@@ -1,0 +1,143 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+.dark {
+  color-scheme: dark;
+}
+
+
+/* =========================
+   NAVBAR
+========================= */
+
+.lgu-navbar {
+    @apply sticky top-0 z-50 flex items-center justify-between 
+    bg-white px-8 py-4 shadow-md;
+}
+
+.lgu-navbar-brand {
+    @apply text-lg font-extrabold text-blue-900;
+}
+
+.lgu-navbar-menu {
+    @apply flex items-center gap-5 font-semibold text-blue-900;
+}
+
+.lgu-nav-link {
+    @apply rounded-md px-3 py-2 
+    hover:bg-sky-300 hover:text-black;
+}
+
+.lgu-logout-button {
+    @apply rounded-lg bg-linear-to-r 
+    from-blue-900 to-blue-600 
+    px-5 py-2 text-white;
+}
+
+
+/* =========================
+   HEADER
+========================= */
+
+.lgu-header {
+    @apply bg-linear-to-r from-blue-900 to-blue-600 
+    px-8 py-6 text-white;
+}
+
+.lgu-header-title {
+    @apply text-lg font-extrabold;
+}
+
+.lgu-header-subtitle {
+    @apply text-sm opacity-80;
+}
+
+
+/* =========================
+   DASHBOARD
+========================= */
+
+.lgu-dashboard {
+    @apply min-h-screen bg-gray-100;
+}
+
+.lgu-dashboard-container {
+    @apply mx-auto max-w-7xl p-8;
+}
+
+.lgu-card-grid {
+    @apply grid gap-6 md:grid-cols-2 lg:grid-cols-4;
+}
+
+.lgu-dashboard {
+    @apply min-h-screen bg-slate-50 text-slate-900;
+}
+
+.lgu-dashboard-hero {
+    @apply overflow-hidden bg-linear-to-r from-slate-100 via-white to-sky-100 px-8 py-10;
+}
+
+.lgu-dashboard-hero-inner {
+    @apply mx-auto grid gap-8 rounded-3xl border border-slate-200 bg-white/95 p-8 shadow-xl md:grid-cols-[1.7fr_1fr] lg:max-w-7xl;
+}
+
+.lgu-dashboard-stats {
+    @apply grid gap-4;
+}
+
+.lgu-dashboard-stat {
+    @apply rounded-3xl bg-slate-50 p-6 text-slate-900 shadow-sm;
+}
+
+.lgu-profile-button {
+    @apply rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-900 transition hover:bg-slate-100;
+}
+
+
+/* =========================
+   SERVICE CARD
+========================= */
+
+.lgu-service-card {
+    @apply rounded-2xl border-l-4 border-blue-900 
+    bg-white p-6 shadow-lg;
+}
+
+.lgu-service-title {
+    @apply mb-3 text-sm font-extrabold uppercase text-blue-900;
+}
+
+.lgu-service-description {
+    @apply rounded-xl border border-dashed 
+    border-gray-300 bg-gray-50 
+    p-4 text-center text-sm text-gray-500;
+}
+
+.lgu-service-tag {
+    @apply mt-3 inline-block rounded-full 
+    bg-blue-100 px-3 py-1 text-xs 
+    font-bold text-blue-900;
+}
+
+
+/* =========================
+   PAYMENT FORM
+========================= */
+
+.payment-form-main {
+    @apply min-h-screen bg-slate-100 p-4 md:p-8;
+}
+
+.payment-form-item {
+    @apply rounded-xl border border-blue-100 px-4 py-4 text-lg outline-none focus:border-blue-700;
+}
+
+
+/* =========================
+   FOOTER
+========================= */
+
+.lgu-footer {
+    @apply p-5 text-center text-xs text-gray-500;
+}

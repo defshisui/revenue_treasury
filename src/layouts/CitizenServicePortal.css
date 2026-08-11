@@ -1,0 +1,14 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Custom utility & animation styles */
+@layer utilities {
+  .card-hover-effect {
+    transition: transform 0.25s ease-in-out, box-shadow 0.25s ease-in-out;
+  }
+  .card-hover-effect:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 12px 24px -6px rgba(0, 0, 0, 0.08);
+  }
+}
