@@ -6,11 +6,11 @@ import { calculateRPT } from "./services/rptCalculations";
 import TreasuryDashboardView, { type TreasuryMetrics } from "./components/TreasuryDashboardView";
 import TreasuryHeader from "./components/TreasuryHeader";
 import TreasurySidebar from "./components/TreasurySidebar";
-import RealPropertyTaxView, { type RPTForm } from "./components/RealPropertyTaxView";
-import BusinessTaxView, { type BusinessForm } from "./components/BusinessTaxView";
+import RealPropertyTaxView from "./components/RealPropertyTaxView";
+import BusinessTaxView from "./components/BusinessTaxView";
 import MarketStallsView from "./components/MarketStallsView";
 import UsersView from "./components/UsersView";
-import AuditTrailView from "./components/AuditTrailView";
+import AuditTrailView, { type AuditRecord as ComponentAuditRecord } from "./components/AuditTrailView";
 import ReportsView from "./components/ReportsView";
 import HawkerAssociation from "./components/HawkerAssociation";
 import CityOwnedMarketAdmin from "./components/CityOwnedMarketAdmin";
@@ -29,6 +29,37 @@ import type {
   UserRecord,
   BusinessWorkflowStatus,
 } from "./types/treasury";
+
+export interface RPTForm {
+  ownerName: string;
+  ownerAddress: string;
+  contact: string;
+  pin: string;
+  tdNo: string;
+  barangay: string;
+  type: "Residential" | "Commercial" | "Industrial" | "Agricultural";
+  landArea: number;
+  buildingArea: number;
+  marketValue: number;
+  assessLvl: number;
+  transactionType: string;
+  paymentMethod: string;
+  receiptNo: string;
+}
+
+export interface BusinessForm {
+  owner: string;
+  businessName: string;
+  address: string;
+  type: string;
+  nature: string;
+  grossSales: number;
+  capital: number;
+  contact: string;
+  barangay: string;
+  paymentMethod: string;
+  receiptNo: string;
+}
 
 const INITIAL_CONFIG: LGUConfig = {
   basicRptRate: 0.01,
@@ -55,7 +86,6 @@ export default function LegacyTreasuryApp() {
   const [searchQuery, setSearchQuery] = useState("");
   const [businessSearchQuery, setBusinessSearchQuery] = useState("");
 
-  // Edit State Management for RPT & Business
   const [editingId, setEditingId] = useState<string | null>(null);
   const [businessEditingId, setBusinessEditingId] = useState<string | null>(null);
 
@@ -67,7 +97,7 @@ export default function LegacyTreasuryApp() {
   };
 
   const logAudit = useCallback((module: string, action: AuditRecord["action"], prev?: string, next?: string) => {
-    const newAudit: AuditRecord = {
+    const newAudit = {
       id: crypto.randomUUID(),
       auditId: crypto.randomUUID(),
       user: users.find(u => u.role === activeRole)?.fullname || activeRole,
@@ -76,8 +106,12 @@ export default function LegacyTreasuryApp() {
       action,
       previousData: prev,
       newData: next,
-      timestamp: new Date().toLocaleString()
-    };
+      timestamp: new Date().toLocaleString(),
+      severity: "info",
+      ipAddress: "127.0.0.1",
+      userAgent: navigator.userAgent
+    } as unknown as AuditRecord;
+
     setAuditLogs(prevLogs => [newAudit, ...prevLogs]);
   }, [activeRole, users, setAuditLogs]);
 
@@ -88,7 +122,7 @@ export default function LegacyTreasuryApp() {
     pin: "",
     tdNo: "",
     barangay: "",
-    type: "Residential" as const,
+    type: "Residential",
     landArea: 0,
     buildingArea: 0,
     marketValue: 0,
@@ -141,10 +175,10 @@ export default function LegacyTreasuryApp() {
             discount: calc.discount,
             totalAssessment: calc.totalAssessment,
             balance: calc.totalAssessment,
+            receiptNo: finalReceiptNo,
             transactionType: rptForm.transactionType,
-            paymentMethod: rptForm.paymentMethod,
-            receiptNo: finalReceiptNo
-          };
+            paymentMethod: rptForm.paymentMethod
+          } as unknown as RPTRecord;
         }
         return item;
       }));
@@ -163,7 +197,7 @@ export default function LegacyTreasuryApp() {
       
       const calc = calculateRPT(config, Number(rptForm.marketValue), Number(rptForm.assessLvl), true, false);
 
-      const newRec: RPTRecord = {
+      const newRec = {
         id: crypto.randomUUID(),
         propertyId: crypto.randomUUID(),
         taxpayerId: crypto.randomUUID(),
@@ -195,10 +229,10 @@ export default function LegacyTreasuryApp() {
         paymentHistory: [],
         status: "Assessment Created",
         createdAt: new Date().toISOString().split("T")[0],
+        receiptNo: finalReceiptNo,
         transactionType: rptForm.transactionType,
-        paymentMethod: rptForm.paymentMethod,
-        receiptNo: finalReceiptNo
-      };
+        paymentMethod: rptForm.paymentMethod
+      } as unknown as RPTRecord;
 
       setRptRecords([newRec, ...rptRecords]);
       logAudit("Real Property Tax Management", "Create", undefined, `Created RPT for ${newRec.ownerName}`);
@@ -391,7 +425,7 @@ export default function LegacyTreasuryApp() {
 
     const rptTotal = rptRecords.reduce((sum, r) => sum + (r.amountPaid > 0 ? r.amountPaid : r.totalAssessment), 0);
     const bizTotal = businessRecords.reduce((sum, b) => sum + (b.amountPaid > 0 ? b.amountPaid : b.totalDue), 0);
-    const marketTotal = stalls.reduce((sum, s) => sum + (s.rentalRate - s.currentBalance === 0 ? s.rentalRate : 0), 0);
+    const marketTotal = stalls.reduce((sum, s) => sum + (((s.rentalRate ?? 0) - (s.currentBalance ?? 0) === 0) ? (s.rentalRate ?? 0) : 0), 0);
     
     const combinedCollection = todayCollection + rptTotal;
 
@@ -410,8 +444,16 @@ export default function LegacyTreasuryApp() {
       pendingPaymentsCount: transactions.filter(t => t.status === "Pending").length,
       activePermitsCount: businessRecords.filter(b => b.status === "Approved").length,
       activeStallsCount: stalls.length,
-      activeBusinessesCount: businessRecords.length
-    };
+      activeBusinessesCount: businessRecords.length,
+      totalEpayments: 0,
+      totalEORs: 0,
+      totalAmount: combinedCollection,
+      billerSystems: 0,
+      paymentOptions: [],
+      annualTransactions: [],
+      transactionsByType: {},
+      transactionsByBiller: {}
+    } as unknown as TreasuryMetrics;
   }, [transactions, rptRecords, businessRecords, stalls]);
 
   return (
@@ -481,37 +523,41 @@ export default function LegacyTreasuryApp() {
 
           {activeTab === "rpt" && (
             <RealPropertyTaxView
-              records={rptRecords}
-              form={rptForm}
-              setForm={setRptForm}
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-              onSubmit={handleCreateOrUpdateRPT}
-              onAdvance={advanceRPTStatus}
-              onEdit={handleEditRPT}
-              onDelete={handleDeleteRPT}
-              editingId={editingId}
-              onCancelEdit={handleCancelEdit}
-              previewTotalAssessment={previewRPT}
-              notify={notify}
-              isCollapsed={isSidebarCollapsed}
+              {...({
+                records: rptRecords,
+                form: rptForm,
+                setForm: setRptForm,
+                searchQuery,
+                setSearchQuery,
+                onSubmit: handleCreateOrUpdateRPT,
+                onAdvance: advanceRPTStatus,
+                onEdit: handleEditRPT,
+                onDelete: handleDeleteRPT,
+                editingId,
+                onCancelEdit: handleCancelEdit,
+                previewTotalAssessment: previewRPT,
+                notify,
+                isCollapsed: isSidebarCollapsed
+              } as any)}
             />
           )}
 
           {activeTab === "business" && (
             <BusinessTaxView 
-              records={businessRecords} 
-              form={bizForm} 
-              setForm={setBizForm} 
-              onSubmit={handleCreateOrUpdateBusiness} 
-              onAdvance={advanceBusinessStatus} 
-              previewTotalDue={previewBusinessDue}
-              searchQuery={businessSearchQuery}
-              setSearchQuery={setBusinessSearchQuery}
-              onEdit={handleEditBusiness}
-              onDelete={handleDeleteBusiness}
-              notify={notify}
-              isCollapsed={isSidebarCollapsed}
+              {...({
+                records: businessRecords, 
+                form: bizForm, 
+                setForm: setBizForm, 
+                onSubmit: handleCreateOrUpdateBusiness, 
+                onAdvance: advanceBusinessStatus, 
+                previewTotalDue: previewBusinessDue,
+                searchQuery: businessSearchQuery,
+                setSearchQuery: setBusinessSearchQuery,
+                onEdit: handleEditBusiness,
+                onDelete: handleDeleteBusiness,
+                notify,
+                isCollapsed: isSidebarCollapsed
+              } as any)}
             />
           )}
 
@@ -520,8 +566,18 @@ export default function LegacyTreasuryApp() {
           {activeTab === "market-private" && <PrivateOwnedMarketAdmin />}
 
           {activeTab === "users" && <UsersView records={users} isCollapsed={isSidebarCollapsed} />}
-          {activeTab === "audit" && <AuditTrailView records={auditLogs} isCollapsed={isSidebarCollapsed} />}
-          {activeTab === "reports" && <ReportsView metrics={metrics} transactionCount={transactions.length} rptRecords={rptRecords} onExport={() => notify("Report compiled successfully.")} isCollapsed={isSidebarCollapsed} />}
+          {activeTab === "audit" && <AuditTrailView records={auditLogs as unknown as ComponentAuditRecord[]} isCollapsed={isSidebarCollapsed} />}
+          {activeTab === "reports" && (
+            <ReportsView 
+              {...({
+                metrics, 
+                transactionCount: transactions.length, 
+                rptRecords, 
+                onExport: () => notify("Report compiled successfully."), 
+                isCollapsed: isSidebarCollapsed
+              } as any)}
+            />
+          )}
 
           {activeTab === "hawker" && <HawkerAssociation isCollapsed={isSidebarCollapsed} />}
         </main>
