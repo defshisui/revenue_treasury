@@ -1,3 +1,4 @@
+// src/LegacyTreasuryApp.tsx
 import React, { useState, useMemo, useCallback } from "react";
 import { useLocalStorage } from "./hooks/useLocalStorage";
 import { usePermissions } from "./hooks/usePermissions";
@@ -8,10 +9,12 @@ import TreasurySidebar from "./components/TreasurySidebar";
 import RealPropertyTaxView, { type RPTForm } from "./components/RealPropertyTaxView";
 import BusinessTaxView, { type BusinessForm } from "./components/BusinessTaxView";
 import MarketStallsView from "./components/MarketStallsView";
-import PaymentsView, { type PaymentForm } from "./components/PaymentsView";
 import UsersView from "./components/UsersView";
 import AuditTrailView from "./components/AuditTrailView";
 import ReportsView from "./components/ReportsView";
+import HawkerAssociation from "./components/HawkerAssociation";
+import CityOwnedMarketAdmin from "./components/CityOwnedMarketAdmin";
+import PrivateOwnedMarketAdmin from "./components/Private_Owned_Admin";
 
 import type {
   AuditRecord,
@@ -45,13 +48,12 @@ export default function LegacyTreasuryApp() {
   const [rptRecords, setRptRecords] = useLocalStorage<RPTRecord[]>("lgu_rpt", []);
   const [businessRecords, setBusinessRecords] = useLocalStorage<BusinessRecord[]>("lgu_business", []);
   const [stalls] = useLocalStorage<StallRecord[]>("lgu_stalls", []);
-  const [transactions, setTransactions] = useLocalStorage<TransactionRecord[]>("lgu_transactions", []);
+  const [transactions] = useLocalStorage<TransactionRecord[]>("lgu_transactions", []);
   const [auditLogs, setAuditLogs] = useLocalStorage<AuditRecord[]>("lgu_audit", []);
 
   const [notification, setNotification] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [businessSearchQuery, setBusinessSearchQuery] = useState("");
-  const [paymentSearchQuery, setPaymentSearchQuery] = useState("");
 
   // Edit State Management for RPT & Business
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -106,14 +108,12 @@ export default function LegacyTreasuryApp() {
   const handleCreateOrUpdateRPT = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Auto-generate receipt number if Cash and field is empty
     const finalReceiptNo = 
       rptForm.paymentMethod === "Cash" && !rptForm.receiptNo
         ? `OR-${Math.floor(100000 + Math.random() * 900000)}`
         : rptForm.receiptNo;
     
     if (editingId) {
-      // UPDATE EXISTING RECORD
       if (!canCreate("RPT")) { return; }
       
       const calc = calculateRPT(config, Number(rptForm.marketValue), Number(rptForm.assessLvl), true, false);
@@ -151,7 +151,6 @@ export default function LegacyTreasuryApp() {
 
       logAudit("Real Property Tax Management", "Update", undefined, `Updated RPT for ${rptForm.ownerName}`);
       
-      // Reset edit mode and form
       setEditingId(null);
       setRptForm({
         ownerName: "", ownerAddress: "", contact: "", pin: "", tdNo: "", barangay: "",
@@ -160,7 +159,6 @@ export default function LegacyTreasuryApp() {
       });
 
     } else {
-      // CREATE NEW RECORD
       if (!canCreate("RPT")) { return; }
       
       const calc = calculateRPT(config, Number(rptForm.marketValue), Number(rptForm.assessLvl), true, false);
@@ -205,7 +203,6 @@ export default function LegacyTreasuryApp() {
       setRptRecords([newRec, ...rptRecords]);
       logAudit("Real Property Tax Management", "Create", undefined, `Created RPT for ${newRec.ownerName}`);
       
-      // Clear form after creation
       setRptForm({
         ownerName: "", ownerAddress: "", contact: "", pin: "", tdNo: "", barangay: "",
         type: "Residential", landArea: 0, buildingArea: 0, marketValue: 0, assessLvl: 0,
@@ -388,39 +385,6 @@ export default function LegacyTreasuryApp() {
     }));
   };
 
-  const [payForm, setPayForm] = useState<PaymentForm>({
-    payer: "", type: "Real Property Tax" as const, amount: 0, method: "Cash" as const, refNo: "", remarks: ""
-  });
-
-  const handlePostPayment = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!canCreate("Payments")) { return; }
-
-    const refNumber = payForm.refNo.trim() !== "" ? payForm.refNo : `OR-${Math.floor(100000 + Math.random() * 900000)}`;
-    const newTrx: TransactionRecord = {
-      id: crypto.randomUUID(),
-      transactionId: crypto.randomUUID(),
-      referenceNumber: refNumber,
-      taxpayer: payForm.payer,
-      paymentType: payForm.type,
-      amount: Number(payForm.amount),
-      paymentMethod: payForm.method,
-      externalReference: payForm.refNo,
-      collector: users.find(u => u.role === activeRole)?.fullname || activeRole,
-      date: new Date().toLocaleString(),
-      status: "Posted",
-      remarks: payForm.remarks
-    };
-
-    setTransactions([newTrx, ...transactions]);
-    logAudit("Payment Collection System", "Payment Posting", undefined, `Posted payment reference ${refNumber} amounting to ${payForm.amount}`);
-    
-    // Reset form after submission
-    setPayForm({
-      payer: "", type: "Real Property Tax", amount: 0, method: "Cash", refNo: "", remarks: ""
-    });
-  };
-
   const metrics: TreasuryMetrics = useMemo(() => {
     const postedTrx = transactions.filter(t => t.status === "Posted");
     const todayCollection = postedTrx.reduce((sum, t) => sum + t.amount, 0);
@@ -451,23 +415,21 @@ export default function LegacyTreasuryApp() {
   }, [transactions, rptRecords, businessRecords, stalls]);
 
   return (
-    <div className="legacy-treasury-shell h-screen overflow-hidden dark:bg-slate-900 text-slate-100 flex flex-col font-sans">
+    <div className="legacy-treasury-shell h-screen overflow-hidden bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 flex flex-col font-sans">
       <TreasuryHeader 
         activeRole={activeRole} 
         setActiveRole={setActiveRole}
         notify={notify}
         isCollapsed={isSidebarCollapsed}
+        setIsCollapsed={setIsSidebarCollapsed} 
       />
 
-      {/* POP-UP NOTIFICATION MODAL CARD */}
       {notification && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 animate-in fade-in duration-100">
-          <div className="bg-white rounded-2xl p-8 max-w-sm w-full mx-4 shadow-2xl border border-slate-100 flex flex-col items-center text-center animate-in zoom-in-95 duration-200">
-            
-            {/* Check Icon in the Center */}
-            <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mb-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 max-w-sm w-full mx-4 shadow-2xl border border-slate-100 dark:border-gray-700 flex flex-col items-center text-center animate-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/40 rounded-full flex items-center justify-center mb-4">
               <svg 
-                className="w-9 h-9 text-emerald-600" 
+                className="w-9 h-9 text-emerald-600 dark:text-emerald-400" 
                 fill="none" 
                 stroke="currentColor" 
                 strokeWidth="3" 
@@ -477,17 +439,14 @@ export default function LegacyTreasuryApp() {
               </svg>
             </div>
 
-            {/* Title */}
-            <h3 className="text-xl font-bold text-slate-900 mb-1">
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-1">
               Transaction Submitted
             </h3>
 
-            {/* Dynamic Detail Message */}
-            <p className="text-sm text-slate-500 mb-6">
+            <p className="text-sm text-slate-500 dark:text-gray-400 mb-6">
               {notification}
             </p>
 
-            {/* Dismiss Button */}
             <button
               type="button"
               onClick={() => setNotification(null)}
@@ -510,9 +469,14 @@ export default function LegacyTreasuryApp() {
           canDelete={canDelete} 
         />
 
-        <main className="flex-1 overflow-y-auto p-8 dark:bg-slate-900">
+        <main className="flex-1 overflow-y-auto p-8 bg-slate-50 dark:bg-slate-900">
           {activeTab === "dashboard" && (
-            <TreasuryDashboardView metrics={metrics} transactions={transactions} isCollapsed={isSidebarCollapsed} />
+            <TreasuryDashboardView 
+              metrics={metrics} 
+              transactions={transactions} 
+              marketStalls={stalls} 
+              isCollapsed={isSidebarCollapsed} 
+            />
           )}
 
           {activeTab === "rpt" && (
@@ -552,23 +516,14 @@ export default function LegacyTreasuryApp() {
           )}
 
           {activeTab === "market" && <MarketStallsView records={stalls} isCollapsed={isSidebarCollapsed} />}
-          
-          {activeTab === "payments" && (
-            <PaymentsView 
-              transactions={transactions}
-              form={payForm}
-              setForm={setPayForm}
-              onSubmit={handlePostPayment}
-              searchQuery={paymentSearchQuery}
-              setSearchQuery={setPaymentSearchQuery}
-              notify={notify}
-              isCollapsed={isSidebarCollapsed}
-            />
-          )}
+          {activeTab === "market-city" && <CityOwnedMarketAdmin />}
+          {activeTab === "market-private" && <PrivateOwnedMarketAdmin />}
 
           {activeTab === "users" && <UsersView records={users} isCollapsed={isSidebarCollapsed} />}
           {activeTab === "audit" && <AuditTrailView records={auditLogs} isCollapsed={isSidebarCollapsed} />}
           {activeTab === "reports" && <ReportsView metrics={metrics} transactionCount={transactions.length} rptRecords={rptRecords} onExport={() => notify("Report compiled successfully.")} isCollapsed={isSidebarCollapsed} />}
+
+          {activeTab === "hawker" && <HawkerAssociation isCollapsed={isSidebarCollapsed} />}
         </main>
       </div>
     </div>

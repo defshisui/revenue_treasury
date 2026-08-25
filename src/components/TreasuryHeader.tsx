@@ -6,30 +6,23 @@ import type { Role } from "../types/treasury";
 import SettingModal from "./SettingModal";
 import { useTheme } from "./ThemeContext";
 
-
 interface TreasuryHeaderProps {
   activeRole: Role;
   setActiveRole: Dispatch<SetStateAction<Role>>;
   notify: (message: string) => void;
-  onToggleSidebar?: () => void;
   isCollapsed: boolean;
+  setIsCollapsed: Dispatch<SetStateAction<boolean>>;
 }
-
 
 export default function TreasuryHeader({
   activeRole,
   //setActiveRole,
   notify,
-  //onToggleSidebar,
   isCollapsed,
 }: TreasuryHeaderProps) {
-
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
-
   const navigate = useNavigate();
-
   const { theme, toggleTheme } = useTheme();
-
 
   return (
     <header
@@ -44,58 +37,15 @@ export default function TreasuryHeader({
         ${isCollapsed ? "left-20" : "left-64"}
       `}
     >
-
-      {/* Search */}
-      <div className="relative w-64">
-
-        <span className="
-          absolute inset-y-0 left-0
-          flex items-center pl-3
-          text-slate-400
-        ">
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            />
-          </svg>
+      {/* Left side spacer / branding placeholder since search was removed */}
+      <div className="flex items-center">
+        <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+          Treasury Portal
         </span>
-
-
-        <input
-          type="text"
-          placeholder="Search applications..."
-          className="
-            w-full
-            pl-9 pr-3
-            py-1.5
-            text-sm
-            rounded-full
-            bg-slate-100 dark:bg-slate-800
-            text-slate-800 dark:text-white
-            placeholder-slate-400
-            border border-transparent
-            focus:outline-none
-            focus:border-slate-300
-            dark:focus:border-slate-600
-          "
-        />
-
       </div>
-
-
 
       {/* Actions */}
       <div className="flex items-center gap-1.5">
-
-
         {/* Theme Toggle */}
         <button
           type="button"
@@ -110,10 +60,7 @@ export default function TreasuryHeader({
           "
           aria-label="Toggle theme"
         >
-
           {theme === "dark" ? (
-
-            // Sun
             <svg
               className="w-4 h-4"
               fill="none"
@@ -127,10 +74,7 @@ export default function TreasuryHeader({
                 d="M12 3v2m0 14v2m9-9h-2M5 12H3m15.364-6.364-1.414 1.414M7.05 16.95l-1.414 1.414m12.728 0-1.414-1.414M7.05 7.05 5.636 5.636M12 8a4 4 0 100 8 4 4 0 000-8z"
               />
             </svg>
-
           ) : (
-
-            // Moon
             <svg
               className="w-4 h-4"
               fill="none"
@@ -144,12 +88,8 @@ export default function TreasuryHeader({
                 d="M20.354 15.354A9 9 0 018.646 3.646 9 9 0 1019.354 14.354c.348.348.348.91 0 1z"
               />
             </svg>
-
           )}
-
         </button>
-
-
 
         {/* Notification */}
         <button
@@ -178,11 +118,8 @@ export default function TreasuryHeader({
           </svg>
         </button>
 
-
-
         {/* Profile */}
         <div className="relative">
-
           <button
             type="button"
             onClick={() => setIsProfileMenuOpen(v => !v)}
@@ -197,7 +134,6 @@ export default function TreasuryHeader({
               dark:hover:bg-slate-700
             "
           >
-
             <div
               className="
                 flex
@@ -213,9 +149,7 @@ export default function TreasuryHeader({
               {activeRole.charAt(0)}
             </div>
 
-
             <div className="hidden md:block">
-
               <p className="
                 text-xs
                 font-semibold
@@ -224,43 +158,29 @@ export default function TreasuryHeader({
               ">
                 {activeRole}
               </p>
-
               <p className="text-[10px] text-slate-400">
                 Staff
               </p>
-
             </div>
-
           </button>
-
-
 
           {isProfileMenuOpen && (
             <SettingModal
-
               onSettings={() => {
                 setIsProfileMenuOpen(false);
-
                 navigate("/profile", {
                   state: { activeRole }
                 });
               }}
-
               onLogout={() => {
                 setIsProfileMenuOpen(false);
-
                 notify("You have been logged out.");
-
                 navigate("/");
               }}
-
             />
           )}
-
         </div>
-
       </div>
-
     </header>
   );
 }

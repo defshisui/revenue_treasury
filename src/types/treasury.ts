@@ -1,3 +1,5 @@
+// src/types/treasury.ts
+
 export type Role =
   | "Municipal Treasurer"
   | "Assistant Treasurer"
@@ -13,6 +15,10 @@ export type Subsystem =
   | "rpt"
   | "business"
   | "market"
+  | "hawker"
+  | "market-city"
+  | "market-private"
+  | "market-operator"
   | "payments"
   | "users"
   | "audit"
@@ -94,34 +100,46 @@ export interface BusinessRecord {
   createdAt: string;
 }
 
-// 1. Keep/expand the strict union type for status
-export type StallStatus = "Current" | "Overdue" | "Vacant" | "Unpaid" | "Paid";
+export type StallStatus = "Occupied" | "Vacant" | "Maintenance" | "Delinquent" | "Closed" | "Paid";
+export type LeaseStatus = "Active" | "Pending Approval" | "Terminated" | "Expired";
+export type MarketBranch = "Central Public Market" | "North Plaza Talipapa" | "Southside Night Market";
+export type MarketSection = 
+  | "Meat & Poultry Section" 
+  | "Fish & Seafood Section" 
+  | "Vegetables & Fruits" 
+  | "Dry Goods Section" 
+  | "Eatery / Food Stalls";
 
-// 2. The merged StallRecord interface
 export interface StallRecord {
-  // --- ORIGINAL FIELDS (Kept intact) ---
   id: string;
   stallNumber: string;
-  location: string;
-  marketSection: string;
-  rentalRate: number;
-  assignedVendorId: string;
-  vendorName: string;
-  billingMonth: string;
-  rentalAmount: number;
-  previousBalance: number;
-  penalty: number;
+  marketBranch: MarketBranch | string;
+  marketSection: MarketSection | string;
+  sizeSqMeters: number;
+  monthlyBaseRate: number;
+  status: StallStatus;
+  assignedVendorId?: string;
+  vendorName?: string;
+  vendorContact?: string;
+  leaseStartDate?: string;
+  leaseEndDate?: string;
+  leaseStatus?: LeaseStatus;
   currentBalance: number;
-  paymentHistory: string[]; // Kept original string[] type
+  accumulatedPenalty: number;
+  lastPaymentDate?: string;
   overdueStatus: boolean;
-  status: StallStatus;     // Kept original union type (extended with "Paid")
-
-  // --- NEW OPTIONAL FIELDS (Added for MarketStallsView form) ---
+  paymentHistory: string[];
   receiptNo?: string;
   paymentMode?: string;
   contactNumber?: string;
   tinOrId?: string;
   billingCycle?: string;
+  rentalRate?: number;
+  location?: string;
+  billingMonth?: string;
+  rentalAmount?: number;
+  previousBalance?: number;
+  penalty?: number;
 }
 
 export interface TransactionRecord {
@@ -129,9 +147,10 @@ export interface TransactionRecord {
   transactionId: string;
   referenceNumber: string;
   taxpayer: string;
-  paymentType: "Real Property Tax" | "Business Tax" | "Market Rental" | "Other Fees";
+  paymentType: "Real Property Tax" | "Business Tax" | "Market Rental" | "Other Fees" | string;
+  type?: string; 
   amount: number;
-  paymentMethod: "Cash" | "Bank Transfer" | "Check" | "Digital Wallet";
+  paymentMethod: "Cash" | "Bank Transfer" | "Check" | "Digital Wallet" | string;
   externalReference: string;
   collector: string;
   date: string;
@@ -158,4 +177,109 @@ export interface AuditRecord {
   previousData?: string;
   newData?: string;
   timestamp: string;
+}
+
+export type HawkerAssociationStatus = "New" | "Under Review" | "Approved" | "Rejected" | "Suspended";
+
+export interface HawkerOfficer {
+  firstName: string;
+  middleName?: string;
+  lastName: string;
+  email: string;
+}
+
+export interface HawkerAssociationRecord {
+  id: string;
+  associationNumber: string;
+  associationName: string;
+  secRegistrationNo?: string;
+  dateIssued?: string;
+  contactNumber: string;
+  chairperson: HawkerOfficer;
+  submittedBy: string;
+  submitterEmail: string;
+  submissionDate: string;
+  status: HawkerAssociationStatus;
+  remarks?: string;
+  memberCount?: number;
+}
+
+/* ============================================================================
+   CITY ASSESSOR - REAL PROPERTY TAX (RPT) CITIZEN'S CHARTER EXTENSIONS
+   ============================================================================ */
+
+export type CategoryType = 
+  | '1.1 Transfer of Ownership'
+  | '1.2 Consolidation / Segregation'
+  | '1.3 New Assessment / Reassessment / Reclassification'
+  | '1.4 Correction of Entry / Updating / Revision'
+  | '1.5 Declaration of New / Undeclared Land'
+  | '2.1 CTC of Tax Declaration'
+  | '2.2 Certified Copy of Tax Map'
+  | '2.3-2.5 Certifications (Adjoining, Location, Holdings)'
+  | '2.6 Print-Out of Real Property Assessment Record'
+  | '3. Cancellation of Assessment Records';
+
+export type StatusType =
+  | 'Under Evaluation'
+  | 'Technical Plotting (GIS)'
+  | 'Field Inspection Scheduled'
+  | 'Payment Pending'
+  | 'Ready for Approval'
+  | 'Approved & Ready for Release'
+  | 'Digital Certificate Issued'
+  | 'Rejected';
+
+export interface DocumentItem {
+  id: string;
+  name: string;
+  type: string;
+  uploadedAt: string;
+  fileUrl: string;
+  status: 'Pending' | 'Verified' | 'Rejected';
+  notes?: string;
+}
+
+export interface ApplicationRecord {
+  id: string;
+  referenceNumber: string;
+  category: CategoryType;
+  applicantName: string;
+  applicantEmail: string;
+  applicantPhone: string;
+  isRepresentative: boolean;
+  representativeDetails?: {
+    name: string;
+    relation: string;
+    spaUploaded: boolean;
+  };
+  propertyDetails: {
+    pin: string; // Property Identification Number
+    titleNumber: string; // TCT/CCT
+    address: string;
+    lotAreaSqM: number;
+    currentValuation?: number;
+  };
+  documents: DocumentItem[];
+  status: StatusType;
+  submissionDate: string;
+  titleReleaseDate?: string; // For 60-day late filing penalty calculation
+  penaltyFee: number;
+  adminFee: number;
+  paymentStatus: 'Unpaid' | 'Paid' | 'Exempted';
+  assignedOfficer?: string;
+  gisPlottingCompleted?: boolean;
+  fieldInspectionRequired?: boolean;
+  fieldInspectionDate?: string;
+  assignedCounter?: 'Counter 1' | 'Counter 2' | 'N/A';
+  scheduledReleaseDate?: string;
+  remarks?: string;
+}
+
+export interface AdminStats {
+  totalApplications: number;
+  pendingReview: number;
+  pendingInspectionOrGIS: number;
+  readyForRelease: number;
+  totalPenaltiesCollected: number;
 }

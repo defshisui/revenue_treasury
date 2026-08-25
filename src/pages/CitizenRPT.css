@@ -1,0 +1,132 @@
+/* Keeps the citizen RPT module visually aligned with the legacy treasury shell. */
+.dark .citizen-rpt-shell {
+  background-color: #0f172a !important;
+  color: #e2e8f0;
+}
+
+.dark .citizen-rpt-shell .bg-white {
+  background-color: #111827 !important;
+}
+
+.dark .citizen-rpt-shell .bg-slate-50 {
+  background-color: #172033 !important;
+}
+
+.dark .citizen-rpt-shell .bg-slate-100 {
+  background-color: #1e293b !important;
+}
+
+.dark .citizen-rpt-shell .bg-slate-900 {
+  background-color: #0f172a !important;
+}
+
+.dark .citizen-rpt-shell .text-slate-900,
+.dark .citizen-rpt-shell .text-slate-800,
+.dark .citizen-rpt-shell .text-slate-700 {
+  color: #f8fafc !important;
+}
+
+.dark .citizen-rpt-shell .text-slate-600,
+.dark .citizen-rpt-shell .text-slate-500,
+.dark .citizen-rpt-shell .text-slate-400 {
+  color: #cbd5e1 !important;
+}
+
+.dark .citizen-rpt-shell .border-slate-100,
+.dark .citizen-rpt-shell .border-slate-200,
+.dark .citizen-rpt-shell .border-slate-300 {
+  border-color: #334155 !important;
+}
+
+.dark .citizen-rpt-shell .divide-slate-100 > :not(:last-child),
+.dark .citizen-rpt-shell .divide-slate-200 > :not(:last-child) {
+  border-color: #334155 !important;
+}
+
+.dark .citizen-rpt-shell input,
+.dark .citizen-rpt-shell select,
+.dark .citizen-rpt-shell textarea {
+  background-color: #172033 !important;
+  border-color: #475569 !important;
+  color: #f8fafc !important;
+}
+
+.dark .citizen-rpt-shell input::placeholder,
+.dark .citizen-rpt-shell textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+.dark .citizen-rpt-shell option {
+  background-color: #172033;
+  color: #f8fafc;
+}
+
+.dark .citizen-rpt-shell .hover\:bg-slate-50:hover,
+.dark .citizen-rpt-shell .hover\:bg-slate-100:hover,
+.dark .citizen-rpt-shell .hover\:bg-white:hover {
+  background-color: #263449 !important;
+}
+
+.dark .citizen-rpt-shell .bg-blue-50 {
+  background-color: #172554 !important;
+}
+
+.dark .citizen-rpt-shell .bg-blue-100 {
+  background-color: #1e3a8a !important;
+}
+
+.dark .citizen-rpt-shell .border-blue-100,
+.dark .citizen-rpt-shell .border-blue-200,
+.dark .citizen-rpt-shell .border-blue-300 {
+  border-color: #2563eb !important;
+}
+
+.dark .citizen-rpt-shell .text-blue-900,
+.dark .citizen-rpt-shell .text-blue-800,
+.dark .citizen-rpt-shell .text-blue-700 {
+  color: #93c5fd !important;
+}
+
+.dark .citizen-rpt-shell .bg-emerald-50 {
+  background-color: #064e3b !important;
+}
+
+.dark .citizen-rpt-shell .border-emerald-200 {
+  border-color: #047857 !important;
+}
+
+.dark .citizen-rpt-shell .text-emerald-900,
+.dark .citizen-rpt-shell .text-emerald-800,
+.dark .citizen-rpt-shell .text-emerald-700 {
+  color: #a7f3d0 !important;
+}
+
+.dark .citizen-rpt-shell .bg-amber-50 {
+  background-color: #451a03 !important;
+}
+
+.dark .citizen-rpt-shell .bg-amber-100 {
+  background-color: #78350f !important;
+}
+
+.dark .citizen-rpt-shell .border-amber-200 {
+  border-color: #b45309 !important;
+}
+
+.dark .citizen-rpt-shell .text-amber-900,
+.dark .citizen-rpt-shell .text-amber-800 {
+  color: #fde68a !important;
+}
+
+.dark .citizen-rpt-shell .bg-rose-50 {
+  background-color: #4c0519 !important;
+}
+
+.dark .citizen-rpt-shell .border-rose-200 {
+  border-color: #be123c !important;
+}
+
+.dark .citizen-rpt-shell .text-rose-800,
+.dark .citizen-rpt-shell .text-rose-700 {
+  color: #fecdd3 !important;
+}
