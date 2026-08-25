@@ -131,8 +131,7 @@ export default function MarketStallApplication() {
     // Leases synced from database layer to dynamically track occupancy status
     const [leases, setLeases] = useState<LeaseRecord[]>([]);
 
-    // Modal states
-    const [activeModal, setActiveModal] = useState<string | null>(null);
+    // Modal state for active stall details
     const [activeStall, setActiveStall] = useState<StallDetails | null>(null);
 
     // Application Form States
@@ -316,7 +315,7 @@ export default function MarketStallApplication() {
         {/* Main Navigation Header */}
         <header className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-            <div className="flex items-center space-x-3.5 cursor-pointer group" onClick={() => setActiveModal(null)}>
+            <div className="flex items-center space-x-3.5 cursor-pointer group" onClick={() => {}}>
                 <div className="overflow-hidden rounded-xl border border-slate-200/60 shadow-sm transition-transform duration-300 group-hover:scale-105 bg-white p-1">
                 <img 
                     src="/src/assets/logo-system.png" 

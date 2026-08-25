@@ -1,7 +1,18 @@
 // src/components/TreasuryDashboardView.tsx
 
 import { useState, useEffect, useRef } from "react";
-import type { TransactionRecord, StallRecord } from "../types/treasury";
+import type { TransactionRecord } from "../types/treasury";
+
+export interface StallRecord {
+  id?: string | number;
+  stallNumber?: string;
+  lesseeName?: string;
+  vendorName?: string;
+  section?: string;
+  monthlyRent?: number;
+  amount?: number;
+  status?: string;
+}
 
 export interface TreasuryMetrics {
   totalEpayments: number;
@@ -56,16 +67,15 @@ const ALL_PAYMENT_OPTIONS = [
 
 const ALL_EOR_OPTIONS = ["EOR", "NON-EOR"];
 
-// Helper for consistent payment option coloring matching the UI reference
 const PAYMENT_OPTION_COLORS: Record<string, string> = {
-  "GCash": "#3b82f6", // Blue
-  "Visa/Mastercard via Paymaya": "#f97316", // Orange
-  "Maya (E-Wallet)": "#a855f7", // Purple
-  "Online Banking via Paygate": "#84cc16", // Lime
-  "Maya (QR)": "#06b6d4", // Cyan
-  "Bayad Center": "#eab308", // Yellow
-  "Manual Payment for Landbank of the Philippines": "#ec4899", // Pink
-  "Landbank Online": "#6366f1" // Indigo
+  "GCash": "#3b82f6", 
+  "Visa/Mastercard via Paymaya": "#f97316", 
+  "Maya (E-Wallet)": "#a855f7", 
+  "Online Banking via Paygate": "#84cc16", 
+  "Maya (QR)": "#06b6d4", 
+  "Bayad Center": "#eab308", 
+  "Manual Payment for Landbank of the Philippines": "#ec4899", 
+  "Landbank Online": "#6366f1" 
 };
 
 export default function TreasuryDashboardView({ 
@@ -285,7 +295,6 @@ export default function TreasuryDashboardView({
     }
   };
 
-  // Helper to generate CSS conic-gradient string for multi-slice pie/donut charts dynamically from real data
   const generateConicGradient = (items: { percentage: number; option?: string; type?: string }[]) => {
     let cumulativePercent = 0;
     return items.map((item, idx) => {
@@ -318,6 +327,14 @@ export default function TreasuryDashboardView({
         </div>
 
         <div className="flex items-center gap-3">
+          {onNavigate && (
+            <button 
+              onClick={() => onNavigate('home')}
+              className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-xs font-semibold cursor-pointer hover:bg-slate-200 transition-colors"
+            >
+              Back Home
+            </button>
+          )}
           <button 
             onClick={loadPostgresData}
             className="px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 text-xs font-semibold cursor-pointer hover:bg-blue-100 transition-colors"
@@ -347,7 +364,6 @@ export default function TreasuryDashboardView({
 
       {/* TOP FIVE METRICS BANNER */}
       <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-4 mb-6">
-        
         <div className="bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 shadow-xs flex items-center gap-4">
           <div className="p-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl flex items-center justify-center">
             <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -379,25 +395,23 @@ export default function TreasuryDashboardView({
           <p className="text-[11px] font-bold tracking-wider text-slate-500 dark:text-slate-400 mb-1.5 mt-0 uppercase">PAYMENT OPTIONS</p>
           <p className="text-xl font-bold text-slate-900 dark:text-white m-0">{activeMetrics.paymentOptions}</p>
         </div>
-
       </div>
 
-      {/* REFINED FILTER BY TOOLBAR SECTION (CENTERED) */}
+      {/* FILTER TOOLBAR SECTION */}
       <div className="bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 mb-6 shadow-xs flex items-center justify-center flex-wrap gap-3">
         <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mr-2">Filter by:</span>
 
-        {/* 1. Transaction Date Filter */}
+        {/* Date Filter */}
         <div className="relative">
           <button
             onClick={() => setOpenDropdown(openDropdown === 'date' ? null : 'date')}
-            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 flex items-center justify-between gap-4 cursor-pointer hover:border-blue-500 hover:bg-slate-50/50 dark:hover:bg-slate-900 transition-all min-w-[160px] shadow-2xs"
+            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 flex items-center justify-between gap-4 cursor-pointer hover:border-blue-500 transition-all min-w-[160px]"
           >
             <span className="truncate">Transaction Date ({selectedDates.length})</span>
             <svg className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${openDropdown === 'date' ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
             </svg>
           </button>
-
           {openDropdown === 'date' && (
             <div className="absolute left-0 mt-2 w-72 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl z-30 p-3.5 backdrop-blur-lg">
               <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2 mb-2.5">
@@ -438,18 +452,17 @@ export default function TreasuryDashboardView({
           )}
         </div>
 
-        {/* 2. Payment Type Filter */}
+        {/* Payment Type Filter */}
         <div className="relative">
           <button
             onClick={() => setOpenDropdown(openDropdown === 'type' ? null : 'type')}
-            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 flex items-center justify-between gap-4 cursor-pointer hover:border-blue-500 hover:bg-slate-50/50 dark:hover:bg-slate-900 transition-all min-w-[160px] shadow-2xs"
+            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 flex items-center justify-between gap-4 cursor-pointer hover:border-blue-500 transition-all min-w-[160px]"
           >
             <span className="truncate">Payment Type ({selectedTypes.length})</span>
             <svg className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${openDropdown === 'type' ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
             </svg>
           </button>
-
           {openDropdown === 'type' && (
             <div className="absolute left-0 mt-2 w-72 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl z-30 p-3.5 backdrop-blur-lg">
               <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2 mb-2.5">
@@ -490,18 +503,17 @@ export default function TreasuryDashboardView({
           )}
         </div>
 
-        {/* 3. Biller Filter */}
+        {/* Biller Filter */}
         <div className="relative">
           <button
             onClick={() => setOpenDropdown(openDropdown === 'biller' ? null : 'biller')}
-            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 flex items-center justify-between gap-4 cursor-pointer hover:border-blue-500 hover:bg-slate-50/50 dark:hover:bg-slate-900 transition-all min-w-[160px] shadow-2xs"
+            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 flex items-center justify-between gap-4 cursor-pointer hover:border-blue-500 transition-all min-w-[160px]"
           >
             <span className="truncate">Biller ({selectedBillers.length})</span>
             <svg className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${openDropdown === 'biller' ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
             </svg>
           </button>
-
           {openDropdown === 'biller' && (
             <div className="absolute left-0 mt-2 w-80 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl z-30 p-3.5 backdrop-blur-lg">
               <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2 mb-2.5">
@@ -542,18 +554,17 @@ export default function TreasuryDashboardView({
           )}
         </div>
 
-        {/* 4. Payment Option Filter */}
+        {/* Payment Option Filter */}
         <div className="relative">
           <button
             onClick={() => setOpenDropdown(openDropdown === 'option' ? null : 'option')}
-            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 flex items-center justify-between gap-4 cursor-pointer hover:border-blue-500 hover:bg-slate-50/50 dark:hover:bg-slate-900 transition-all min-w-[160px] shadow-2xs"
+            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 flex items-center justify-between gap-4 cursor-pointer hover:border-blue-500 transition-all min-w-[160px]"
           >
             <span className="truncate">Payment Option ({selectedOptions.length})</span>
             <svg className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${openDropdown === 'option' ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
             </svg>
           </button>
-
           {openDropdown === 'option' && (
             <div className="absolute left-0 mt-2 w-72 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl z-30 p-3.5 backdrop-blur-lg">
               <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2 mb-2.5">
@@ -594,18 +605,17 @@ export default function TreasuryDashboardView({
           )}
         </div>
 
-        {/* 5. With eOR Filter */}
+        {/* eOR Filter */}
         <div className="relative">
           <button
             onClick={() => setOpenDropdown(openDropdown === 'eor' ? null : 'eor')}
-            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 flex items-center justify-between gap-4 cursor-pointer hover:border-blue-500 hover:bg-slate-50/50 dark:hover:bg-slate-900 transition-all min-w-[140px] shadow-2xs"
+            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 flex items-center justify-between gap-4 cursor-pointer hover:border-blue-500 transition-all min-w-[140px]"
           >
             <span className="truncate">With eOR ({selectedEor.length})</span>
             <svg className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${openDropdown === 'eor' ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
             </svg>
           </button>
-
           {openDropdown === 'eor' && (
             <div className="absolute left-0 mt-2 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl z-30 p-3.5 backdrop-blur-lg">
               <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2 mb-2.5">
@@ -645,12 +655,10 @@ export default function TreasuryDashboardView({
             </div>
           )}
         </div>
-
       </div>
 
       {/* ROW 1: CHARTS */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        
         <div className="bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
           <div>
             <h3 className="text-base font-bold text-slate-900 dark:text-white m-0 mb-4">Annual Total ePayment Transactions</h3>
@@ -665,9 +673,6 @@ export default function TreasuryDashboardView({
                   </div>
                 );
               })}
-              {activeMetrics.annualTransactions.length === 0 && (
-                <div className="w-full h-full flex items-center justify-center text-xs text-slate-400">No annual transaction records</div>
-              )}
             </div>
           </div>
           <div className="flex justify-between items-center text-xs text-slate-400 mt-3">
@@ -725,17 +730,13 @@ export default function TreasuryDashboardView({
           </div>
           <p className="text-[11px] text-slate-400 text-center mt-2 m-0">Ranked by municipal biller integration</p>
         </div>
-
       </div>
 
-      {/* ROW 2: PAYMENT OPTION DONUT CHARTS (MATCHING THE REFERENCE SCREENSHOT) */}
+      {/* ROW 2: PAYMENT OPTION DONUT CHARTS */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        
-        {/* 1. ePAYMENT TRANSACTIONS BY PAYMENT OPTION */}
         <div className="bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
           <div>
             <h3 className="text-sm font-bold tracking-wider uppercase text-slate-900 dark:text-white m-0 mb-6">ePayment Transactions by Payment Option</h3>
-            
             <div className="flex items-center justify-around gap-4 flex-wrap">
               <div 
                 className="w-44 h-44 rounded-full relative flex items-center justify-center shadow-md"
@@ -747,14 +748,10 @@ export default function TreasuryDashboardView({
                   </span>
                 </div>
               </div>
-
               <div className="flex flex-col gap-2 text-xs text-slate-600 dark:text-slate-300 max-h-48 overflow-y-auto pr-2">
                 {activeMetrics.transactionsByPaymentOption.map((opt, idx) => (
                   <div key={idx} className="flex items-center gap-2">
-                    <span 
-                      className="w-3 h-3 rounded-full shrink-0" 
-                      style={{ backgroundColor: PAYMENT_OPTION_COLORS[opt.option] || '#3b82f6' }}
-                    ></span> 
+                    <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: PAYMENT_OPTION_COLORS[opt.option] || '#3b82f6' }}></span> 
                     <span className="truncate max-w-[200px]" title={opt.option}>{opt.option}</span>
                   </div>
                 ))}
@@ -764,11 +761,9 @@ export default function TreasuryDashboardView({
           <p className="text-[11px] text-slate-400 text-center mt-6 m-0">Volume breakdown by integrated payment option channel</p>
         </div>
 
-        {/* 2. AMOUNT BY PAYMENT OPTION */}
         <div className="bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
           <div>
             <h3 className="text-sm font-bold tracking-wider uppercase text-slate-900 dark:text-white m-0 mb-6">Amount by Payment Option</h3>
-            
             <div className="flex items-center justify-around gap-4 flex-wrap">
               <div 
                 className="w-44 h-44 rounded-full relative flex items-center justify-center shadow-md"
@@ -780,14 +775,10 @@ export default function TreasuryDashboardView({
                   </span>
                 </div>
               </div>
-
               <div className="flex flex-col gap-2 text-xs text-slate-600 dark:text-slate-300 max-h-48 overflow-y-auto pr-2">
                 {activeMetrics.amountByPaymentOption.map((opt, idx) => (
                   <div key={idx} className="flex items-center gap-2">
-                    <span 
-                      className="w-3 h-3 rounded-full shrink-0" 
-                      style={{ backgroundColor: PAYMENT_OPTION_COLORS[opt.option] || '#3b82f6' }}
-                    ></span> 
+                    <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: PAYMENT_OPTION_COLORS[opt.option] || '#3b82f6' }}></span> 
                     <span className="truncate max-w-[200px]" title={`${opt.option} (${opt.percentage}%)`}>{opt.option}</span>
                   </div>
                 ))}
@@ -796,102 +787,56 @@ export default function TreasuryDashboardView({
           </div>
           <p className="text-[11px] text-slate-400 text-center mt-6 m-0">Total monetary value distributed across gateway payment methods</p>
         </div>
-
       </div>
 
-      {/* NEW: PAYMENT OPTION BREAKDOWN DETAILED TABLE (MATCHING YOUR SCREENSHOT) */}
-      <div className="grid grid-cols-1 mb-6">
-        <div className="bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-xs">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-base font-bold text-slate-900 dark:text-white m-0">Payment Option Performance & Revenue Breakdown</h3>
-            <span className="text-xs font-semibold px-2.5 py-1 bg-slate-100 dark:bg-slate-800 rounded-xl text-slate-600 dark:text-slate-300">
-              1 - {activeMetrics.amountByPaymentOption.length} of {activeMetrics.amountByPaymentOption.length}
-            </span>
+      {/* MARKET STALLS & LEASE OVERVIEW */}
+      <div className="bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-xs mb-6">
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <h3 className="text-base font-bold text-slate-900 dark:text-white m-0">Market Stalls & Lease Overview</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 m-0 mt-0.5">Active market stall records fetched from PostgreSQL ({stalls.length} total entries)</p>
           </div>
+          <span className="text-xs font-semibold px-2.5 py-1 bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 rounded-xl">
+            {stalls.length} Stalls Registered
+          </span>
+        </div>
 
+        {stalls.length === 0 ? (
+          <p className="text-slate-400 dark:text-slate-500 text-[13px] italic text-center p-6 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl m-0">
+            No market stall records available.
+          </p>
+        ) : (
           <div className="overflow-x-auto rounded-xl border border-slate-200/80 dark:border-slate-800">
             <table className="w-full text-left text-[13px] border-collapse">
               <thead className="bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-800">
                 <tr>
-                  <th className="py-3 px-4 w-12 text-center">#</th>
-                  <th className="py-3 px-4">Payment Option ▾</th>
-                  <th className="py-3 px-4">Transactions ▾</th>
-                  <th className="py-3 px-4">% of Total ePayments</th>
-                  <th className="py-3 px-4 text-right">Amount</th>
-                  <th className="py-3 px-4 text-right">% of Total Amount</th>
+                  <th className="py-3 px-4">Stall Number / ID</th>
+                  <th className="py-3 px-4">Vendor / Lessee</th>
+                  <th className="py-3 px-4">Section / Market</th>
+                  <th className="py-3 px-4 text-right">Monthly Rental</th>
+                  <th className="py-3 px-4 text-center">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
-                {activeMetrics.amountByPaymentOption.map((item, idx) => {
-                  const txMatch = activeMetrics.transactionsByPaymentOption.find(t => t.option === item.option);
-                  const txCount = txMatch?.transactions || Math.round((item.percentage / 100) * activeMetrics.totalEpayments);
-                  return (
-                    <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors">
-                      <td className="py-3 px-4 text-center font-medium text-slate-400">{idx + 1}.</td>
-                      <td className="py-3 px-4 font-semibold text-slate-900 dark:text-white flex items-center gap-2.5">
-                        <span 
-                          className="w-2.5 h-2.5 rounded-full shrink-0" 
-                          style={{ backgroundColor: PAYMENT_OPTION_COLORS[item.option] || '#3b82f6' }}
-                        ></span>
-                        {item.option}
-                      </td>
-                      <td className="py-3 px-4 text-slate-600 dark:text-slate-300">{txCount.toLocaleString()}</td>
-                      <td className="py-3 px-4 text-slate-600 dark:text-slate-300">{txMatch?.percentage ?? item.percentage}%</td>
-                      <td className="py-3 px-4 text-right font-semibold text-emerald-700 dark:text-emerald-400">
-                        ₱{item.amount.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </td>
-                      <td className="py-3 px-4 text-right text-slate-600 dark:text-slate-300">{item.percentage}%</td>
-                    </tr>
-                  );
-                })}
+                {stalls.slice(0, 5).map((stall, idx) => (
+                  <tr key={stall.id || idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors">
+                    <td className="py-3 px-4 font-mono font-semibold text-blue-600 dark:text-blue-400">{stall.stallNumber || stall.id}</td>
+                    <td className="py-3 px-4 font-semibold text-slate-900 dark:text-white">{stall.lesseeName || stall.vendorName || 'Unassigned'}</td>
+                    <td className="py-3 px-4 text-slate-600 dark:text-slate-300">{stall.section || 'General Market'}</td>
+                    <td className="py-3 px-4 text-right font-semibold text-emerald-700 dark:text-emerald-400">
+                      ₱{Number(stall.monthlyRent || stall.amount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                    </td>
+                    <td className="py-3 px-4 text-center">
+                      <span className="py-0.5 px-2.5 rounded-full text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                        {stall.status || 'Active'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
-        </div>
-      </div>
-
-      {/* ROW 3: ANNUAL SUMMARY LEDGER TABLE */}
-      <div className="grid grid-cols-1 mb-6">
-        <div className="bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
-          <div>
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-base font-bold text-slate-900 dark:text-white m-0">Annual ePayment Summary Ledger</h3>
-              <span className="text-xs font-semibold px-2.5 py-1 bg-slate-100 dark:bg-slate-800 rounded-xl text-slate-600 dark:text-slate-300">
-                {activeMetrics.annualTransactions.length} Years
-              </span>
-            </div>
-
-            <div className="overflow-x-auto rounded-xl border border-slate-200/80 dark:border-slate-800">
-              <table className="w-full text-left text-[13px] border-collapse">
-                <thead className="bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-800">
-                  <tr>
-                    <th className="py-3 px-4">Year ▾</th>
-                    <th className="py-3 px-4">Transactions</th>
-                    <th className="py-3 px-4 text-right">Amount</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
-                  {activeMetrics.annualTransactions.map((row, idx) => (
-                    <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors">
-                      <td className="py-3 px-4 font-semibold text-slate-900 dark:text-white">{row.year}</td>
-                      <td className="py-3 px-4 text-slate-600 dark:text-slate-300">{row.transactions.toLocaleString()}</td>
-                      <td className="py-3 px-4 text-right font-semibold text-emerald-700 dark:text-emerald-400">
-                        ₱{row.amount.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </td>
-                    </tr>
-                  ))}
-                  <tr className="bg-slate-100/60 dark:bg-slate-950/80 font-bold">
-                    <td className="py-3 px-4 text-slate-900 dark:text-white">Grand total</td>
-                    <td className="py-3 px-4 text-slate-900 dark:text-white">{activeMetrics.totalEpayments.toLocaleString()}</td>
-                    <td className="py-3 px-4 text-right text-emerald-700 dark:text-emerald-400">
-                      ₱{activeMetrics.totalAmount.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* POSTGRESQL LIVE TRANSACTION FEED TABLE */}

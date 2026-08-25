@@ -1,7 +1,6 @@
+// src/components/CitizenServicePortal.tsx
 import React, { useState } from 'react';
 import './layouts/CitizenServicePortal.css';
-
-
 
 // Types
 interface ServiceDetail {
@@ -133,7 +132,8 @@ export const CitizenServicePortal: React.FC = () => {
   const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
 
   // Navigation action when clicking card directly or "Go to Portal" inside Modal
-  const handleGoToModule = (serviceId: string, title: string) => {
+  // Fixed TS6133 by either using serviceId or prefixing with _ if unused
+  const handleGoToModule = (_serviceId: string, title: string) => {
     setActiveModalService(null);
     setActiveModule(title);
   };
@@ -168,7 +168,7 @@ export const CitizenServicePortal: React.FC = () => {
       <div className="min-h-screen bg-gray-50 p-8 font-sans text-slate-800">
         <button
           onClick={() => setActiveModule(null)}
-          className="text-blue-600 hover:underline flex items-center gap-2 mb-6 font-medium"
+          className="text-blue-600 hover:underline flex items-center gap-2 mb-6 font-medium cursor-pointer"
         >
           ‹ Back to Services
         </button>
@@ -194,11 +194,9 @@ export const CitizenServicePortal: React.FC = () => {
       <header className="border-b border-gray-100 px-6 py-3 flex items-center justify-between">
         {/* Left Logo Section */}
         <div className="flex items-center gap-3">
-          {/* Logo Placeholder */}
           <div className="w-10 h-10 bg-slate-200 rounded flex items-center justify-center text-xs text-slate-500 font-bold border border-slate-300">
             <img src="src/assets/logo-system.png" alt="Hero Icon" className="w-10 h-10 object-contain" />
           </div>
-          {/* Brand Name */}
           <span className="text-2xl font-extrabold tracking-tight text-blue-950">
             GovServe
           </span>
@@ -234,7 +232,7 @@ export const CitizenServicePortal: React.FC = () => {
           </div>
 
           {/* Search Button Icon */}
-          <button className="border border-sky-400 text-sky-500 p-2 rounded-lg hover:bg-sky-50 transition-colors">
+          <button className="border border-sky-400 text-sky-500 p-2 rounded-lg hover:bg-sky-50 transition-colors cursor-pointer">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
@@ -244,7 +242,6 @@ export const CitizenServicePortal: React.FC = () => {
 
       {/* Main Content Area */}
       <main className="max-w-7xl mx-auto px-8 py-6">
-        {/* Back Link */}
         <a
           href="#back"
           className="text-sky-600 font-semibold text-sm hover:underline inline-flex items-center gap-1 mb-4"
@@ -252,7 +249,6 @@ export const CitizenServicePortal: React.FC = () => {
           ‹ Back to Home
         </a>
 
-        {/* Title */}
         <h1 className="text-4xl font-extrabold text-blue-950 mb-6 tracking-tight">
           List of Services
         </h1>
@@ -289,7 +285,7 @@ export const CitizenServicePortal: React.FC = () => {
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full p-2.5 bg-white border border-gray-200 rounded-md text-slate-700 font-medium text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+              className="w-full p-2.5 bg-white border border-gray-200 rounded-md text-slate-700 font-medium text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
             >
               {CATEGORIES.map((cat) => (
                 <option key={cat} value={cat}>
@@ -338,7 +334,7 @@ export const CitizenServicePortal: React.FC = () => {
                         <div
                           key={service.id}
                           onClick={() => handleGoToModule(service.id, service.title)}
-                          className="card-hover-effect bg-white border border-sky-100 rounded-2xl p-6 flex flex-col items-center text-center cursor-pointer shadow-sm relative group"
+                          className="bg-white border border-sky-100 rounded-2xl p-6 flex flex-col items-center text-center cursor-pointer shadow-sm relative group hover:shadow-md transition-shadow"
                         >
                           {/* Icon Container */}
                           <div className="w-20 h-20 bg-[#dbeafe] text-sky-800 rounded-2xl flex items-center justify-center mb-5">
@@ -358,10 +354,10 @@ export const CitizenServicePortal: React.FC = () => {
                           {/* View Details Button */}
                           <button
                             onClick={(e) => {
-                              e.stopPropagation(); // Prevents triggers on parent card click
+                              e.stopPropagation();
                               setActiveModalService(service);
                             }}
-                            className="bg-[#0f4f66] hover:bg-[#0a394a] text-white text-xs font-semibold px-5 py-2.5 rounded-md transition-colors"
+                            className="bg-[#0f4f66] hover:bg-[#0a394a] text-white text-xs font-semibold px-5 py-2.5 rounded-md transition-colors cursor-pointer"
                           >
                             View Details
                           </button>
@@ -380,24 +376,20 @@ export const CitizenServicePortal: React.FC = () => {
       {activeModalService && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="bg-white rounded-2xl max-w-xl w-full p-8 shadow-2xl relative animate-in fade-in zoom-in-95 duration-150">
-            {/* Modal Close Button */}
             <button
               onClick={() => setActiveModalService(null)}
-              className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 transition-colors"
+              className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
 
-            {/* Modal Title */}
             <h2 className="text-2xl font-bold text-blue-950 mb-6 pr-8">
               {activeModalService.title}
             </h2>
 
-            {/* Modal Info Rows */}
             <div className="space-y-5 mb-8">
-              {/* Target Users */}
               <div className="flex items-start gap-4">
                 <div className="w-10 h-10 rounded-full bg-sky-100 text-sky-800 flex items-center justify-center shrink-0 mt-0.5">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -410,7 +402,6 @@ export const CitizenServicePortal: React.FC = () => {
                 </div>
               </div>
 
-              {/* Service Method */}
               <div className="flex items-start gap-4">
                 <div className="w-10 h-10 rounded-full bg-sky-100 text-sky-800 flex items-center justify-center shrink-0 mt-0.5">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -423,7 +414,6 @@ export const CitizenServicePortal: React.FC = () => {
                 </div>
               </div>
 
-              {/* Time Period */}
               <div className="flex items-start gap-4">
                 <div className="w-10 h-10 rounded-full bg-sky-100 text-sky-800 flex items-center justify-center shrink-0 mt-0.5">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -436,7 +426,6 @@ export const CitizenServicePortal: React.FC = () => {
                 </div>
               </div>
 
-              {/* Charges & Payment */}
               <div className="flex items-start gap-4">
                 <div className="w-10 h-10 rounded-full bg-sky-100 text-sky-800 flex items-center justify-center shrink-0 mt-0.5">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -449,7 +438,6 @@ export const CitizenServicePortal: React.FC = () => {
                 </div>
               </div>
 
-              {/* Payment Method */}
               <div className="flex items-start gap-4">
                 <div className="w-10 h-10 rounded-full bg-sky-100 text-sky-800 flex items-center justify-center shrink-0 mt-0.5">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -463,12 +451,11 @@ export const CitizenServicePortal: React.FC = () => {
               </div>
             </div>
 
-            {/* Direct Action Button */}
             <button
               onClick={() =>
                 handleGoToModule(activeModalService.id, activeModalService.title)
               }
-              className="w-full bg-[#0f4f66] hover:bg-[#0a394a] text-white font-bold py-3.5 rounded-lg transition-colors text-base"
+              className="w-full bg-[#0f4f66] hover:bg-[#0a394a] text-white font-bold py-3.5 rounded-lg transition-colors text-base cursor-pointer"
             >
               Go to {activeModalService.title}
             </button>

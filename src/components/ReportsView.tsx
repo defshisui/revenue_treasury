@@ -4,12 +4,17 @@ import type { RPTRecord } from "../types/treasury";
 import { getLeases } from "../services/marketService";
 import { getHawkerApplications } from "../services/hawkerservice";
 
-export default function ReportsView({ isCollapsed = false }: { isCollapsed?: boolean }) {
+export default function ReportsView({ 
+  rptRecords = [], 
+  isCollapsed = false 
+}: { 
+  rptRecords?: RPTRecord[]; 
+  isCollapsed?: boolean 
+}) {
   const [reportPeriod, setReportPeriod] = useState("FY 2026");
   const [previewModalType, setPreviewModalType] = useState<"daily" | "delinquent" | "market" | "hawkers" | null>(null);
 
   // Database state
-  const [rptRecords, setRptRecords] = useState<RPTRecord[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [marketLeases, setMarketLeases] = useState<any[]>([]);
   const [hawkerApps, setHawkerApps] = useState<any[]>([]);

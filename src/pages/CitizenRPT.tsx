@@ -173,7 +173,6 @@ export default function CitizenRPT() {
   const location = useLocation();
   const { theme, toggleTheme } = useTheme();
   const [session] = useState<CitizenSession | null>(() => getCitizenSession());
-  const [overview, setOverview] = useState<RPTOverview | null>(null);
   const [properties, setProperties] = useState<RPTProperty[]>([]);
   const [payments, setPayments] = useState<RPTPayment[]>([]);
   const [applications, setApplications] = useState<RPTApplication[]>([]);
@@ -255,7 +254,7 @@ export default function CitizenRPT() {
       }
 
       try {
-        const [nextOverview, nextProperties, nextPayments, nextApplications, nextNotifications] = await Promise.all([
+        const [, nextProperties, nextPayments, nextApplications, nextNotifications] = await Promise.all([
           getRPTOverview(),
           getRPTProperties(),
           getRPTPayments(),
@@ -263,7 +262,6 @@ export default function CitizenRPT() {
           getRPTNotifications(),
         ]);
         if (!isMounted) return;
-        setOverview(nextOverview);
         setProperties(nextProperties);
         setPayments(nextPayments);
         setApplications(nextApplications);
@@ -363,12 +361,6 @@ export default function CitizenRPT() {
 
     setIsSubmitting(true);
     try {
-      /*
-       * The existing RPT service remains the source of truth for the
-       * assessment. This call creates the payment transaction/reference.
-       * The UI then shows a simulated online-payment confirmation suitable
-       * for the capstone prototype.
-       */
       const payload: PaymentRequestPayload = {
         propertyId: paymentProperty.id,
         amount,
@@ -377,12 +369,6 @@ export default function CitizenRPT() {
 
       const result = await createRPTPaymentRequest(payload);
 
-      /*
-       * In the prototype, a successful confirmation is represented by the
-       * returned payment record. If the real backend later returns
-       * "Pending Payment", its status is preserved instead of pretending
-       * that a real external gateway transaction happened.
-       */
       setPayments((current) => [result, ...current]);
       setPaymentResult(result);
       setPaymentStep(4);

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+// src/components/AuditTrailView.tsx
+import { useState, useEffect } from "react";
 
 export interface AuditRecord {
   id: string;
@@ -27,7 +28,7 @@ export default function AuditTrailView({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedModule, setSelectedModule] = useState("ALL");
   const [selectedSeverity, setSelectedSeverity] = useState("ALL");
-  const [actionCategory, setActionCategory] = useState("ALL"); // NEW: Quick filter for auth actions
+  const [actionCategory, setActionCategory] = useState("ALL"); // Quick filter for auth actions
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [currentPage, setCurrentPage] = useState(1);

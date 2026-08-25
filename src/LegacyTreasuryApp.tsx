@@ -562,8 +562,14 @@ export default function LegacyTreasuryApp() {
           )}
 
           {activeTab === "market" && <MarketStallsView records={stalls} isCollapsed={isSidebarCollapsed} />}
-          {activeTab === "market-city" && <CityOwnedMarketAdmin />}
-          {activeTab === "market-private" && <PrivateOwnedMarketAdmin />}
+          
+          {activeTab === "market-city" && (
+            <CityOwnedMarketAdmin {...({ isCollapsed: isSidebarCollapsed } as any)} />
+          )}
+          
+          {activeTab === "market-private" && (
+            <PrivateOwnedMarketAdmin {...({ isCollapsed: isSidebarCollapsed } as any)} />
+          )}
 
           {activeTab === "users" && <UsersView records={users} isCollapsed={isSidebarCollapsed} />}
           {activeTab === "audit" && <AuditTrailView records={auditLogs as unknown as ComponentAuditRecord[]} isCollapsed={isSidebarCollapsed} />}
@@ -579,7 +585,9 @@ export default function LegacyTreasuryApp() {
             />
           )}
 
-          {activeTab === "hawker" && <HawkerAssociation isCollapsed={isSidebarCollapsed} />}
+          {activeTab === "hawker" && (
+            <HawkerAssociation {...({ isCollapsed: isSidebarCollapsed } as any)} />
+          )}
         </main>
       </div>
     </div>

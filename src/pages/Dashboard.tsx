@@ -283,7 +283,8 @@ export default function Login() {
             <form onSubmit={handleLogin} className="space-y-5">
               <div className="space-y-2">
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">EMAIL ADDRESS</label>
-                <div className="relative flex items-center bg-[#EBF2FE] rounded-2xl px-4 py-3.5 focus-within:ring-2 focus-within:ring-blue-600 transition-all">
+                {/* Utilizing isErrorState here to change border color dynamically on error */}
+                <div className={`relative flex items-center bg-[#EBF2FE] rounded-2xl px-4 py-3.5 transition-all ${isErrorState ? 'ring-2 ring-rose-500' : 'focus-within:ring-2 focus-within:ring-blue-600'}`}>
                   <input type="email" required disabled={isLockedOut} placeholder="name@email.com" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-transparent text-sm text-slate-900 placeholder-slate-400 focus:outline-none font-medium" />
                 </div>
               </div>
@@ -292,7 +293,7 @@ export default function Login() {
                 <div className="flex items-center justify-between">
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">PASSWORD</label>
                 </div>
-                <div className="relative flex items-center bg-[#EBF2FE] rounded-2xl px-4 py-3.5 focus-within:ring-2 focus-within:ring-blue-600 transition-all">
+                <div className={`relative flex items-center bg-[#EBF2FE] rounded-2xl px-4 py-3.5 transition-all ${isErrorState ? 'ring-2 ring-rose-500' : 'focus-within:ring-2 focus-within:ring-blue-600'}`}>
                   <input type={showPassword ? "text" : "password"} required disabled={isLockedOut} placeholder="••••••••••••••" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-transparent text-sm text-slate-900 placeholder-slate-400 focus:outline-none font-medium pr-10" />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 text-slate-500 hover:text-slate-800 text-xs font-bold cursor-pointer">
                     {showPassword ? "Hide" : "Show"}

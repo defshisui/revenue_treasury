@@ -5,7 +5,6 @@ export interface MarketVendorsHubProps {
 }
 
 export const MarketVendorsHub: React.FC<MarketVendorsHubProps> = ({ isCollapsed = false }) => {
-  const [activeModal, setActiveModal] = useState<string | null>(null);
   const [marketCategoryModal, setMarketCategoryModal] = useState<string | null>(null);
   const [submitOptionsModal, setSubmitOptionsModal] = useState(false);
   const [marketOperatorGuideModal, setMarketOperatorGuideModal] = useState(false);
@@ -111,7 +110,7 @@ export const MarketVendorsHub: React.FC<MarketVendorsHubProps> = ({ isCollapsed 
         <div className="w-full bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-xs">
           <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-3 cursor-pointer" onClick={() => { setActiveModal(null); window.location.href = '/citizen-portal'; }}>
+              <div className="flex items-center gap-3 cursor-pointer" onClick={() => { window.location.href = '/citizen-portal'; }}>
                 <div className="p-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xs flex items-center justify-center">
                   <img 
                     src="/src/assets/logo-system.png" 
@@ -415,7 +414,7 @@ export const MarketVendorsHub: React.FC<MarketVendorsHubProps> = ({ isCollapsed 
             </div>
 
             <div className="flex justify-end gap-2 px-6 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
-              <button onClick={() => setMarketCategoryModal(null)} className="px-4 py-2 border border-slate-300 dark:border-slate-700 rounded font-semibold hover:bg-slate-100 text-xs">Close Menu</button>
+              <button onClick={() => setMarketCategoryModal(null)} className="px-4 py-2 border border-slate-300 dark:border-slate-700 rounded font-semibold hover:bg-slate-100 text-xs cursor-pointer">Close Menu</button>
             </div>
           </div>
         </div>
@@ -446,10 +445,10 @@ export const MarketVendorsHub: React.FC<MarketVendorsHubProps> = ({ isCollapsed 
             </div>
 
             <div className="flex justify-between items-center px-6 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-xs">
-              <button onClick={() => { setSubmitOptionsModal(false); setMarketCategoryModal('cityOwned'); }} className="font-semibold text-slate-600 hover:underline">
+              <button onClick={() => { setSubmitOptionsModal(false); setMarketCategoryModal('cityOwned'); }} className="font-semibold text-slate-600 hover:underline cursor-pointer">
                 &larr; Back to Menu
               </button>
-              <button onClick={() => setSubmitOptionsModal(false)} className="px-4 py-2 border border-slate-300 dark:border-slate-700 rounded font-semibold hover:bg-slate-100">Close</button>
+              <button onClick={() => setSubmitOptionsModal(false)} className="px-4 py-2 border border-slate-300 dark:border-slate-700 rounded font-semibold hover:bg-slate-100 cursor-pointer">Close</button>
             </div>
           </div>
         </div>
