@@ -31,6 +31,7 @@ interface ExtendedApplicationRecord extends Omit<RPTApplicationRecord, 'document
     id: string;
     name: string;
     type: string;
+    url?: string;
     status: 'Verified' | 'Rejected' | 'Pending';
     uploadedAt: string;
   }[];
@@ -131,6 +132,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                 id: `DOC-${idx + 1}`,
                 name: `Document ${idx + 1}`,
                 type: 'PDF',
+                url: '',
                 status: 'Pending' as const,
                 uploadedAt: item.filedDate || ''
               };
@@ -140,6 +142,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                 id: `DOC-${idx + 1}`,
                 name: doc,
                 type: doc.includes('.pdf') ? 'PDF' : 'IMAGE',
+                url: doc.startsWith('data:') || doc.startsWith('http') ? doc : `/uploads/${doc}`,
                 status: 'Pending' as const,
                 uploadedAt: item.filedDate || ''
               };
@@ -148,6 +151,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
               id: doc.id || `DOC-${idx + 1}`,
               name: doc.name || doc.fileName || `Document ${idx + 1}`,
               type: doc.type || 'PDF',
+              url: doc.url || '',
               status: doc.status || 'Pending',
               uploadedAt: doc.uploadedAt || item.filedDate || ''
             };
@@ -235,7 +239,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
             id: target.id,
             status: target.status,
             applicantName: target.applicantName,
-            documents: target.documents.map(d => d.name),
+            documents: target.documents.map(d => ({ name: d.name, url: d.url || '' })),
             controlNumber: target.referenceNumber,
             email: target.applicantEmail,
             mobileNumber: target.applicantPhone,
@@ -282,18 +286,25 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     }
   };
 
-  const handleOpenPreview = (docName: string) => {
-    // Check if docName is a server path or direct URL, otherwise build absolute url or fallback placeholder
-    let targetUrl = docName;
-    if (docName.includes('/uploads/')) {
-      const cleanPath = docName.includes(': /uploads/') ? docName.split(': ')[1] : docName;
-      targetUrl = cleanPath.startsWith('http') ? cleanPath : `${API_BASE_URL}${cleanPath}`;
-    } else if (!docName.startsWith('http') && !docName.startsWith('blob:')) {
-      // If it's just a file name string like "title.pdf", use a mock or standard upload path format if available
-      targetUrl = `${API_BASE_URL}/uploads/${docName}`;
+  // Fixed Preview Lightbox Handler with fallback support for base64 strings and absolute paths
+  const handleOpenPreview = (doc: { name: string; url?: string }) => {
+    let targetUrl = doc.url || '';
+
+    if (!targetUrl || targetUrl === '') {
+      targetUrl = doc.name;
     }
 
-    setPreviewDocTitle(docName);
+    if (targetUrl.startsWith('data:')) {
+      // Base64 string ready for lightbox
+    } else if (targetUrl.startsWith('http')) {
+      // Fully qualified absolute URL
+    } else if (targetUrl.startsWith('/uploads/')) {
+      targetUrl = `${API_BASE_URL}${targetUrl}`;
+    } else {
+      targetUrl = `${API_BASE_URL}/uploads/${targetUrl}`;
+    }
+
+    setPreviewDocTitle(doc.name);
     setPreviewDocUrl(targetUrl);
   };
 
@@ -740,20 +751,21 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                                 </div>
                                 <div className="flex gap-2">
                                   <button
-                                    onClick={() => handleOpenPreview(doc.name)}
+                                    onClick={() => handleOpenPreview(doc)}
                                     className="px-3 py-1.5 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900 rounded-lg font-semibold cursor-pointer"
                                   >
                                     Preview
                                   </button>
                                   <button
                                     onClick={() => handleDocumentStatusChange(doc.id, 'Verified')}
-                                    className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg font-semibold cursor-pointer"
+                                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold cursor-pointer transition-colors"
                                   >
                                     Verify
                                   </button>
+                                  {/* High-visibility Rose Red Reject Button */}
                                   <button
                                     onClick={() => handleDocumentStatusChange(doc.id, 'Rejected')}
-                                    className="px-3 py-1.5 bg-rose-50 text-rose-700 rounded-lg font-semibold cursor-pointer"
+                                    className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-semibold cursor-pointer shadow-xs transition-colors"
                                   >
                                     Reject
                                   </button>
@@ -848,7 +860,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                     <div key={doc.id} className="p-3 border rounded-xl flex justify-between items-center text-xs">
                       <span>{doc.name}</span>
                       <button
-                        onClick={() => handleOpenPreview(doc.name)}
+                        onClick={() => handleOpenPreview(doc)}
                         className="px-3 py-1 bg-blue-50 text-blue-700 rounded-lg font-semibold cursor-pointer"
                       >
                         Preview
@@ -885,7 +897,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
               </button>
             </div>
             <div className="flex-1 bg-slate-100 dark:bg-slate-950 overflow-auto flex items-center justify-center p-4">
-              {previewDocUrl.toLowerCase().includes('.pdf') ? (
+              {previewDocUrl.toLowerCase().includes('.pdf') || previewDocUrl.startsWith('data:application/pdf') ? (
                 <iframe
                   src={previewDocUrl}
                   className="w-full h-full rounded-xl border-0 shadow-inner bg-white"
