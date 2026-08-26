@@ -179,12 +179,11 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    // Handle File Attachment Selection (Image / PDF)
+    // FIX: Convert File to Base64 instead of temporary Blob URL
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, docType: HawkerDocument['document_type']) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        // Ensure file is image or PDF
         const validTypes = ['image/jpeg', 'image/png', 'application/pdf'];
         if (!validTypes.includes(file.type)) {
             alert('Invalid file format. Please upload a JPG, PNG image or a PDF document.');
@@ -192,19 +191,43 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
             return;
         }
 
-        const newDoc: HawkerDocument = {
-            id: crypto.randomUUID(),
-            document_type: docType,
-            file_name: file.name,
-            file_url: URL.createObjectURL(file), // Generate local preview URL
-            mime_type: file.type,
-            status: 'PENDING'
+        const reader = new FileReader();
+
+        reader.onloadend = () => {
+            const base64String = reader.result as string;
+
+            const newDoc: HawkerDocument = {
+                id: crypto.randomUUID(),
+                document_type: docType,
+                file_name: file.name,
+                file_url: base64String, // Saved permanently as Base64 text
+                mime_type: file.type,
+                status: 'PENDING'
+            };
+
+            setUploadedDocs(prev => {
+                const filtered = prev.filter(d => d.document_type !== docType);
+                return [...filtered, newDoc];
+            });
         };
 
-        setUploadedDocs(prev => {
-            const filtered = prev.filter(d => d.document_type !== docType);
-            return [...filtered, newDoc];
-        });
+        reader.readAsDataURL(file);
+    };
+
+    // FIX: Helper to safely open Base64 strings in a new browser tab
+    const openAttachment = (url: string | undefined, mimeType: string | undefined) => {
+        if (!url) return;
+        const newTab = window.open();
+        if (newTab) {
+            newTab.document.body.style.margin = '0';
+            if (mimeType === 'application/pdf') {
+                newTab.document.write(`<iframe src="${url}" width="100%" height="100%" style="border:none;"></iframe>`);
+            } else {
+                newTab.document.write(`<div style="display:flex;justify-content:center;align-items:center;height:100vh;background:#0f172a;"><img src="${url}" style="max-width:100%;max-height:100vh;object-fit:contain;" /></div>`);
+            }
+        } else {
+            alert("Please allow pop-ups to view this document.");
+        }
     };
 
     const showApplicationForm = () => {
@@ -229,7 +252,6 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
         setIsModalOpen(true);
     };
 
-    // Handler to open an application in View-Only Mode
     const handleViewClick = (app: any) => {
         setFormData({
             associationName: app.associationName || '',
@@ -249,7 +271,6 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
             documents: app.lguMeta?.documents || initialFormState.documents,
         });
 
-        // Set uploaded documents array from application metadata
         setUploadedDocs(app.lguMeta?.uploadedDocuments || app.uploadedDocuments || []);
         setViewedAppStatus(app.status || 'New');
         setViewedAppRemarks(app.remarks || '');
@@ -297,7 +318,7 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                 marketZone: formData.marketZone,
                 assignedStallCount: Number(formData.assignedStallCount),
                 documents: formData.documents,
-                uploadedDocuments: uploadedDocs, // Pass digital vault files
+                uploadedDocuments: uploadedDocs,
                 feesPaid: false,
                 violationsCount: 0,
                 auditTrail: [
@@ -820,13 +841,13 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                                                 src={getDocByType('SEC_DTI_PERMIT')?.file_url}
                                                                 alt="SEC Permit Preview"
                                                                 className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
-                                                                onClick={() => window.open(getDocByType('SEC_DTI_PERMIT')?.file_url, '_blank')}
+                                                                onClick={() => openAttachment(getDocByType('SEC_DTI_PERMIT')?.file_url, getDocByType('SEC_DTI_PERMIT')?.mime_type)}
                                                             />
                                                         </div>
                                                     ) : (
                                                         <div
                                                             className="w-full h-24 rounded border border-slate-200 bg-slate-50 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-100"
-                                                            onClick={() => window.open(getDocByType('SEC_DTI_PERMIT')?.file_url, '_blank')}
+                                                            onClick={() => openAttachment(getDocByType('SEC_DTI_PERMIT')?.file_url, getDocByType('SEC_DTI_PERMIT')?.mime_type)}
                                                         >
                                                             <i className="fa-solid fa-file-pdf text-rose-500 text-3xl mb-1"></i>
                                                             <span className="text-[10px] text-blue-600 font-semibold hover:underline">View PDF</span>
@@ -861,13 +882,13 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                                                 src={getDocByType('MEMBER_ROSTER')?.file_url}
                                                                 alt="Roster Preview"
                                                                 className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
-                                                                onClick={() => window.open(getDocByType('MEMBER_ROSTER')?.file_url, '_blank')}
+                                                                onClick={() => openAttachment(getDocByType('MEMBER_ROSTER')?.file_url, getDocByType('MEMBER_ROSTER')?.mime_type)}
                                                             />
                                                         </div>
                                                     ) : (
                                                         <div
                                                             className="w-full h-24 rounded border border-slate-200 bg-slate-50 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-100"
-                                                            onClick={() => window.open(getDocByType('MEMBER_ROSTER')?.file_url, '_blank')}
+                                                            onClick={() => openAttachment(getDocByType('MEMBER_ROSTER')?.file_url, getDocByType('MEMBER_ROSTER')?.mime_type)}
                                                         >
                                                             <i className="fa-solid fa-file-pdf text-rose-500 text-3xl mb-1"></i>
                                                             <span className="text-[10px] text-blue-600 font-semibold hover:underline">View PDF</span>
@@ -902,13 +923,13 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                                                 src={getDocByType('BARANGAY_CLEARANCE')?.file_url}
                                                                 alt="Clearance Preview"
                                                                 className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
-                                                                onClick={() => window.open(getDocByType('BARANGAY_CLEARANCE')?.file_url, '_blank')}
+                                                                onClick={() => openAttachment(getDocByType('BARANGAY_CLEARANCE')?.file_url, getDocByType('BARANGAY_CLEARANCE')?.mime_type)}
                                                             />
                                                         </div>
                                                     ) : (
                                                         <div
                                                             className="w-full h-24 rounded border border-slate-200 bg-slate-50 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-100"
-                                                            onClick={() => window.open(getDocByType('BARANGAY_CLEARANCE')?.file_url, '_blank')}
+                                                            onClick={() => openAttachment(getDocByType('BARANGAY_CLEARANCE')?.file_url, getDocByType('BARANGAY_CLEARANCE')?.mime_type)}
                                                         >
                                                             <i className="fa-solid fa-file-pdf text-rose-500 text-3xl mb-1"></i>
                                                             <span className="text-[10px] text-blue-600 font-semibold hover:underline">View PDF</span>
