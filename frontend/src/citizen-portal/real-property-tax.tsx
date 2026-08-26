@@ -230,6 +230,9 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
   const [paymentMethod, setPaymentMethod] = useState("GCash");
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
 
+  // NEW STATE: Holds the URL of the document being previewed
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
   const [loading, setLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [searchType, setSearchType] = useState("Tax Declaration");
@@ -473,7 +476,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
     formDataPayload.append("notes", formData.notes);
 
     // BULLETPROOF FALLBACK: Explicitly send a stringified list of document names
-    // Using a safe entry mapping that avoids unused variables
     const attachedDocsList = Object.entries(documents)
       .filter((entry) => entry[1])
       .map(([key, val]) => `${key}: ${val}`);
@@ -934,7 +936,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
                       try { docs = JSON.parse(docs); } catch { }
                     }
                     if (docs && !Array.isArray(docs) && typeof docs === "object") {
-                      // FIX: Replaced .map(([k, v]) => v) with Object.values to prevent TS warning
                       docs = Object.values(docs).filter((v) => v);
                     }
 
@@ -947,7 +948,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
                     return docArray.map((doc, idx) => {
                       const docStr = typeof doc === "string" ? doc : JSON.stringify(doc);
 
-                      // Check if it looks like an uploaded file path
                       const isUpload = docStr.includes('/uploads/') || docStr.startsWith('http') || docStr.startsWith('blob:');
                       const cleanDocStr = docStr.includes(': /uploads/') ? docStr.split(': ')[1] : docStr;
 
@@ -958,9 +958,20 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
                       return (
                         <div key={idx} className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-800 shadow-sm flex flex-col group">
                           {imgUrl ? (
-                            <a href={imgUrl} target="_blank" rel="noopener noreferrer" className="w-full h-32 block bg-slate-200 dark:bg-slate-700">
-                              <img src={imgUrl} alt={`Document ${idx}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                            </a>
+                            <button
+                              type="button"
+                              onClick={() => setPreviewUrl(imgUrl)}
+                              className="w-full h-32 block bg-slate-200 dark:bg-slate-700 p-0 border-0 outline-none cursor-pointer"
+                            >
+                              {imgUrl.toLowerCase().includes('.pdf') ? (
+                                <div className="w-full h-full flex flex-col items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-blue-600 transition-colors">
+                                  <span className="text-3xl mb-1">📄</span>
+                                  <span className="text-[10px] font-bold">VIEW PDF</span>
+                                </div>
+                              ) : (
+                                <img src={imgUrl} alt={`Document ${idx}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                              )}
+                            </button>
                           ) : (
                             <div className="w-full h-32 flex flex-col items-center justify-center p-3 text-center">
                               <span className="text-3xl mb-2">📄</span>
@@ -1006,6 +1017,25 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
             <div className="mt-6 flex gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
               <button type="button" onClick={() => setIsPaymentOpen(false)} className="flex-1 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 cursor-pointer">Cancel</button>
               <button type="button" onClick={confirmPayment} className="flex-1 rounded-xl bg-blue-800 px-4 py-3 text-sm font-bold text-white hover:bg-blue-900 cursor-pointer">Confirm Payment</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* NEW LIGHTBOX MODAL FOR PREVIEWING DOCUMENTS */}
+      {previewUrl && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/90 backdrop-blur-sm p-4">
+          <div className="relative w-full max-w-4xl h-[85vh] bg-white dark:bg-slate-900 rounded-2xl overflow-hidden shadow-2xl flex flex-col">
+            <div className="flex justify-between items-center p-4 border-b border-slate-200 dark:border-slate-800">
+              <h3 className="font-bold text-slate-800 dark:text-slate-200">Document Preview</h3>
+              <button type="button" onClick={() => setPreviewUrl(null)} className="px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-xl font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer">Close ✕</button>
+            </div>
+            <div className="flex-1 w-full h-full bg-slate-100 dark:bg-slate-950 overflow-auto flex items-center justify-center p-4">
+              {previewUrl.toLowerCase().includes('.pdf') ? (
+                <iframe src={previewUrl} className="w-full h-full border-0 rounded-lg" title="PDF Preview" />
+              ) : (
+                <img src={previewUrl} alt="Preview" className="max-w-full max-h-full object-contain rounded-lg shadow-sm" />
+              )}
             </div>
           </div>
         </div>
