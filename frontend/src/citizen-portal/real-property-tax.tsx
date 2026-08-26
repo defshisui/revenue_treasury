@@ -356,7 +356,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
     setFormData((current) => ({ ...current, [name]: value }));
   }
 
-  // Exact Business Tax File-to-Base64 Conversion Reader
   function updateDocument(event: ChangeEvent<HTMLInputElement>) {
     const { name, files } = event.target;
     const file = files?.[0];
@@ -1027,7 +1026,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
         </div>
       )}
 
-      {/* EXACT BUSINESS TAX-STYLE DOCUMENT PREVIEW MODAL */}
+      {/* FIXED DOCUMENT PREVIEW MODAL */}
       {previewFile && (
         <div className="fixed inset-0 z-60 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-3xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
@@ -1040,7 +1039,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
             </div>
 
             <div className="h-[60vh] bg-slate-100 dark:bg-slate-950 rounded-2xl flex items-center justify-center border border-slate-200 dark:border-slate-800 overflow-hidden relative">
-              {previewFile.url.startsWith('data:image/') || previewFile.url.match(/\.(jpeg|jpg|gif|png)$/i) ? (
+              {previewFile.url.startsWith('data:image/') || previewFile.url.match(/\.(jpeg|jpg|gif|png)$/i) || previewFile.name.match(/\.(jpeg|jpg|gif|png)$/i) ? (
                 <img src={previewFile.url} alt="Document Preview" className="max-h-full max-w-full object-contain" />
               ) : (
                 <iframe src={previewFile.url} title="Document Preview" className="w-full h-full border-0 bg-white" />
