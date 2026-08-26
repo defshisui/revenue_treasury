@@ -19,18 +19,41 @@ export async function createRptApplication(req: Request, res: Response): Promise
   const appData = req.body as Record<string, string>;
   const files = (req as Request & { files?: Express.Multer.File[] }).files;
 
-  // 1. Save the ACTUAL server path so the frontend can preview the image
-  let filePaths: string[] = [];
+  // 1. Map uploaded files into structured objects containing name and url properties to match the business tax structure
+  let fileObjects: Array<{ name: string; url: string }> = [];
   if (files && files.length > 0) {
-    filePaths = files.map((f) => `/uploads/${f.filename}`);
+    fileObjects = files.map((f) => ({
+      name: f.originalname || f.filename,
+      url: `/uploads/${f.filename}`
+    }));
   }
 
-  // 2. Fallback text if Multer drops the physical file
-  if (filePaths.length === 0 && appData.documents) {
+  // 2. Fallback if physical files were not processed by multer but document names/paths were passed in body
+  if (fileObjects.length === 0 && appData.documents) {
     try {
-      filePaths = JSON.parse(appData.documents);
+      const parsed = JSON.parse(appData.documents);
+      if (Array.isArray(parsed)) {
+        fileObjects = parsed.map((item: any) => {
+          const itemStr = typeof item === 'string' ? item : JSON.stringify(item);
+          const cleanPath = itemStr.replace(/["'{}]/g, "").trim();
+          const parts = cleanPath.split(': ');
+          const fileName = parts.length > 1 ? parts[1].trim() : cleanPath;
+          const pathOnly = fileName.startsWith('/uploads/') ? fileName : `/uploads/${fileName}`;
+          return {
+            name: fileName.split('/').pop() || fileName,
+            url: pathOnly
+          };
+        });
+      }
     } catch {
-      filePaths = [appData.documents];
+      const cleanStr = appData.documents.replace(/["'{}]/g, "").trim();
+      const parts = cleanStr.split(': ');
+      const fileName = parts.length > 1 ? parts[1].trim() : cleanStr;
+      const pathOnly = fileName.startsWith('/uploads/') ? fileName : `/uploads/${fileName}`;
+      fileObjects = [{
+        name: fileName.split('/').pop() || fileName,
+        url: pathOnly
+      }];
     }
   }
 
@@ -59,7 +82,7 @@ export async function createRptApplication(req: Request, res: Response): Promise
         appData.status || 'Submitted',
         appData.filed_date || new Date().toISOString().split('T')[0],
         appData.notes || null,
-        JSON.stringify(filePaths),
+        JSON.stringify(fileObjects),
       ]
     );
 
