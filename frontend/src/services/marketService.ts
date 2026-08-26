@@ -15,8 +15,9 @@ export interface LeaseRecord {
   paymentMethod?: string; // Tracks the selected e-payment channel (GCash, Maya, Landbank, QR Ph, etc.)
 }
 
-const MODE: "LOCALSTORAGE" | "ONLINE" = "ONLINE"; 
-const API_BASE_URL = "http://localhost:3000"; // Update with your actual server URL when deployed
+import { API_BASE_URL } from '../config/api';
+
+const MODE: "LOCALSTORAGE" | "ONLINE" = "ONLINE";
 
 export async function getLeases(): Promise<LeaseRecord[]> {
   if (MODE === "ONLINE") {

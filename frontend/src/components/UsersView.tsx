@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import type { UserRecord } from "../types/treasury";
+import { API_BASE_URL } from "../config/api";
 
 export default function UsersView({ 
   records: initialRecords = [], 
@@ -20,8 +21,6 @@ export default function UsersView({
   const [newPassword, setNewPassword] = useState("");
   const [newRole, setNewRole] = useState("treasury-staff");
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
   const fetchUsers = () => {
     setIsLoading(true);

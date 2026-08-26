@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { API_BASE_URL } from '../config/api';
 
 export interface BusinessTaxAssessmentViewProps {
   isCollapsed?: boolean;
@@ -50,8 +51,6 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
     tin: '',
     file: null as File | null 
   });
-
-  const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
   useEffect(() => {
     const checkUserSession = () => {

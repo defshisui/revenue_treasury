@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import type { FormEvent } from "react";
+import { API_BASE_URL } from "../config/api";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -62,7 +63,7 @@ export default function Login() {
     const timeoutId = setTimeout(() => controller.abort(), 10000);
 
     try {
-      const response = await fetch("http://localhost:3000/login", {
+      const response = await fetch(`${API_BASE_URL}/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
@@ -156,7 +157,7 @@ export default function Login() {
     setRegMessage("");
 
     try {
-      const userRes = await fetch("http://localhost:3000/users", {
+      const userRes = await fetch(`${API_BASE_URL}/users`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -185,7 +186,7 @@ export default function Login() {
         throw new Error("User account was created, but server response missing user ID.");
       }
 
-      const citizenRes = await fetch("http://localhost:3000/citizens", {
+      const citizenRes = await fetch(`${API_BASE_URL}/citizens`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -86,7 +86,7 @@ interface RPTFormData {
   notes: string;
 }
 
-const API_BASE_URL = "http://localhost:3000";
+import { API_BASE_URL } from '../config/api';
 
 const services = [
   "Transfer of Ownership",

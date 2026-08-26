@@ -19,9 +19,8 @@ export interface HawkerApplicationPayload {
     status: string;
 }
 
-// Set to ONLINE to connect directly to your PostgreSQL database server
-const MODE: "LOCALSTORAGE" | "ONLINE" = "ONLINE"; 
-const API_BASE_URL = "http://localhost:3000";
+import { API_BASE_URL } from '../config/api';
+const MODE: "LOCALSTORAGE" | "ONLINE" = "ONLINE";
 
 export async function getHawkerApplications(): Promise<HawkerApplicationPayload[]> {
     if (MODE === "ONLINE") {

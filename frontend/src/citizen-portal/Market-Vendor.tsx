@@ -1,10 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import type { FC } from 'react';
+import { API_BASE_URL } from '../config/api';
 
 export interface MarketVendorsHubProps {
   isCollapsed?: boolean;
 }
 
-export const MarketVendorsHub: React.FC<MarketVendorsHubProps> = ({ isCollapsed = false }) => {
+export const MarketVendorsHub: FC<MarketVendorsHubProps> = ({ isCollapsed = false }) => {
   const [marketCategoryModal, setMarketCategoryModal] = useState<string | null>(null);
   const [submitOptionsModal, setSubmitOptionsModal] = useState(false);
   const [marketOperatorGuideModal, setMarketOperatorGuideModal] = useState(false);
@@ -13,8 +15,6 @@ export const MarketVendorsHub: React.FC<MarketVendorsHubProps> = ({ isCollapsed 
   const [user, setUser] = useState<{ fullname: string; email: string; initials: string; firstName: string } | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-
-  const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
   useEffect(() => {
     const checkUserSession = () => {

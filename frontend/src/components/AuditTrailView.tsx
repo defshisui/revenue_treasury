@@ -1,5 +1,5 @@
-// src/components/AuditTrailView.tsx
 import { useState, useEffect } from "react";
+import { API_BASE_URL } from "../config/api";
 
 export interface AuditRecord {
   id: string;
@@ -40,7 +40,6 @@ export default function AuditTrailView({
   const [isDeleting, setIsDeleting] = useState(false);
 
   const itemsPerPage = 10;
-  const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
   const fetchLogs = () => {
     setIsLoading(true);

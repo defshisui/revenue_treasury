@@ -1,13 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
-import logoSystem from '/src/assets/logo-system.png';
+import logoSystem from '../assets/logo-system.png';
+import { API_BASE_URL } from '../config/api';
 
 export default function CitizenPortalLanding() {
   // Authentication & Dropdown State
   const [user, setUser] = useState<{ fullname: string; email: string; initials: string; firstName: string } | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-
-  const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
   useEffect(() => {
     const checkUserSession = () => {

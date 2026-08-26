@@ -1,7 +1,6 @@
-// src/components/CityOwnedMarketAdmin.tsx
-
-import React, { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { getLeases, updateLease, deleteLease } from "../services/marketService";
+import { API_BASE_URL } from "../config/api";
 
 interface LeaseRecord {
   leaseId: string;
@@ -130,7 +129,7 @@ export default function CityOwnedMarketAdmin({
     setFraudAnalysisResult(null);
 
     try {
-      const response = await fetch('http://localhost:3000/api/ai/fraud-scan', {
+      const response = await fetch(`${API_BASE_URL}/api/ai/fraud-scan`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

@@ -140,7 +140,8 @@ export interface PaymentRequestPayload {
   paymentMethod: RPTPaymentMethod;
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+import { API_BASE_URL } from '../config/api';
+
 const USE_MOCK_DATA = import.meta.env.VITE_RPT_USE_MOCK !== "false";
 
 const demoProperties: RPTProperty[] = [

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import type { TransactionRecord } from "../types/treasury";
+import { API_BASE_URL } from "../config/api";
 
 export interface StallRecord {
   id?: string | number;
@@ -151,14 +152,14 @@ export default function TreasuryDashboardView({
       if (fetchTransactions) {
         dbTransactions = await fetchTransactions();
       } else {
-        const res = await fetch('http://localhost:3000/transactions');
+        const res = await fetch(`${API_BASE_URL}/transactions`);
         if (res.ok) dbTransactions = await res.json();
       }
 
       if (fetchStalls) {
         dbStalls = await fetchStalls();
       } else {
-        const res = await fetch('http://localhost:3000/market-leases');
+        const res = await fetch(`${API_BASE_URL}/market-leases`);
         if (res.ok) dbStalls = await res.json();
       }
 
@@ -166,7 +167,7 @@ export default function TreasuryDashboardView({
         dbMetrics = await fetchMetrics();
       } else {
         try {
-          const res = await fetch('http://localhost:3000/treasury-metrics');
+          const res = await fetch(`${API_BASE_URL}/treasury-metrics`);
           if (res.ok) dbMetrics = await res.json();
         } catch {
           // Fallback compute

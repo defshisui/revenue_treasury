@@ -1,6 +1,5 @@
-// src/components/BusinessTaxAssessmentAdminView.tsx
-
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { API_BASE_URL } from '../config/api';
 
 export interface BusinessTaxAssessmentAdminViewProps {
   isCollapsed?: boolean;
@@ -83,8 +82,6 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
     fireSafetyFee: 0,
     total: 0
   });
-
-  const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
   useEffect(() => {
     const checkAdminSession = () => {
