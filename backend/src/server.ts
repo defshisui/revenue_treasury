@@ -20,8 +20,15 @@ app.set('trust proxy', true);
 
 // Middleware
 app.use(corsMiddleware);
-app.use(express.json());
-app.use(express.text()); // For navigator.sendBeacon (text/plain payloads)
+
+// ==========================================
+// 🚨 FIX: INCREASE PAYLOAD LIMITS FOR BASE64 IMAGES 🚨
+// ==========================================
+app.use(express.json({ limit: '200mb' }));
+app.use(express.urlencoded({ limit: '200mb', extended: true }));
+app.use(express.text({ limit: '200mb' })); // For navigator.sendBeacon (text/plain payloads)
+
+console.log("✅ REAL Express JSON limit successfully set to 200MB!");
 
 // Static file serving for uploaded documents
 app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
