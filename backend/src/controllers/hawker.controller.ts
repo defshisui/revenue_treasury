@@ -105,3 +105,35 @@ export async function updateHawkerStatus(req: Request, res: Response): Promise<v
     res.status(500).json({ message: 'Failed to update hawker association.' });
   }
 }
+
+// ==========================================
+// NEW: Delete Hawker Association
+// ==========================================
+export async function deleteHawker(req: Request, res: Response): Promise<void> {
+  const { id } = req.params;
+
+  try {
+    // Attempt to delete based on the ID or the Association Number
+    const result = await pool.query(
+      `DELETE FROM hawker_associations
+       WHERE id::text=$1 OR association_number=$1
+       RETURNING *`,
+      [id]
+    );
+
+    if (result.rowCount === 0) {
+      res.status(404).json({ message: 'Hawker association record not found.' });
+      return;
+    }
+
+    // Log the deletion in your audit trail
+    await recordAudit(req, 'AUD-HAWKER-DELETE', 'system-admin@lgu.gov.ph', 'admin',
+      'Hawker Module', 'HAWKER_APPLICATION_DELETED', 'WARNING', null,
+      `Deleted association record: ${id}`);
+
+    res.status(200).json({ message: 'Hawker association deleted successfully.' });
+  } catch (err) {
+    console.error('Error deleting hawker association:', err);
+    res.status(500).json({ message: 'Failed to delete hawker association.' });
+  }
+}
