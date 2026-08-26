@@ -8,6 +8,15 @@ interface Props {
     onSubmitApplication?: (record: any) => void;
 }
 
+export interface HawkerDocument {
+    id: string;
+    document_type: 'SEC_DTI_PERMIT' | 'MEMBER_ROSTER' | 'BARANGAY_CLEARANCE';
+    file_name: string;
+    file_url: string;
+    mime_type: string;
+    status: string;
+}
+
 const MARKET_ZONES = [
     "Cubao Farmers Market Zone",
     "Novaliches Proper Market Zone",
@@ -40,7 +49,10 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
-    // Initial empty form state for resetting later (includes LGU zoning & document flags)
+    // Document Uploads State
+    const [uploadedDocs, setUploadedDocs] = useState<HawkerDocument[]>([]);
+
+    // Initial empty form state
     const initialFormState = {
         associationName: '',
         secNumber: '',
@@ -134,7 +146,6 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
 
         checkUserSession();
 
-        // Close dropdown on outside click
         const handleClickOutside = (event: MouseEvent) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
                 setIsUserMenuOpen(false);
@@ -147,27 +158,19 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
 
-        // Restrict phone number to 11 digits max (numbers only)
         if (name === 'telephone') {
             const numericValue = value.replace(/\D/g, '').slice(0, 11);
             setFormData(prev => ({ ...prev, [name]: numericValue }));
             return;
         }
 
-        // Automatically format dateGranted as MM/DD/YYYY as digits are typed
         if (name === 'dateGranted') {
             const numbersOnly = value.replace(/\D/g, '').slice(0, 8);
             let formattedDate = '';
 
-            if (numbersOnly.length > 0) {
-                formattedDate = numbersOnly.slice(0, 2);
-            }
-            if (numbersOnly.length >= 3) {
-                formattedDate += '/' + numbersOnly.slice(2, 4);
-            }
-            if (numbersOnly.length >= 5) {
-                formattedDate += '/' + numbersOnly.slice(4, 8);
-            }
+            if (numbersOnly.length > 0) formattedDate = numbersOnly.slice(0, 2);
+            if (numbersOnly.length >= 3) formattedDate += '/' + numbersOnly.slice(2, 4);
+            if (numbersOnly.length >= 5) formattedDate += '/' + numbersOnly.slice(4, 8);
 
             setFormData(prev => ({ ...prev, [name]: formattedDate }));
             return;
@@ -176,8 +179,35 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
+    // Handle File Attachment Selection (Image / PDF)
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, docType: HawkerDocument['document_type']) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Ensure file is image or PDF
+        const validTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+        if (!validTypes.includes(file.type)) {
+            alert('Invalid file format. Please upload a JPG, PNG image or a PDF document.');
+            e.target.value = '';
+            return;
+        }
+
+        const newDoc: HawkerDocument = {
+            id: crypto.randomUUID(),
+            document_type: docType,
+            file_name: file.name,
+            file_url: URL.createObjectURL(file), // Generate local preview URL
+            mime_type: file.type,
+            status: 'PENDING'
+        };
+
+        setUploadedDocs(prev => {
+            const filtered = prev.filter(d => d.document_type !== docType);
+            return [...filtered, newDoc];
+        });
+    };
+
     const showApplicationForm = () => {
-        // Generate automatic fields on open
         const currentDate = new Date().toLocaleDateString('en-US', {
             month: '2-digit',
             day: '2-digit',
@@ -193,6 +223,7 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
             submitterEmail: loggedInUser ? loggedInUser.email : prev.submitterEmail
         }));
 
+        setUploadedDocs([]);
         setIsPreviewMode(false);
         setIsViewOnly(false);
         setIsModalOpen(true);
@@ -218,10 +249,12 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
             documents: app.lguMeta?.documents || initialFormState.documents,
         });
 
+        // Set uploaded documents array from application metadata
+        setUploadedDocs(app.lguMeta?.uploadedDocuments || app.uploadedDocuments || []);
         setViewedAppStatus(app.status || 'New');
         setViewedAppRemarks(app.remarks || '');
 
-        setIsPreviewMode(true); // Makes inputs read-only based on existing logic
+        setIsPreviewMode(true);
         setIsViewOnly(true);
         setIsModalOpen(true);
     };
@@ -264,6 +297,7 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                 marketZone: formData.marketZone,
                 assignedStallCount: Number(formData.assignedStallCount),
                 documents: formData.documents,
+                uploadedDocuments: uploadedDocs, // Pass digital vault files
                 feesPaid: false,
                 violationsCount: 0,
                 auditTrail: [
@@ -293,6 +327,7 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
 
             alert("Application successfully submitted to the LGU portal!");
             setFormData(initialFormState);
+            setUploadedDocs([]);
             showListView();
         } catch (error) {
             console.error("Submission failed:", error);
@@ -323,6 +358,7 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
     const handleConfirmYes = () => {
         setIsConfirmationOpen(false);
         setFormData(initialFormState);
+        setUploadedDocs([]);
         showListView();
     };
 
@@ -340,18 +376,19 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
         window.location.href = '/';
     };
 
-    // Derived filtered list for search functionality
     const displayedApplications = applications.filter(app =>
         app.associationName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         app.associationNumber.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
+    const getDocByType = (docType: HawkerDocument['document_type']) => {
+        return uploadedDocs.find(d => d.document_type === docType);
+    };
+
     return (
         <div className="w-full min-h-screen bg-slate-100 font-sans text-slate-800 flex flex-col antialiased relative">
 
-            {/* =====================================================
-                MAIN NAVIGATION HEADER (Matches CitizenPortalLanding Reference)
-            ====================================================== */}
+            {/* MAIN NAVIGATION HEADER */}
             <header className="w-full bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-xs sticky top-0 z-40">
                 <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
 
@@ -465,9 +502,7 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                 </div>
             </header>
 
-            {/* =====================================================
-                MAIN CONTENT CONTAINER (LIST VIEW)
-            ====================================================== */}
+            {/* MAIN CONTENT CONTAINER (LIST VIEW) */}
             <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
                 <div className="w-full bg-white border border-slate-300 rounded-lg p-6 md:p-10 relative shadow-md">
                     <div className="flex flex-col md:flex-row justify-between items-center border-b border-slate-200 pb-5 gap-4">
@@ -528,8 +563,8 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                                 <td className="py-2.5 px-4">{app.submissionDate}</td>
                                                 <td className="py-2.5 px-4">
                                                     <span className={`px-2 py-1 rounded font-bold uppercase tracking-wider text-[10px] ${app.status === 'Approved' ? 'bg-emerald-100 text-emerald-800' :
-                                                            app.status === 'Rejected' || app.status === 'Suspended' ? 'bg-rose-100 text-rose-800' :
-                                                                'bg-amber-100 text-amber-800'
+                                                        app.status === 'Rejected' || app.status === 'Suspended' ? 'bg-rose-100 text-rose-800' :
+                                                            'bg-amber-100 text-amber-800'
                                                         }`}>
                                                         {app.status || 'New'}
                                                     </span>
@@ -577,9 +612,7 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                 </div>
             </main>
 
-            {/* =====================================================
-                MODAL POPUP (APPLICATION FORM & PREVIEW)
-            ====================================================== */}
+            {/* MODAL POPUP (APPLICATION FORM & PREVIEW) */}
             {isModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 overflow-y-auto">
                     <div className="bg-white border border-slate-300 rounded-lg max-w-4xl w-full p-6 md:p-8 relative shadow-2xl my-8 max-h-[90vh] overflow-y-auto">
@@ -630,8 +663,8 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                     {isViewOnly ? (
                                         <div className="w-56 text-right md:text-left md:pl-1">
                                             <span className={`px-3 py-1 rounded-full font-bold uppercase tracking-wider text-[10px] border ${viewedAppStatus === 'Approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                                                    viewedAppStatus === 'Rejected' || viewedAppStatus === 'Suspended' ? 'bg-rose-50 text-rose-700 border-rose-200' :
-                                                        'bg-amber-50 text-amber-700 border-amber-200'
+                                                viewedAppStatus === 'Rejected' || viewedAppStatus === 'Suspended' ? 'bg-rose-50 text-rose-700 border-rose-200' :
+                                                    'bg-amber-50 text-amber-700 border-amber-200'
                                                 }`}>
                                                 {viewedAppStatus}
                                             </span>
@@ -655,7 +688,6 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                     />
                                 </div>
 
-                                {/* Only display remarks if in View-Only mode and remarks exist */}
                                 {isViewOnly && viewedAppRemarks && (
                                     <div className="col-span-1 md:col-span-2 mt-3 p-3 bg-blue-50/50 border border-blue-200 rounded-lg">
                                         <h4 className="text-[11px] font-bold text-blue-800 uppercase tracking-wider mb-1">
@@ -759,24 +791,136 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                     </div>
                                 </div>
 
-                                {/* LGU DIGITAL VAULT ATTACHMENTS */}
+                                {/* LGU DIGITAL VAULT ATTACHMENTS WITH PREVIEWS */}
                                 <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
                                     <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wide mb-1">Digital Vault Statutory Documents</h3>
-                                    <p className="text-[11px] text-slate-500 mb-3">Upload required municipal compliance attachments for MDAD verification:</p>
+                                    <p className="text-[11px] text-slate-500 mb-3">Upload required municipal compliance attachments (JPG, PNG images or PDF files):</p>
 
-                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                                        <div className="p-3 bg-white rounded-lg border border-slate-200">
-                                            <p className="font-semibold text-slate-800 mb-1">SEC / DTI Permit</p>
-                                            <input type="file" disabled={isPreviewMode} className="w-full text-[10px] text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+
+                                        {/* DOCUMENT 1: SEC / DTI PERMIT */}
+                                        <div className="p-3 bg-white rounded-lg border border-slate-200 flex flex-col justify-between">
+                                            <div>
+                                                <p className="font-semibold text-slate-800 mb-1">SEC / DTI Permit</p>
+                                                {!isPreviewMode && (
+                                                    <input
+                                                        type="file"
+                                                        accept="image/jpeg, image/png, application/pdf"
+                                                        onChange={(e) => handleFileChange(e, 'SEC_DTI_PERMIT')}
+                                                        className="w-full text-[10px] text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                                                    />
+                                                )}
+                                            </div>
+
+                                            {getDocByType('SEC_DTI_PERMIT') ? (
+                                                <div className="mt-2 pt-2 border-t border-slate-100">
+                                                    {getDocByType('SEC_DTI_PERMIT')?.mime_type.startsWith('image/') ? (
+                                                        <div className="w-full h-24 rounded overflow-hidden border border-slate-200 bg-slate-50">
+                                                            <img
+                                                                src={getDocByType('SEC_DTI_PERMIT')?.file_url}
+                                                                alt="SEC Permit Preview"
+                                                                className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
+                                                                onClick={() => window.open(getDocByType('SEC_DTI_PERMIT')?.file_url, '_blank')}
+                                                            />
+                                                        </div>
+                                                    ) : (
+                                                        <div
+                                                            className="w-full h-24 rounded border border-slate-200 bg-slate-50 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-100"
+                                                            onClick={() => window.open(getDocByType('SEC_DTI_PERMIT')?.file_url, '_blank')}
+                                                        >
+                                                            <i className="fa-solid fa-file-pdf text-rose-500 text-3xl mb-1"></i>
+                                                            <span className="text-[10px] text-blue-600 font-semibold hover:underline">View PDF</span>
+                                                        </div>
+                                                    )}
+                                                    <p className="text-[10px] text-slate-500 truncate mt-1">{getDocByType('SEC_DTI_PERMIT')?.file_name}</p>
+                                                </div>
+                                            ) : isPreviewMode && (
+                                                <p className="text-[10px] text-amber-600 italic mt-2">No SEC/DTI file attached</p>
+                                            )}
                                         </div>
-                                        <div className="p-3 bg-white rounded-lg border border-slate-200">
-                                            <p className="font-semibold text-slate-800 mb-1">Member Roster List</p>
-                                            <input type="file" disabled={isPreviewMode} className="w-full text-[10px] text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+
+                                        {/* DOCUMENT 2: MEMBER ROSTER LIST */}
+                                        <div className="p-3 bg-white rounded-lg border border-slate-200 flex flex-col justify-between">
+                                            <div>
+                                                <p className="font-semibold text-slate-800 mb-1">Member Roster List</p>
+                                                {!isPreviewMode && (
+                                                    <input
+                                                        type="file"
+                                                        accept="image/jpeg, image/png, application/pdf"
+                                                        onChange={(e) => handleFileChange(e, 'MEMBER_ROSTER')}
+                                                        className="w-full text-[10px] text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                                                    />
+                                                )}
+                                            </div>
+
+                                            {getDocByType('MEMBER_ROSTER') ? (
+                                                <div className="mt-2 pt-2 border-t border-slate-100">
+                                                    {getDocByType('MEMBER_ROSTER')?.mime_type.startsWith('image/') ? (
+                                                        <div className="w-full h-24 rounded overflow-hidden border border-slate-200 bg-slate-50">
+                                                            <img
+                                                                src={getDocByType('MEMBER_ROSTER')?.file_url}
+                                                                alt="Roster Preview"
+                                                                className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
+                                                                onClick={() => window.open(getDocByType('MEMBER_ROSTER')?.file_url, '_blank')}
+                                                            />
+                                                        </div>
+                                                    ) : (
+                                                        <div
+                                                            className="w-full h-24 rounded border border-slate-200 bg-slate-50 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-100"
+                                                            onClick={() => window.open(getDocByType('MEMBER_ROSTER')?.file_url, '_blank')}
+                                                        >
+                                                            <i className="fa-solid fa-file-pdf text-rose-500 text-3xl mb-1"></i>
+                                                            <span className="text-[10px] text-blue-600 font-semibold hover:underline">View PDF</span>
+                                                        </div>
+                                                    )}
+                                                    <p className="text-[10px] text-slate-500 truncate mt-1">{getDocByType('MEMBER_ROSTER')?.file_name}</p>
+                                                </div>
+                                            ) : isPreviewMode && (
+                                                <p className="text-[10px] text-amber-600 italic mt-2">No Roster file attached</p>
+                                            )}
                                         </div>
-                                        <div className="p-3 bg-white rounded-lg border border-slate-200">
-                                            <p className="font-semibold text-slate-800 mb-1">Barangay Clearance</p>
-                                            <input type="file" disabled={isPreviewMode} className="w-full text-[10px] text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+
+                                        {/* DOCUMENT 3: BARANGAY CLEARANCE */}
+                                        <div className="p-3 bg-white rounded-lg border border-slate-200 flex flex-col justify-between">
+                                            <div>
+                                                <p className="font-semibold text-slate-800 mb-1">Barangay Clearance</p>
+                                                {!isPreviewMode && (
+                                                    <input
+                                                        type="file"
+                                                        accept="image/jpeg, image/png, application/pdf"
+                                                        onChange={(e) => handleFileChange(e, 'BARANGAY_CLEARANCE')}
+                                                        className="w-full text-[10px] text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                                                    />
+                                                )}
+                                            </div>
+
+                                            {getDocByType('BARANGAY_CLEARANCE') ? (
+                                                <div className="mt-2 pt-2 border-t border-slate-100">
+                                                    {getDocByType('BARANGAY_CLEARANCE')?.mime_type.startsWith('image/') ? (
+                                                        <div className="w-full h-24 rounded overflow-hidden border border-slate-200 bg-slate-50">
+                                                            <img
+                                                                src={getDocByType('BARANGAY_CLEARANCE')?.file_url}
+                                                                alt="Clearance Preview"
+                                                                className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
+                                                                onClick={() => window.open(getDocByType('BARANGAY_CLEARANCE')?.file_url, '_blank')}
+                                                            />
+                                                        </div>
+                                                    ) : (
+                                                        <div
+                                                            className="w-full h-24 rounded border border-slate-200 bg-slate-50 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-100"
+                                                            onClick={() => window.open(getDocByType('BARANGAY_CLEARANCE')?.file_url, '_blank')}
+                                                        >
+                                                            <i className="fa-solid fa-file-pdf text-rose-500 text-3xl mb-1"></i>
+                                                            <span className="text-[10px] text-blue-600 font-semibold hover:underline">View PDF</span>
+                                                        </div>
+                                                    )}
+                                                    <p className="text-[10px] text-slate-500 truncate mt-1">{getDocByType('BARANGAY_CLEARANCE')?.file_name}</p>
+                                                </div>
+                                            ) : isPreviewMode && (
+                                                <p className="text-[10px] text-amber-600 italic mt-2">No Barangay Clearance attached</p>
+                                            )}
                                         </div>
+
                                     </div>
                                 </div>
 
@@ -908,9 +1052,7 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                 </div>
             )}
 
-            {/* =====================================================
-                CONFIRMATION POPUP
-            ====================================================== */}
+            {/* CONFIRMATION POPUP */}
             {isConfirmationOpen && (
                 <div className="fixed inset-0 z-60 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
                     <div className="bg-white border border-slate-300 rounded-lg max-w-sm w-full p-6 text-center space-y-4 shadow-xl">
