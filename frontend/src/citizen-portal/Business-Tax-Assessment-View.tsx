@@ -65,6 +65,10 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
   const [loading, setLoading] = useState<boolean>(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
+  // Verification Processing States
+  const [verifying, setVerifying] = useState<boolean>(false);
+  const [verificationResult, setVerificationResult] = useState<any>(null);
+
   // Search, Filter & Pagination States
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [searchType, setSearchType] = useState<string>('Tracking/MP No.');
@@ -228,14 +232,12 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
   const handleAppointmentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // 📞 Strict 11-digit Phone Number Validation Check
     const cleanPhone = aptForm.phone.trim();
     if (!/^\d{11}$/.test(cleanPhone)) {
       alert("Please enter a valid 11-digit phone number (e.g., 09123456789).");
       return;
     }
 
-    // 🧮 Functional Math Captcha Validation Check
     if (parseInt(captchaInput.trim(), 10) !== captchaNum1 + captchaNum2) {
       alert("Incorrect CAPTCHA answer. Please solve the math problem correctly.");
       return;
@@ -252,7 +254,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
         body: JSON.stringify(aptForm)
       });
       if (!res.ok) throw new Error("Failed to submit appointment request.");
-      alert("Appointment submitted successfully! You can track its status in 'My Appointments'.");
+      alert("Appointment submitted successfully. You can track its status under 'My Appointments'.");
       setIsModalOpen(false);
     } catch (err: any) {
       alert(err.message || "An error occurred.");
@@ -263,41 +265,33 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
 
   const handleTaxBillVerification = async (e: React.FormEvent) => {
     e.preventDefault();
+    setVerifying(true);
+    setVerificationResult(null);
     try {
       const headers: HeadersInit = { 'Content-Type': 'application/json' };
       if (user?.token) headers['Authorization'] = `Bearer ${user.token}`;
 
-      const res = await fetch(`${API_BASE_URL}/verify/tax-bill`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(taxBillForm)
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Verification failed.");
-      alert(`Tax Bill Verified Successfully! Status: ${data.status || 'Valid'}`);
-      setIsModalOpen(false);
-    } catch (err: any) {
-      alert(err.message);
-    }
-  };
+      const res = isModalOpen === 'tax-bill'
+        ? await fetch(`${API_BASE_URL}/verify/tax-bill`, { method: 'POST', headers, body: JSON.stringify(taxBillForm) })
+        : await fetch(`${API_BASE_URL}/verify/or-number`, { method: 'POST', headers, body: JSON.stringify(orForm) });
 
-  const handleOrVerification = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const headers: HeadersInit = { 'Content-Type': 'application/json' };
-      if (user?.token) headers['Authorization'] = `Bearer ${user.token}`;
+      const textResponse = await res.text();
+      let data;
+      try {
+        data = JSON.parse(textResponse);
+      } catch (parseErr) {
+        throw new Error(`Server returned invalid response (Status ${res.status}). Please check backend API logs.`);
+      }
 
-      const res = await fetch(`${API_BASE_URL}/verify/or-number`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(orForm)
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Verification failed.");
-      alert(`Official Receipt Verified Successfully! Paid Amount: ₱${data.amount || 'N/A'}`);
-      setIsModalOpen(false);
+      if (!res.ok) {
+        throw new Error(data.message || `Server responded with status code ${res.status}`);
+      }
+
+      setVerificationResult(data);
     } catch (err: any) {
-      alert(err.message);
+      alert(`Verification Error: ${err.message}`);
+    } finally {
+      setVerifying(false);
     }
   };
 
@@ -323,7 +317,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
         body: formData
       });
       if (!res.ok) throw new Error("Failed to submit sales declaration.");
-      alert("Sales declaration submitted successfully!");
+      alert("Sales declaration submitted successfully.");
       setIsModalOpen(false);
       fetchAssessments();
     } catch (err: any) {
@@ -339,11 +333,13 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
       setCaptchaNum2(Math.floor(Math.random() * 10) + 1);
       setCaptchaInput('');
     }
+    setVerificationResult(null);
     setIsModalOpen(type);
   };
 
   const closeModal = () => {
     setIsModalOpen(false);
+    setVerificationResult(null);
   };
 
   return (
@@ -421,7 +417,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
           </div>
         </div>
 
-        {/* Hero Banner Illustration Area */}
+        {/* Hero Banner Area */}
         <div className="relative w-full bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 h-36 sm:h-48 overflow-hidden flex items-center justify-center border-b-4 border-blue-600">
           <div className="absolute inset-0 opacity-30 bg-[radial-gradient(#3b82f6_1px,transparent_1px)] [background-size:16px_16px]"></div>
           <div className="relative z-10 text-center px-4">
@@ -701,8 +697,8 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
             <div className="w-6 h-6 rounded-full bg-blue-900 flex items-center justify-center text-[10px] font-bold cursor-pointer">x</div>
           </div>
           <div className="flex items-center gap-6 text-[11px]">
-            <span>📞 122</span>
-            <span>✉️ helpdesk@domain.gov.ph</span>
+            <span>Phone: 122</span>
+            <span>Email: helpdesk@domain.gov.ph</span>
           </div>
           <div className="flex items-center gap-4 text-[11px]">
             <span className="hover:underline cursor-pointer">TERMS OF SERVICE</span>
@@ -719,7 +715,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
 
-          {/* ENHANCED APPOINTMENT MODAL WITH 11-DIGIT PHONE & MATH CAPTCHA */}
+          {/* APPOINTMENT MODAL */}
           {isModalOpen === 'appointment' && (
             <form onSubmit={handleAppointmentSubmit} className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-xl overflow-hidden">
               <div className="flex justify-between items-center px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
@@ -869,7 +865,6 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                   />
                 </div>
 
-                {/* Functional Math Captcha Box */}
                 <div className="p-3 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950 flex flex-col sm:flex-row items-center justify-between gap-3">
                   <div className="flex items-center gap-2 text-xs font-semibold">
                     <span className="bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 px-2.5 py-1 rounded font-mono">
@@ -951,17 +946,26 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                     className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950"
                   />
                 </div>
+
+                {verificationResult && (
+                  <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded text-emerald-800 dark:text-emerald-300 font-mono">
+                    <p className="font-bold">Status: {verificationResult.status || 'Verified Successfully'}</p>
+                    {verificationResult.message && <p>{verificationResult.message}</p>}
+                  </div>
+                )}
               </div>
               <div className="flex justify-end gap-2 px-6 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
-                <button type="button" onClick={closeModal} className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded shadow-xs cursor-pointer">Cancel</button>
-                <button type="submit" className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded shadow-xs cursor-pointer">Verify</button>
+                <button type="button" onClick={closeModal} className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded shadow-xs cursor-pointer">Close</button>
+                <button type="submit" disabled={verifying} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded shadow-xs cursor-pointer">
+                  {verifying ? 'Verifying...' : 'Verify'}
+                </button>
               </div>
             </form>
           )}
 
           {/* O.R. NUMBER VERIFICATION MODAL */}
           {isModalOpen === 'or-number' && (
-            <form onSubmit={handleOrVerification} className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-lg overflow-hidden">
+            <form onSubmit={handleTaxBillVerification} className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-lg overflow-hidden">
               <div className="flex justify-between items-center px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
                 <h3 className="font-bold text-sm text-slate-800 dark:text-slate-100">O.R. NUMBER VERIFICATION</h3>
                 <button type="button" onClick={closeModal} className="text-slate-400 hover:text-slate-600 font-bold text-lg cursor-pointer">✕</button>
@@ -1000,10 +1004,20 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                     className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950"
                   />
                 </div>
+
+                {verificationResult && (
+                  <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded text-emerald-800 dark:text-emerald-300 font-mono">
+                    <p className="font-bold">Official Receipt Verified Successfully</p>
+                    <p>Paid Amount: ₱{verificationResult.amount || 'N/A'}</p>
+                    {verificationResult.status && <p>Status: {verificationResult.status}</p>}
+                  </div>
+                )}
               </div>
               <div className="flex justify-end gap-2 px-6 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
-                <button type="button" onClick={closeModal} className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded shadow-xs cursor-pointer">Cancel</button>
-                <button type="submit" className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded shadow-xs cursor-pointer">Verify</button>
+                <button type="button" onClick={closeModal} className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded shadow-xs cursor-pointer">Close</button>
+                <button type="submit" disabled={verifying} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded shadow-xs cursor-pointer">
+                  {verifying ? 'Verifying...' : 'Verify'}
+                </button>
               </div>
             </form>
           )}
