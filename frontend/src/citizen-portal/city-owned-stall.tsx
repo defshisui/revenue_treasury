@@ -122,7 +122,7 @@ export default function MarketStallApplication() {
     const [selectedMarket, setSelectedMarket] = useState<string>("");
     const [isFloorPlanOpen, setIsFloorPlanOpen] = useState<boolean>(false);
     const [selectedFloor, setSelectedFloor] = useState<string>("1");
-    
+
     // Auth Session State matching MarketVendorsHub layout
     const [currentUser, setCurrentUser] = useState<{ fullname: string; email: string; initials: string; firstName: string } | null>(null);
     const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
@@ -158,11 +158,11 @@ export default function MarketStallApplication() {
     // Fetch leases and check active user session on initial mount
     useEffect(() => {
         const checkUserSession = () => {
-            const rawData = localStorage.getItem('currentUser') || 
-                            localStorage.getItem('user') || 
-                            localStorage.getItem('citizen_user') || 
-                            sessionStorage.getItem('currentUser') || 
-                            sessionStorage.getItem('user');
+            const rawData = localStorage.getItem('currentUser') ||
+                localStorage.getItem('user') ||
+                localStorage.getItem('citizen_user') ||
+                sessionStorage.getItem('currentUser') ||
+                sessionStorage.getItem('user');
 
             if (!rawData) return null;
 
@@ -174,9 +174,9 @@ export default function MarketStallApplication() {
                 const email = target.email || "";
                 const nameParts = String(fullName).trim().split(" ");
                 const firstName = nameParts[0];
-                const initials = nameParts.length > 1 
-                  ? (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase()
-                  : nameParts[0].slice(0, 2).toUpperCase();
+                const initials = nameParts.length > 1
+                    ? (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase()
+                    : nameParts[0].slice(0, 2).toUpperCase();
 
                 return { fullname: String(fullName), email, firstName, initials };
             } catch (e) {
@@ -207,8 +207,8 @@ export default function MarketStallApplication() {
             l.section.toLowerCase().includes(section.toLowerCase())
         );
 
-        const isTerminated = matchedLease?.leaseStatus?.toLowerCase() === "terminated" || 
-                             matchedLease?.leaseStatus?.toLowerCase() === "cancelled";
+        const isTerminated = matchedLease?.leaseStatus?.toLowerCase() === "terminated" ||
+            matchedLease?.leaseStatus?.toLowerCase() === "cancelled";
 
         if (matchedLease && matchedLease.paymentStatus === "Paid" && !isTerminated) {
             return {
@@ -279,7 +279,7 @@ export default function MarketStallApplication() {
             helperApprovalStatus: "Pending",
             advancePaymentStatus: "Paid",
             paymentStatus: "Paid",
-            paymentMethod: selectedEPayment // <-- Explicitly passes the chosen payment method to the backend/database[cite: 4]
+            paymentMethod: selectedEPayment
         };
 
         try {
@@ -312,83 +312,127 @@ export default function MarketStallApplication() {
 
     return (
         <div className="bg-slate-100 font-sans text-slate-800 min-h-screen flex flex-col antialiased">
-        {/* Main Navigation Header */}
-        <header className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-            <div className="flex items-center space-x-3.5 cursor-pointer group" onClick={() => {}}>
-                <div className="overflow-hidden rounded-xl border border-slate-200/60 shadow-sm transition-transform duration-300 group-hover:scale-105 bg-white p-1">
-                <img 
-                    src="/src/assets/logo-system.png" 
-                    alt="Gov Serv Logo" 
-                    className="h-12 w-auto object-contain" 
-                />
-                </div>
-                <div>
-                <h1 className="text-lg font-extrabold text-slate-900 tracking-tight">Gov Serv</h1>
-                <p className="text-[11px] text-slate-500 font-semibold tracking-wide uppercase">Unified Portal</p>
-                </div>
-            </div>
+            {/* Main Navigation Header */}
+            <header className="w-full bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-xs sticky top-0 z-40">
+                <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
 
-            <div className="hidden md:flex items-center space-x-8 text-sm font-semibold text-slate-700">
-                <span className="hover:text-blue-700 cursor-pointer">HOME</span>
-                <span className="hover:text-blue-700 cursor-pointer flex items-center gap-1">SERVICES ▾</span>
-            </div>
-
-            <div className="flex items-center space-x-3">
-                {currentUser ? (
-                /* LOGGED IN USER DYNAMIC DISPLAY */
-                <div className="relative" ref={dropdownRef}>
-                    <button 
-                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                    className="flex items-center space-x-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 px-3.5 py-2 rounded-2xl transition-all cursor-pointer shadow-xs group"
-                    >
-                    <span className="text-sm font-extrabold text-slate-800 tracking-tight">
-                        Hi, {currentUser.firstName}
-                    </span>
-                    <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-sm tracking-wider">
-                        {currentUser.initials}
+                    {/* Logo & Branding */}
+                    <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 cursor-pointer" onClick={() => { window.location.href = '/citizen-portal'; }}>
+                            <div className="p-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xs flex items-center justify-center">
+                                <img
+                                    src="/src/assets/logo-system.png"
+                                    alt="System Logo"
+                                    className="h-8 w-8 object-contain"
+                                />
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="font-extrabold text-lg tracking-tight text-slate-900 dark:text-white leading-tight">
+                                    Gov Serv
+                                </span>
+                                <span className="text-[10px] font-bold text-blue-700 dark:text-blue-400 tracking-wider uppercase">
+                                    Unified Portal
+                                </span>
+                            </div>
+                        </div>
                     </div>
-                    </button>
 
-                    {/* Dropdown Menu */}
-                    {isDropdownOpen && (
-                    <div className="absolute right-0 mt-2 w-52 bg-white rounded-2xl shadow-xl border border-slate-200 py-2 z-50 animate-in fade-in zoom-in duration-150">
-                        <div className="px-4 py-2 border-b border-slate-100 mb-1">
-                        <p className="text-xs font-bold text-slate-900 truncate">{currentUser.fullname}</p>
-                        <p className="text-[11px] text-slate-500 truncate">{currentUser.email}</p>
+                    {/* Desktop Navigation */}
+                    <div className="hidden md:flex items-center space-x-6 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                        <span className="hover:text-blue-700 cursor-pointer" onClick={() => window.location.href = '/citizen-portal'}>HOME</span>
+
+                        {/* Services Dropdown */}
+                        <div className="relative group py-2">
+                            <span className="hover:text-blue-700 cursor-pointer flex items-center gap-1 select-none">
+                                SERVICES ▾
+                            </span>
+
+                            <div className="absolute left-0 top-full h-2 w-full"></div>
+
+                            <div className="absolute left-0 top-[calc(100%+8px)] w-60 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 py-2 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-1 group-hover:translate-y-0">
+                                <button
+                                    onClick={() => window.location.href = '/citizen-portal'}
+                                    className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer"
+                                >
+                                    Home
+                                </button>
+                                <button
+                                    onClick={() => window.location.href = '/Market-Vendor'}
+                                    className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer"
+                                >
+                                    Market &amp; Vendors Hub
+                                </button>
+                                <button
+                                    onClick={() => window.location.href = '/real-property-tax-hub'}
+                                    className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer"
+                                >
+                                    Real Property Tax Hub
+                                </button>
+                                <button
+                                    onClick={() => window.location.href = '/Bsiness-Tax-Assessment-View'}
+                                    className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer"
+                                >
+                                    Business Tax Assessment Hub
+                                </button>
+                            </div>
                         </div>
 
-                        <button 
-                        onClick={() => {
-                            setIsDropdownOpen(false);
-                            window.location.href = '/edit-profile';
-                        }} 
-                        className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center space-x-2 cursor-pointer"
-                        >
-                        <span>Edit Profile</span>
-                        </button>
-
-                        <button 
-                        onClick={handleLogout} 
-                        className="w-full text-left px-4 py-2.5 text-xs font-bold text-rose-600 hover:bg-rose-50 transition-colors flex items-center space-x-2 cursor-pointer border-t border-slate-100 mt-1 pt-2"
-                        >
-                        <span>Log Out</span>
-                        </button>
+                        <span className="hover:text-blue-700 cursor-pointer">CONTACT US</span>
                     </div>
-                    )}
+
+                    {/* Authentication & User Dropdown */}
+                    <div className="flex items-center space-x-3">
+                        {currentUser ? (
+                            <div className="relative" ref={dropdownRef}>
+                                <button
+                                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                                    className="flex items-center space-x-2.5 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-xl transition-all cursor-pointer shadow-xs group"
+                                >
+                                    <span className="text-xs font-extrabold text-slate-800 dark:text-slate-200 tracking-tight">
+                                        Hi, {currentUser.firstName}
+                                    </span>
+                                    <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-[10px] shadow-sm tracking-wider">
+                                        {currentUser.initials}
+                                    </div>
+                                </button>
+
+                                {isDropdownOpen && (
+                                    <div className="absolute right-0 mt-2 w-52 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 py-2 z-50">
+                                        <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-800 mb-1">
+                                            <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{currentUser.fullname}</p>
+                                            <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{currentUser.email}</p>
+                                        </div>
+
+                                        <button
+                                            onClick={() => {
+                                                setIsDropdownOpen(false);
+                                                window.location.href = '/edit-profile';
+                                            }}
+                                            className="w-full text-left px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer"
+                                        >
+                                            Edit Profile
+                                        </button>
+
+                                        <button
+                                            onClick={handleLogout}
+                                            className="w-full text-left px-4 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer border-t border-slate-100 dark:border-slate-800 mt-1 pt-2"
+                                        >
+                                            Log Out
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <button
+                                onClick={() => window.location.href = '/login'}
+                                className="bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs px-4 py-2 rounded-xl shadow transition-all cursor-pointer"
+                            >
+                                Login / Register
+                            </button>
+                        )}
+                    </div>
                 </div>
-                ) : (
-                /* NOT LOGGED IN */
-                <button 
-                    onClick={() => window.location.href = '/login'}
-                    className="bg-blue-900 hover:bg-blue-800 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow transition-all cursor-pointer"
-                >
-                    Login / Register
-                </button>
-                )}
-            </div>
-            </div>
-        </header>
+            </header>
 
             {/* Main Content Container */}
             <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
@@ -407,8 +451,8 @@ export default function MarketStallApplication() {
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-slate-50 p-5 rounded-2xl border border-slate-200">
                         <label htmlFor="palengke-select" className="font-bold text-sm text-slate-700 w-44">Pamilihang Lungsod :</label>
                         <div className="flex-1 w-full max-w-md">
-                            <select 
-                                id="palengke-select" 
+                            <select
+                                id="palengke-select"
                                 value={selectedMarket}
                                 onChange={(e) => setSelectedMarket(e.target.value)}
                                 className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900 shadow-sm"
@@ -498,8 +542,8 @@ export default function MarketStallApplication() {
                         <div className="p-4 bg-white border-b border-slate-200 flex flex-wrap items-center justify-between gap-4">
                             <div className="flex items-center space-x-3">
                                 <label htmlFor="floor-select" className="text-xs font-bold text-slate-700 uppercase">Pumili ng Palapag:</label>
-                                <select 
-                                    id="floor-select" 
+                                <select
+                                    id="floor-select"
                                     value={selectedFloor}
                                     onChange={(e) => setSelectedFloor(e.target.value)}
                                     className="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900 shadow-sm"
@@ -517,7 +561,7 @@ export default function MarketStallApplication() {
                         <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-100">
                             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-x-auto flex flex-col items-center">
                                 <div className="relative w-full max-w-4xl bg-white border-4 border-slate-800 rounded-xl p-4 shadow-inner min-h-[500px]">
-                                    
+
                                     {selectedFloor === "1" && (
                                         <div>
                                             <div className="text-center font-bold text-xs bg-slate-200 py-1 border border-slate-400 mb-4 tracking-widest text-slate-700">
@@ -652,13 +696,13 @@ export default function MarketStallApplication() {
                             </div>
                             <button onClick={() => setActiveStall(null)} className="text-slate-500 hover:text-slate-800 font-bold text-base px-1 cursor-pointer">✕</button>
                         </div>
-                        
+
                         <div className="space-y-2 text-xs text-slate-800">
                             <p><strong>Stallholder Name:</strong> <span className="text-slate-700">{activeStall.holder}</span></p>
                             <p className="flex items-center gap-1.5">
-                                <strong>Stall Availability:</strong> 
+                                <strong>Stall Availability:</strong>
                                 <span className="inline-flex items-center gap-1 text-slate-700">
-                                    <span className={`w-2 h-2 rounded-full ${activeStall.availability === 'Occupied' ? 'bg-rose-600' : 'bg-emerald-500'} inline-block`}></span> 
+                                    <span className={`w-2 h-2 rounded-full ${activeStall.availability === 'Occupied' ? 'bg-rose-600' : 'bg-emerald-500'} inline-block`}></span>
                                     {activeStall.availability}
                                 </span>
                             </p>
@@ -675,15 +719,15 @@ export default function MarketStallApplication() {
                                     This stall is currently occupied and cannot be applied for.
                                 </div>
                             ) : currentUser ? (
-                                <button 
-                                    onClick={handleOpenApplicationForm} 
+                                <button
+                                    onClick={handleOpenApplicationForm}
                                     className="w-full bg-[#7a92c4] hover:bg-[#6881b5] text-white font-medium py-2 px-4 rounded text-xs shadow-sm transition-all text-center cursor-pointer"
                                 >
                                     Apply Now
                                 </button>
                             ) : (
                                 <div className="space-y-1.5">
-                                    <button 
+                                    <button
                                         disabled
                                         className="w-full bg-slate-200 text-slate-400 font-medium py-2 px-4 rounded text-xs cursor-not-allowed text-center"
                                     >
@@ -719,8 +763,8 @@ export default function MarketStallApplication() {
 
                             <div>
                                 <label className="block font-semibold text-slate-700 mb-1">Unang Pangalan (First Name)</label>
-                                <input 
-                                    type="text" 
+                                <input
+                                    type="text"
                                     required
                                     value={firstName}
                                     onChange={(e) => setFirstName(e.target.value)}
@@ -731,8 +775,8 @@ export default function MarketStallApplication() {
 
                             <div>
                                 <label className="block font-semibold text-slate-700 mb-1">Apelyido (Last Name)</label>
-                                <input 
-                                    type="text" 
+                                <input
+                                    type="text"
                                     required
                                     value={lastName}
                                     onChange={(e) => setLastName(e.target.value)}
@@ -747,15 +791,15 @@ export default function MarketStallApplication() {
                             </div>
 
                             <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
-                                <button 
-                                    type="button" 
-                                    onClick={() => setIsApplicationFormOpen(false)} 
+                                <button
+                                    type="button"
+                                    onClick={() => setIsApplicationFormOpen(false)}
                                     className="px-4 py-2 font-semibold text-slate-600 hover:text-slate-900 cursor-pointer"
                                 >
                                     Cancel
                                 </button>
-                                <button 
-                                    type="submit" 
+                                <button
+                                    type="submit"
                                     className="px-5 py-2.5 bg-blue-900 hover:bg-blue-800 text-white font-bold rounded-xl shadow-md cursor-pointer transition-all"
                                 >
                                     Proceed to Digital Payment &rarr;
@@ -787,7 +831,7 @@ export default function MarketStallApplication() {
                             {/* E-Payment Option Selector */}
                             <div className="space-y-1.5">
                                 <label htmlFor="epayment-select" className="block font-bold text-slate-700 uppercase text-[10px]">Pumili ng E-Payment Method :</label>
-                                <select 
+                                <select
                                     id="epayment-select"
                                     value={selectedEPayment}
                                     onChange={(e) => setSelectedEPayment(e.target.value)}
@@ -813,7 +857,7 @@ export default function MarketStallApplication() {
                             </div>
 
                             <div className="space-y-2">
-                                <button 
+                                <button
                                     type="button"
                                     disabled={isProcessingPayment}
                                     onClick={handleCompletePaymentAndSubmission}
@@ -821,7 +865,7 @@ export default function MarketStallApplication() {
                                 >
                                     {isProcessingPayment ? "Processing Online Payment..." : "Complete Payment & Submit Application"}
                                 </button>
-                                <button 
+                                <button
                                     type="button"
                                     onClick={() => {
                                         setIsPaymentStep(false);
