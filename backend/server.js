@@ -69,37 +69,49 @@ app.get(['/', '/health'], (req, res) => {
   });
 });
 
-const isInternalDb = process.env.DATABASE_URL && (
-  process.env.DATABASE_URL.includes('railway.internal') ||
-  process.env.DATABASE_URL.includes('localhost') ||
-  process.env.DATABASE_URL.includes('127.0.0.1')
+const dbConnectionString = 
+  process.env.DATABASE_URL || 
+  process.env.DATABASE_PRIVATE_URL || 
+  process.env.DATABASE_PUBLIC_URL;
+
+const isInternalDb = Boolean(
+  dbConnectionString && (
+    dbConnectionString.includes('railway.internal') ||
+    dbConnectionString.includes('localhost') ||
+    dbConnectionString.includes('127.0.0.1')
+  )
 );
 
-const pool = new Pool(
-  process.env.DATABASE_URL
-    ? {
-        connectionString: process.env.DATABASE_URL,
-        ssl: isInternalDb ? false : { rejectUnauthorized: false }
-      }
-    : {
-        host: process.env.DB_HOST || 'localhost',
-        port: Number(process.env.DB_PORT) || 5432,
-        database: process.env.DB_NAME,
-        user: process.env.DB_USER,
-        password: String(process.env.DB_PASSWORD || ''),
-      }
-);
+let poolConfig;
 
-pool.connect(async (err, client, release) => {
-  if (err) {
-    console.error('❌ Error acquiring database client:', err.stack);
-    return;
-  }
-  console.log('✅ Successfully connected to the PostgreSQL database.');
-  release();
+if (dbConnectionString) {
+  poolConfig = {
+    connectionString: dbConnectionString,
+    ssl: isInternalDb ? false : { rejectUnauthorized: false }
+  };
+} else {
+  poolConfig = {
+    host: process.env.PGHOST || process.env.DB_HOST || 'localhost',
+    port: Number(process.env.PGPORT || process.env.DB_PORT) || 5432,
+    database: process.env.PGDATABASE || process.env.DB_NAME || 'revenue_treasury',
+    user: process.env.PGUSER || process.env.DB_USER || 'postgres',
+    password: String(process.env.PGPASSWORD || process.env.DB_PASSWORD || '')
+  };
+}
 
-  // Auto-initialize tables if they don't exist yet
+const pool = new Pool(poolConfig);
+
+pool.on('error', (err) => {
+  console.error('⚠️ Unexpected PostgreSQL client error:', err.message);
+});
+
+async function initializeDatabase() {
   try {
+    const client = await pool.connect();
+    console.log('✅ Successfully connected to the PostgreSQL database.');
+    client.release();
+
+    // Auto-initialize tables if they don't exist yet
     await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
           id SERIAL PRIMARY KEY,
@@ -255,9 +267,12 @@ pool.connect(async (err, client, release) => {
 
     console.log('✅ Database tables checked/initialized successfully.');
   } catch (tableErr) {
-    console.error('❌ Error initializing database tables:', tableErr);
+    console.error('❌ Error initializing database tables:', tableErr.message || tableErr);
   }
-});
+}
+
+// Initialize database in background without blocking server startup
+initializeDatabase().catch(err => console.error('Database startup background error:', err.message || err));
 
 const loginAttemptsTracker = new Map();
 const LOCKOUT_LIMIT = 5; 

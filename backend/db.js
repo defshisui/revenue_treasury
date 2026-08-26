@@ -10,19 +10,40 @@ dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 const { Pool } = pg;
 
-const pool = new Pool(
-  process.env.DATABASE_URL
-    ? {
-        connectionString: process.env.DATABASE_URL,
-        ssl: { rejectUnauthorized: false }
-      }
-    : {
-        host: process.env.DB_HOST || 'localhost',
-        port: Number(process.env.DB_PORT) || 5432,
-        database: process.env.DB_NAME,
-        user: process.env.DB_USER,
-        password: String(process.env.DB_PASSWORD || ''),
-      }
+const dbConnectionString = 
+  process.env.DATABASE_URL || 
+  process.env.DATABASE_PRIVATE_URL || 
+  process.env.DATABASE_PUBLIC_URL;
+
+const isInternalDb = Boolean(
+  dbConnectionString && (
+    dbConnectionString.includes('railway.internal') ||
+    dbConnectionString.includes('localhost') ||
+    dbConnectionString.includes('127.0.0.1')
+  )
 );
+
+let poolConfig;
+
+if (dbConnectionString) {
+  poolConfig = {
+    connectionString: dbConnectionString,
+    ssl: isInternalDb ? false : { rejectUnauthorized: false }
+  };
+} else {
+  poolConfig = {
+    host: process.env.PGHOST || process.env.DB_HOST || 'localhost',
+    port: Number(process.env.PGPORT || process.env.DB_PORT) || 5432,
+    database: process.env.PGDATABASE || process.env.DB_NAME || 'revenue_treasury',
+    user: process.env.PGUSER || process.env.DB_USER || 'postgres',
+    password: String(process.env.PGPASSWORD || process.env.DB_PASSWORD || '')
+  };
+}
+
+const pool = new Pool(poolConfig);
+
+pool.on('error', (err) => {
+  console.error('⚠️ Unexpected PostgreSQL client error in db.js:', err.message);
+});
 
 export default pool;
