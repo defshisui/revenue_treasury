@@ -10,10 +10,10 @@ export default function CitizenPortalLanding() {
 
   useEffect(() => {
     const checkUserSession = () => {
-      const rawData = localStorage.getItem('currentUser') || 
-                      localStorage.getItem('user') || 
-                      sessionStorage.getItem('currentUser') || 
-                      sessionStorage.getItem('user');
+      const rawData = localStorage.getItem('currentUser') ||
+        localStorage.getItem('user') ||
+        sessionStorage.getItem('currentUser') ||
+        sessionStorage.getItem('user');
 
       if (!rawData) return null;
 
@@ -27,7 +27,7 @@ export default function CitizenPortalLanding() {
         const email = target.email || "";
         const nameParts = String(fullName).trim().split(" ");
         const firstName = nameParts[0];
-        const initials = nameParts.length > 1 
+        const initials = nameParts.length > 1
           ? (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase()
           : nameParts[0].slice(0, 2).toUpperCase();
 
@@ -85,8 +85,8 @@ export default function CitizenPortalLanding() {
     sessionStorage.removeItem('user');
     setUser(null);
     setIsDropdownOpen(false);
-    
-    window.location.href = '/'; 
+
+    window.location.href = '/';
   };
 
   return (
@@ -97,10 +97,10 @@ export default function CitizenPortalLanding() {
           <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
             <div className="flex items-center gap-3 cursor-pointer" onClick={() => window.location.href = '/citizen-portal'}>
               <div className="p-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xs flex items-center justify-center">
-                <img 
-                  src={logoSystem} 
-                  alt="System Logo" 
-                  className="h-8 w-8 object-contain" 
+                <img
+                  src={logoSystem}
+                  alt="System Logo"
+                  className="h-8 w-8 object-contain"
                 />
               </div>
               <div className="flex flex-col">
@@ -115,7 +115,7 @@ export default function CitizenPortalLanding() {
 
             <div className="hidden md:flex items-center space-x-6 text-xs font-semibold text-slate-600 dark:text-slate-300">
               <span className="hover:text-blue-700 cursor-pointer" onClick={() => window.location.href = '/citizen-portal'}>HOME</span>
-              
+
               {/* Services Dropdown using Tailwind Group Hover with a Hover Bridge */}
               <div className="relative group py-2">
                 <span className="hover:text-blue-700 cursor-pointer flex items-center gap-1 select-none">
@@ -126,25 +126,25 @@ export default function CitizenPortalLanding() {
                 <div className="absolute left-0 top-full h-2 w-full"></div>
 
                 <div className="absolute left-0 top-[calc(100%+8px)] w-60 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 py-2 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-1 group-hover:translate-y-0">
-                  <button 
+                  <button
                     onClick={() => window.location.href = '/citizen-portal'}
                     className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer"
                   >
                     Home
                   </button>
-                  <button 
+                  <button
                     onClick={() => window.location.href = '/market-vendors-hub'}
                     className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer"
                   >
                     Market &amp; Vendors Hub
                   </button>
-                  <button 
+                  <button
                     onClick={() => window.location.href = '/real-property-tax-hub'}
                     className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer"
                   >
                     Real Proerty Tax Hub
                   </button>
-                  <button 
+                  <button
                     onClick={() => window.location.href = '/business-tax-assessment'}
                     className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer"
                   >
@@ -159,7 +159,7 @@ export default function CitizenPortalLanding() {
             <div className="flex items-center space-x-3">
               {user ? (
                 <div className="relative" ref={dropdownRef}>
-                  <button 
+                  <button
                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                     className="flex items-center space-x-2.5 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-xl transition-all cursor-pointer shadow-xs group"
                   >
@@ -178,18 +178,18 @@ export default function CitizenPortalLanding() {
                         <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{user.email}</p>
                       </div>
 
-                      <button 
+                      <button
                         onClick={() => {
                           setIsDropdownOpen(false);
                           window.location.href = '/edit-profile';
-                        }} 
+                        }}
                         className="w-full text-left px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer"
                       >
                         Edit Profile
                       </button>
 
-                      <button 
-                        onClick={handleLogout} 
+                      <button
+                        onClick={handleLogout}
                         className="w-full text-left px-4 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer border-t border-slate-100 dark:border-slate-800 mt-1 pt-2"
                       >
                         Log Out
@@ -198,8 +198,8 @@ export default function CitizenPortalLanding() {
                   )}
                 </div>
               ) : (
-                <button 
-                  onClick={() => window.location.href = '/login'}
+                <button
+                  onClick={() => window.location.href = '/'}
                   className="bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs px-4 py-2 rounded-xl shadow transition-all cursor-pointer"
                 >
                   Login / Register
@@ -211,16 +211,16 @@ export default function CitizenPortalLanding() {
 
         {/* Main Content Container / Landing Page */}
         <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-          
+
           {/* Hero Welcome Banner matching the exact reference style */}
           <div className="relative overflow-hidden bg-[#122261] rounded-3xl p-8 sm:p-12 text-white shadow-lg flex flex-col justify-center bg-[radial-gradient(#1e3a8a_1px,transparent_1px)] [background-size:16px_16px]">
-            
+
             {/* Background Watermark Logo */}
             <div className="absolute right-[-20px] bottom-[-40px] pointer-events-none opacity-10 select-none">
-              <img 
-                src={logoSystem} 
-                alt="" 
-                className="w-80 h-80 sm:w-96 sm:h-96 object-contain" 
+              <img
+                src={logoSystem}
+                alt=""
+                className="w-80 h-80 sm:w-96 sm:h-96 object-contain"
               />
             </div>
 
@@ -246,8 +246,8 @@ export default function CitizenPortalLanding() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              
-              <div 
+
+              <div
                 onClick={() => window.location.href = '/market-vendor-tab'}
                 className="bg-white hover:bg-slate-50 p-6 rounded-2xl border border-slate-200 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between space-y-4 group"
               >
@@ -266,7 +266,7 @@ export default function CitizenPortalLanding() {
                 </div>
               </div>
 
-              <div 
+              <div
                 onClick={() => window.location.href = '/citizen-rpt'}
                 className="bg-white hover:bg-slate-50 p-6 rounded-2xl border border-slate-200 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between space-y-4 group"
               >
@@ -284,7 +284,7 @@ export default function CitizenPortalLanding() {
                 </div>
               </div>
 
-              <div 
+              <div
                 onClick={() => window.location.href = '/business-tax-assessment'}
                 className="bg-white hover:bg-slate-50 p-6 rounded-2xl border border-slate-200 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between space-y-4 group"
               >
