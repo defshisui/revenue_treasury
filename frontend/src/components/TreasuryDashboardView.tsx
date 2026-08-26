@@ -68,16 +68,19 @@ const ALL_PAYMENT_OPTIONS = [
 
 const ALL_EOR_OPTIONS = ["EOR", "NON-EOR"];
 
+// Standardized monochromatic blue palette for charts
 const PAYMENT_OPTION_COLORS: Record<string, string> = {
-  "GCash": "#3b82f6",
-  "Visa/Mastercard via Paymaya": "#f97316",
-  "Maya (E-Wallet)": "#a855f7",
-  "Online Banking via Paygate": "#84cc16",
-  "Maya (QR)": "#06b6d4",
-  "Bayad Center": "#eab308",
-  "Manual Payment for Landbank of the Philippines": "#ec4899",
-  "Landbank Online": "#6366f1"
+  "GCash": "#1d4ed8",
+  "Visa/Mastercard via Paymaya": "#2563eb",
+  "Maya (E-Wallet)": "#3b82f6",
+  "Online Banking via Paygate": "#60a5fa",
+  "Maya (QR)": "#93c5fd",
+  "Bayad Center": "#bfdbfe",
+  "Manual Payment for Landbank of the Philippines": "#dbeafe",
+  "Landbank Online": "#1e3a8a"
 };
+
+const CHART_COLORS = ["#2563eb", "#60a5fa", "#93c5fd", "#bfdbfe", "#1e3a8a"];
 
 export default function TreasuryDashboardView({
   metrics: initialMetrics,
@@ -279,6 +282,23 @@ export default function TreasuryDashboardView({
 
   const activeMetrics = metrics && metrics.totalEpayments > 0 ? metrics : computedMetrics;
 
+  // Process data for dedicated RPT and Business Tax graphs
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+  const rptTrend = months.map(m => {
+    const amount = activeTxFeed
+      .filter(t => t.paymentType === 'REAL PROPERTY TAX (RPT)' && t.date?.startsWith(m))
+      .reduce((sum, t) => sum + Number(t.amount || 0), 0);
+    return { month: m, amount };
+  });
+
+  const bizTrend = months.map(m => {
+    const amount = activeTxFeed
+      .filter(t => t.paymentType === 'BUSINESS' && t.date?.startsWith(m))
+      .reduce((sum, t) => sum + Number(t.amount || 0), 0);
+    return { month: m, amount };
+  });
+
   const toggleSelectAll = (allList: string[], currentSelected: string[], setter: (val: string[]) => void) => {
     if (currentSelected.length === allList.length) {
       setter([]);
@@ -300,7 +320,9 @@ export default function TreasuryDashboardView({
     return items.map((item, idx) => {
       const start = cumulativePercent;
       cumulativePercent += item.percentage;
-      const color = item.option ? (PAYMENT_OPTION_COLORS[item.option] || '#3b82f6') : (idx === 0 ? '#3b82f6' : idx === 1 ? '#f97316' : '#a855f7');
+      const color = item.option
+        ? (PAYMENT_OPTION_COLORS[item.option] || '#2563eb')
+        : (CHART_COLORS[idx % CHART_COLORS.length]);
       return `${color} ${start}% ${cumulativePercent}%`;
     }).join(', ');
   };
@@ -311,14 +333,14 @@ export default function TreasuryDashboardView({
         marginLeft: isCollapsed ? "80px" : "256px",
         width: isCollapsed ? "calc(100% - 80px)" : "calc(100% - 256px)",
       }}
-      className="min-h-screen bg-slate-50/60 dark:bg-slate-950 text-slate-800 dark:text-slate-100 p-6 pt-24 transition-all duration-300 box-border"
+      className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 p-6 pt-24 transition-all duration-300 box-border"
       ref={dropdownRef}
     >
       {/* HEADER & YEAR SELECTOR & MODULE LINKS */}
-      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center bg-white dark:bg-slate-900/60 p-6 rounded-2xl mb-6 flex-wrap gap-4 shadow-xs border border-slate-200/80 dark:border-slate-800 backdrop-blur-md">
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center bg-white dark:bg-slate-900 p-6 rounded-2xl mb-6 flex-wrap gap-4 border border-slate-200 dark:border-slate-800 shadow-sm">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse"></span>
+            <span className="h-2 w-2 rounded-full bg-blue-600 animate-pulse"></span>
             <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 tracking-wider uppercase">
               OFFICE OF THE CITY ASSESSOR & TREASURY
             </span>
@@ -333,39 +355,36 @@ export default function TreasuryDashboardView({
         </div>
 
         <div className="flex items-center flex-wrap gap-3">
-
-          {/* ======== QUICK NAVIGATION MODULE PORTALS ======== */}
-          <div className="flex items-center gap-2 border-r border-slate-300 dark:border-slate-700 pr-3">
+          <div className="flex items-center gap-2 border-r border-slate-200 dark:border-slate-800 pr-3">
             <button
-              onClick={() => onNavigate ? onNavigate('rpt') : console.log("RPT clicked")}
-              className="px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 text-xs font-bold cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900 transition-colors flex items-center gap-1.5"
+              onClick={() => onNavigate && onNavigate('rpt')}
+              className="px-4 py-2 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800 text-xs font-bold cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
             >
-              RPT Portal ↗
+              RPT Portal
             </button>
             <button
-              onClick={() => onNavigate ? onNavigate('business_tax') : console.log("Business Tax clicked")}
-              className="px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 text-xs font-bold cursor-pointer hover:bg-emerald-100 dark:hover:bg-emerald-900 transition-colors flex items-center gap-1.5"
+              onClick={() => onNavigate && onNavigate('business_tax')}
+              className="px-4 py-2 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800 text-xs font-bold cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
             >
-              Business Tax Hub ↗
+              Business Tax Hub
             </button>
           </div>
-          {/* ======================================================== */}
 
           {onNavigate && (
             <button
               onClick={() => onNavigate('home')}
-              className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-xs font-semibold cursor-pointer hover:bg-slate-200 transition-colors"
+              className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-xs font-semibold cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
             >
               Back Home
             </button>
           )}
           <button
             onClick={loadPostgresData}
-            className="px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 text-xs font-semibold cursor-pointer hover:bg-blue-100 transition-colors"
+            className="px-4 py-2 rounded-xl bg-blue-600 text-white border border-blue-700 text-xs font-semibold cursor-pointer hover:bg-blue-700 shadow-sm transition-colors"
           >
             Refresh Data
           </button>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 ml-1">
             <label htmlFor="fiscalPeriodSelect" className="text-[13px] font-medium text-slate-700 dark:text-slate-300">
               Filter Year:
             </label>
@@ -373,7 +392,7 @@ export default function TreasuryDashboardView({
               id="fiscalPeriodSelect"
               value={fiscalPeriod}
               onChange={(e) => setFiscalPeriod(e.target.value)}
-              className="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-1.5 text-[13px] font-medium text-slate-700 dark:text-slate-200 cursor-pointer outline-none focus:border-blue-500"
+              className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-[13px] font-medium text-slate-700 dark:text-slate-200 cursor-pointer outline-none focus:border-blue-500"
             >
               <option value="2026">2026</option>
               <option value="2025">2025</option>
@@ -388,8 +407,8 @@ export default function TreasuryDashboardView({
 
       {/* TOP FIVE METRICS BANNER */}
       <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-4 mb-6">
-        <div className="bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 shadow-xs flex items-center gap-4">
-          <div className="p-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl flex items-center justify-center">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm flex items-center gap-4">
+          <div className="p-3 bg-slate-50 dark:bg-slate-800 text-blue-600 dark:text-blue-400 rounded-xl flex items-center justify-center border border-slate-100 dark:border-slate-700">
             <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
             </svg>
@@ -400,36 +419,36 @@ export default function TreasuryDashboardView({
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 shadow-xs flex flex-col justify-center">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm flex flex-col justify-center">
           <p className="text-[11px] font-bold tracking-wider text-slate-500 dark:text-slate-400 mb-1.5 mt-0 uppercase">TOTAL eORs</p>
           <p className="text-xl font-bold text-slate-900 dark:text-white m-0">{activeMetrics.totalEORs.toLocaleString()}</p>
         </div>
 
-        <div className="bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 shadow-xs flex flex-col justify-center">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm flex flex-col justify-center">
           <p className="text-[11px] font-bold tracking-wider text-slate-500 dark:text-slate-400 mb-1.5 mt-0 uppercase">TOTAL AMOUNT</p>
           <p className="text-lg font-bold text-slate-900 dark:text-white m-0 truncate">₱{activeMetrics.totalAmount.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
         </div>
 
-        <div className="bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 shadow-xs flex flex-col justify-center">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm flex flex-col justify-center">
           <p className="text-[11px] font-bold tracking-wider text-slate-500 dark:text-slate-400 mb-1.5 mt-0 uppercase">BILLER SYSTEMS</p>
           <p className="text-xl font-bold text-slate-900 dark:text-white m-0">{activeMetrics.billerSystems}</p>
         </div>
 
-        <div className="bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 shadow-xs flex flex-col justify-center">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm flex flex-col justify-center">
           <p className="text-[11px] font-bold tracking-wider text-slate-500 dark:text-slate-400 mb-1.5 mt-0 uppercase">PAYMENT OPTIONS</p>
           <p className="text-xl font-bold text-slate-900 dark:text-white m-0">{activeMetrics.paymentOptions}</p>
         </div>
       </div>
 
       {/* FILTER TOOLBAR SECTION */}
-      <div className="bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 mb-6 shadow-xs flex items-center justify-center flex-wrap gap-3">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 mb-6 shadow-sm flex items-center justify-center flex-wrap gap-3">
         <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mr-2">Filter by:</span>
 
         {/* Date Filter */}
         <div className="relative">
           <button
             onClick={() => setOpenDropdown(openDropdown === 'date' ? null : 'date')}
-            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 flex items-center justify-between gap-4 cursor-pointer hover:border-blue-500 transition-all min-w-[160px]"
+            className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 flex items-center justify-between gap-4 cursor-pointer hover:border-blue-500 transition-all min-w-[160px]"
           >
             <span className="truncate">Transaction Date ({selectedDates.length})</span>
             <svg className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${openDropdown === 'date' ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -437,7 +456,7 @@ export default function TreasuryDashboardView({
             </svg>
           </button>
           {openDropdown === 'date' && (
-            <div className="absolute left-0 mt-2 w-72 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl z-30 p-3.5 backdrop-blur-lg">
+            <div className="absolute left-0 mt-2 w-72 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-lg z-30 p-3.5">
               <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2 mb-2.5">
                 <label className="flex items-center gap-2.5 text-xs font-semibold cursor-pointer text-slate-800 dark:text-slate-200">
                   <input
@@ -461,7 +480,7 @@ export default function TreasuryDashboardView({
               </div>
               <div className="max-h-52 overflow-y-auto flex flex-col gap-1 pr-1">
                 {ALL_TRANSACTION_DATES.filter(d => d.toLowerCase().includes(dateSearch.toLowerCase())).map((date) => (
-                  <label key={date} className="flex items-center gap-2.5 text-xs py-1.5 px-2 hover:bg-slate-100 dark:hover:bg-slate-800/60 rounded-xl cursor-pointer transition-colors">
+                  <label key={date} className="flex items-center gap-2.5 text-xs py-1.5 px-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl cursor-pointer transition-colors">
                     <input
                       type="checkbox"
                       checked={selectedDates.includes(date)}
@@ -480,7 +499,7 @@ export default function TreasuryDashboardView({
         <div className="relative">
           <button
             onClick={() => setOpenDropdown(openDropdown === 'type' ? null : 'type')}
-            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 flex items-center justify-between gap-4 cursor-pointer hover:border-blue-500 transition-all min-w-[160px]"
+            className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 flex items-center justify-between gap-4 cursor-pointer hover:border-blue-500 transition-all min-w-[160px]"
           >
             <span className="truncate">Payment Type ({selectedTypes.length})</span>
             <svg className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${openDropdown === 'type' ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -488,7 +507,7 @@ export default function TreasuryDashboardView({
             </svg>
           </button>
           {openDropdown === 'type' && (
-            <div className="absolute left-0 mt-2 w-72 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl z-30 p-3.5 backdrop-blur-lg">
+            <div className="absolute left-0 mt-2 w-72 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-lg z-30 p-3.5">
               <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2 mb-2.5">
                 <label className="flex items-center gap-2.5 text-xs font-semibold cursor-pointer text-slate-800 dark:text-slate-200">
                   <input
@@ -512,7 +531,7 @@ export default function TreasuryDashboardView({
               </div>
               <div className="max-h-52 overflow-y-auto flex flex-col gap-1 pr-1">
                 {ALL_PAYMENT_TYPES.filter(t => t.toLowerCase().includes(typeSearch.toLowerCase())).map((type) => (
-                  <label key={type} className="flex items-center gap-2.5 text-xs py-1.5 px-2 hover:bg-slate-100 dark:hover:bg-slate-800/60 rounded-xl cursor-pointer transition-colors">
+                  <label key={type} className="flex items-center gap-2.5 text-xs py-1.5 px-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl cursor-pointer transition-colors">
                     <input
                       type="checkbox"
                       checked={selectedTypes.includes(type)}
@@ -531,7 +550,7 @@ export default function TreasuryDashboardView({
         <div className="relative">
           <button
             onClick={() => setOpenDropdown(openDropdown === 'biller' ? null : 'biller')}
-            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 flex items-center justify-between gap-4 cursor-pointer hover:border-blue-500 transition-all min-w-[160px]"
+            className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 flex items-center justify-between gap-4 cursor-pointer hover:border-blue-500 transition-all min-w-[160px]"
           >
             <span className="truncate">Biller ({selectedBillers.length})</span>
             <svg className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${openDropdown === 'biller' ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -539,7 +558,7 @@ export default function TreasuryDashboardView({
             </svg>
           </button>
           {openDropdown === 'biller' && (
-            <div className="absolute left-0 mt-2 w-80 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl z-30 p-3.5 backdrop-blur-lg">
+            <div className="absolute left-0 mt-2 w-80 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-lg z-30 p-3.5">
               <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2 mb-2.5">
                 <label className="flex items-center gap-2.5 text-xs font-semibold cursor-pointer text-slate-800 dark:text-slate-200">
                   <input
@@ -563,7 +582,7 @@ export default function TreasuryDashboardView({
               </div>
               <div className="max-h-52 overflow-y-auto flex flex-col gap-1 pr-1">
                 {ALL_BILLERS.filter(b => b.toLowerCase().includes(billerSearch.toLowerCase())).map((biller) => (
-                  <label key={biller} className="flex items-center gap-2.5 text-xs py-1.5 px-2 hover:bg-slate-100 dark:hover:bg-slate-800/60 rounded-xl cursor-pointer transition-colors">
+                  <label key={biller} className="flex items-center gap-2.5 text-xs py-1.5 px-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl cursor-pointer transition-colors">
                     <input
                       type="checkbox"
                       checked={selectedBillers.includes(biller)}
@@ -582,7 +601,7 @@ export default function TreasuryDashboardView({
         <div className="relative">
           <button
             onClick={() => setOpenDropdown(openDropdown === 'option' ? null : 'option')}
-            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 flex items-center justify-between gap-4 cursor-pointer hover:border-blue-500 transition-all min-w-[160px]"
+            className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 flex items-center justify-between gap-4 cursor-pointer hover:border-blue-500 transition-all min-w-[160px]"
           >
             <span className="truncate">Payment Option ({selectedOptions.length})</span>
             <svg className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${openDropdown === 'option' ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -590,7 +609,7 @@ export default function TreasuryDashboardView({
             </svg>
           </button>
           {openDropdown === 'option' && (
-            <div className="absolute left-0 mt-2 w-72 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl z-30 p-3.5 backdrop-blur-lg">
+            <div className="absolute left-0 mt-2 w-72 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-lg z-30 p-3.5">
               <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2 mb-2.5">
                 <label className="flex items-center gap-2.5 text-xs font-semibold cursor-pointer text-slate-800 dark:text-slate-200">
                   <input
@@ -614,7 +633,7 @@ export default function TreasuryDashboardView({
               </div>
               <div className="max-h-52 overflow-y-auto flex flex-col gap-1 pr-1">
                 {ALL_PAYMENT_OPTIONS.filter(o => o.toLowerCase().includes(optionSearch.toLowerCase())).map((opt) => (
-                  <label key={opt} className="flex items-center gap-2.5 text-xs py-1.5 px-2 hover:bg-slate-100 dark:hover:bg-slate-800/60 rounded-xl cursor-pointer transition-colors">
+                  <label key={opt} className="flex items-center gap-2.5 text-xs py-1.5 px-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl cursor-pointer transition-colors">
                     <input
                       type="checkbox"
                       checked={selectedOptions.includes(opt)}
@@ -633,7 +652,7 @@ export default function TreasuryDashboardView({
         <div className="relative">
           <button
             onClick={() => setOpenDropdown(openDropdown === 'eor' ? null : 'eor')}
-            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 flex items-center justify-between gap-4 cursor-pointer hover:border-blue-500 transition-all min-w-[140px]"
+            className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 flex items-center justify-between gap-4 cursor-pointer hover:border-blue-500 transition-all min-w-[140px]"
           >
             <span className="truncate">With eOR ({selectedEor.length})</span>
             <svg className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${openDropdown === 'eor' ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -641,7 +660,7 @@ export default function TreasuryDashboardView({
             </svg>
           </button>
           {openDropdown === 'eor' && (
-            <div className="absolute left-0 mt-2 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl z-30 p-3.5 backdrop-blur-lg">
+            <div className="absolute left-0 mt-2 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-lg z-30 p-3.5">
               <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2 mb-2.5">
                 <label className="flex items-center gap-2.5 text-xs font-semibold cursor-pointer text-slate-800 dark:text-slate-200">
                   <input
@@ -665,7 +684,7 @@ export default function TreasuryDashboardView({
               </div>
               <div className="max-h-52 overflow-y-auto flex flex-col gap-1 pr-1">
                 {ALL_EOR_OPTIONS.filter(e => e.toLowerCase().includes(eorSearch.toLowerCase())).map((item) => (
-                  <label key={item} className="flex items-center gap-2.5 text-xs py-1.5 px-2 hover:bg-slate-100 dark:hover:bg-slate-800/60 rounded-xl cursor-pointer transition-colors">
+                  <label key={item} className="flex items-center gap-2.5 text-xs py-1.5 px-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl cursor-pointer transition-colors">
                     <input
                       type="checkbox"
                       checked={selectedEor.includes(item)}
@@ -681,9 +700,9 @@ export default function TreasuryDashboardView({
         </div>
       </div>
 
-      {/* ROW 1: CHARTS */}
+      {/* ROW 1: CORE METRIC CHARTS */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        <div className="bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
           <div>
             <h3 className="text-base font-bold text-slate-900 dark:text-white m-0 mb-4">Annual Total ePayment Transactions</h3>
             <div className="h-44 flex items-end justify-between gap-2 pt-6 px-2 border-b border-slate-200 dark:border-slate-800">
@@ -692,7 +711,7 @@ export default function TreasuryDashboardView({
                 const heightPct = Math.round((item.transactions / maxTx) * 100);
                 return (
                   <div key={index} className="flex-1 flex flex-col items-center h-full justify-end" title={`${item.year}: ${item.transactions.toLocaleString()} transactions`}>
-                    <div style={{ height: `${Math.max(heightPct, 4)}%` }} className="w-full bg-blue-500 rounded-t-xs" />
+                    <div style={{ height: `${Math.max(heightPct, 4)}%` }} className="w-full bg-blue-600 rounded-t-sm" />
                     <span className="text-[10px] text-slate-500 mt-2">{item.year}</span>
                   </div>
                 );
@@ -705,20 +724,20 @@ export default function TreasuryDashboardView({
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
           <div>
             <h3 className="text-base font-bold text-slate-900 dark:text-white m-0 mb-2">ePayment Transactions by Type</h3>
             <div className="flex flex-wrap items-center gap-3 text-xs mb-4">
               {activeMetrics.transactionsByType.map((item, idx) => (
                 <span key={idx} className="flex items-center gap-1.5 uppercase">
-                  <span className={`w-2.5 h-2.5 rounded-full ${idx === 0 ? 'bg-blue-500' : idx === 1 ? 'bg-amber-500' : 'bg-purple-500'} inline-block`}></span>
+                  <span className={`w-2.5 h-2.5 rounded-full inline-block`} style={{ backgroundColor: CHART_COLORS[idx % CHART_COLORS.length] }}></span>
                   {item.type} ({item.percentage}%)
                 </span>
               ))}
             </div>
             <div className="flex justify-center items-center py-4">
               <div
-                className="w-36 h-36 rounded-full relative flex items-center justify-center shadow-xs"
+                className="w-36 h-36 rounded-full relative flex items-center justify-center shadow-sm"
                 style={{ background: `conic-gradient(${generateConicGradient(activeMetrics.transactionsByType)})` }}
               >
                 <div className="w-20 h-20 bg-white dark:bg-slate-900 rounded-full flex items-center justify-center">
@@ -730,12 +749,12 @@ export default function TreasuryDashboardView({
           <p className="text-[11px] text-slate-400 text-center m-0">Distribution across statutory assessment modules</p>
         </div>
 
-        <div className="bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
           <div>
             <h3 className="text-base font-bold text-slate-900 dark:text-white m-0 mb-3">ePayment Transactions by Biller</h3>
             <div className="flex items-center justify-between">
               <div
-                className="w-32 h-32 rounded-full relative flex items-center justify-center shadow-xs"
+                className="w-32 h-32 rounded-full relative flex items-center justify-center shadow-sm"
                 style={{ background: `conic-gradient(${generateConicGradient(activeMetrics.transactionsByBiller)})` }}
               >
                 <div className="w-16 h-16 bg-white dark:bg-slate-900 rounded-full flex items-center justify-center">
@@ -745,7 +764,7 @@ export default function TreasuryDashboardView({
               <div className="flex flex-col gap-1 text-[11px] text-slate-600 dark:text-slate-300 max-h-36 overflow-y-auto pr-1">
                 {activeMetrics.transactionsByBiller.map((billerItem, idx) => (
                   <div key={idx} className="flex items-center gap-1.5">
-                    <span className={`w-2 h-2 rounded-full ${idx === 0 ? 'bg-blue-500' : idx === 1 ? 'bg-amber-500' : 'bg-purple-500'}`}></span>
+                    <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: CHART_COLORS[idx % CHART_COLORS.length] }}></span>
                     {billerItem.biller} ({billerItem.percentage}%)
                   </div>
                 ))}
@@ -756,14 +775,55 @@ export default function TreasuryDashboardView({
         </div>
       </div>
 
-      {/* ROW 2: PAYMENT OPTION DONUT CHARTS */}
+      {/* ROW 2: SPECIFIC REVENUE MODULE GRAPHS */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <div className="bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+          <div>
+            <h3 className="text-base font-bold text-slate-900 dark:text-white m-0 mb-4">Real Property Tax (RPT) Revenue Trends</h3>
+            <div className="h-44 flex items-end justify-between gap-1 pt-6 px-2 border-b border-slate-200 dark:border-slate-800">
+              {rptTrend.map((item, index) => {
+                const maxAmt = Math.max(...rptTrend.map(s => s.amount), 1);
+                const heightPct = Math.round((item.amount / maxAmt) * 100);
+                return (
+                  <div key={index} className="flex-1 flex flex-col items-center h-full justify-end" title={`${item.month}: ₱${item.amount.toLocaleString()}`}>
+                    <div style={{ height: `${Math.max(heightPct, 4)}%` }} className="w-full bg-blue-600 rounded-t-sm transition-all hover:bg-blue-500" />
+                    <span className="text-[9px] text-slate-500 mt-2">{item.month}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <p className="text-[11px] text-slate-400 text-center mt-4 m-0">Monthly collection distribution for Real Property properties</p>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+          <div>
+            <h3 className="text-base font-bold text-slate-900 dark:text-white m-0 mb-4">Business Tax Assessment Revenue Trends</h3>
+            <div className="h-44 flex items-end justify-between gap-1 pt-6 px-2 border-b border-slate-200 dark:border-slate-800">
+              {bizTrend.map((item, index) => {
+                const maxAmt = Math.max(...bizTrend.map(s => s.amount), 1);
+                const heightPct = Math.round((item.amount / maxAmt) * 100);
+                return (
+                  <div key={index} className="flex-1 flex flex-col items-center h-full justify-end" title={`${item.month}: ₱${item.amount.toLocaleString()}`}>
+                    <div style={{ height: `${Math.max(heightPct, 4)}%` }} className="w-full bg-blue-400 rounded-t-sm transition-all hover:bg-blue-300" />
+                    <span className="text-[9px] text-slate-500 mt-2">{item.month}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <p className="text-[11px] text-slate-400 text-center mt-4 m-0">Monthly collection distribution for Corporate & Vendor Taxes</p>
+        </div>
+      </div>
+
+      {/* ROW 3: PAYMENT OPTION DONUT CHARTS */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
           <div>
             <h3 className="text-sm font-bold tracking-wider uppercase text-slate-900 dark:text-white m-0 mb-6">ePayment Transactions by Payment Option</h3>
             <div className="flex items-center justify-around gap-4 flex-wrap">
               <div
-                className="w-44 h-44 rounded-full relative flex items-center justify-center shadow-md"
+                className="w-44 h-44 rounded-full relative flex items-center justify-center shadow-sm"
                 style={{ background: `conic-gradient(${generateConicGradient(activeMetrics.transactionsByPaymentOption)})` }}
               >
                 <div className="w-24 h-24 bg-white dark:bg-slate-900 rounded-full flex items-center justify-center">
@@ -775,7 +835,7 @@ export default function TreasuryDashboardView({
               <div className="flex flex-col gap-2 text-xs text-slate-600 dark:text-slate-300 max-h-48 overflow-y-auto pr-2">
                 {activeMetrics.transactionsByPaymentOption.map((opt, idx) => (
                   <div key={idx} className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: PAYMENT_OPTION_COLORS[opt.option] || '#3b82f6' }}></span>
+                    <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: PAYMENT_OPTION_COLORS[opt.option] || '#2563eb' }}></span>
                     <span className="truncate max-w-[200px]" title={opt.option}>{opt.option}</span>
                   </div>
                 ))}
@@ -785,12 +845,12 @@ export default function TreasuryDashboardView({
           <p className="text-[11px] text-slate-400 text-center mt-6 m-0">Volume breakdown by integrated payment option channel</p>
         </div>
 
-        <div className="bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
           <div>
             <h3 className="text-sm font-bold tracking-wider uppercase text-slate-900 dark:text-white m-0 mb-6">Amount by Payment Option</h3>
             <div className="flex items-center justify-around gap-4 flex-wrap">
               <div
-                className="w-44 h-44 rounded-full relative flex items-center justify-center shadow-md"
+                className="w-44 h-44 rounded-full relative flex items-center justify-center shadow-sm"
                 style={{ background: `conic-gradient(${generateConicGradient(activeMetrics.amountByPaymentOption)})` }}
               >
                 <div className="w-24 h-24 bg-white dark:bg-slate-900 rounded-full flex items-center justify-center">
@@ -802,7 +862,7 @@ export default function TreasuryDashboardView({
               <div className="flex flex-col gap-2 text-xs text-slate-600 dark:text-slate-300 max-h-48 overflow-y-auto pr-2">
                 {activeMetrics.amountByPaymentOption.map((opt, idx) => (
                   <div key={idx} className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: PAYMENT_OPTION_COLORS[opt.option] || '#3b82f6' }}></span>
+                    <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: PAYMENT_OPTION_COLORS[opt.option] || '#2563eb' }}></span>
                     <span className="truncate max-w-[200px]" title={`${opt.option} (${opt.percentage}%)`}>{opt.option}</span>
                   </div>
                 ))}
@@ -814,13 +874,13 @@ export default function TreasuryDashboardView({
       </div>
 
       {/* MARKET STALLS & LEASE OVERVIEW */}
-      <div className="bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-xs mb-6">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm mb-6">
         <div className="flex justify-between items-center mb-4">
           <div>
             <h3 className="text-base font-bold text-slate-900 dark:text-white m-0">Market Stalls & Lease Overview</h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 m-0 mt-0.5">Active market stall records fetched from PostgreSQL ({stalls.length} total entries)</p>
           </div>
-          <span className="text-xs font-semibold px-2.5 py-1 bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 rounded-xl">
+          <span className="text-xs font-semibold px-2.5 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl">
             {stalls.length} Stalls Registered
           </span>
         </div>
@@ -830,7 +890,7 @@ export default function TreasuryDashboardView({
             No market stall records available.
           </p>
         ) : (
-          <div className="overflow-x-auto rounded-xl border border-slate-200/80 dark:border-slate-800">
+          <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
             <table className="w-full text-left text-[13px] border-collapse">
               <thead className="bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-800">
                 <tr>
@@ -843,15 +903,15 @@ export default function TreasuryDashboardView({
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
                 {stalls.slice(0, 5).map((stall, idx) => (
-                  <tr key={stall.id || idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors">
+                  <tr key={stall.id || idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
                     <td className="py-3 px-4 font-mono font-semibold text-blue-600 dark:text-blue-400">{stall.stallNumber || stall.id}</td>
                     <td className="py-3 px-4 font-semibold text-slate-900 dark:text-white">{stall.lesseeName || stall.vendorName || 'Unassigned'}</td>
                     <td className="py-3 px-4 text-slate-600 dark:text-slate-300">{stall.section || 'General Market'}</td>
-                    <td className="py-3 px-4 text-right font-semibold text-emerald-700 dark:text-emerald-400">
+                    <td className="py-3 px-4 text-right font-semibold text-slate-900 dark:text-white">
                       ₱{Number(stall.monthlyRent || stall.amount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
                     </td>
                     <td className="py-3 px-4 text-center">
-                      <span className="py-0.5 px-2.5 rounded-full text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                      <span className="py-0.5 px-2.5 rounded-full text-[11px] font-semibold bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
                         {stall.status || 'Active'}
                       </span>
                     </td>
@@ -864,7 +924,7 @@ export default function TreasuryDashboardView({
       </div>
 
       {/* POSTGRESQL LIVE TRANSACTION FEED TABLE */}
-      <div className="bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-xs">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-base font-bold text-slate-900 dark:text-white m-0">Live Postgres Transaction Ledger ({fiscalPeriod})</h3>
           {activeTxFeed.length > 0 && (
@@ -872,7 +932,7 @@ export default function TreasuryDashboardView({
               onClick={() => setShowAllModal(true)}
               className="text-xs text-blue-600 dark:text-blue-400 font-semibold cursor-pointer hover:underline bg-transparent border-none p-0"
             >
-              View All Feed →
+              View All Feed
             </button>
           )}
         </div>
@@ -882,7 +942,7 @@ export default function TreasuryDashboardView({
             No transaction records found in database for year {fiscalPeriod}.
           </p>
         ) : (
-          <div className="overflow-x-auto rounded-xl border border-slate-200/80 dark:border-slate-800">
+          <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
             <table className="w-full text-left text-[13px] border-collapse">
               <thead className="bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-800">
                 <tr>
@@ -897,17 +957,17 @@ export default function TreasuryDashboardView({
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
                 {activeTxFeed.slice(0, 5).map((transaction, index) => (
-                  <tr key={transaction.id || transaction.transactionId || index} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors">
+                  <tr key={transaction.id || transaction.transactionId || index} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
                     <td className="py-3 px-4 font-mono font-semibold text-blue-600 dark:text-blue-400">{transaction.referenceNumber || transaction.id}</td>
                     <td className="py-3 px-4 font-semibold text-slate-900 dark:text-white">{transaction.taxpayer || (transaction as any).payerName}</td>
                     <td className="py-3 px-4 text-slate-600 dark:text-slate-300">{transaction.paymentType}</td>
-                    <td className="py-3 px-4 text-right font-semibold text-emerald-700 dark:text-emerald-400">
+                    <td className="py-3 px-4 text-right font-semibold text-slate-900 dark:text-white">
                       ₱{Number(transaction.amount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
                     </td>
                     <td className="py-3 px-4 text-slate-600 dark:text-slate-300">{transaction.paymentMethod}</td>
                     <td className="py-3 px-4 text-slate-500 dark:text-slate-400">{transaction.collector}</td>
                     <td className="py-3 px-4 text-center">
-                      <span className="py-0.5 px-2.5 rounded-full text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                      <span className="py-0.5 px-2.5 rounded-full text-[11px] font-semibold bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
                         {transaction.status || "Posted"}
                       </span>
                     </td>
@@ -921,7 +981,7 @@ export default function TreasuryDashboardView({
 
       {/* FULL LEDGER MODAL */}
       {showAllModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-xs p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
             <div className="flex justify-between items-center p-6 border-b border-slate-200 dark:border-slate-800">
               <div>
@@ -932,11 +992,11 @@ export default function TreasuryDashboardView({
                 onClick={() => setShowAllModal(false)}
                 className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white flex items-center justify-center font-bold border-none cursor-pointer"
               >
-                ✕
+                X
               </button>
             </div>
             <div className="p-6 overflow-y-auto flex-1">
-              <div className="overflow-x-auto rounded-xl border border-slate-200/80 dark:border-slate-800">
+              <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
                 <table className="w-full text-left text-[13px] border-collapse">
                   <thead className="bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-800">
                     <tr>
@@ -951,17 +1011,17 @@ export default function TreasuryDashboardView({
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
                     {activeTxFeed.map((transaction, index) => (
-                      <tr key={transaction.id || transaction.transactionId || index} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors">
+                      <tr key={transaction.id || transaction.transactionId || index} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
                         <td className="py-3 px-4 font-mono font-semibold text-blue-600 dark:text-blue-400">{transaction.referenceNumber || transaction.id}</td>
                         <td className="py-3 px-4 font-semibold text-slate-900 dark:text-white">{transaction.taxpayer || (transaction as any).payerName}</td>
                         <td className="py-3 px-4 text-slate-600 dark:text-slate-300">{transaction.paymentType}</td>
-                        <td className="py-3 px-4 text-right font-semibold text-emerald-700 dark:text-emerald-400">
+                        <td className="py-3 px-4 text-right font-semibold text-slate-900 dark:text-white">
                           ₱{Number(transaction.amount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
                         </td>
                         <td className="py-3 px-4 text-slate-600 dark:text-slate-300">{transaction.paymentMethod}</td>
                         <td className="py-3 px-4 text-slate-500 dark:text-slate-400">{transaction.date || ""}</td>
                         <td className="py-3 px-4 text-center">
-                          <span className="py-0.5 px-2.5 rounded-full text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                          <span className="py-0.5 px-2.5 rounded-full text-[11px] font-semibold bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
                             {transaction.status || "Posted"}
                           </span>
                         </td>
