@@ -16,10 +16,10 @@ export async function getRptApplications(_req: Request, res: Response): Promise<
 }
 
 export async function createRptApplication(req: Request, res: Response): Promise<void> {
-  const appData = req.body as Record<string, string>;
+  const appData = req.body as Record<string, any>;
   const files = (req as Request & { files?: Express.Multer.File[] }).files;
 
-  // 1. Map uploaded files directly into Base64 strings to match business tax structure
+  // 1. Map uploaded files directly into Base64 strings or storage paths to match business tax structure[cite: 4]
   let fileObjects: Array<{ name: string; url: string }> = [];
   if (files && files.length > 0) {
     fileObjects = files.map((f: any) => ({
@@ -28,17 +28,23 @@ export async function createRptApplication(req: Request, res: Response): Promise
     }));
   }
 
-  // 2. Fallback if physical files were not processed by multer but document names/paths were passed in body
+  // 2. Fallback if physical files were not processed by multer but document names/paths were passed in body[cite: 4]
   if (fileObjects.length === 0 && appData.documents) {
     try {
-      const parsed = JSON.parse(appData.documents);
+      const parsed = typeof appData.documents === 'string' ? JSON.parse(appData.documents) : appData.documents;
       if (Array.isArray(parsed)) {
         fileObjects = parsed.map((item: any) => {
+          if (typeof item === 'object' && item !== null) {
+            return {
+              name: item.name || 'Document',
+              url: item.url || ''
+            };
+          }
           const itemStr = typeof item === 'string' ? item : JSON.stringify(item);
           const cleanPath = itemStr.replace(/["'{}]/g, "").trim();
           const parts = cleanPath.split(': ');
           const fileName = parts.length > 1 ? parts[1].trim() : cleanPath;
-          const pathOnly = fileName.startsWith('/uploads/') ? fileName : `/uploads/${fileName}`;
+          const pathOnly = fileName.startsWith('data:') || fileName.startsWith('http') || fileName.startsWith('/uploads/') ? fileName : `/uploads/${fileName}`;
           return {
             name: fileName.split('/').pop() || fileName,
             url: pathOnly
@@ -46,10 +52,10 @@ export async function createRptApplication(req: Request, res: Response): Promise
         });
       }
     } catch {
-      const cleanStr = appData.documents.replace(/["'{}]/g, "").trim();
+      const cleanStr = String(appData.documents).replace(/["'{}]/g, "").trim();
       const parts = cleanStr.split(': ');
       const fileName = parts.length > 1 ? parts[1].trim() : cleanStr;
-      const pathOnly = fileName.startsWith('/uploads/') ? fileName : `/uploads/${fileName}`;
+      const pathOnly = fileName.startsWith('data:') || fileName.startsWith('http') || fileName.startsWith('/uploads/') ? fileName : `/uploads/${fileName}`;
       fileObjects = [{
         name: fileName.split('/').pop() || fileName,
         url: pathOnly
@@ -61,10 +67,11 @@ export async function createRptApplication(req: Request, res: Response): Promise
   let resolvedApplicantName = appData.applicant_name || appData.applicantName || ownerName || 'Unknown Applicant';
 
   try {
+    // Explicitly cast $16 as jsonb to match your PostgreSQL table schema column type perfectly
     const result = await pool.query(
       `INSERT INTO rpt_applications
        (id, control_number, tax_declaration_number, owner_name, applicant_name, applicant_type, email, mobile_number, service, property_location, barangay, property_type, status, filed_date, notes, documents)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16::jsonb)
        RETURNING *`,
       [
         appData.id || randomUUID(),
