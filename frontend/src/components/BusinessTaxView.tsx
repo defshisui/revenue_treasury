@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+// src/components/BusinessTaxAssessmentAdminView.tsx
+import React, { useState, useEffect, useRef } from 'react';
 import { API_BASE_URL } from '../config/api';
 
 export interface BusinessTaxAssessmentAdminViewProps {
@@ -43,12 +44,12 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
   // Active Tab State ('assessments' or 'audit_logs')
   const [activeTab, setActiveTab] = useState<'assessments' | 'audit_logs'>('assessments');
 
-  // Functional Data States (No dummy data initialized)
+  // Functional Data States
   const [assessments, setAssessments] = useState<AssessmentRecord[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
-  
+
   // Search, Filter & Pagination States
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [searchType, setSearchType] = useState<string>('Tracking/MP No.');
@@ -62,7 +63,7 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
   const [actionRemarks, setActionRemarks] = useState<string>('');
   const [submittingAction, setSubmittingAction] = useState<boolean>(false);
 
-  // Document Preview Modal State
+  // Document Preview Modal State (Embedded View)
   const [previewFile, setPreviewFile] = useState<AttachmentFile | null>(null);
 
   // Verification Checklist State
@@ -85,10 +86,10 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
 
   useEffect(() => {
     const checkAdminSession = () => {
-      const rawData = localStorage.getItem('currentUser') || 
-                      localStorage.getItem('user') || 
-                      sessionStorage.getItem('currentUser') || 
-                      sessionStorage.getItem('user');
+      const rawData = localStorage.getItem('currentUser') ||
+        localStorage.getItem('user') ||
+        sessionStorage.getItem('currentUser') ||
+        sessionStorage.getItem('user');
 
       if (!rawData) return null;
 
@@ -103,7 +104,7 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
         const token = parsed.token || target.token || "";
         const nameParts = String(fullName).trim().split(" ");
         const firstName = nameParts[0];
-        const initials = nameParts.length > 1 
+        const initials = nameParts.length > 1
           ? (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase()
           : nameParts[0].slice(0, 2).toUpperCase();
 
@@ -125,7 +126,6 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Fetch Data based on active tab
   useEffect(() => {
     if (activeTab === 'assessments') {
       fetchAdminAssessments();
@@ -134,12 +134,11 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
     }
   }, [statusFilter, currentPage, activeTab]);
 
-  // Compute standard LGU fees whenever selectedAssessment changes
   useEffect(() => {
     if (selectedAssessment) {
       const gross = selectedAssessment.grossSales || 0;
       const bType = selectedAssessment.businessType || 'Retailer';
-      let lbtRate = 0.01; 
+      let lbtRate = 0.01;
       if (bType === 'Manufacturer') lbtRate = 0.005;
       else if (bType === 'Wholesaler') lbtRate = 0.012;
       else if (bType === 'Exporter') lbtRate = 0.003;
@@ -250,6 +249,33 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
     }
   };
 
+  // 🗑️ Delete Assessment Handler
+  const handleDeleteAssessment = async (id: string, trackingNo: string) => {
+    if (!window.confirm(`Are you sure you want to permanently delete assessment record ${trackingNo}?`)) {
+      return;
+    }
+
+    try {
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (adminUser?.token) headers['Authorization'] = `Bearer ${adminUser.token}`;
+
+      const res = await fetch(`${API_BASE_URL}/admin/business-assessments/${id}`, {
+        method: 'DELETE',
+        headers
+      });
+
+      if (!res.ok) throw new Error("Failed to delete record from server.");
+
+      alert("Assessment record deleted successfully.");
+      if (selectedAssessment?.id === id) {
+        setSelectedAssessment(null);
+      }
+      fetchAdminAssessments();
+    } catch (err: any) {
+      alert(`Error deleting record: ${err.message || "Server error"}`);
+    }
+  };
+
   const handleExportCSV = () => {
     if (assessments.length === 0) {
       alert("No data available to export.");
@@ -283,11 +309,11 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
     sessionStorage.removeItem('user');
     setAdminUser(null);
     setIsDropdownOpen(false);
-    window.location.href = '/login'; 
+    window.location.href = '/login';
   };
 
   return (
-    <div 
+    <div
       style={{
         marginLeft: isCollapsed ? "80px" : "256px",
         width: isCollapsed ? "calc(100% - 80px)" : "calc(100% - 256px)",
@@ -315,7 +341,7 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
           <div className="flex items-center space-x-3">
             {adminUser && (
               <div className="relative" ref={dropdownRef}>
-                <button 
+                <button
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                   className="flex items-center space-x-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 px-4 py-2.5 rounded-xl transition-all cursor-pointer shadow-xs"
                 >
@@ -346,30 +372,28 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
         {/* Navigation Tabs Bar */}
         <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
           <div className="flex gap-2">
-            <button 
+            <button
               onClick={() => setActiveTab('assessments')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'assessments' 
-                  ? 'bg-blue-600 text-white shadow-sm' 
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeTab === 'assessments'
+                  ? 'bg-blue-600 text-white shadow-sm'
                   : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:bg-slate-50'
-              }`}
+                }`}
             >
               Tax Assessments & Filings
             </button>
-            <button 
+            <button
               onClick={() => setActiveTab('audit_logs')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'audit_logs' 
-                  ? 'bg-blue-600 text-white shadow-sm' 
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeTab === 'audit_logs'
+                  ? 'bg-blue-600 text-white shadow-sm'
                   : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:bg-slate-50'
-              }`}
+                }`}
             >
               Audit Trail & COA Compliance Logs
             </button>
           </div>
 
           {activeTab === 'assessments' && (
-            <button 
+            <button
               onClick={handleExportCSV}
               className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-xs transition-all shadow-xs cursor-pointer flex items-center gap-2"
             >
@@ -394,7 +418,7 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
             <div className="p-5 bg-slate-50/50 dark:bg-slate-950/50 rounded-2xl border border-slate-200/80 dark:border-slate-800 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
               <div className="flex flex-col gap-1.5 text-xs">
                 <label className="font-semibold text-slate-700 dark:text-slate-300">Filter by Status</label>
-                <select 
+                <select
                   value={statusFilter}
                   onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
                   className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white outline-none cursor-pointer focus:border-blue-500 transition-all"
@@ -408,7 +432,7 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
 
               <div className="flex flex-col gap-1.5 text-xs">
                 <label className="font-semibold text-slate-700 dark:text-slate-300">Search Parameter</label>
-                <select 
+                <select
                   value={searchType}
                   onChange={(e) => setSearchType(e.target.value)}
                   className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white outline-none cursor-pointer focus:border-blue-500 transition-all"
@@ -421,15 +445,15 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
               <div className="flex flex-col gap-1.5 text-xs sm:col-span-2 lg:col-span-1">
                 <label className="font-semibold text-slate-700 dark:text-slate-300">Search Query</label>
                 <div className="flex gap-2">
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search submissions..." 
-                    className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white outline-none focus:border-blue-500 transition-all" 
+                    placeholder="Search submissions..."
+                    className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white outline-none focus:border-blue-500 transition-all"
                   />
-                  <button 
-                    onClick={() => { setCurrentPage(1); fetchAdminAssessments(); }} 
+                  <button
+                    onClick={() => { setCurrentPage(1); fetchAdminAssessments(); }}
                     className="px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl transition-all cursor-pointer shadow-xs shrink-0 flex items-center gap-1.5"
                   >
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg> Search
@@ -449,7 +473,7 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
                     <th className="p-4">GROSS SALES (PHP)</th>
                     <th className="p-4 text-center">STATUS</th>
                     <th className="p-4">DATE FILED</th>
-                    <th className="p-4 text-center">ACTION</th>
+                    <th className="p-4 text-center">ACTIONS</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-slate-700 dark:text-slate-300">
@@ -479,21 +503,26 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
                         <td className="p-4 font-medium text-slate-700 dark:text-slate-300">{item.businessOwner}</td>
                         <td className="p-4 font-mono font-bold text-slate-900 dark:text-white">₱{item.grossSales ? item.grossSales.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '0.00'}</td>
                         <td className="p-4 text-center">
-                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold border ${
-                            item.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-800' :
-                            item.status === 'REJECTED' ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/50 dark:text-rose-400 dark:border-rose-800' :
-                            'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-800'
-                          }`}>
+                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold border ${item.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-800' :
+                              item.status === 'REJECTED' ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/50 dark:text-rose-400 dark:border-rose-800' :
+                                'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-800'
+                            }`}>
                             {item.status}
                           </span>
                         </td>
                         <td className="p-4 text-slate-500">{new Date(item.applicationDate).toLocaleDateString()}</td>
-                        <td className="p-4 text-center">
-                          <button 
-                            onClick={() => setSelectedAssessment(item)} 
-                            className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-3.5 py-1.5 rounded-xl transition-all cursor-pointer shadow-xs inline-flex items-center gap-1.5"
+                        <td className="p-4 text-center space-x-2">
+                          <button
+                            onClick={() => setSelectedAssessment(item)}
+                            className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-3.5 py-1.5 rounded-xl transition-all cursor-pointer shadow-xs inline-flex items-center gap-1"
                           >
-                            Review / Action
+                            Review
+                          </button>
+                          <button
+                            onClick={() => handleDeleteAssessment(item.id, item.trackingNumber)}
+                            className="bg-rose-600 hover:bg-rose-700 text-white font-medium px-3 py-1.5 rounded-xl transition-all cursor-pointer shadow-xs inline-flex items-center gap-1"
+                          >
+                            Delete
                           </button>
                         </td>
                       </tr>
@@ -507,15 +536,15 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
             <div className="flex justify-between items-center text-xs text-slate-500 dark:text-slate-400 pt-2">
               <span className="font-medium">Page {currentPage} of {totalPages}</span>
               <div className="flex gap-2">
-                <button 
-                  disabled={currentPage <= 1 || loading} 
+                <button
+                  disabled={currentPage <= 1 || loading}
                   onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                   className="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl disabled:opacity-40 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-all font-semibold flex items-center gap-1"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg> Previous
                 </button>
-                <button 
-                  disabled={currentPage >= totalPages || loading} 
+                <button
+                  disabled={currentPage >= totalPages || loading}
                   onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                   className="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl disabled:opacity-40 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-all font-semibold flex items-center gap-1"
                 >
@@ -574,7 +603,7 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
               </div>
               <button type="button" onClick={() => setSelectedAssessment(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"><svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg></button>
             </div>
-            
+
             <div className="space-y-5 text-xs max-h-[70vh] overflow-y-auto pr-1">
               {/* Business Info Grid */}
               <div className="grid grid-cols-2 gap-3.5 bg-slate-50/50 dark:bg-slate-950/50 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800">
@@ -632,7 +661,7 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
                 <h4 className="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide text-[11px]">
                   Attached Requirements & Verification Checklist
                 </h4>
-                
+
                 <div className="bg-slate-50 dark:bg-slate-950 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
                   <div className="font-semibold text-slate-700 dark:text-slate-300 mb-1">Uploaded Files:</div>
                   {selectedAssessment.attachments && selectedAssessment.attachments.length > 0 ? (
@@ -642,22 +671,13 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
                           <svg className="w-3.5 h-3.5 text-blue-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg> {file.name}
                         </span>
                         <div className="flex items-center gap-3">
-                          <button 
+                          <button
                             type="button"
                             onClick={() => setPreviewFile(file)}
                             className="text-blue-600 font-bold hover:underline flex items-center gap-1 cursor-pointer"
                           >
                             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg> Preview
                           </button>
-                          <a 
-                            href={file.url} 
-                            download 
-                            target="_blank" 
-                            rel="noreferrer"
-                            className="text-slate-600 dark:text-slate-300 hover:text-blue-600 font-bold flex items-center gap-1 cursor-pointer"
-                          >
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg> Download
-                          </a>
                         </div>
                       </div>
                     ))
@@ -669,28 +689,28 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
                 {/* Checklist checkboxes */}
                 <div className="space-y-2 pt-1">
                   <label className="flex items-center gap-2.5 cursor-pointer">
-                    <input 
-                      type="checkbox" 
+                    <input
+                      type="checkbox"
                       checked={checklist.itrChecked}
-                      onChange={(e) => setChecklist({...checklist, itrChecked: e.target.checked})}
+                      onChange={(e) => setChecklist({ ...checklist, itrChecked: e.target.checked })}
                       className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-4 w-4"
                     />
                     <span className="font-medium text-slate-700 dark:text-slate-300">I have verified the Income Tax Return (ITR) or Financial Statements.</span>
                   </label>
                   <label className="flex items-center gap-2.5 cursor-pointer">
-                    <input 
-                      type="checkbox" 
+                    <input
+                      type="checkbox"
                       checked={checklist.clearanceVerified}
-                      onChange={(e) => setChecklist({...checklist, clearanceVerified: e.target.checked})}
+                      onChange={(e) => setChecklist({ ...checklist, clearanceVerified: e.target.checked })}
                       className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-4 w-4"
                     />
                     <span className="font-medium text-slate-700 dark:text-slate-300">Barangay Clearance and Zoning permits are authentic and valid.</span>
                   </label>
                   <label className="flex items-center gap-2.5 cursor-pointer">
-                    <input 
-                      type="checkbox" 
+                    <input
+                      type="checkbox"
                       checked={checklist.financialStatementValid}
-                      onChange={(e) => setChecklist({...checklist, financialStatementValid: e.target.checked})}
+                      onChange={(e) => setChecklist({ ...checklist, financialStatementValid: e.target.checked })}
                       className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-4 w-4"
                     />
                     <span className="font-medium text-slate-700 dark:text-slate-300">Declared gross sales match the submitted financial records.</span>
@@ -700,8 +720,8 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
 
               <div>
                 <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Official Remarks / Assessment Notes</label>
-                <textarea 
-                  rows={2} 
+                <textarea
+                  rows={2}
                   value={actionRemarks}
                   onChange={(e) => setActionRemarks(e.target.value)}
                   placeholder="Enter evaluation notes or reason for approval/rejection..."
@@ -711,8 +731,8 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
             </div>
 
             <div className="flex justify-between items-center pt-4 border-t border-slate-200 dark:border-slate-800 mt-6">
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={() => setShowOrderOfPaymentModal(true)}
                 className="px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl text-xs shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
               >
@@ -720,16 +740,16 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
               </button>
 
               <div className="flex gap-2">
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   disabled={submittingAction}
                   onClick={() => handleStatusUpdate('REJECTED')}
                   className="px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl text-xs shadow-xs cursor-pointer disabled:opacity-50 transition-all"
                 >
                   Reject
                 </button>
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   disabled={submittingAction}
                   onClick={() => handleStatusUpdate('APPROVED')}
                   className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-xs shadow-xs cursor-pointer disabled:opacity-50 transition-all"
@@ -742,41 +762,34 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
         </div>
       )}
 
-      {/* FILE PREVIEW MODAL */}
+      {/* EMBEDDED DOCUMENT PREVIEW MODAL (ADMIN) */}
       {previewFile && (
         <div className="fixed inset-0 z-60 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-3xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
             <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-3">
               <div className="flex items-center gap-2">
                 <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
                 <h4 className="font-bold text-slate-900 dark:text-white text-sm truncate max-w-[320px]">{previewFile.name}</h4>
               </div>
-              <button type="button" onClick={() => setPreviewFile(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"><svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg></button>
+              <button type="button" onClick={() => setPreviewFile(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer font-bold text-lg">✕</button>
             </div>
 
-            <div className="h-64 bg-slate-100 dark:bg-slate-950 rounded-2xl flex flex-col items-center justify-center border border-slate-200 dark:border-slate-800 p-4 text-center">
-              <svg className="w-12 h-12 text-slate-400 mb-2" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-              <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Document Preview Ready</p>
-              <p className="text-[11px] text-slate-500 mt-1">Click the download button below to view the full attachment locally.</p>
+            <div className="h-[60vh] bg-slate-100 dark:bg-slate-950 rounded-2xl flex items-center justify-center border border-slate-200 dark:border-slate-800 overflow-hidden relative">
+              {previewFile.url.match(/\.(jpeg|jpg|gif|png)$/i) ? (
+                <img src={previewFile.url} alt="Document Preview" className="max-h-full max-w-full object-contain" />
+              ) : (
+                <iframe src={previewFile.url} title="Document Preview" className="w-full h-full border-0" />
+              )}
             </div>
 
-            <div className="flex justify-end gap-2 pt-2">
-              <button 
-                type="button" 
+            <div className="flex justify-end pt-2">
+              <button
+                type="button"
                 onClick={() => setPreviewFile(null)}
-                className="px-4 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 font-bold rounded-xl text-xs cursor-pointer"
+                className="px-5 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 font-bold rounded-xl text-xs cursor-pointer"
               >
-                Close
+                Close Preview
               </button>
-              <a 
-                href={previewFile.url} 
-                download 
-                target="_blank" 
-                rel="noreferrer"
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs cursor-pointer shadow-sm flex items-center gap-1.5"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg> Download File
-              </a>
             </div>
           </div>
         </div>
@@ -824,13 +837,13 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
             </div>
 
             <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
-              <button 
+              <button
                 onClick={() => setShowOrderOfPaymentModal(false)}
                 className="px-4 py-2 bg-slate-200 hover:bg-slate-300 font-bold rounded-xl text-xs cursor-pointer"
               >
                 Close Preview
               </button>
-              <button 
+              <button
                 onClick={() => window.print()}
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs cursor-pointer shadow-sm flex items-center gap-1.5"
               >
