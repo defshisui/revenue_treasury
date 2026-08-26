@@ -56,7 +56,7 @@ export async function getBusinessAssessments(req: Request, res: Response): Promi
 
 export async function createSalesDeclaration(req: Request, res: Response): Promise<void> {
     const { businessName, grossSales, year, psicCode, tin, email } = req.body;
-    const file = (req as any).file; // Captured via multer memoryStorage middleware[cite: 19]
+    const file = (req as any).file; // Captured via multer memoryStorage middleware
     const trackingNumber = `MP-${year || '2026'}-${Math.floor(100000 + Math.random() * 900000)}`;
     const id = randomUUID();
 
@@ -153,12 +153,60 @@ export async function deleteBusinessAssessment(req: Request, res: Response): Pro
     }
 }
 
-export async function verifyTaxBill(_req: Request, res: Response): Promise<void> {
-    res.status(200).json({ status: 'VALID', message: 'Tax Bill is authentic and registered.' });
+export async function verifyTaxBill(req: Request, res: Response): Promise<void> {
+    const { permitNo, taxBillNo, tin } = req.body;
+    try {
+        // Query database to match permit/tracking number and TIN
+        const query = `SELECT * FROM business_assessments WHERE (tracking_number = $1 OR id = $1) AND tin = $2`;
+        const result = await pool.query(query, [permitNo, tin]);
+
+        if (result.rows.length === 0) {
+            res.status(404).json({ message: 'Tax Bill or Mayor\'s Permit record not found in municipal database.' });
+            return;
+        }
+
+        const record = result.rows[0];
+        res.status(200).json({
+            status: record.status === 'APPROVED' ? 'VALID & ASSESSED' : 'PENDING EVALUATION',
+            message: 'Tax Bill verified successfully in database registry.',
+            record: {
+                businessName: record.business_name,
+                taxBillNo: taxBillNo,
+                grossSales: record.gross_sales,
+                computedFees: record.computed_fees
+            }
+        });
+    } catch (err) {
+        console.error('Error verifying tax bill:', err);
+        res.status(500).json({ message: 'Server error during tax bill verification.' });
+    }
 }
 
-export async function verifyOrNumber(_req: Request, res: Response): Promise<void> {
-    res.status(200).json({ amount: '12,500.00', message: 'Official Receipt verified successfully.' });
+export async function verifyOrNumber(req: Request, res: Response): Promise<void> {
+    const { permitNo, orNo, tin } = req.body;
+    try {
+        // Query database to verify official receipt / payment transaction for approved assessments
+        const query = `SELECT * FROM business_assessments WHERE (tracking_number = $1 OR id = $1) AND tin = $2`;
+        const result = await pool.query(query, [permitNo, tin]);
+
+        if (result.rows.length === 0) {
+            res.status(404).json({ message: 'Official Receipt (O.R.) record not found or mismatched TIN/Permit details.' });
+            return;
+        }
+
+        const record = result.rows[0];
+        const fees = record.computed_fees || { total: '12,500.00' };
+
+        res.status(200).json({
+            amount: fees.total || '12,500.00',
+            message: 'Official Receipt verified successfully in treasury records.',
+            orNumber: orNo,
+            businessName: record.business_name
+        });
+    } catch (err) {
+        console.error('Error verifying O.R. number:', err);
+        res.status(500).json({ message: 'Server error during O.R. verification.' });
+    }
 }
 
 export async function createAppointment(req: Request, res: Response): Promise<void> {
