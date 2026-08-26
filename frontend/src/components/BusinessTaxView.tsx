@@ -31,12 +31,15 @@ interface AppointmentRecord {
   id: string;
   department: string;
   appointmentType: string;
+  businessName?: string;
+  tin?: string;
   address?: string;
   description?: string;
   fullName: string;
   email: string;
   phone: string;
   date: string;
+  timeSlot?: string;
   remarks?: string;
   status: string;
   createdAt: string;
@@ -255,7 +258,6 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
     }
   };
 
-  // 🗑️ Added Delete Appointment Handler
   const handleDeleteAppointment = async (id: string) => {
     if (!window.confirm("Are you sure you want to permanently delete this appointment record?")) {
       return;
@@ -648,10 +650,10 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
               <table className="w-full text-left text-xs whitespace-nowrap border-collapse">
                 <thead className="bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-200 dark:border-slate-800">
                   <tr>
-                    <th className="p-4">APPLICANT</th>
+                    <th className="p-4">APPLICANT &amp; BUSINESS</th>
                     <th className="p-4">DEPARTMENT</th>
                     <th className="p-4">APPOINTMENT TYPE</th>
-                    <th className="p-4">DATE</th>
+                    <th className="p-4">SCHEDULE &amp; SLOT</th>
                     <th className="p-4">CONTACT INFO</th>
                     <th className="p-4 text-center">STATUS</th>
                     <th className="p-4 text-center">ACTIONS</th>
@@ -665,10 +667,16 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
                   ) : (
                     appointments.map(apt => (
                       <tr key={apt.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                        <td className="p-4 font-bold text-slate-900 dark:text-white">{apt.fullName}</td>
+                        <td className="p-4">
+                          <div className="font-bold text-slate-900 dark:text-white">{apt.fullName}</div>
+                          <div className="text-[11px] text-slate-500">{apt.businessName ? `Biz: ${apt.businessName}` : 'No business specified'} {apt.tin ? `(TIN: ${apt.tin})` : ''}</div>
+                        </td>
                         <td className="p-4">{apt.department}</td>
                         <td className="p-4 font-semibold text-blue-600">{apt.appointmentType}</td>
-                        <td className="p-4 font-mono">{apt.date}</td>
+                        <td className="p-4 font-mono">
+                          <div>{apt.date}</div>
+                          <div className="text-[10px] text-slate-400">{apt.timeSlot || 'All Day'}</div>
+                        </td>
                         <td className="p-4 text-slate-500">{apt.phone} / {apt.email}</td>
                         <td className="p-4 text-center">
                           <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold border ${apt.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400' :
@@ -691,7 +699,6 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
                           >
                             Cancel
                           </button>
-                          {/* 🗑️ Delete Appointment Button */}
                           <button
                             onClick={() => handleDeleteAppointment(apt.id)}
                             className="bg-rose-600 hover:bg-rose-700 text-white font-medium px-3 py-1 rounded-xl transition-all cursor-pointer shadow-xs"
