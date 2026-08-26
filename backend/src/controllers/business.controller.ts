@@ -56,7 +56,7 @@ export async function getBusinessAssessments(req: Request, res: Response): Promi
 
 export async function createSalesDeclaration(req: Request, res: Response): Promise<void> {
     const { businessName, grossSales, year, psicCode, tin, email } = req.body;
-    const file = (req as any).file; // Captured via multer memoryStorage middleware[cite: 7, 9]
+    const file = (req as any).file; // Captured via multer memoryStorage middleware[cite: 19]
     const trackingNumber = `MP-${year || '2026'}-${Math.floor(100000 + Math.random() * 900000)}`;
     const id = randomUUID();
 
@@ -162,15 +162,15 @@ export async function verifyOrNumber(_req: Request, res: Response): Promise<void
 }
 
 export async function createAppointment(req: Request, res: Response): Promise<void> {
-    const { department, appointmentType, address, description, fullName, email, phone, date, remarks } = req.body;
+    const { department, appointmentType, businessName, tin, address, description, fullName, email, phone, date, timeSlot, remarks } = req.body;
     const id = randomUUID();
 
     try {
         const result = await pool.query(
             `INSERT INTO appointments 
-            (id, department, appointment_type, address, description, full_name, email, phone, appointment_date, remarks, status)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'PENDING') RETURNING *`,
-            [id, department, appointmentType, address, description, fullName, email, phone, date, remarks]
+            (id, department, appointment_type, business_name, tin, address, description, full_name, email, phone, appointment_date, time_slot, remarks, status)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'PENDING') RETURNING *`,
+            [id, department, appointmentType, businessName || '', tin || '', address, description, fullName, email, phone, date, timeSlot || '09:00 AM - 10:00 AM', remarks]
         );
 
         await recordAudit(req, 'AUD-APT-SUBMIT', email || 'citizen@gov.ph', 'Citizen',
@@ -191,12 +191,15 @@ export async function getAppointments(_req: Request, res: Response): Promise<voi
             id: row.id,
             department: row.department,
             appointmentType: row.appointment_type,
+            businessName: row.business_name,
+            tin: row.tin,
             address: row.address,
             description: row.description,
             fullName: row.full_name,
             email: row.email,
             phone: row.phone,
             date: row.appointment_date,
+            timeSlot: row.time_slot,
             remarks: row.remarks,
             status: row.status,
             createdAt: row.created_at
@@ -224,5 +227,28 @@ export async function updateAppointmentStatus(req: Request, res: Response): Prom
     } catch (err) {
         console.error('Error updating appointment status:', err);
         res.status(500).json({ message: 'Failed to update status.' });
+    }
+}
+
+export async function deleteAppointment(req: Request, res: Response): Promise<void> {
+    const { id } = req.params;
+    try {
+        const result = await pool.query(
+            `DELETE FROM appointments WHERE id = $1 RETURNING *`,
+            [id]
+        );
+        if (result.rows.length === 0) {
+            res.status(404).json({ message: 'Appointment record not found.' });
+            return;
+        }
+
+        await recordAudit(req, 'AUD-APT-DELETE', 'admin@lgu.gov.ph', 'admin',
+            'Appointments Module', 'APPOINTMENT_DELETED', 'WARNING', null,
+            `Deleted appointment record with ID ${id}`);
+
+        res.status(200).json({ message: 'Appointment record successfully deleted.' });
+    } catch (err) {
+        console.error('Error deleting appointment record:', err);
+        res.status(500).json({ message: 'Failed to delete appointment from server.' });
     }
 }
