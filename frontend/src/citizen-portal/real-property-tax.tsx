@@ -180,9 +180,15 @@ function makeControlNumber() {
   return `RPT-${period}-${random}`;
 }
 
+// SAFE FALLBACK: Checks if the date string already contains a "T"
 function formatDate(date: string) {
-  if (!date) return "";
-  return new Intl.DateTimeFormat("en-PH", { year: "numeric", month: "short", day: "numeric" }).format(new Date(`${date}T00:00:00`));
+  if (!date) return "—";
+  try {
+    const cleanDate = date.includes('T') ? date : `${date}T00:00:00`;
+    return new Intl.DateTimeFormat("en-PH", { year: "numeric", month: "short", day: "numeric" }).format(new Date(cleanDate));
+  } catch (e) {
+    return "Invalid Date";
+  }
 }
 
 const getStatusColor = (status?: string) => {
