@@ -358,6 +358,22 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
     }
   };
 
+  // ⚡ Auto-Fill Helper for instant testing using loaded database records
+  const handleAutoFillFromRecord = (item: AssessmentRecord) => {
+    setAdminTaxBillForm({
+      permitNo: item.trackingNumber,
+      taxBillNo: `TB-${item.trackingNumber.split('-')[1] || '2026'}-01`,
+      tin: item.tin || '000-000-000-000'
+    });
+    setAdminOrForm({
+      permitNo: item.trackingNumber,
+      orNo: `OR-2026-${Math.floor(100000 + Math.random() * 900000)}`,
+      tin: item.tin || '000-000-000-000'
+    });
+    setActiveTab('verifications');
+    alert(`Loaded record for "${item.businessName}" into verification lookup forms! Click "Verify" to test.`);
+  };
+
   const handleStatusUpdate = async (newStatus: 'APPROVED' | 'REJECTED') => {
     if (!selectedAssessment) return;
     if (newStatus === 'APPROVED' && (!checklist.itrChecked || !checklist.clearanceVerified || !checklist.financialStatementValid)) {
@@ -676,6 +692,13 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
                             Review
                           </button>
                           <button
+                            onClick={() => handleAutoFillFromRecord(item)}
+                            className="bg-amber-600 hover:bg-amber-700 text-white font-medium px-3 py-1.5 rounded-xl transition-all cursor-pointer shadow-xs inline-flex items-center gap-1"
+                            title="Quick Lookup Auto-Fill"
+                          >
+                            Lookup
+                          </button>
+                          <button
                             onClick={() => handleDeleteAssessment(item.id, item.trackingNumber)}
                             className="bg-rose-600 hover:bg-rose-700 text-white font-medium px-3 py-1.5 rounded-xl transition-all cursor-pointer shadow-xs inline-flex items-center gap-1"
                           >
@@ -790,13 +813,33 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
           </section>
         ) : activeTab === 'verifications' ? (
           <section className="bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-xs space-y-6">
-            <div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-1">
-                <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg> Tax Bill &amp; Official Receipt (O.R.) Treasury Verification
-              </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Perform administrative checks to validate taxpayer numbers, cross-verify issued bills, and authenticate treasury payments directly against database records.
-              </p>
+            <div className="flex justify-between items-center flex-wrap gap-3">
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-1">
+                  <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg> Tax Bill &amp; Official Receipt (O.R.) Treasury Verification
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Perform administrative checks to validate taxpayer numbers, cross-verify issued bills, and authenticate treasury payments directly against database records.
+                </p>
+              </div>
+              {assessments.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-semibold text-slate-500">Quick Auto-Fill from Record:</span>
+                  <select
+                    onChange={(e) => {
+                      const found = assessments.find(a => a.id === e.target.value);
+                      if (found) handleAutoFillFromRecord(found);
+                    }}
+                    defaultValue=""
+                    className="p-2 text-xs bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl outline-none cursor-pointer"
+                  >
+                    <option value="" disabled>Select business record...</option>
+                    {assessments.map(a => (
+                      <option key={a.id} value={a.id}>{a.businessName} ({a.trackingNumber})</option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
