@@ -155,7 +155,8 @@ export async function deleteBusinessAssessment(req: Request, res: Response): Pro
 export async function verifyTaxBill(req: Request, res: Response): Promise<void> {
     const { permitNo, taxBillNo, tin } = req.body;
     try {
-        const query = `SELECT * FROM business_assessments WHERE (tracking_number = $1 OR id = $1) AND tin = $2`;
+        // Cast id to text to prevent operator does not exist: uuid = text errors
+        const query = `SELECT * FROM business_assessments WHERE (tracking_number = $1 OR id::text = $1) AND tin = $2`;
         const result = await pool.query(query, [permitNo, tin]);
 
         if (result.rows.length === 0) {
@@ -174,16 +175,17 @@ export async function verifyTaxBill(req: Request, res: Response): Promise<void> 
                 computedFees: record.computed_fees
             }
         });
-    } catch (err) {
+    } catch (err: any) {
         console.error('Error verifying tax bill:', err);
-        res.status(500).json({ message: 'Server error during tax bill verification.' });
+        res.status(500).json({ message: err.message || 'Server error during tax bill verification.' });
     }
 }
 
 export async function verifyOrNumber(req: Request, res: Response): Promise<void> {
     const { permitNo, orNo, tin } = req.body;
     try {
-        const query = `SELECT * FROM business_assessments WHERE (tracking_number = $1 OR id = $1) AND tin = $2`;
+        // Cast id to text to prevent operator does not exist: uuid = text errors
+        const query = `SELECT * FROM business_assessments WHERE (tracking_number = $1 OR id::text = $1) AND tin = $2`;
         const result = await pool.query(query, [permitNo, tin]);
 
         if (result.rows.length === 0) {
