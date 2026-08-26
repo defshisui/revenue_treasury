@@ -879,8 +879,8 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
             <div className="w-6 h-6 rounded-full bg-blue-900 flex items-center justify-center text-[10px] font-bold cursor-pointer">x</div>
           </div>
           <div className="flex items-center gap-6 text-[11px]">
-            <span>📞 122</span>
-            <span>✉️ helpdesk@domain.gov.ph</span>
+            <span>Phone: 122</span>
+            <span>Email: helpdesk@domain.gov.ph</span>
           </div>
           <div className="flex items-center gap-4 text-[11px]">
             <span className="hover:underline cursor-pointer">TERMS OF SERVICE</span>
@@ -889,7 +889,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
           </div>
         </div>
         <div className="max-w-7xl mx-auto text-center text-[10px] text-slate-400 mt-3 pt-3 border-t border-blue-900/50">
-          © 2026 Local Government. All rights reserved.
+          (c) 2026 Local Government. All rights reserved.
         </div>
       </footer>
 
@@ -940,19 +940,18 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
                     return docArray.map((doc, idx) => {
                       const docStr = typeof doc === "string" ? doc : JSON.stringify(doc);
 
-                      let fileName = docStr;
-                      if (docStr.includes(': ')) {
-                        fileName = docStr.split(': ')[1].trim();
-                      }
+                      const parts = docStr.split(':');
+                      let rawFileName = parts.length > 1 ? parts[parts.length - 1].trim() : docStr.trim();
+                      rawFileName = rawFileName.replace(/["'{}]/g, "").trim();
 
-                      const hasExtension = /\.(jpg|jpeg|png|gif|webp|pdf)$/i.test(fileName);
+                      const hasExtension = /\.(jpg|jpeg|png|gif|webp|pdf)$/i.test(rawFileName);
 
                       let imgUrl = null;
-                      if (hasExtension) {
-                        const cleanPath = fileName.startsWith('/uploads/') ? fileName : `/uploads/${fileName}`;
-                        imgUrl = cleanPath.startsWith('http') || cleanPath.startsWith('blob:') ? cleanPath : `${API_BASE_URL}${cleanPath}`;
-                      } else if (docStr.includes('/uploads/') || docStr.startsWith('http') || docStr.startsWith('blob:')) {
-                        imgUrl = docStr.startsWith('http') || docStr.startsWith('blob:') ? docStr : `${API_BASE_URL}${docStr}`;
+                      if (hasExtension || rawFileName.includes('/uploads/')) {
+                        const cleanFileName = rawFileName.includes('/uploads/') ? rawFileName.split('/uploads/').pop() : rawFileName;
+                        imgUrl = `${API_BASE_URL}/uploads/${cleanFileName}`;
+                      } else if (rawFileName.startsWith('http') || rawFileName.startsWith('blob:')) {
+                        imgUrl = rawFileName;
                       }
 
                       return (
