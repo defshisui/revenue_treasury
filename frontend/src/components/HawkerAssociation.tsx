@@ -3,7 +3,7 @@ import React, { useState, useMemo } from "react";
 import type { HawkerAssociationRecord, HawkerAssociationStatus } from "../types/treasury";
 import { API_BASE_URL } from '../config/api';
 
-// NEW: Define the structure for the Digital Vault Documents
+// Define the structure for the Digital Vault Documents
 export interface HawkerDocument {
   id: string;
   document_type: string;
@@ -112,7 +112,6 @@ export default function HawkerAssociation({
   const [reviewRemarks, setReviewRemarks] = useState("");
   const [inspectionNote, setInspectionNote] = useState("");
 
-  // New Manual Admin Registration Form State with LGU fields
   const [newForm, setNewForm] = useState({
     associationNumber: `HA-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
     associationName: "",
@@ -129,7 +128,6 @@ export default function HawkerAssociation({
     submitterEmail: "admin.market@quezoncity.gov.ph",
   });
 
-  // Fetch submitted applications from Backend API / LocalStorage
   const fetchApplications = async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/hawkers`);
@@ -164,32 +162,15 @@ export default function HawkerAssociation({
         return;
       }
     } catch (error) {
-      console.warn("Backend API unreachable, utilizing local storage:", error);
+      console.warn("Backend API unreachable, utilizing local storage:");
     }
 
+    // Fallback to local storage if backend fails
     const savedApplications = localStorage.getItem("hawker_applications");
     if (savedApplications) {
       try {
         const parsed = JSON.parse(savedApplications);
-        const mappedRecords: ExtendedHawkerRecord[] = parsed.map((item: any) => enrichWithLguMeta({
-          id: item.id || crypto.randomUUID(),
-          associationNumber: item.associationNumber,
-          associationName: item.associationName,
-          secRegistrationNo: item.secRegistrationNo || undefined,
-          dateIssued: item.dateIssued || undefined,
-          contactNumber: item.contactNumber,
-          chairperson: {
-            firstName: item.chairperson?.firstName || "",
-            middleName: item.chairperson?.middleName || "",
-            lastName: item.chairperson?.lastName || "",
-            email: item.chairperson?.email || "",
-          },
-          submittedBy: item.submittedBy || "Citizen Applicant",
-          submitterEmail: item.submitterEmail || item.chairperson?.email || "",
-          submissionDate: item.submissionDate || new Date().toISOString().slice(0, 10),
-          status: item.status || "New",
-          memberCount: 20,
-        }));
+        const mappedRecords: ExtendedHawkerRecord[] = parsed.map((item: any) => enrichWithLguMeta(item));
 
         setAssociations((prev) => {
           const existingIds = new Set(prev.map(p => p.id));
@@ -197,7 +178,7 @@ export default function HawkerAssociation({
           return [...newItems, ...prev];
         });
       } catch (err) {
-        console.error("Failed parsing local storage hawker records:", err);
+        console.error("Failed parsing local storage records:", err);
       }
     }
   };
@@ -206,7 +187,6 @@ export default function HawkerAssociation({
     fetchApplications();
   }, []);
 
-  // Executive LGU Metrics
   const metrics = useMemo(() => {
     const total = associations.length;
     const pending = associations.filter((a) => a.status === "New" || a.status === "Under Review").length;
@@ -217,7 +197,6 @@ export default function HawkerAssociation({
     return { total, pending, approved, rejected, totalStalls };
   }, [associations]);
 
-  // Filter Data List
   const filteredAssociations = useMemo(() => {
     return associations.filter((item) => {
       const matchesStatus = selectedStatus === "All" || item.status === selectedStatus;
@@ -233,7 +212,6 @@ export default function HawkerAssociation({
     });
   }, [associations, selectedStatus, searchTerm]);
 
-  // Create Walk-in Record
   const handleCreateAssociation = async (e: React.FormEvent) => {
     e.preventDefault();
     const newRecord: ExtendedHawkerRecord = enrichWithLguMeta({
@@ -270,6 +248,12 @@ export default function HawkerAssociation({
       },
     });
 
+    const updated = [newRecord, ...associations];
+    setAssociations(updated);
+
+    // Sync Local Storage
+    localStorage.setItem("hawker_applications", JSON.stringify(updated));
+
     try {
       await fetch(`${API_BASE_URL}/api/hawkers`, {
         method: 'POST',
@@ -280,7 +264,6 @@ export default function HawkerAssociation({
       console.warn("Backend server offline, saved locally.");
     }
 
-    setAssociations([newRecord, ...associations]);
     setIsRegisterOpen(false);
     setNewForm({
       associationNumber: `HA-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -299,7 +282,6 @@ export default function HawkerAssociation({
     });
   };
 
-  // Update Status & Audit Trail
   const handleUpdateStatus = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedRecord) return;
@@ -334,7 +316,9 @@ export default function HawkerAssociation({
 
     setAssociations(updated);
 
-    // Update the backend so the user sees it immediately
+    // Sync Local Storage
+    localStorage.setItem("hawker_applications", JSON.stringify(updated));
+
     if (itemToUpdate) {
       try {
         await fetch(`${API_BASE_URL}/api/hawkers/${selectedRecord.id}`, {
@@ -343,7 +327,7 @@ export default function HawkerAssociation({
           body: JSON.stringify(itemToUpdate),
         });
       } catch (err) {
-        console.warn("Backend update failed, saved locally:", err);
+        console.warn("Backend update failed, saved locally.");
       }
     }
 
@@ -352,7 +336,6 @@ export default function HawkerAssociation({
     setReviewRemarks("");
   };
 
-  // Add Inspector Violation Notice
   const handleAddViolation = async () => {
     if (!selectedRecord || !inspectionNote.trim()) return;
 
@@ -383,7 +366,9 @@ export default function HawkerAssociation({
 
     setAssociations(updated);
 
-    // Update backend violation count
+    // Sync Local Storage
+    localStorage.setItem("hawker_applications", JSON.stringify(updated));
+
     if (itemToUpdate) {
       try {
         await fetch(`${API_BASE_URL}/api/hawkers/${selectedRecord.id}`, {
@@ -392,35 +377,44 @@ export default function HawkerAssociation({
           body: JSON.stringify(itemToUpdate),
         });
       } catch (err) {
-        console.warn("Backend update failed, saved locally:", err);
+        console.warn("Backend update failed, saved locally.");
       }
     }
 
     setInspectionNote("");
   };
 
-  // ROBUST DATABASE DELETION
+  // ROBUST & OPTIMISTIC DELETION (Mirrors the Market Stall Component)
   const handleDelete = async (id: string) => {
-    if (confirm("Are you sure you want to delete this hawker association registry? This will permanently remove the record from the database.")) {
-
-      // Optimistically remove from UI
-      const updated = associations.filter((item) => item.id !== id);
-      setAssociations(updated);
+    if (window.confirm("Are you sure you want to delete this hawker association registry?")) {
 
       try {
-        const response = await fetch(`${API_BASE_URL}/api/hawkers/${id}`, { method: 'DELETE' });
+        // Attempt backend deletion
+        await fetch(`${API_BASE_URL}/api/hawkers/${id}`, { method: 'DELETE' });
+      } catch (err) {
+        console.warn("Backend delete failed or unavailable, removing from local UI state anyway:", err);
+      }
 
-        if (!response.ok) {
-          throw new Error("Failed to delete from database");
+      // Optimistically remove from UI State
+      setAssociations((prev) => {
+        const updated = prev.filter((item) => item.id !== id);
+
+        // Scrub it from localStorage so it stays deleted even after refresh
+        try {
+          const savedStr = localStorage.getItem("hawker_applications");
+          if (savedStr) {
+            const savedArr = JSON.parse(savedStr);
+            const filteredArr = savedArr.filter((p: any) => p.id !== id);
+            localStorage.setItem("hawker_applications", JSON.stringify(filteredArr));
+          }
+        } catch (e) {
+          console.error("Failed to sync deletion to local storage:", e);
         }
 
-        if (onDeleteRecord) onDeleteRecord(id);
-      } catch (err) {
-        console.error("Delete failed:", err);
-        alert("Failed to delete record from the database. Restoring view.");
-        // If DB deletion fails, restore the list by fetching again
-        fetchApplications();
-      }
+        return updated;
+      });
+
+      if (onDeleteRecord) onDeleteRecord(id);
     }
   };
 
@@ -762,7 +756,6 @@ export default function HawkerAssociation({
                           {doc.document_type.replace(/_/g, ' ')}
                         </span>
 
-                        {/* Display Logic Based on mime_type */}
                         {doc.mime_type.startsWith('image/') ? (
                           <div className="w-full h-36 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700 bg-white">
                             <img
