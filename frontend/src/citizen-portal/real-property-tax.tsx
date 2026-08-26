@@ -1032,7 +1032,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
             </div>
 
             <div className="h-[60vh] bg-slate-100 dark:bg-slate-950 rounded-2xl flex items-center justify-center border border-slate-200 dark:border-slate-800 overflow-hidden relative">
-              {previewFile.url.toLowerCase().match(/\.(jpeg|jpg|gif|png|webp)$/i) ? (
+              {previewFile.url.toLowerCase().match(/\.(jpeg|jpg|gif|png|webp)$/i) || previewFile.name.toLowerCase().match(/\.(jpeg|jpg|gif|png|webp)$/i) ? (
                 <img src={previewFile.url} alt="Document Preview" className="max-h-full max-w-full object-contain" />
               ) : (
                 <iframe src={previewFile.url} title="Document Preview" className="w-full h-full border-0 bg-white" />
