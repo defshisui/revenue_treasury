@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import multer from 'multer';
+import { randomUUID } from 'crypto';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -545,7 +546,7 @@ app.post('/citizen-rpt-applications', upload.any(), async (req, res) => {
     `;
     
     const values = [
-      appData.id || crypto.randomUUID(),
+      appData.id || randomUUID(),
       appData.controlNumber || null,
       appData.referenceNumber || null,
       appData.email || null,
@@ -892,7 +893,7 @@ app.post('/api/hawkers', async (req, res) => {
     `;
     
     const values = [
-      data.id || crypto.randomUUID(),
+      data.id || randomUUID(),
       data.associationNumber,
       data.associationName,
       data.secRegistrationNo || '',
