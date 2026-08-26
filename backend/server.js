@@ -1219,6 +1219,27 @@ function handleFailedAttempt(req, email, trackingData, currentTime, res) {
   }
 }
 
+// ==========================================
+// GLOBAL ERROR HANDLING MIDDLEWARE
+// ==========================================
+app.use((err, req, res, next) => {
+  console.error('🔥 Unhandled Express Error:', err.stack || err);
+  res.status(err.status || 500).json({
+    success: false,
+    message: err.message || 'Internal server error',
+  });
+});
+
+// ==========================================
+// 404 CATCH-ALL JSON MIDDLEWARE
+// ==========================================
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `API endpoint not found: ${req.method} ${req.originalUrl}`
+  });
+});
+
 const parsedPort = parseInt(process.env.PORT || '3000', 10);
 
 app.listen(parsedPort, '0.0.0.0', () => {
