@@ -1,3 +1,4 @@
+// src/components/TreasurySidebar.tsx
 import { useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import type { Subsystem } from "../types/treasury";
@@ -52,15 +53,15 @@ export default function TreasurySidebar({
 
   return (
     <aside
-      className={`h-screen fixed top-0 left-0 shrink-0 bg-[#0b132b] border-r border-[#1c2541] flex flex-col p-4 z-50 transition-[width] duration-300 shadow-xl ${
-        isCollapsed ? "w-20" : "w-64"
-      }`}
+      className={`h-screen fixed top-0 left-0 shrink-0 bg-[#0b132b] border-r border-[#1c2541] flex flex-col p-4 z-50 transition-[width] duration-300 shadow-xl ${isCollapsed ? "w-20" : "w-64"
+        }`}
       style={{ backgroundColor: "#0b132b" }}
     >
       {/* Header Logo */}
       <div className="flex items-center gap-3 px-1 py-1">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white shadow-sm">
-          <img src="src/assets/logo-system.png" alt="Hero Icon" className="w-10 h-10 object-contain" />
+          {/* Added leading slash to ensure the logo loads on all nested routes */}
+          <img src="/src/assets/logo-system.png" alt="System Logo" className="w-10 h-10 object-contain" />
         </div>
         {!isCollapsed && (
           <div className="min-w-0">
@@ -115,10 +116,11 @@ export default function TreasurySidebar({
                 onClick={() => handleTabClick(item)}
                 title={item.label}
                 className={`w-full min-w-0 flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 cursor-pointer ${
-                  activeTab === item.id || (isMarketGroup && ["market-city", "market-private", "hawker"].includes(activeTab))
+                  // Removed 'market-private' from the active state array
+                  activeTab === item.id || (isMarketGroup && ["market-city", "hawker"].includes(activeTab))
                     ? "bg-[#1d4ed8] text-white shadow-sm font-bold"
                     : "hover:bg-[#1c2541] text-gray-300 hover:text-white"
-                }`}
+                  }`}
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <span className="w-5 shrink-0 text-center text-base" aria-hidden="true">
@@ -136,9 +138,8 @@ export default function TreasurySidebar({
                     className="text-slate-400 hover:text-white p-1 rounded cursor-pointer"
                   >
                     <svg
-                      className={`w-3.5 h-3.5 transition-transform duration-200 ${
-                        isMarketOpen ? "rotate-180" : "rotate-0"
-                      }`}
+                      className={`w-3.5 h-3.5 transition-transform duration-200 ${isMarketOpen ? "rotate-180" : "rotate-0"
+                        }`}
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -154,31 +155,19 @@ export default function TreasurySidebar({
                 <div className="mt-1 ml-4 pl-3 border-l-2 border-[#1c2541] space-y-1">
                   <button
                     onClick={() => setActiveTab("market-city")}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors flex items-center justify-between cursor-pointer ${
-                      activeTab === "market-city"
+                    className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors flex items-center justify-between cursor-pointer ${activeTab === "market-city"
                         ? "bg-[#1d4ed8] text-white font-bold"
                         : "text-slate-400 hover:text-white hover:bg-[#1c2541]"
-                    }`}
+                      }`}
                   >
                     <span className="truncate">City-Owned Market</span>
                   </button>
                   <button
-                    onClick={() => setActiveTab("market-private")}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors flex items-center justify-between cursor-pointer ${
-                      activeTab === "market-private"
-                        ? "bg-[#1d4ed8] text-white font-bold"
-                        : "text-slate-400 hover:text-white hover:bg-[#1c2541]"
-                    }`}
-                  >
-                    <span className="truncate">Private Owned Market / Talipapa</span>
-                  </button>
-                  <button
                     onClick={() => setActiveTab("hawker")}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors flex items-center justify-between cursor-pointer ${
-                      activeTab === "hawker"
+                    className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors flex items-center justify-between cursor-pointer ${activeTab === "hawker"
                         ? "bg-[#1d4ed8] text-white font-bold"
                         : "text-slate-400 hover:text-white hover:bg-[#1c2541]"
-                    }`}
+                      }`}
                   >
                     <span className="truncate">Hawker Association</span>
                   </button>
