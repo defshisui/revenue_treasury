@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import logoSystem from '../assets/logo-system.png';
 import { submitHawkerApplication } from '../services/hawkerservice';
+import { API_BASE_URL } from '../config/api';
 
 interface Props {
     onSubmitApplication?: (record: any) => void;
@@ -22,7 +23,7 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
     const [isPreviewMode, setIsPreviewMode] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // New state for Read-Only View Mode
+    // Read-Only View Mode state
     const [isViewOnly, setIsViewOnly] = useState(false);
     const [viewedAppStatus, setViewedAppStatus] = useState<string>('New');
     const [viewedAppRemarks, setViewedAppRemarks] = useState<string>('');
@@ -32,6 +33,7 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
 
     // State to hold submitted applications for the table list
     const [applications, setApplications] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
 
     // Logged-in user state & dropdown controls
     const [loggedInUser, setLoggedInUser] = useState<any>(null);
@@ -63,6 +65,23 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
 
     // Form fields state
     const [formData, setFormData] = useState(initialFormState);
+
+    // Fetch applications from Backend
+    const fetchApplications = async (userEmail: string) => {
+        setIsLoading(true);
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/hawkers`);
+            if (response.ok) {
+                const data = await response.json();
+                const userApps = data.filter((app: any) => app.submitterEmail === userEmail);
+                setApplications(userApps.reverse());
+            }
+        } catch (error) {
+            console.error("Failed to fetch applications from backend:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     // Check user session on mount
     useEffect(() => {
@@ -101,10 +120,15 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                             initials
                         };
                         setLoggedInUser(userObj);
+
+                        if (email) fetchApplications(email);
+                        return;
                     }
                 }
+                setIsLoading(false);
             } catch (err) {
                 console.error("Failed to parse user session:", err);
+                setIsLoading(false);
             }
         };
 
@@ -210,7 +234,7 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
     };
 
     const handleBack = () => {
-        window.history.back();
+        window.location.href = '/market-vendors-hub';
     };
 
     const handleInitialSubmitClick = (e: React.FormEvent) => {
@@ -255,15 +279,17 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
         try {
             setIsSubmitting(true);
 
-            // Mock backend call
             await submitHawkerApplication(payload);
 
             if (onSubmitApplication) {
                 onSubmitApplication(payload);
             }
 
-            // Update local state so it appears in the table immediately
-            setApplications(prev => [payload, ...prev]);
+            if (loggedInUser?.email) {
+                await fetchApplications(loggedInUser.email);
+            } else {
+                setApplications(prev => [payload, ...prev]);
+            }
 
             alert("Application successfully submitted to the LGU portal!");
             setFormData(initialFormState);
@@ -311,6 +337,7 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
         sessionStorage.removeItem('user');
         setLoggedInUser(null);
         setIsUserMenuOpen(false);
+        window.location.href = '/';
     };
 
     // Derived filtered list for search functionality
@@ -323,27 +350,66 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
         <div className="w-full min-h-screen bg-slate-100 font-sans text-slate-800 flex flex-col antialiased relative">
 
             {/* =====================================================
-                MARKET STALL UNIFIED PORTAL HEADER
+                MAIN NAVIGATION HEADER (Matches CitizenPortalLanding Reference)
             ====================================================== */}
-            <header className="bg-[#1e3a8a] border-b border-blue-900 sticky top-0 z-40 shadow-md">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-                    <div className="flex items-center space-x-3 cursor-pointer group" onClick={showListView}>
-                        <div className="bg-white rounded-full p-1 shadow-sm transition-transform duration-300 group-hover:scale-105">
+            <header className="w-full bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-xs sticky top-0 z-40">
+                <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+
+                    <div className="flex items-center gap-3 cursor-pointer" onClick={showListView}>
+                        <div className="p-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xs flex items-center justify-center">
                             <img
                                 src={logoSystem}
-                                alt="QC Logo"
-                                className="h-9 w-9 object-contain"
+                                alt="System Logo"
+                                className="h-8 w-8 object-contain"
                             />
                         </div>
-                        <div>
-                            <h1 className="text-sm font-extrabold text-white tracking-wide uppercase">QC E-Services</h1>
-                            <p className="text-[10px] text-blue-200 font-medium tracking-wider uppercase">Market Stall & Vendor Management</p>
+                        <div className="flex flex-col">
+                            <span className="font-extrabold text-lg tracking-tight text-slate-900 dark:text-white leading-tight">
+                                Gov Serv
+                            </span>
+                            <span className="text-[10px] font-bold text-blue-700 dark:text-blue-400 tracking-wider uppercase">
+                                Unified Portal
+                            </span>
                         </div>
                     </div>
 
-                    <div className="hidden md:flex items-center space-x-8 text-xs font-semibold text-blue-100">
-                        <span className="hover:text-white transition-colors cursor-pointer">Home</span>
-                        <span className="hover:text-white transition-colors cursor-pointer flex items-center gap-1">Services ▾</span>
+                    <div className="hidden md:flex items-center space-x-6 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                        <span className="hover:text-blue-700 cursor-pointer" onClick={() => window.location.href = '/citizen-portal'}>HOME</span>
+
+                        <div className="relative group py-2">
+                            <span className="hover:text-blue-700 cursor-pointer flex items-center gap-1 select-none">
+                                SERVICES ▾
+                            </span>
+                            <div className="absolute left-0 top-full h-2 w-full"></div>
+                            <div className="absolute left-0 top-[calc(100%+8px)] w-60 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 py-2 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-1 group-hover:translate-y-0">
+                                <button
+                                    onClick={() => window.location.href = '/citizen-portal'}
+                                    className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer"
+                                >
+                                    Home
+                                </button>
+                                <button
+                                    onClick={() => window.location.href = '/market-vendors-hub'}
+                                    className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer"
+                                >
+                                    Market &amp; Vendors Hub
+                                </button>
+                                <button
+                                    onClick={() => window.location.href = '/real-property-tax-hub'}
+                                    className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer"
+                                >
+                                    Real Property Tax Hub
+                                </button>
+                                <button
+                                    onClick={() => window.location.href = '/business-tax-assessment'}
+                                    className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer"
+                                >
+                                    Business Tax Assessment Hub
+                                </button>
+                            </div>
+                        </div>
+
+                        <span className="hover:text-blue-700 cursor-pointer">CONTACT US</span>
                     </div>
 
                     <div className="flex items-center space-x-3">
@@ -351,35 +417,38 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                             <div className="relative" ref={dropdownRef}>
                                 <button
                                     onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                                    className="flex items-center space-x-2 bg-blue-800 hover:bg-blue-700 border border-blue-700 px-3 py-1.5 rounded-full transition-all cursor-pointer shadow-xs group"
+                                    className="flex items-center space-x-2.5 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-xl transition-all cursor-pointer shadow-xs group"
                                 >
-                                    <div className="w-6 h-6 rounded-full bg-white text-[#1e3a8a] flex items-center justify-center font-bold text-[10px] shadow-sm tracking-wider">
+                                    <span className="text-xs font-extrabold text-slate-800 dark:text-slate-200 tracking-tight">
+                                        Hi, {loggedInUser.firstName}
+                                    </span>
+                                    <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-[10px] shadow-sm tracking-wider">
                                         {loggedInUser.initials}
                                     </div>
-                                    <span className="text-xs font-bold text-white tracking-tight pr-1">
-                                        {loggedInUser.firstName}
-                                    </span>
                                 </button>
 
                                 {isUserMenuOpen && (
-                                    <div className="absolute right-0 mt-2 w-52 bg-white rounded-2xl shadow-xl border border-slate-200 py-2 z-50 animate-in fade-in zoom-in duration-150">
-                                        <div className="px-4 py-2 border-b border-slate-100 mb-1">
-                                            <p className="text-xs font-bold text-slate-900 truncate">{loggedInUser.fullname}</p>
-                                            <p className="text-[11px] text-slate-500 truncate">{loggedInUser.email}</p>
+                                    <div className="absolute right-0 mt-2 w-52 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 py-2 z-50">
+                                        <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-800 mb-1">
+                                            <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{loggedInUser.fullname}</p>
+                                            <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{loggedInUser.email}</p>
                                         </div>
 
                                         <button
-                                            onClick={() => { setIsUserMenuOpen(false); window.location.href = '/edit-profile'; }}
-                                            className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center space-x-2 cursor-pointer"
+                                            onClick={() => {
+                                                setIsUserMenuOpen(false);
+                                                window.location.href = '/edit-profile';
+                                            }}
+                                            className="w-full text-left px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer"
                                         >
-                                            <span>Edit Profile</span>
+                                            Edit Profile
                                         </button>
 
                                         <button
                                             onClick={handleLogout}
-                                            className="w-full text-left px-4 py-2.5 text-xs font-bold text-rose-600 hover:bg-rose-50 transition-colors flex items-center space-x-2 cursor-pointer border-t border-slate-100 mt-1 pt-2"
+                                            className="w-full text-left px-4 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer border-t border-slate-100 dark:border-slate-800 mt-1 pt-2"
                                         >
-                                            <span>Log Out</span>
+                                            Log Out
                                         </button>
                                     </div>
                                 )}
@@ -387,7 +456,7 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                         ) : (
                             <button
                                 onClick={() => window.location.href = '/login'}
-                                className="bg-white hover:bg-slate-100 text-[#1e3a8a] font-bold text-xs px-5 py-2 rounded-full shadow-sm transition-all cursor-pointer"
+                                className="bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs px-4 py-2 rounded-xl shadow transition-all cursor-pointer"
                             >
                                 Login / Register
                             </button>
@@ -417,7 +486,7 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                         <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4">
                             <button
                                 onClick={showApplicationForm}
-                                className="bg-[#1e3a8a] hover:bg-blue-900 text-white text-xs font-semibold py-2 px-4 rounded shadow-sm flex items-center justify-center space-x-1.5 transition-colors w-fit cursor-pointer"
+                                className="bg-blue-800 hover:bg-blue-900 text-white text-xs font-semibold py-2 px-4 rounded shadow-sm flex items-center justify-center space-x-1.5 transition-colors w-fit cursor-pointer"
                             >
                                 <span>Add new</span>
                                 <i className="fa-solid fa-plus text-[10px]"></i>
@@ -428,7 +497,7 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                     type="text"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="border border-slate-300 rounded px-2.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-[#1e3a8a] w-full sm:w-56"
+                                    className="border border-slate-300 rounded px-2.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 w-full sm:w-56"
                                 />
                             </div>
                         </div>
@@ -436,7 +505,7 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                         <div className="overflow-x-auto border border-slate-200 rounded">
                             <table className="w-full text-left border-collapse">
                                 <thead>
-                                    <tr className="bg-[#1e3a8a] text-white text-[11px] uppercase tracking-wider">
+                                    <tr className="bg-blue-900 text-white text-[11px] uppercase tracking-wider">
                                         <th className="py-2.5 px-4 font-semibold">Association Number</th>
                                         <th className="py-2.5 px-4 font-semibold">Pangalan ng Samahan</th>
                                         <th className="py-2.5 px-4 font-semibold">Petsa ng Pagsusumite</th>
@@ -445,7 +514,13 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {displayedApplications.length > 0 ? (
+                                    {isLoading ? (
+                                        <tr>
+                                            <td colSpan={5} className="bg-slate-50 py-10 text-center">
+                                                <p className="text-xs font-medium text-slate-500 animate-pulse">Loading backend records...</p>
+                                            </td>
+                                        </tr>
+                                    ) : displayedApplications.length > 0 ? (
                                         displayedApplications.map((app) => (
                                             <tr key={app.id} className="border-b border-slate-200 bg-white hover:bg-slate-50 transition-colors text-xs text-slate-700">
                                                 <td className="py-2.5 px-4 font-semibold text-blue-800">{app.associationNumber}</td>
@@ -462,7 +537,7 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                                 <td className="py-2.5 px-4 text-center">
                                                     <button
                                                         onClick={() => handleViewClick(app)}
-                                                        className="text-[#1e3a8a] hover:text-blue-800 font-semibold hover:underline text-[11px] cursor-pointer"
+                                                        className="text-blue-600 hover:text-blue-800 font-semibold hover:underline text-[11px] cursor-pointer"
                                                     >
                                                         View
                                                     </button>
@@ -820,7 +895,7 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                         ) : (
                                             <button
                                                 type="submit"
-                                                className="bg-[#1e3a8a] hover:bg-blue-950 text-white font-semibold text-xs py-1.5 px-8 rounded shadow transition-colors cursor-pointer"
+                                                className="bg-blue-900 hover:bg-blue-950 text-white font-semibold text-xs py-1.5 px-8 rounded shadow transition-colors cursor-pointer"
                                             >
                                                 Submit
                                             </button>
