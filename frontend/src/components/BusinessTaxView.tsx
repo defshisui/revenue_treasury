@@ -79,6 +79,10 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
 
   // Selected Record Modal / Review State
   const [selectedAssessment, setSelectedAssessment] = useState<AssessmentRecord | null>(null);
+
+  // 🔍 Selected Appointment Modal State for Preview
+  const [selectedAppointmentPreview, setSelectedAppointmentPreview] = useState<AppointmentRecord | null>(null);
+
   const [actionRemarks, setActionRemarks] = useState<string>('');
   const [submittingAction, setSubmittingAction] = useState<boolean>(false);
 
@@ -253,6 +257,9 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
       if (!res.ok) throw new Error("Failed to update status");
       alert(`Appointment marked as ${newStatus}.`);
       fetchAppointments();
+      if (selectedAppointmentPreview) {
+        setSelectedAppointmentPreview(prev => prev ? { ...prev, status: newStatus } : null);
+      }
     } catch (err: any) {
       alert("Error updating appointment status.");
     }
@@ -275,6 +282,7 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
       if (!res.ok) throw new Error("Failed to delete appointment record.");
 
       alert("Appointment deleted successfully.");
+      setSelectedAppointmentPreview(null);
       fetchAppointments();
     } catch (err: any) {
       alert(`Error deleting appointment: ${err.message || "Server error"}`);
@@ -454,8 +462,8 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
             <button
               onClick={() => setActiveTab('assessments')}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeTab === 'assessments'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:bg-slate-50'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:bg-slate-50'
                 }`}
             >
               Tax Assessments & Filings
@@ -463,8 +471,8 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
             <button
               onClick={() => setActiveTab('appointments')}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeTab === 'appointments'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:bg-slate-50'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:bg-slate-50'
                 }`}
             >
               Scheduled Appointments
@@ -472,8 +480,8 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
             <button
               onClick={() => setActiveTab('audit_logs')}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeTab === 'audit_logs'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:bg-slate-50'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:bg-slate-50'
                 }`}
             >
               Audit Trail & COA Compliance Logs
@@ -592,8 +600,8 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
                         <td className="p-4 font-mono font-bold text-slate-900 dark:text-white">₱{item.grossSales ? item.grossSales.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '0.00'}</td>
                         <td className="p-4 text-center">
                           <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold border ${item.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-800' :
-                              item.status === 'REJECTED' ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/50 dark:text-rose-400 dark:border-rose-800' :
-                                'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-800'
+                            item.status === 'REJECTED' ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/50 dark:text-rose-400 dark:border-rose-800' :
+                              'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-800'
                             }`}>
                             {item.status}
                           </span>
@@ -688,6 +696,12 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
                         </td>
                         <td className="p-4 text-center space-x-2">
                           <button
+                            onClick={() => setSelectedAppointmentPreview(apt)}
+                            className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-3 py-1 rounded-xl transition-all cursor-pointer shadow-xs"
+                          >
+                            Preview
+                          </button>
+                          <button
                             onClick={() => handleAppointmentStatusUpdate(apt.id, 'APPROVED')}
                             className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-3 py-1 rounded-xl transition-all cursor-pointer shadow-xs"
                           >
@@ -749,6 +763,119 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
           </section>
         )}
       </div>
+
+      {/* 🔍 APPOINTMENT PREVIEW MODAL */}
+      {selectedAppointmentPreview && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-8 shadow-2xl border border-slate-200 dark:border-slate-800 my-8">
+            <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-4 mb-5">
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                  Appointment Ticket Details
+                </h3>
+                <p className="text-xs font-mono text-blue-600 dark:text-blue-400 mt-0.5">Reference ID: {selectedAppointmentPreview.id}</p>
+              </div>
+              <button type="button" onClick={() => setSelectedAppointmentPreview(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer font-bold text-lg">✕</button>
+            </div>
+
+            <div className="space-y-4 text-xs max-h-[65vh] overflow-y-auto pr-1">
+              <div className="grid grid-cols-2 gap-3 bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-200 dark:border-slate-800">
+                <div>
+                  <span className="block text-[10px] text-slate-400 uppercase font-bold">Applicant Name</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">{selectedAppointmentPreview.fullName}</span>
+                </div>
+                <div>
+                  <span className="block text-[10px] text-slate-400 uppercase font-bold">Department</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">{selectedAppointmentPreview.department}</span>
+                </div>
+                <div>
+                  <span className="block text-[10px] text-slate-400 uppercase font-bold">Business Name</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">{selectedAppointmentPreview.businessName || 'N/A'}</span>
+                </div>
+                <div>
+                  <span className="block text-[10px] text-slate-400 uppercase font-bold">TIN</span>
+                  <span className="font-mono text-slate-700 dark:text-slate-300">{selectedAppointmentPreview.tin || 'N/A'}</span>
+                </div>
+              </div>
+
+              <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2.5">
+                <div>
+                  <span className="block text-[10px] text-slate-400 uppercase font-bold">Appointment Purpose / Type</span>
+                  <span className="font-bold text-blue-600 dark:text-blue-400 text-sm">{selectedAppointmentPreview.appointmentType}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <div>
+                    <span className="block text-[10px] text-slate-400 uppercase font-bold">Scheduled Date</span>
+                    <span className="font-mono font-medium text-slate-800 dark:text-slate-200">{selectedAppointmentPreview.date}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] text-slate-400 uppercase font-bold">Time Slot</span>
+                    <span className="font-mono font-medium text-slate-800 dark:text-slate-200">{selectedAppointmentPreview.timeSlot || 'All Day'}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <span className="block text-[10px] text-slate-400 uppercase font-bold">Contact Email</span>
+                    <span className="text-slate-700 dark:text-slate-300">{selectedAppointmentPreview.email}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] text-slate-400 uppercase font-bold">Phone Number</span>
+                    <span className="font-mono text-slate-700 dark:text-slate-300">{selectedAppointmentPreview.phone}</span>
+                  </div>
+                </div>
+                <div>
+                  <span className="block text-[10px] text-slate-400 uppercase font-bold">Office Address</span>
+                  <span className="text-slate-700 dark:text-slate-300">{selectedAppointmentPreview.address || 'N/A'}</span>
+                </div>
+              </div>
+
+              <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-1">
+                <span className="block text-[10px] text-slate-400 uppercase font-bold">Description / Concern Details</span>
+                <p className="text-slate-700 dark:text-slate-300 italic">{selectedAppointmentPreview.description || 'No detailed notes provided.'}</p>
+              </div>
+
+              <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-1">
+                <span className="block text-[10px] text-slate-400 uppercase font-bold">Current Ticket Status</span>
+                <span className={`inline-block px-2.5 py-1 rounded font-bold text-xs mt-1 ${selectedAppointmentPreview.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-800' :
+                    selectedAppointmentPreview.status === 'CANCELLED' ? 'bg-rose-100 text-rose-800' :
+                      'bg-amber-100 text-amber-800'
+                  }`}>
+                  {selectedAppointmentPreview.status}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex justify-between items-center pt-5 border-t border-slate-200 dark:border-slate-800 mt-6">
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleAppointmentStatusUpdate(selectedAppointmentPreview.id, 'APPROVED')}
+                  className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs cursor-pointer shadow-xs"
+                >
+                  Approve
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAppointmentStatusUpdate(selectedAppointmentPreview.id, 'CANCELLED')}
+                  className="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs cursor-pointer shadow-xs"
+                >
+                  Cancel
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedAppointmentPreview(null)}
+                className="px-4 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 font-bold rounded-xl text-xs cursor-pointer"
+              >
+                Close Preview
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* DETAILED REVIEW & COMPUTATION MODAL */}
       {selectedAssessment && (
