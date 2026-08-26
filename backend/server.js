@@ -60,6 +60,15 @@ const upload = multer({ storage: storage });
 // Make the uploads folder publicly accessible to view or download files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// Health check and root endpoint
+app.get(['/', '/health'], (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    service: 'Revenue & Treasury Backend API',
+    timestamp: new Date().toISOString()
+  });
+});
+
 const pool = new Pool(
   process.env.DATABASE_URL
     ? {
