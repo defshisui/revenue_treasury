@@ -33,3 +33,9 @@ router.post('/verify/tax-bill', verifyTaxBill);
 router.post('/verify/or-number', verifyOrNumber);
 
 export default router;
+
+import { createAppointment, getAppointments, updateAppointmentStatus } from '../controllers/business.controller.js';
+
+router.post('/appointments', createAppointment);
+router.get('/admin/appointments', getAppointments);
+router.patch('/admin/appointments/:id/status', updateAppointmentStatus);
