@@ -9,7 +9,6 @@ export interface MarketVendorsHubProps {
 export const MarketVendorsHub: FC<MarketVendorsHubProps> = ({ isCollapsed = false }) => {
   const [marketCategoryModal, setMarketCategoryModal] = useState<string | null>(null);
   const [submitOptionsModal, setSubmitOptionsModal] = useState(false);
-  const [marketOperatorGuideModal, setMarketOperatorGuideModal] = useState(false);
 
   // Authentication & Dropdown State
   const [user, setUser] = useState<{ fullname: string; email: string; initials: string; firstName: string } | null>(null);
@@ -18,10 +17,10 @@ export const MarketVendorsHub: FC<MarketVendorsHubProps> = ({ isCollapsed = fals
 
   useEffect(() => {
     const checkUserSession = () => {
-      const rawData = localStorage.getItem('currentUser') || 
-                      localStorage.getItem('user') || 
-                      sessionStorage.getItem('currentUser') || 
-                      sessionStorage.getItem('user');
+      const rawData = localStorage.getItem('currentUser') ||
+        localStorage.getItem('user') ||
+        sessionStorage.getItem('currentUser') ||
+        sessionStorage.getItem('user');
 
       if (!rawData) return null;
 
@@ -35,7 +34,7 @@ export const MarketVendorsHub: FC<MarketVendorsHubProps> = ({ isCollapsed = fals
         const email = target.email || "";
         const nameParts = String(fullName).trim().split(" ");
         const firstName = nameParts[0];
-        const initials = nameParts.length > 1 
+        const initials = nameParts.length > 1
           ? (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase()
           : nameParts[0].slice(0, 2).toUpperCase();
 
@@ -93,12 +92,12 @@ export const MarketVendorsHub: FC<MarketVendorsHubProps> = ({ isCollapsed = fals
     sessionStorage.removeItem('user');
     setUser(null);
     setIsDropdownOpen(false);
-    
-    window.location.href = '/'; 
+
+    window.location.href = '/';
   };
 
   return (
-    <div 
+    <div
       style={{
         marginLeft: isCollapsed ? "80px" : "0px",
         width: isCollapsed ? "calc(100% - 80px)" : "100%",
@@ -112,10 +111,10 @@ export const MarketVendorsHub: FC<MarketVendorsHubProps> = ({ isCollapsed = fals
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-3 cursor-pointer" onClick={() => { window.location.href = '/citizen-portal'; }}>
                 <div className="p-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xs flex items-center justify-center">
-                  <img 
-                    src="/src/assets/logo-system.png" 
-                    alt="System Logo" 
-                    className="h-8 w-8 object-contain" 
+                  <img
+                    src="/src/assets/logo-system.png"
+                    alt="System Logo"
+                    className="h-8 w-8 object-contain"
                   />
                 </div>
                 <div className="flex flex-col">
@@ -131,7 +130,7 @@ export const MarketVendorsHub: FC<MarketVendorsHubProps> = ({ isCollapsed = fals
 
             <div className="hidden md:flex items-center space-x-6 text-xs font-semibold text-slate-600 dark:text-slate-300">
               <span className="hover:text-blue-700 cursor-pointer" onClick={() => window.location.href = '/citizen-portal'}>HOME</span>
-              
+
               {/* Services Dropdown using Tailwind Group Hover with a Hover Bridge */}
               <div className="relative group py-2">
                 <span className="hover:text-blue-700 cursor-pointer flex items-center gap-1 select-none">
@@ -142,25 +141,25 @@ export const MarketVendorsHub: FC<MarketVendorsHubProps> = ({ isCollapsed = fals
                 <div className="absolute left-0 top-full h-2 w-full"></div>
 
                 <div className="absolute left-0 top-[calc(100%+8px)] w-60 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 py-2 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-1 group-hover:translate-y-0">
-                  <button 
+                  <button
                     onClick={() => window.location.href = '/citizen-portal'}
                     className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer"
                   >
                     Home
                   </button>
-                  <button 
+                  <button
                     onClick={() => window.location.href = '/Market-Vendor'}
                     className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer"
                   >
                     Market &amp; Vendors Hub
                   </button>
-                  <button 
+                  <button
                     onClick={() => window.location.href = '/real-property-tax-hub'}
                     className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer"
                   >
                     Real Proerty Tax Hub
                   </button>
-                  <button 
+                  <button
                     onClick={() => window.location.href = '/Bsiness-Tax-Assessment-View'}
                     className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer"
                   >
@@ -175,7 +174,7 @@ export const MarketVendorsHub: FC<MarketVendorsHubProps> = ({ isCollapsed = fals
             <div className="flex items-center space-x-3">
               {user ? (
                 <div className="relative" ref={dropdownRef}>
-                  <button 
+                  <button
                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                     className="flex items-center space-x-2.5 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-xl transition-all cursor-pointer shadow-xs group"
                   >
@@ -194,18 +193,18 @@ export const MarketVendorsHub: FC<MarketVendorsHubProps> = ({ isCollapsed = fals
                         <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{user.email}</p>
                       </div>
 
-                      <button 
+                      <button
                         onClick={() => {
                           setIsDropdownOpen(false);
                           window.location.href = '/edit-profile';
-                        }} 
+                        }}
                         className="w-full text-left px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer"
                       >
                         Edit Profile
                       </button>
 
-                      <button 
-                        onClick={handleLogout} 
+                      <button
+                        onClick={handleLogout}
                         className="w-full text-left px-4 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer border-t border-slate-100 dark:border-slate-800 mt-1 pt-2"
                       >
                         Log Out
@@ -214,7 +213,7 @@ export const MarketVendorsHub: FC<MarketVendorsHubProps> = ({ isCollapsed = fals
                   )}
                 </div>
               ) : (
-                <button 
+                <button
                   onClick={() => window.location.href = '/'}
                   className="bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs px-4 py-2 rounded-xl shadow transition-all cursor-pointer"
                 >
@@ -240,48 +239,24 @@ export const MarketVendorsHub: FC<MarketVendorsHubProps> = ({ isCollapsed = fals
 
         {/* Main Body Content Container */}
         <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
-          
-          {/* Top Two Grid Actions: City-Owned Market & Private Market */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            
-            {/* City-Owned Market Card */}
-            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 flex flex-col justify-between text-center">
-              <div>
-                <h3 className="text-blue-900 dark:text-blue-400 font-bold text-sm tracking-wider uppercase mb-1">CITY-OWNED MARKET</h3>
-                <h4 className="text-slate-800 dark:text-slate-100 font-semibold text-base mb-3">&nbsp;</h4>
-                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-6">
-                  Kamuning, Mega QC, Project 4 &amp; comprehensive public wet/dry market stalls. You can now submit your stall applications and manage accounts online through this portal.
-                </p>
-              </div>
-              <div>
-                <button 
-                  onClick={() => setMarketCategoryModal('cityOwned')}
-                  className="w-full sm:w-auto px-6 py-2.5 bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold rounded-full shadow-md transition-all cursor-pointer"
-                >
-                  PROCEED WITH CITY-OWNED MARKET
-                </button>
-              </div>
-            </div>
 
-            {/* Private Market Card */}
-            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 flex flex-col justify-between text-center">
-              <div>
-                <h3 className="text-blue-900 dark:text-blue-400 font-bold text-sm tracking-wider uppercase mb-1">PRIVATE MARKET &amp; TALIPAPA</h3>
-                <h4 className="text-slate-800 dark:text-slate-100 font-semibold text-base mb-3">&nbsp;</h4>
-                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-6">
-                  Do you have any concerns regarding your Private Market or Talipapa operations? You may review operator guidelines or manage accounts below:
-                </p>
-              </div>
-              <div>
-                <button 
-                  onClick={() => setMarketCategoryModal('privateMarket')}
-                  className="w-full sm:w-auto px-6 py-2.5 bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold rounded-full shadow-md transition-all cursor-pointer"
-                >
-                  PROCEED WITH PRIVATE MARKET
-                </button>
-              </div>
+          {/* City-Owned Market - Full Width */}
+          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 flex flex-col justify-between text-center">
+            <div>
+              <h3 className="text-blue-900 dark:text-blue-400 font-bold text-sm tracking-wider uppercase mb-1">CITY-OWNED MARKET</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-6">
+                Galas, Kamuning, Murphy, Project 2, Project 4, RA Calalay, Roxas, and San Jose public wet/dry market stalls.
+                You can now submit your stall applications and manage accounts online through this portal.
+              </p>
             </div>
-
+            <div className="flex flex-col sm:flex-row justify-center gap-3">
+              <button
+                onClick={() => setMarketCategoryModal('cityOwned')}
+                className="px-6 py-2.5 bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold rounded-full shadow-md transition-all cursor-pointer"
+              >
+                PROCEED WITH CITY-OWNED MARKET
+              </button>
+            </div>
           </div>
 
           {/* Bottom Full Width Card: Hawkers & Street Vendors */}
@@ -293,7 +268,7 @@ export const MarketVendorsHub: FC<MarketVendorsHubProps> = ({ isCollapsed = fals
               Do you want to register your mobile vending association or certified sidewalk cart spot? Click below to start your application:
             </p>
             <div className="flex justify-center">
-              <button 
+              <button
                 onClick={() => setMarketCategoryModal('hawkers')}
                 className="w-full sm:w-auto px-6 py-2.5 bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold rounded-full shadow-md transition-all cursor-pointer"
               >
@@ -337,18 +312,17 @@ export const MarketVendorsHub: FC<MarketVendorsHubProps> = ({ isCollapsed = fals
                 <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700 dark:text-blue-400">QC MDAD Portal</span>
                 <h3 className="font-bold text-sm text-slate-800 dark:text-slate-100">
                   {marketCategoryModal === 'cityOwned' && 'City-Owned Market'}
-                  {marketCategoryModal === 'privateMarket' && 'Private Market'}
                   {marketCategoryModal === 'hawkers' && 'Hawkers'}
                 </h3>
               </div>
               <button onClick={() => setMarketCategoryModal(null)} className="text-slate-400 hover:text-slate-600 font-bold text-lg cursor-pointer">✕</button>
             </div>
-            
+
             <div className="p-6 space-y-3 max-h-[60vh] overflow-y-auto text-xs">
               {marketCategoryModal === 'cityOwned' && (
                 <>
-                  <button 
-                    onClick={() => { setMarketCategoryModal(null); setSubmitOptionsModal(true); }} 
+                  <button
+                    onClick={() => { setMarketCategoryModal(null); setSubmitOptionsModal(true); }}
                     className="w-full text-left bg-white dark:bg-slate-950 hover:bg-slate-50 dark:hover:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-xl flex items-center justify-between transition-all shadow-xs group cursor-pointer"
                   >
                     <div>
@@ -358,8 +332,8 @@ export const MarketVendorsHub: FC<MarketVendorsHubProps> = ({ isCollapsed = fals
                     <span className="text-sm font-bold text-slate-400 group-hover:text-blue-700">&rarr;</span>
                   </button>
 
-                  <button 
-                    onClick={() => { window.location.href = '/citizen-portal-stall-manage-account'; setMarketCategoryModal(null); }} 
+                  <button
+                    onClick={() => { window.location.href = '/citizen-portal-stall-manage-account'; setMarketCategoryModal(null); }}
                     className="w-full text-left bg-white dark:bg-slate-950 hover:bg-slate-50 dark:hover:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-xl flex items-center justify-between transition-all shadow-xs group cursor-pointer"
                   >
                     <div>
@@ -371,36 +345,11 @@ export const MarketVendorsHub: FC<MarketVendorsHubProps> = ({ isCollapsed = fals
                 </>
               )}
 
-              {marketCategoryModal === 'privateMarket' && (
-                <>
-                  <button 
-                    onClick={() => { setMarketCategoryModal(null); setMarketOperatorGuideModal(true); }} 
-                    className="w-full text-left bg-white dark:bg-slate-950 hover:bg-slate-50 dark:hover:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-xl flex items-center justify-between transition-all shadow-xs group cursor-pointer"
-                  >
-                    <div>
-                      <h4 className="font-bold text-xs text-slate-900 dark:text-white group-hover:text-blue-700">Apply for a Market Franchise</h4>
-                      <p className="text-[11px] text-slate-500">Guide and requirements for private market operators</p>
-                    </div>
-                    <span className="text-sm font-bold text-slate-400 group-hover:text-blue-700">&rarr;</span>
-                  </button>
-
-                  <button 
-                    onClick={() => { window.location.href = '/private-manage-account'; setMarketCategoryModal(null); }} 
-                    className="w-full text-left bg-white dark:bg-slate-950 hover:bg-slate-50 dark:hover:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-xl flex items-center justify-between transition-all shadow-xs group cursor-pointer"
-                  >
-                    <div>
-                      <h4 className="font-bold text-xs text-slate-900 dark:text-white group-hover:text-blue-700">Manage Private Market / Talipapa Operator Account</h4>
-                      <p className="text-[11px] text-slate-500">Oversee facility records, stall rosters, and compliance</p>
-                    </div>
-                    <span className="text-sm font-bold text-slate-400 group-hover:text-blue-700">&rarr;</span>
-                  </button>
-                </>
-              )}
 
               {marketCategoryModal === 'hawkers' && (
                 <>
-                  <button 
-                    onClick={() => { window.location.href = '/hawker-application'; setMarketCategoryModal(null); }} 
+                  <button
+                    onClick={() => { window.location.href = '/hawker-application'; setMarketCategoryModal(null); }}
                     className="w-full text-left bg-white dark:bg-slate-950 hover:bg-slate-50 dark:hover:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-xl flex items-center justify-between transition-all shadow-xs group cursor-pointer"
                   >
                     <div>
@@ -430,10 +379,10 @@ export const MarketVendorsHub: FC<MarketVendorsHubProps> = ({ isCollapsed = fals
               </div>
               <button onClick={() => setSubmitOptionsModal(false)} className="text-slate-400 hover:text-slate-600 font-bold text-lg cursor-pointer">✕</button>
             </div>
-            
+
             <div className="p-6 space-y-3 text-xs">
-              <button 
-                onClick={() => { window.location.href = '/citizen-portal-stall'; setSubmitOptionsModal(false); }} 
+              <button
+                onClick={() => { window.location.href = '/citizen-portal-stall'; setSubmitOptionsModal(false); }}
                 className="w-full text-left bg-white dark:bg-slate-950 hover:bg-slate-50 dark:hover:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-xl flex items-center justify-between transition-all shadow-xs group cursor-pointer"
               >
                 <div>
@@ -454,61 +403,6 @@ export const MarketVendorsHub: FC<MarketVendorsHubProps> = ({ isCollapsed = fals
         </div>
       )}
 
-      {marketOperatorGuideModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-2xl overflow-hidden">
-            <div className="flex justify-between items-center px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700 dark:text-blue-400">QC MDAD Portal</span>
-                <h3 className="font-bold text-sm text-slate-800 dark:text-slate-100">How to be a Market Operator</h3>
-              </div>
-              <button onClick={() => setMarketOperatorGuideModal(false)} className="text-slate-400 hover:text-slate-600 font-bold text-lg cursor-pointer">✕</button>
-            </div>
-            
-            <div className="p-6 space-y-4 text-xs text-slate-600 dark:text-slate-300 max-h-[60vh] overflow-y-auto">
-              <p className="font-medium text-slate-700 dark:text-slate-200">To be a Market Operator, please follow the steps below:</p>
-              <ol className="space-y-3">
-                <li className="flex gap-2">
-                  <span className="font-bold text-slate-900 dark:text-white shrink-0">Step 1:</span>
-                  <span>You need to submit your business permit application: <a href="https://qceservices.quezoncity.gov.ph/" target="_blank" rel="noreferrer" className="text-blue-600 dark:text-blue-400 underline font-semibold">https://qceservices.quezoncity.gov.ph/</a></span>
-                </li>
-                <li className="flex gap-2">
-                  <span className="font-bold text-slate-900 dark:text-white shrink-0">Step 2:</span>
-                  <span>Upload the required documents.</span>
-                </li>
-                <li className="flex gap-2">
-                  <span className="font-bold text-slate-900 dark:text-white shrink-0">Step 3:</span>
-                  <span>Submit the form.</span>
-                </li>
-                <li className="flex flex-col gap-1">
-                  <div className="flex gap-2">
-                    <span className="font-bold text-slate-900 dark:text-white shrink-0">Step 4:</span>
-                    <span>You will receive an email once the MDAD has completed their initial evaluation.</span>
-                  </div>
-                  <p className="text-slate-400 pl-6 italic">Depending on the market type, you may be required to submit for additional documents.</p>
-                </li>
-                <li className="flex gap-2">
-                  <span className="font-bold text-slate-900 dark:text-white shrink-0">Step 5:</span>
-                  <span>After MDAD's initial review, your fees will be calculated. You will need to pay for the amount due to proceed with your application.</span>
-                </li>
-                <li className="flex flex-col gap-1">
-                  <div className="flex gap-2">
-                    <span className="font-bold text-slate-900 dark:text-white shrink-0">Step 6:</span>
-                    <span>Once your application is approved, your business permit will be released.</span>
-                  </div>
-                  <p className="text-slate-400 pl-6 italic">However, please note that you will still need to complete the clearances required.</p>
-                </li>
-              </ol>
-            </div>
-
-            <div className="flex justify-end px-6 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
-              <button onClick={() => setMarketOperatorGuideModal(false)} className="px-5 py-2 bg-blue-900 hover:bg-blue-950 text-white font-bold rounded-lg text-xs transition-colors shadow-xs cursor-pointer">
-                Got it
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
