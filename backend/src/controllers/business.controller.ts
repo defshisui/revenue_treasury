@@ -56,14 +56,21 @@ export async function getBusinessAssessments(req: Request, res: Response): Promi
 
 export async function createSalesDeclaration(req: Request, res: Response): Promise<void> {
     const { businessName, grossSales, year, psicCode, tin, email } = req.body;
-    const file = (req as any).file; // Captured via multer middleware[cite: 7]
+    const file = (req as any).file; // Captured via multer memoryStorage middleware[cite: 7, 9]
     const trackingNumber = `MP-${year || '2026'}-${Math.floor(100000 + Math.random() * 900000)}`;
     const id = randomUUID();
 
     try {
+        // Convert the uploaded file buffer into a Base64 Data URL so in-app previews render natively
         const fileAttachment = file
-            ? [{ name: file.originalname, url: `https://placeholder-storage/${file.originalname}` }]
-            : [{ name: 'Financial_Statement.pdf', url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf' }];
+            ? [{
+                name: file.originalname,
+                url: `data:${file.mimetype};base64,${file.buffer.toString('base64')}`
+            }]
+            : [{
+                name: 'Financial_Statement.pdf',
+                url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf'
+            }];
 
         const result = await pool.query(
             `INSERT INTO business_assessments 
@@ -121,7 +128,6 @@ export async function updateAssessmentStatus(req: Request, res: Response): Promi
     }
 }
 
-// 🗑️ Delete Assessment Handler Function
 export async function deleteBusinessAssessment(req: Request, res: Response): Promise<void> {
     const { id } = req.params;
 
