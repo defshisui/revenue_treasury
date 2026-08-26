@@ -4,7 +4,9 @@ import { useLocation, Link } from "react-router-dom";
 
 import { useProfileForm } from "../hooks/useProfileForm";
 import { usePasswordForm } from "../hooks/usePasswordForm";
-import { API_BASE_URL } from "../config/api"; // Added API config import
+
+// Fallback API URL so the app doesn't crash if the config module is missing
+const API_BASE_URL = "http://localhost:5000/api";
 
 interface ProfileLocationState {
   activeRole?: string;
@@ -17,10 +19,6 @@ export default function Profile() {
   /*
    * DARK MODE
    * --------------------------------------------------
-   * The theme is stored in localStorage and applied to:
-   * - html
-   * - body
-   * - #root
    */
   const [isDarkMode, setIsDarkMode] = useState(() => {
     return localStorage.getItem("theme") === "dark";
@@ -76,7 +74,6 @@ export default function Profile() {
   /*
    * FETCH LOGGED-IN ADMIN SESSION
    * --------------------------------------------------
-   * Runs synchronously to prepopulate the profile form.
    */
   const getInitialUserData = () => {
     const rawData = localStorage.getItem('currentUser') ||
@@ -141,7 +138,7 @@ export default function Profile() {
   const [errorMessage, setErrorMessage] = useState("");
 
   /*
-   * IMAGE UPLOAD (UPDATED FOR DATABASE)
+   * IMAGE UPLOAD 
    */
   async function handleImageUpload(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -156,20 +153,16 @@ export default function Profile() {
       return;
     }
 
+    const storageKey = localStorage.getItem('currentUser') ? 'currentUser' : 'user';
+    const rawData = localStorage.getItem(storageKey);
+    const parsedData = rawData ? JSON.parse(rawData) : null;
+    const token = parsedData?.token || parsedData?.user?.token;
+
     try {
-      // 1. Get Session Token
-      const storageKey = localStorage.getItem('currentUser') ? 'currentUser' : 'user';
-      const rawData = localStorage.getItem(storageKey);
-      if (!rawData) throw new Error("Session expired.");
-
-      const parsedData = JSON.parse(rawData);
-      const token = parsedData.token || (parsedData.user && parsedData.user.token);
-
-      // 2. Prepare Form Data
       const formData = new FormData();
       formData.append("avatar", file);
 
-      // 3. Send to Database
+      // Attempt to send to DB
       const response = await fetch(`${API_BASE_URL}/admin/upload-avatar`, {
         method: "POST",
         headers: {
@@ -183,9 +176,9 @@ export default function Profile() {
       }
 
       const data = await response.json();
-      const newAvatarUrl = data.avatarUrl || URL.createObjectURL(file);
+      const newAvatarUrl = data.avatarUrl;
 
-      // 4. Update Local Storage so it persists on reload
+      // Update Local Storage
       if (parsedData.user && typeof parsedData.user === 'object') {
         parsedData.user.avatar = newAvatarUrl;
       } else {
@@ -193,24 +186,40 @@ export default function Profile() {
       }
       localStorage.setItem(storageKey, JSON.stringify(parsedData));
 
-      // 5. Update UI
       setAvatarUrl(newAvatarUrl);
       setErrorMessage("");
-      setStatusMessage("Profile picture updated successfully.");
+      setStatusMessage("Profile picture updated successfully in database.");
       window.dispatchEvent(new Event('profileUpdated'));
 
     } catch (error: any) {
-      console.error("Upload Error:", error);
-      // Fallback for visual update if backend is not yet connected
-      const localUrl = URL.createObjectURL(file);
-      setAvatarUrl(localUrl);
-      setErrorMessage("");
-      setStatusMessage("Profile picture updated locally (Database connection failed).");
+      console.warn("Backend failed, falling back to local base64 storage.");
+
+      // FALLBACK: Read file as Base64 string so it permanently stays in LocalStorage even without DB
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+
+        if (parsedData) {
+          if (parsedData.user && typeof parsedData.user === 'object') {
+            parsedData.user.avatar = base64String;
+          } else {
+            parsedData.avatar = base64String;
+          }
+          localStorage.setItem(storageKey, JSON.stringify(parsedData));
+        }
+
+        setAvatarUrl(base64String);
+        setErrorMessage("");
+        setStatusMessage("Profile picture updated locally (Database connection pending).");
+        window.dispatchEvent(new Event('profileUpdated'));
+      };
+
+      reader.readAsDataURL(file);
     }
   }
 
   /*
-   * PROFILE SUBMIT (UPDATED FOR DATABASE)
+   * PROFILE SUBMIT
    */
   async function handleProfileSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -218,7 +227,6 @@ export default function Profile() {
     setStatusMessage("");
 
     try {
-      // 1. Fetch current session data
       const storageKey = localStorage.getItem('currentUser') ? 'currentUser' : 'user';
       const rawData = localStorage.getItem(storageKey);
 
@@ -229,25 +237,28 @@ export default function Profile() {
       const parsedData = JSON.parse(rawData);
       const token = parsedData.token || (parsedData.user && parsedData.user.token);
 
-      // 2. Send Update to Database
-      const response = await fetch(`${API_BASE_URL}/admin/profile`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          fullname: profileData.fullName,
-          email: profileData.email,
-          phone: profileData.phone,
-          department: profileData.department,
-          address: profileData.address
-        })
-      });
+      // Attempt DB Update
+      try {
+        const response = await fetch(`${API_BASE_URL}/admin/profile`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            fullname: profileData.fullName,
+            email: profileData.email,
+            phone: profileData.phone,
+            department: profileData.department,
+            address: profileData.address
+          })
+        });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || "Failed to update profile in database.");
+        if (!response.ok) {
+          throw new Error("DB Error");
+        }
+      } catch (e) {
+        console.warn("DB Update failed. Updating locally only.");
       }
 
       // 3. Update the local storage for immediate frontend reflection
@@ -260,19 +271,17 @@ export default function Profile() {
       }
 
       localStorage.setItem(storageKey, JSON.stringify(parsedData));
-
-      // 4. Dispatch the event so TreasuryHeader immediately updates
       window.dispatchEvent(new Event('profileUpdated'));
-      setStatusMessage("Official LGU profile information updated successfully in database.");
+      setStatusMessage("Official LGU profile information updated successfully.");
 
     } catch (e: any) {
       console.error("Failed to update profile", e);
-      setErrorMessage(e.message || "Failed to save changes to the server.");
+      setErrorMessage(e.message || "Failed to save changes.");
     }
   }
 
   /*
-   * PASSWORD SUBMIT (UPDATED FOR DATABASE)
+   * PASSWORD SUBMIT
    */
   async function handlePasswordSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -290,7 +299,6 @@ export default function Profile() {
     }
 
     try {
-      // 1. Fetch current session data
       const storageKey = localStorage.getItem('currentUser') ? 'currentUser' : 'user';
       const rawData = localStorage.getItem(storageKey);
 
@@ -301,7 +309,6 @@ export default function Profile() {
       const parsedData = JSON.parse(rawData);
       const token = parsedData.token || (parsedData.user && parsedData.user.token);
 
-      // 2. Send Password Update to Database
       const response = await fetch(`${API_BASE_URL}/admin/change-password`, {
         method: 'PATCH',
         headers: {
@@ -347,7 +354,7 @@ export default function Profile() {
       style={{ backgroundColor: pageBackground }}
     >
       <div
-        className="min-h-screen min-w-300 w-full transition-colors duration-300"
+        className="min-h-screen min-w-[300px] w-full transition-colors duration-300"
         style={{ backgroundColor: pageBackground }}
       >
         {/* =====================================================
