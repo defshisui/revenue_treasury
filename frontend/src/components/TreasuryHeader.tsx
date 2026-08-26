@@ -25,7 +25,7 @@ export default function TreasuryHeader({
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
 
-  // Fetch logged-in user details from local/session storage
+  // Fetch logged-in user details from local/session storage and listen for updates
   useEffect(() => {
     const checkAdminSession = () => {
       const rawData = localStorage.getItem('currentUser') ||
@@ -33,14 +33,17 @@ export default function TreasuryHeader({
         sessionStorage.getItem('currentUser') ||
         sessionStorage.getItem('user');
 
-      if (!rawData) return null;
+      if (!rawData) {
+        setAdminUser(null);
+        return;
+      }
 
       try {
         const parsed = JSON.parse(rawData);
         const target = parsed.user && typeof parsed.user === 'object' ? parsed.user : parsed;
 
         const fullName = target.fullname || target.name || target.fullName || target.firstName || target.email;
-        if (!fullName) return null;
+        if (!fullName) return;
 
         const nameParts = String(fullName).trim().split(" ");
         const firstName = nameParts[0];
@@ -48,14 +51,25 @@ export default function TreasuryHeader({
           ? (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase()
           : nameParts[0].slice(0, 2).toUpperCase();
 
-        return { fullname: String(fullName), firstName, initials };
+        setAdminUser({ fullname: String(fullName), firstName, initials });
       } catch (e) {
         console.error("Failed to parse admin session", e);
-        return null;
+        setAdminUser(null);
       }
     };
 
-    setAdminUser(checkAdminSession());
+    // Initial check on mount
+    checkAdminSession();
+
+    // Listen for cross-tab storage changes and same-tab custom updates
+    window.addEventListener('storage', checkAdminSession);
+    window.addEventListener('profileUpdated', checkAdminSession);
+
+    // Cleanup listeners on unmount
+    return () => {
+      window.removeEventListener('storage', checkAdminSession);
+      window.removeEventListener('profileUpdated', checkAdminSession);
+    };
   }, []);
 
   // Close dropdown when clicking outside
@@ -159,7 +173,6 @@ export default function TreasuryHeader({
               <button
                 onClick={() => {
                   setIsProfileMenuOpen(false);
-                  // Using your existing logout logic here
                   localStorage.removeItem('currentUser');
                   localStorage.removeItem('user');
                   sessionStorage.removeItem('currentUser');
