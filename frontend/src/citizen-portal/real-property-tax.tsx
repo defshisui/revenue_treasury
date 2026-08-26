@@ -185,7 +185,6 @@ function formatDate(date: string) {
   return new Intl.DateTimeFormat("en-PH", { year: "numeric", month: "short", day: "numeric" }).format(new Date(`${date}T00:00:00`));
 }
 
-// SAFE HELPER: Uses a fallback to prevent undefined errors
 const getStatusColor = (status?: string) => {
   const s = (status || "Submitted").toUpperCase();
   if (s === 'APPROVED' || s === 'COMPLETED' || s === 'READY FOR RELEASE') return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-400';
@@ -225,7 +224,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
   const [paymentMethod, setPaymentMethod] = useState("GCash");
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
 
-  // Status View Filtering, Search & Pagination States
   const [loading, setLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [searchType, setSearchType] = useState("Tax Declaration");
@@ -252,28 +250,26 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
         const activeUser = getStoredCitizenSession();
 
         if (activeUser?.email) {
-          const appsRes = await fetch(`${API_BASE_URL}/citizen-rpt-applications?email=${encodeURIComponent(activeUser.email)}`);
+          const appsRes = await fetch(`${API_BASE_URL}/citizen-rpt-applications`);
           if (appsRes.ok) {
             const data = await appsRes.json();
             const userApps = Array.isArray(data)
               ? data.map((app: any) => ({
                 ...app,
-                controlNumber: app.controlNumber || app.control_number || app.controlnumber || "",
-                taxDeclarationNumber: app.taxDeclarationNumber || app.tax_declaration_number || app.taxdeclarationnumber || "",
-                ownerName: app.ownerName || app.owner_name || app.ownername || "",
-                applicantName: app.applicantName || app.applicant_name || app.applicantname || "",
-                applicantType: app.applicantType || app.applicant_type || app.applicanttype || "",
-                mobileNumber: app.mobileNumber || app.mobile_number || app.mobilenumber || "",
-                propertyLocation: app.propertyLocation || app.property_location || app.propertylocation || "",
-                propertyType: app.propertyType || app.property_type || app.propertytype || "",
-                filedDate: app.filedDate || app.filed_date || app.created_at || "",
+                controlNumber: app.control_number || app.controlNumber || "",
+                taxDeclarationNumber: app.tax_declaration_number || app.taxDeclarationNumber || "",
+                ownerName: app.owner_name || app.ownerName || "",
+                applicantName: app.applicant_name || app.applicantName || "",
+                applicantType: app.applicant_type || app.applicantType || "",
+                mobileNumber: app.mobile_number || app.mobileNumber || "",
+                propertyLocation: app.property_location || app.propertyLocation || "",
+                propertyType: app.property_type || app.propertyType || "",
+                filedDate: app.filed_date || app.filedDate || app.created_at || "",
                 status: app.status || "Submitted",
               })).filter((app: RPTApplicationRecord) => app.email === activeUser.email)
               : [];
             setApplications(userApps);
           }
-        } else {
-          setApplications([]);
         }
 
         const rptRes = await fetch(`${API_BASE_URL}/lgu-rpt-records`);
@@ -319,7 +315,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
     let result = applications;
 
     if (statusFilter !== "ALL") {
-      // SAFE FALLBACK: Add (app.status || "") to prevent undefined error
       result = result.filter(app => (app.status || "Submitted").toUpperCase() === statusFilter.toUpperCase());
     }
 
@@ -455,59 +450,52 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
     const generatedControlNo = makeControlNumber();
     const currentDate = new Date().toISOString().slice(0, 10);
 
-    const payload = {
-      controlNumber: generatedControlNo,
-      control_number: generatedControlNo,
-      taxDeclarationNumber: formData.taxDeclarationNumber || "For issuance",
-      tax_declaration_number: formData.taxDeclarationNumber || "For issuance",
-      ownerName: formData.ownerName,
-      owner_name: formData.ownerName,
-      applicantName: formData.applicantName,
-      applicant_name: formData.applicantName,
-      applicantType: formData.applicantType,
-      applicant_type: formData.applicantType,
-      email: formData.email,
-      mobileNumber: formData.mobileNumber,
-      mobile_number: formData.mobileNumber,
-      service: formData.service,
-      propertyLocation: formData.propertyLocation,
-      property_location: formData.propertyLocation,
-      barangay: formData.barangay,
-      propertyType: formData.propertyType,
-      property_type: formData.propertyType,
-      status: "Submitted",
-      filedDate: currentDate,
-      filed_date: currentDate,
-      notes: formData.notes,
-      documents: Object.entries(documents)
-        .filter(([_, val]) => val)
-        .map(([key, val]) => `${key}: ${val}`)
-    };
+    const formDataPayload = new FormData();
+    formDataPayload.append("control_number", generatedControlNo);
+    formDataPayload.append("tax_declaration_number", formData.taxDeclarationNumber || "For issuance");
+    formDataPayload.append("owner_name", formData.ownerName);
+    formDataPayload.append("applicant_name", formData.applicantName);
+    formDataPayload.append("applicant_type", formData.applicantType);
+    formDataPayload.append("email", formData.email);
+    formDataPayload.append("mobile_number", formData.mobileNumber);
+    formDataPayload.append("service", formData.service);
+    formDataPayload.append("property_location", formData.propertyLocation);
+    formDataPayload.append("barangay", formData.barangay);
+    formDataPayload.append("property_type", formData.propertyType);
+    formDataPayload.append("status", "Submitted");
+    formDataPayload.append("filed_date", currentDate);
+    formDataPayload.append("notes", formData.notes);
+
+    const fileInputNames = ["ownershipProof", "validId", "taxRecord", "propertySketch", "authorization"];
+    fileInputNames.forEach((name) => {
+      const fileInput = document.querySelector(`input[name="${name}"]`) as HTMLInputElement;
+      if (fileInput && fileInput.files && fileInput.files[0]) {
+        formDataPayload.append(name, fileInput.files[0]);
+      }
+    });
 
     try {
       const response = await fetch(`${API_BASE_URL}/citizen-rpt-applications`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(payload),
+        body: formDataPayload,
       });
 
       if (!response.ok) throw new Error("Failed to submit application");
 
-      const rawApp = await response.json();
+      const savedAppResult = await response.json();
+      const rawApp = savedAppResult.record || savedAppResult;
 
       const savedApp = {
         ...rawApp,
-        controlNumber: rawApp.controlNumber || rawApp.control_number || generatedControlNo,
-        taxDeclarationNumber: rawApp.taxDeclarationNumber || rawApp.tax_declaration_number || payload.taxDeclarationNumber,
-        ownerName: rawApp.ownerName || rawApp.owner_name || payload.ownerName,
-        applicantName: rawApp.applicantName || rawApp.applicant_name || payload.applicantName,
-        applicantType: rawApp.applicantType || rawApp.applicant_type || payload.applicantType,
-        mobileNumber: rawApp.mobileNumber || rawApp.mobile_number || payload.mobileNumber,
-        propertyLocation: rawApp.propertyLocation || rawApp.property_location || payload.propertyLocation,
-        propertyType: rawApp.propertyType || rawApp.property_type || payload.propertyType,
-        filedDate: rawApp.filedDate || rawApp.filed_date || payload.filedDate,
+        controlNumber: rawApp.control_number || rawApp.controlNumber || generatedControlNo,
+        taxDeclarationNumber: rawApp.tax_declaration_number || rawApp.taxDeclarationNumber || formData.taxDeclarationNumber,
+        ownerName: rawApp.owner_name || rawApp.ownerName || formData.ownerName,
+        applicantName: rawApp.applicant_name || rawApp.applicantName || formData.applicantName,
+        applicantType: rawApp.applicant_type || rawApp.applicantType || formData.applicantType,
+        mobileNumber: rawApp.mobile_number || rawApp.mobileNumber || formData.mobileNumber,
+        propertyLocation: rawApp.property_location || rawApp.propertyLocation || formData.propertyLocation,
+        propertyType: rawApp.property_type || rawApp.propertyType || formData.propertyType,
+        filedDate: rawApp.filed_date || rawApp.filedDate || currentDate,
         status: rawApp.status || "Submitted",
       };
 
