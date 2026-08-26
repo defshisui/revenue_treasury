@@ -84,7 +84,6 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('ALL');
 
-  const [selectedAppIds, setSelectedAppIds] = useState<string[]>([]);
   const [mainViewTab, setMainViewTab] = useState<'queue' | 'citizenAudit'>('queue');
   const [detailTab, setDetailTab] = useState<'overview' | 'audit' | 'notifications'>('overview');
 
