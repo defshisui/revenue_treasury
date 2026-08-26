@@ -12,7 +12,8 @@ const PORT = process.env.PORT || 5173;
 const app = express();
 
 // Middleware to parse incoming JSON data from the frontend
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // ==========================================
 // 1. DATABASE CONNECTION (Railway)
