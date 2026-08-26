@@ -251,14 +251,24 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
       try {
         const activeUser = getStoredCitizenSession();
 
-        // Only fetch applications if a user is logged in
         if (activeUser?.email) {
           const appsRes = await fetch(`${API_BASE_URL}/citizen-rpt-applications?email=${encodeURIComponent(activeUser.email)}`);
           if (appsRes.ok) {
             const data = await appsRes.json();
-            // Filter strictly to ensure only the active user's applications are shown
+            // Data normalization maps backend keys (snake_case/lowercase) to frontend keys (camelCase)
             const userApps = Array.isArray(data)
-              ? data.filter((app: RPTApplicationRecord) => app.email === activeUser.email)
+              ? data.map((app: any) => ({
+                ...app,
+                controlNumber: app.controlNumber || app.control_number || app.controlnumber || "",
+                taxDeclarationNumber: app.taxDeclarationNumber || app.tax_declaration_number || app.taxdeclarationnumber || "",
+                ownerName: app.ownerName || app.owner_name || app.ownername || "",
+                applicantName: app.applicantName || app.applicant_name || app.applicantname || "",
+                applicantType: app.applicantType || app.applicant_type || app.applicanttype || "",
+                mobileNumber: app.mobileNumber || app.mobile_number || app.mobilenumber || "",
+                propertyLocation: app.propertyLocation || app.property_location || app.propertylocation || "",
+                propertyType: app.propertyType || app.property_type || app.propertytype || "",
+                filedDate: app.filedDate || app.filed_date || app.created_at || "",
+              })).filter((app: RPTApplicationRecord) => app.email === activeUser.email)
               : [];
             setApplications(userApps);
           }
@@ -305,7 +315,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
     window.location.href = '/';
   };
 
-  // Memoized Filter & Pagination Logic
   const filteredApplications = useMemo(() => {
     let result = applications;
 
@@ -443,25 +452,33 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
 
   async function submitApplication() {
     const generatedControlNo = makeControlNumber();
+    const currentDate = new Date().toISOString().slice(0, 10);
 
-    // Create a structured JSON payload instead of FormData
-    // This guarantees mock backends (like json-server) correctly save all text fields
+    // Payload includes BOTH camelCase and snake_case versions to bypass any backend schema mismatches.
     const payload = {
       controlNumber: generatedControlNo,
+      control_number: generatedControlNo,
       taxDeclarationNumber: formData.taxDeclarationNumber || "For issuance",
+      tax_declaration_number: formData.taxDeclarationNumber || "For issuance",
       ownerName: formData.ownerName,
+      owner_name: formData.ownerName,
       applicantName: formData.applicantName,
+      applicant_name: formData.applicantName,
       applicantType: formData.applicantType,
+      applicant_type: formData.applicantType,
       email: formData.email,
       mobileNumber: formData.mobileNumber,
+      mobile_number: formData.mobileNumber,
       service: formData.service,
       propertyLocation: formData.propertyLocation,
+      property_location: formData.propertyLocation,
       barangay: formData.barangay,
       propertyType: formData.propertyType,
+      property_type: formData.propertyType,
       status: "Submitted",
-      filedDate: new Date().toISOString().slice(0, 10),
+      filedDate: currentDate,
+      filed_date: currentDate,
       notes: formData.notes,
-      // Map attached documents to an array of identifiable strings to display in modal
       documents: Object.entries(documents)
         .filter(([_, val]) => val)
         .map(([key, val]) => `${key}: ${val}`)
@@ -478,14 +495,28 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
 
       if (!response.ok) throw new Error("Failed to submit application");
 
-      const savedApp = await response.json();
+      const rawApp = await response.json();
+
+      // Normalize the newly saved app immediately for UI display
+      const savedApp = {
+        ...rawApp,
+        controlNumber: rawApp.controlNumber || rawApp.control_number || generatedControlNo,
+        taxDeclarationNumber: rawApp.taxDeclarationNumber || rawApp.tax_declaration_number || payload.taxDeclarationNumber,
+        ownerName: rawApp.ownerName || rawApp.owner_name || payload.ownerName,
+        applicantName: rawApp.applicantName || rawApp.applicant_name || payload.applicantName,
+        applicantType: rawApp.applicantType || rawApp.applicant_type || payload.applicantType,
+        mobileNumber: rawApp.mobileNumber || rawApp.mobile_number || payload.mobileNumber,
+        propertyLocation: rawApp.propertyLocation || rawApp.property_location || payload.propertyLocation,
+        propertyType: rawApp.propertyType || rawApp.property_type || payload.propertyType,
+        filedDate: rawApp.filedDate || rawApp.filed_date || payload.filedDate,
+      };
+
       setApplications([savedApp, ...applications]);
       setIsPreviewOpen(false);
       setCurrentView("status");
       setIsFormOpen(false);
 
-      const assignedControlNumber = savedApp.controlNumber || generatedControlNo;
-      setNotice(`Application submitted. Your control number is ${assignedControlNumber}.`);
+      setNotice(`Application submitted. Your control number is ${savedApp.controlNumber}.`);
       navigate("/citizen-rpt?view=status");
     } catch (error) {
       console.error(error);
