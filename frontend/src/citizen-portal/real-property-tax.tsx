@@ -518,7 +518,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
         applicantType: rawApp.applicant_type || rawApp.applicantType || formData.applicantType,
         mobileNumber: rawApp.mobile_number || rawApp.mobileNumber || formData.mobileNumber,
         propertyLocation: rawApp.property_location || rawApp.propertyLocation || formData.propertyLocation,
-        propertyType: rawApp.property_type || rawApp.property_type || formData.propertyType,
+        propertyType: rawApp.property_type || rawApp.propertyType || formData.propertyType,
         filedDate: rawApp.filed_date || rawApp.filedDate || currentDate,
         status: rawApp.status || "Submitted",
         documents: parsedDocs || attachedDocsList,
@@ -955,12 +955,20 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
                     if (typeof fileObj === "object" && fileObj !== null) {
                       fileName = (fileObj as any).name || "Document";
                       const rawUrl = (fileObj as any).url || "";
-                      fileUrl = rawUrl.startsWith("http") ? rawUrl : `${API_BASE_URL}${rawUrl}`;
+
+                      if (rawUrl.startsWith("data:")) {
+                        fileUrl = rawUrl;
+                      } else if (rawUrl.startsWith("http")) {
+                        fileUrl = rawUrl;
+                      } else {
+                        const cleanPath = rawUrl.startsWith("/uploads/") ? rawUrl : `/uploads/${rawUrl}`;
+                        fileUrl = `${API_BASE_URL}${cleanPath}`;
+                      }
                     } else {
                       const docStr = String(fileObj);
                       fileName = docStr.includes(': ') ? docStr.split(': ')[1].trim() : docStr;
-                      const pathOnly = fileName.startsWith("/uploads/") ? fileName : `/uploads/${fileName}`;
-                      fileUrl = `${API_BASE_URL}${pathOnly}`;
+                      const cleanPath = fileName.startsWith("/uploads/") ? fileName : `/uploads/${fileName}`;
+                      fileUrl = `${API_BASE_URL}${cleanPath}`;
                     }
 
                     return (
@@ -1032,11 +1040,17 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
             </div>
 
             <div className="h-[60vh] bg-slate-100 dark:bg-slate-950 rounded-2xl flex items-center justify-center border border-slate-200 dark:border-slate-800 overflow-hidden relative">
-              {previewFile.url.toLowerCase().match(/\.(jpeg|jpg|gif|png|webp)$/i) || previewFile.name.toLowerCase().match(/\.(jpeg|jpg|gif|png|webp)$/i) ? (
-                <img src={previewFile.url} alt="Document Preview" className="max-h-full max-w-full object-contain" />
-              ) : (
-                <iframe src={previewFile.url} title="Document Preview" className="w-full h-full border-0 bg-white" />
-              )}
+              {(() => {
+                const name = (previewFile.name || "").toLowerCase();
+                const url = (previewFile.url || "").toLowerCase();
+                const isImage = name.match(/\.(jpeg|jpg|gif|png|webp)$/i) || url.match(/\.(jpeg|jpg|gif|png|webp)$/i) || url.startsWith("data:image/");
+
+                if (isImage) {
+                  return <img src={previewFile.url} alt="Document Preview" className="max-h-full max-w-full object-contain" />;
+                } else {
+                  return <iframe src={previewFile.url} title="Document Preview" className="w-full h-full border-0 bg-white" />;
+                }
+              })()}
             </div>
 
             <div className="flex justify-end pt-2">
