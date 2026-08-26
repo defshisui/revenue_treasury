@@ -1,5 +1,8 @@
 // Centralized API configuration
-export const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3000').replace(/\/+$/, '');
+const rawApiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+// Sanitize in case the env var was accidentally set as "VITE_API_URL=https://..." instead of just "https://..."
+const sanitizedApiUrl = rawApiUrl.replace(/^VITE_API_URL=/, '');
+export const API_BASE_URL = sanitizedApiUrl.replace(/\/+$/, '');
 
 /**
  * Helper function for handling authentication login requests
