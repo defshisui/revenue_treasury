@@ -67,11 +67,11 @@ interface ExtendedApplicationRecord extends Omit<RPTApplicationRecord, 'document
 }
 
 export interface RealPropertyTaxViewProps {
-  isCollapsed: boolean;
+  isCollapsed?: boolean;
 }
 
 export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
-  isCollapsed
+  isCollapsed = false
 }) => {
   const [applications, setApplications] = useState<ExtendedApplicationRecord[]>([]);
   const [citizenAuditTrail, setCitizenAuditTrail] = useState<ExtendedApplicationRecord[]>([]);
@@ -271,6 +271,10 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     const targetApp = applications.find(a => a.id === appId);
     if (!targetApp) return;
 
+    if (!confirm(`Are you sure you want to remove application ${targetApp.referenceNumber}?`)) {
+      return;
+    }
+
     try {
       const response = await fetch(`${API_BASE_URL}/citizen-rpt-applications/${appId}`, {
         method: 'DELETE',
@@ -296,7 +300,6 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     }
   };
 
-  // Foolproof Preview Lightbox Handler
   const handleOpenPreview = (doc: { name: string; url?: string }) => {
     let targetUrl = doc.url || '';
 
@@ -304,10 +307,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
       targetUrl = doc.name;
     }
 
-    if (targetUrl.startsWith('data:')) {
-      // Base64 string ready for lightbox
-    } else if (targetUrl.startsWith('http://') || targetUrl.startsWith('https://')) {
-      // Fully qualified absolute URL
+    if (targetUrl.startsWith('data:') || targetUrl.startsWith('http://') || targetUrl.startsWith('https://')) {
+      // Direct URL/Base64 format
     } else if (targetUrl.startsWith('/uploads/')) {
       targetUrl = `${API_BASE_URL}${targetUrl}`;
     } else {
@@ -485,6 +486,28 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     triggerToast(`Document package for ${target.referenceNumber} downloaded successfully.`, 'success');
   };
 
+  const handleExportCSV = () => {
+    const headers = ["Reference No", "Applicant Name", "Category", "Status", "PIN", "Valuation", "Penalty"];
+    const rows = applications.map((a) => [
+      `"${a.referenceNumber}"`,
+      `"${a.applicantName}"`,
+      `"${a.category}"`,
+      `"${a.status}"`,
+      `"${a.propertyDetails?.pin || ''}"`,
+      a.propertyDetails?.currentValuation || 0,
+      a.penaltyFee || 0,
+    ]);
+
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `RPT_Applications_Masterlist_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const toggleSelectAll = () => {
     if (selectedAppIds.length === filteredApplications.length) {
       setSelectedAppIds([]);
@@ -502,19 +525,20 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
   return (
     <div
       style={{
-        marginLeft: isCollapsed ? '80px' : '256px',
-        width: isCollapsed ? 'calc(100% - 80px)' : 'calc(100% - 256px)'
+        marginLeft: isCollapsed ? "80px" : "256px",
+        width: isCollapsed ? "calc(100% - 80px)" : "calc(100% - 256px)",
       }}
-      className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 p-4 sm:p-6 pt-24 transition-all duration-300 box-border flex flex-col font-sans relative selection:bg-blue-600 selection:text-white"
+      className="min-h-screen bg-slate-50/60 dark:bg-slate-950 text-slate-800 dark:text-slate-100 p-6 pt-24 transition-all duration-300 box-border relative"
     >
+      {/* Toast Notification Popup */}
       {toastMessage && (
         <div className="fixed top-20 right-6 z-50 animate-in fade-in slide-in-from-top-4 duration-300">
           <div
             className={`px-4 py-3 rounded-xl shadow-lg border flex items-center gap-3 text-xs font-semibold ${toastMessage.type === 'success'
-              ? 'bg-emerald-950 text-emerald-200 border-emerald-800/80 shadow-emerald-950/20'
-              : toastMessage.type === 'warning'
-                ? 'bg-amber-950 text-amber-200 border-amber-800/80 shadow-amber-950/20'
-                : 'bg-rose-950 text-rose-200 border-rose-800/80 shadow-rose-950/20'
+                ? 'bg-emerald-950 text-emerald-200 border-emerald-800/80 shadow-emerald-950/20'
+                : toastMessage.type === 'warning'
+                  ? 'bg-amber-950 text-amber-200 border-amber-800/80 shadow-amber-950/20'
+                  : 'bg-rose-950 text-rose-200 border-rose-800/80 shadow-rose-950/20'
               }`}
           >
             <span className="w-2 h-2 rounded-full bg-current animate-pulse"></span>
@@ -524,83 +548,148 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
       )}
 
       {/* Header Banner */}
-      <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-2xl border border-slate-200/90 dark:border-slate-800/80 shadow-xs">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8 bg-white dark:bg-slate-900/60 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs backdrop-blur-md">
         <div>
-          <div className="flex items-center gap-3">
-            <span className="p-2.5 bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 rounded-xl border border-blue-100 dark:border-blue-900/50">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-              </svg>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="h-2 w-2 rounded-full bg-blue-600 animate-pulse"></span>
+            <span className="text-[11px] font-semibold tracking-wider text-blue-600 dark:text-blue-400 uppercase">
+              Municipal Treasury Operations
             </span>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-              Real Property Assessment & Treasury Portal
-            </h1>
           </div>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1.5 ml-0.5">
+          <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+            Real Property Assessment & Treasury Portal
+          </h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             GovServe • Electronic Processing, Citizen Uploads Inspection & Document Verification
           </p>
         </div>
 
-        <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
+            <button
+              onClick={() => setMainViewTab('queue')}
+              className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${mainViewTab === 'queue'
+                  ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                }`}
+            >
+              Active Queue ({applications.length})
+            </button>
+            <button
+              onClick={() => setMainViewTab('citizenAudit')}
+              className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${mainViewTab === 'citizenAudit'
+                  ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                }`}
+            >
+              Audit Trail ({citizenAuditTrail.length})
+            </button>
+          </div>
+
           <button
-            onClick={() => setMainViewTab('queue')}
-            className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${mainViewTab === 'queue'
-              ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-2xs'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-              }`}
+            onClick={handleExportCSV}
+            className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold px-4 py-2.5 rounded-xl transition-all border border-slate-200 dark:border-slate-700 cursor-pointer flex items-center gap-1.5"
           >
-            Active Queue ({applications.length})
+            <i className="fa-solid fa-file-csv text-xs"></i> Export Masterlist
           </button>
-          <button
-            onClick={() => setMainViewTab('citizenAudit')}
-            className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${mainViewTab === 'citizenAudit'
-              ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-2xs'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-              }`}
-          >
-            Citizen Documents Audit Trail ({citizenAuditTrail.length})
-          </button>
+        </div>
+      </div>
+
+      {/* Analytics KPI Metric Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+        <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs">
+          <div className="flex justify-between items-start">
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Total Applications</p>
+            <span className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400">
+              <i className="fa-solid fa-file-lines text-xs"></i>
+            </span>
+          </div>
+          <h4 className="text-2xl font-bold text-slate-900 dark:text-white mt-3">{stats.totalApplications}</h4>
+          <p className="mt-2 text-[11px] text-blue-600 dark:text-blue-400 font-medium">Recorded applications</p>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs">
+          <div className="flex justify-between items-start">
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Under Evaluation</p>
+            <span className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400">
+              <i className="fa-solid fa-magnifying-glass-doc text-xs"></i>
+            </span>
+          </div>
+          <h4 className="text-2xl font-bold text-indigo-600 dark:text-indigo-400 mt-3">{stats.pendingReview}</h4>
+          <p className="mt-2 text-[11px] text-slate-400">Awaiting initial review</p>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs">
+          <div className="flex justify-between items-start">
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Inspection / GIS</p>
+            <span className="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400">
+              <i className="fa-solid fa-map-location-dot text-xs"></i>
+            </span>
+          </div>
+          <h4 className="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-3">{stats.pendingInspectionOrGIS}</h4>
+          <p className="mt-2 text-[11px] text-slate-400">Field mapping / audit</p>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs">
+          <div className="flex justify-between items-start">
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Ready for Release</p>
+            <span className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400">
+              <i className="fa-solid fa-circle-check text-xs"></i>
+            </span>
+          </div>
+          <h4 className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-3">{stats.readyForRelease}</h4>
+          <p className="mt-2 text-[11px] text-slate-400">Approved certifications</p>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs sm:col-span-2 lg:col-span-1">
+          <div className="flex justify-between items-start">
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Penalties Collected</p>
+            <span className="p-2 rounded-xl bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400">
+              <i className="fa-solid fa-peso-sign text-xs"></i>
+            </span>
+          </div>
+          <h4 className="text-xl font-bold text-slate-900 dark:text-white mt-3 truncate">
+            ₱{stats.totalPenaltiesCollected.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+          </h4>
+          <p className="mt-2 text-[11px] text-slate-400">Paid penalty revenues</p>
         </div>
       </div>
 
       {/* ACTIVE QUEUE VIEW */}
       {mainViewTab === 'queue' && (
-        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden gap-6 h-[calc(100vh-13rem)] min-h-0 w-full">
-          <div className="w-full lg:w-[420px] xl:w-[460px] flex-shrink-0 flex flex-col gap-4 min-h-0 h-1/2 lg:h-full">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/90 dark:border-slate-800/80 shadow-2xs">
-                <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wider">Under Evaluation</span>
-                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-2">{stats.pendingReview}</div>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Left Panel: Queue Directory List */}
+          <div className="lg:col-span-5 bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-xs flex flex-col gap-4">
+            <div className="flex flex-col gap-3">
+              <div className="relative">
+                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                  <i className="fa-solid fa-magnifying-glass text-xs"></i>
+                </span>
+                <input
+                  type="text"
+                  placeholder="Search Ref No, Applicant, PIN..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-blue-500 transition-all"
+                />
               </div>
-              <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/90 dark:border-slate-800/80 shadow-2xs">
-                <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wider">Inspection / Other</span>
-                <div className="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-2">{stats.pendingInspectionOrGIS}</div>
-              </div>
-            </div>
 
-            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/90 dark:border-slate-800/80 shadow-2xs flex flex-col gap-3">
-              <input
-                type="text"
-                placeholder="Search Ref No, Applicant, PIN..."
-                className="w-full px-3.5 py-2.5 border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-600/50"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
               <div className="grid grid-cols-2 gap-2">
                 <select
-                  className="text-xs p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-950 text-slate-700 dark:text-slate-200 font-medium cursor-pointer"
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-950 text-slate-700 dark:text-slate-200 focus:outline-none focus:border-blue-500 cursor-pointer"
                 >
                   <option value="ALL">All Categories</option>
                   <option value="1.1 Transfer of Ownership">1.1 Transfer of Ownership</option>
                   <option value="1.2 Consolidation / Segregation">1.2 Consolidation / Segregation</option>
                   <option value="1.3 New Assessment / Reassessment / Reclassification">1.3 New / Reassessment</option>
                 </select>
+
                 <select
-                  className="text-xs p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-950 text-slate-700 dark:text-slate-200 font-medium cursor-pointer"
                   value={selectedStatusFilter}
                   onChange={(e) => setSelectedStatusFilter(e.target.value)}
+                  className="px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-950 text-slate-700 dark:text-slate-200 focus:outline-none focus:border-blue-500 cursor-pointer"
                 >
                   <option value="ALL">All Statuses</option>
                   <option value="Under Evaluation">Under Evaluation</option>
@@ -610,23 +699,24 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
               </div>
             </div>
 
-            <div className="flex-1 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800/80 shadow-2xs overflow-hidden flex flex-col min-h-0">
-              <div className="p-3.5 bg-slate-50/80 dark:bg-slate-950 border-b border-slate-200/90 dark:border-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider flex justify-between items-center">
-                <div className="flex items-center gap-2.5">
+            <div className="border border-slate-200/80 dark:border-slate-800 rounded-xl overflow-hidden">
+              <div className="p-3 bg-slate-100 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 text-[11px] font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider flex justify-between items-center">
+                <div className="flex items-center gap-2">
                   <input
                     type="checkbox"
                     checked={filteredApplications.length > 0 && selectedAppIds.length === filteredApplications.length}
                     onChange={toggleSelectAll}
-                    className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                    className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5 cursor-pointer"
                   />
-                  <span>Queue ({filteredApplications.length})</span>
+                  <span>Queue Master Directory ({filteredApplications.length})</span>
                 </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/50 p-2 space-y-1">
+              <div className="max-h-[500px] overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60 p-1">
                 {filteredApplications.length === 0 ? (
-                  <div className="p-8 text-center text-slate-400 text-xs flex flex-col items-center justify-center space-y-2.5">
-                    <p>Application queue is currently empty.</p>
+                  <div className="p-12 text-center text-slate-400 text-xs italic">
+                    <i className="fa-solid fa-folder-open text-xl mb-2 block"></i>
+                    No application records match criteria.
                   </div>
                 ) : (
                   filteredApplications.map((app) => {
@@ -636,47 +726,45 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                     return (
                       <div
                         key={app.id}
-                        className={`w-full text-left p-3 rounded-xl transition-all flex items-start gap-3 border ${isSelected
-                          ? 'bg-blue-50/60 dark:bg-blue-950/30 border-blue-500/40 shadow-2xs'
-                          : 'bg-transparent border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/40'
+                        className={`w-full p-3 rounded-xl transition-all flex items-start gap-3 border my-1 ${isSelected
+                            ? 'bg-blue-50/60 dark:bg-blue-950/30 border-blue-500/40 shadow-2xs'
+                            : 'bg-transparent border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/40'
                           }`}
                       >
                         <input
                           type="checkbox"
                           checked={isChecked}
                           onChange={() => toggleSelectApp(app.id)}
-                          className="mt-1 rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer flex-shrink-0"
+                          className="mt-1 rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5 cursor-pointer flex-shrink-0"
                         />
                         <button
                           onClick={() => setSelectedAppId(app.id)}
-                          className="flex-1 text-left flex flex-col gap-1.5 cursor-pointer"
+                          className="flex-1 text-left flex flex-col gap-1 cursor-pointer"
                         >
-                          <div className="flex justify-between items-start gap-2">
-                            <span className="font-bold text-xs sm:text-sm text-slate-900 dark:text-slate-100 font-mono">
+                          <div className="flex justify-between items-center gap-2">
+                            <span className="font-mono font-bold text-xs text-slate-900 dark:text-white">
                               {app.referenceNumber}
                             </span>
-                            <div className="flex items-center gap-1.5 flex-shrink-0">
-                              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 border">
-                                {app.status}
-                              </span>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteApplication(app.id);
-                                }}
-                                title="Delete Application"
-                                className="text-slate-400 hover:text-rose-600 p-1 rounded transition-colors cursor-pointer"
-                              >
-                                ✕
-                              </button>
-                            </div>
+                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                              {app.status}
+                            </span>
                           </div>
                           <div className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
                             {app.applicantName}
                           </div>
-                          <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                            {app.category}
+                          <div className="text-[11px] text-slate-400 truncate">
+                            {app.category || 'General Tax Assessment'}
                           </div>
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteApplication(app.id);
+                          }}
+                          title="Delete Application"
+                          className="text-slate-400 hover:text-rose-600 p-1 rounded transition-colors cursor-pointer"
+                        >
+                          <i className="fa-solid fa-xmark text-xs"></i>
                         </button>
                       </div>
                     );
@@ -686,44 +774,50 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
             </div>
           </div>
 
-          <div className="flex-1 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800/80 shadow-2xs flex flex-col overflow-hidden min-h-0 h-1/2 lg:h-full">
+          {/* Right Panel: Detail View */}
+          <div className="lg:col-span-7 bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs overflow-hidden">
             {!currentApp ? (
-              <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-3">
+              <div className="p-16 text-center space-y-3">
+                <div className="p-4 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 inline-block">
+                  <i className="fa-solid fa-file-invoice text-2xl"></i>
+                </div>
                 <h3 className="text-base font-bold text-slate-700 dark:text-slate-300">No Application Selected</h3>
-                <p className="text-xs text-slate-400 max-w-sm">Select an application from the queue to inspect documents and workflow steps.</p>
+                <p className="text-xs text-slate-400 max-w-sm mx-auto">Select an item from the master directory to view documents, workflow stages, and citizen audit logs.</p>
               </div>
             ) : (
               <>
-                <div className="p-5 sm:p-6 border-b border-slate-200/90 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/40 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div className="p-6 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/40 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                   <div>
-                    <h2 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100 font-mono">
+                    <h2 className="text-xl font-bold font-mono text-slate-900 dark:text-white">
                       {currentApp.referenceNumber}
                     </h2>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                       Applicant: <span className="font-semibold text-slate-800 dark:text-slate-200">{currentApp.applicantName}</span>
                     </p>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => handleDeleteApplication(currentApp.id)}
-                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 hover:bg-rose-100 border border-rose-200 cursor-pointer"
-                    >
-                      Delete Application
-                    </button>
+
+                  <div className="flex items-center gap-2">
                     <select
                       value={currentApp.status}
                       onChange={(e) => handleUpdateStatus(e.target.value as StatusType)}
-                      className="text-xs font-semibold px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-100 cursor-pointer"
+                      className="px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 focus:outline-none cursor-pointer"
                     >
                       <option value="Under Evaluation">Under Evaluation</option>
                       <option value="Field Inspection Scheduled">Field Inspection Scheduled</option>
                       <option value="Approved & Ready for Release">Approved & Ready for Release</option>
                       <option value="Digital Certificate Issued">Digital Certificate Issued</option>
                     </select>
+
+                    <button
+                      onClick={() => handleDeleteApplication(currentApp.id)}
+                      className="bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-500 dark:bg-slate-800 dark:text-slate-400 font-semibold px-3 py-2 rounded-xl transition-all border border-slate-200 dark:border-slate-700 text-xs cursor-pointer"
+                    >
+                      Delete
+                    </button>
                   </div>
                 </div>
 
-                <div className="flex border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-950 px-5 text-xs font-semibold">
+                <div className="flex border-b border-slate-200 dark:border-slate-800 bg-slate-100/60 dark:bg-slate-950 px-6 text-xs font-semibold">
                   {(
                     [
                       ['overview', 'Overview & Uploads'],
@@ -734,9 +828,9 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                     <button
                       key={tab}
                       onClick={() => setDetailTab(tab as any)}
-                      className={`py-3.5 px-4 border-b-2 transition-colors cursor-pointer whitespace-nowrap ${detailTab === tab
-                        ? 'border-blue-600 text-blue-600 dark:text-blue-400 font-bold'
-                        : 'border-transparent text-slate-500 hover:text-slate-700'
+                      className={`py-3 px-4 border-b-2 transition-colors cursor-pointer whitespace-nowrap ${detailTab === tab
+                          ? 'border-blue-600 text-blue-600 dark:text-blue-400 font-bold'
+                          : 'border-transparent text-slate-500 hover:text-slate-700'
                         }`}
                     >
                       {label}
@@ -744,54 +838,53 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                   ))}
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6">
+                <div className="p-6 space-y-6">
                   {detailTab === 'overview' && (
                     <>
                       <section className="space-y-3">
-                        <h3 className="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-[11px]">
-                          Documents Uploaded by Citizen ({currentApp.documents.length})
+                        <h3 className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[11px] flex items-center gap-2">
+                          <i className="fa-solid fa-folder-open text-blue-600"></i> Citizen Submitted Document Package ({currentApp.documents.length})
                         </h3>
+
                         <div className="space-y-3">
                           {currentApp.documents.map((doc) => (
-                            <div key={doc.id} className="flex flex-col p-4 border rounded-xl text-xs bg-white dark:bg-slate-900 gap-3 shadow-2xs">
-                              <div className="flex justify-between items-center">
-                                <div>
-                                  <p className="font-bold text-slate-900 dark:text-white">{doc.name}</p>
-                                  <p className="text-[10px] text-slate-400">Status: {doc.status}</p>
-                                </div>
-                                <div className="flex gap-2">
-                                  <button
-                                    onClick={() => handleOpenPreview(doc)}
-                                    className="px-3 py-1.5 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900 rounded-lg font-semibold cursor-pointer"
-                                  >
-                                    Preview
-                                  </button>
-                                  <button
-                                    onClick={() => handleDocumentStatusChange(doc.id, 'Verified')}
-                                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold cursor-pointer transition-colors"
-                                  >
-                                    Verify
-                                  </button>
-                                  {/* High-visibility Rose Red Reject Button */}
-                                  <button
-                                    onClick={() => handleDocumentStatusChange(doc.id, 'Rejected')}
-                                    className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-semibold cursor-pointer shadow-xs transition-colors"
-                                  >
-                                    Reject
-                                  </button>
-                                </div>
+                            <div key={doc.id} className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                              <div>
+                                <p className="font-semibold text-xs text-slate-900 dark:text-white">{doc.name}</p>
+                                <p className="text-[10px] text-slate-400 mt-0.5">Status: <span className="font-medium text-slate-600 dark:text-slate-300">{doc.status}</span></p>
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => handleOpenPreview(doc)}
+                                  className="bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300 font-semibold px-3 py-1.5 rounded-xl border border-blue-200 dark:border-blue-900 text-xs cursor-pointer transition-colors"
+                                >
+                                  Preview
+                                </button>
+                                <button
+                                  onClick={() => handleDocumentStatusChange(doc.id, 'Verified')}
+                                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3 py-1.5 rounded-xl text-xs cursor-pointer transition-colors"
+                                >
+                                  Verify
+                                </button>
+                                <button
+                                  onClick={() => handleDocumentStatusChange(doc.id, 'Rejected')}
+                                  className="bg-rose-600 hover:bg-rose-700 text-white font-semibold px-3 py-1.5 rounded-xl text-xs cursor-pointer transition-colors"
+                                >
+                                  Reject
+                                </button>
                               </div>
                             </div>
                           ))}
                         </div>
                       </section>
 
-                      <section className="pt-4 border-t">
+                      <section className="pt-4 border-t border-slate-100 dark:border-slate-800">
                         <button
                           onClick={handleDigitalRelease}
-                          className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-xs cursor-pointer"
+                          className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs cursor-pointer shadow-md shadow-blue-500/20 transition-all flex items-center justify-center gap-2"
                         >
-                          Approve, Release & Move to Audit Trail
+                          <i className="fa-solid fa-stamp"></i> Approve, Issue Digital Certification & Archive
                         </button>
                       </section>
                     </>
@@ -799,23 +892,31 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
 
                   {detailTab === 'audit' && (
                     <div className="space-y-2">
-                      {currentApp.auditLogs?.map((log) => (
-                        <div key={log.id} className="p-3 border rounded-xl text-xs">
-                          <p className="font-bold">{log.action}</p>
-                          <span className="text-[10px] text-slate-400">{log.timestamp}</span>
-                        </div>
-                      ))}
+                      {currentApp.auditLogs?.length === 0 ? (
+                        <p className="text-xs text-slate-400 italic">No audit records found.</p>
+                      ) : (
+                        currentApp.auditLogs?.map((log) => (
+                          <div key={log.id} className="p-3 border border-slate-200 dark:border-slate-800 rounded-xl text-xs bg-slate-50/50 dark:bg-slate-950/50">
+                            <p className="font-semibold text-slate-800 dark:text-slate-200">{log.action}</p>
+                            <span className="text-[10px] text-slate-400 mt-1 block">{log.timestamp} • {log.officer}</span>
+                          </div>
+                        ))
+                      )}
                     </div>
                   )}
 
                   {detailTab === 'notifications' && (
                     <div className="space-y-2">
-                      {currentApp.notificationLogs?.map((notif) => (
-                        <div key={notif.id} className="p-3 border rounded-xl text-xs">
-                          <p>{notif.message}</p>
-                          <span className="text-[10px] text-slate-400">{notif.timestamp}</span>
-                        </div>
-                      ))}
+                      {currentApp.notificationLogs?.length === 0 ? (
+                        <p className="text-xs text-slate-400 italic">No notification history.</p>
+                      ) : (
+                        currentApp.notificationLogs?.map((notif) => (
+                          <div key={notif.id} className="p-3 border border-slate-200 dark:border-slate-800 rounded-xl text-xs bg-slate-50/50 dark:bg-slate-950/50">
+                            <p className="text-slate-800 dark:text-slate-200">{notif.message}</p>
+                            <span className="text-[10px] text-slate-400 mt-1 block">{notif.timestamp} • {notif.type}</span>
+                          </div>
+                        ))
+                      )}
                     </div>
                   )}
                 </div>
@@ -827,28 +928,32 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
 
       {/* CITIZEN DOCUMENTS AUDIT TRAIL VIEW */}
       {mainViewTab === 'citizenAudit' && (
-        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden gap-6 h-[calc(100vh-13rem)] min-h-0 w-full">
-          <div className="w-full lg:w-[420px] xl:w-[460px] flex-shrink-0 flex flex-col gap-4 min-h-0 h-1/2 lg:h-full">
-            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xs flex justify-between items-center">
-              <div>
-                <h3 className="font-bold text-xs uppercase tracking-wider text-slate-700 dark:text-slate-300">Citizen Documents Trail</h3>
-                <p className="text-[11px] text-slate-400">Archived records</p>
-              </div>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <div className="lg:col-span-5 bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-xs flex flex-col gap-4">
+            <div>
+              <h3 className="font-bold text-xs uppercase tracking-wider text-slate-900 dark:text-white">Archived Audit Master Trail</h3>
+              <p className="text-[11px] text-slate-400 mt-0.5">Historical verification records</p>
             </div>
 
-            <div className="flex-1 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xs overflow-hidden flex flex-col min-h-0">
-              <div className="flex-1 overflow-y-auto divide-y p-2 space-y-1">
+            <div className="border border-slate-200/80 dark:border-slate-800 rounded-xl overflow-hidden">
+              <div className="max-h-[500px] overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60 p-1">
                 {citizenAuditTrail.length === 0 ? (
-                  <div className="p-8 text-center text-slate-400 text-xs">No verified records in the audit trail.</div>
+                  <div className="p-12 text-center text-slate-400 text-xs italic">
+                    <i className="fa-solid fa-box-archive text-xl mb-2 block"></i>
+                    No archived records present in the audit trail.
+                  </div>
                 ) : (
                   citizenAuditTrail.map((app) => (
                     <div
                       key={app.id}
                       onClick={() => setSelectedCitizenAppId(app.id)}
-                      className="p-3 rounded-xl border cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/40"
+                      className={`p-3 rounded-xl border cursor-pointer my-1 transition-all ${app.id === currentCitizenApp?.id
+                          ? 'bg-blue-50/60 dark:bg-blue-950/30 border-blue-500/40'
+                          : 'border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/40'
+                        }`}
                     >
-                      <div className="font-bold text-xs font-mono">{app.referenceNumber}</div>
-                      <div className="text-xs text-slate-600 dark:text-slate-300">{app.applicantName}</div>
+                      <div className="font-mono font-bold text-xs text-slate-900 dark:text-white">{app.referenceNumber}</div>
+                      <div className="text-xs font-medium text-slate-700 dark:text-slate-300">{app.applicantName}</div>
                     </div>
                   ))
                 )}
@@ -856,33 +961,36 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
             </div>
           </div>
 
-          <div className="flex-1 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xs flex flex-col overflow-hidden min-h-0 h-1/2 lg:h-full">
+          <div className="lg:col-span-7 bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-xs">
             {!currentCitizenApp ? (
-              <div className="flex-1 flex items-center justify-center p-8 text-center text-xs text-slate-400">
-                Select an archived record from the list.
+              <div className="p-16 text-center text-xs text-slate-400 italic">
+                Select an archived record from the trail to inspect details.
               </div>
             ) : (
-              <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                <h2 className="text-lg font-bold font-mono">{currentCitizenApp.referenceNumber}</h2>
-                <div className="space-y-2 pt-2">
+              <div className="space-y-4">
+                <h2 className="text-xl font-bold font-mono text-slate-900 dark:text-white">{currentCitizenApp.referenceNumber}</h2>
+                <p className="text-xs text-slate-500">Applicant: <span className="font-bold text-slate-800 dark:text-slate-200">{currentCitizenApp.applicantName}</span></p>
+
+                <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
                   <h3 className="text-xs font-bold uppercase text-slate-500">Archived Documents</h3>
                   {currentCitizenApp.documents.map((doc) => (
-                    <div key={doc.id} className="p-3 border rounded-xl flex justify-between items-center text-xs">
-                      <span>{doc.name}</span>
+                    <div key={doc.id} className="p-3 border border-slate-200 dark:border-slate-800 rounded-xl flex justify-between items-center text-xs bg-slate-50/50 dark:bg-slate-950/50">
+                      <span className="font-semibold text-slate-800 dark:text-slate-200">{doc.name}</span>
                       <button
                         onClick={() => handleOpenPreview(doc)}
-                        className="px-3 py-1 bg-blue-50 text-blue-700 rounded-lg font-semibold cursor-pointer"
+                        className="bg-blue-50 text-blue-700 font-semibold px-3 py-1 rounded-lg text-xs cursor-pointer border border-blue-200"
                       >
                         Preview
                       </button>
                     </div>
                   ))}
                 </div>
+
                 <button
                   onClick={() => handleDownloadCertificate(currentCitizenApp.id)}
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-semibold cursor-pointer"
+                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl cursor-pointer shadow-md shadow-blue-500/20 transition-all flex items-center gap-2"
                 >
-                  Download Package
+                  <i className="fa-solid fa-download"></i> Download Complete Package
                 </button>
               </div>
             )}
@@ -892,16 +1000,16 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
 
       {/* POP-UP DOCUMENT PREVIEW LIGHTBOX MODAL */}
       {previewDocUrl && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-4xl h-[85vh] shadow-2xl overflow-hidden flex flex-col">
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-4xl w-full h-[85vh] shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col my-8">
             <div className="p-4 bg-slate-900 text-white flex justify-between items-center border-b border-slate-800">
               <div className="flex items-center gap-2">
-                <span className="text-xs uppercase font-bold text-blue-400">Document Inspector</span>
+                <span className="text-xs font-bold text-blue-400 uppercase tracking-wider">Document Inspector</span>
                 <span className="text-xs text-slate-300 truncate max-w-md">({previewDocTitle})</span>
               </div>
               <button
                 onClick={() => setPreviewDocUrl(null)}
-                className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-bold cursor-pointer transition-colors"
+                className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold cursor-pointer transition-colors"
               >
                 Close ✕
               </button>
