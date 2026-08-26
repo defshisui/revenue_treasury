@@ -3,6 +3,9 @@ import { useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import type { Subsystem } from "../types/treasury";
 
+// Import the logo directly from the assets folder
+import logo from "../assets/logo-system.png";
+
 interface TreasurySidebarProps {
   activeTab: Subsystem;
   isCollapsed: boolean;
@@ -60,8 +63,8 @@ export default function TreasurySidebar({
       {/* Header Logo */}
       <div className="flex items-center gap-3 px-1 py-1">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white shadow-sm">
-          {/* Added leading slash to ensure the logo loads on all nested routes */}
-          <img src="/src/assets/logo-system.png" alt="System Logo" className="w-10 h-10 object-contain" />
+          {/* Use the imported logo variable here */}
+          <img src={logo} alt="System Logo" className="w-10 h-10 object-contain" />
         </div>
         {!isCollapsed && (
           <div className="min-w-0">
@@ -115,9 +118,7 @@ export default function TreasurySidebar({
               <button
                 onClick={() => handleTabClick(item)}
                 title={item.label}
-                className={`w-full min-w-0 flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 cursor-pointer ${
-                  // Removed 'market-private' from the active state array
-                  activeTab === item.id || (isMarketGroup && ["market-city", "hawker"].includes(activeTab))
+                className={`w-full min-w-0 flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 cursor-pointer ${activeTab === item.id || (isMarketGroup && ["market-city", "hawker"].includes(activeTab))
                     ? "bg-[#1d4ed8] text-white shadow-sm font-bold"
                     : "hover:bg-[#1c2541] text-gray-300 hover:text-white"
                   }`}
