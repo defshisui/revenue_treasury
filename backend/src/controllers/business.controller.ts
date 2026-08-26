@@ -56,7 +56,7 @@ export async function getBusinessAssessments(req: Request, res: Response): Promi
 
 export async function createSalesDeclaration(req: Request, res: Response): Promise<void> {
     const { businessName, grossSales, year, psicCode, tin, email } = req.body;
-    const file = (req as any).file; // Captured via multer middleware
+    const file = (req as any).file; // Captured via multer middleware[cite: 7]
     const trackingNumber = `MP-${year || '2026'}-${Math.floor(100000 + Math.random() * 900000)}`;
     const id = randomUUID();
 
@@ -118,6 +118,32 @@ export async function updateAssessmentStatus(req: Request, res: Response): Promi
     } catch (err) {
         console.error('Error updating assessment status:', err);
         res.status(500).json({ message: 'Failed to update status.' });
+    }
+}
+
+// 🗑️ Delete Assessment Handler Function
+export async function deleteBusinessAssessment(req: Request, res: Response): Promise<void> {
+    const { id } = req.params;
+
+    try {
+        const result = await pool.query(
+            `DELETE FROM business_assessments WHERE id = $1 RETURNING *`,
+            [id]
+        );
+
+        if (result.rows.length === 0) {
+            res.status(404).json({ message: 'Assessment record not found.' });
+            return;
+        }
+
+        await recordAudit(req, 'AUD-BIZ-DELETE', 'admin@lgu.gov.ph', 'admin',
+            'Business Tax Module', 'ASSESSMENT_RECORD_DELETED', 'WARNING', null,
+            `Deleted business tax assessment record with ID ${id}`);
+
+        res.status(200).json({ message: 'Assessment record deleted successfully.' });
+    } catch (err) {
+        console.error('Error deleting assessment record:', err);
+        res.status(500).json({ message: 'Failed to delete record from server.' });
     }
 }
 
