@@ -75,14 +75,14 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
 }) => {
   const [applications, setApplications] = useState<ExtendedApplicationRecord[]>([]);
   const [citizenAuditTrail, setCitizenAuditTrail] = useState<ExtendedApplicationRecord[]>([]);
-
   const [selectedCitizenAppId, setSelectedCitizenAppId] = useState<string>('');
-  const [selectedAppId, setSelectedAppId] = useState<string>('');
 
+  const [selectedAppId, setSelectedAppId] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('ALL');
 
+  const [selectedAppIds, setSelectedAppIds] = useState<string[]>([]);
   const [mainViewTab, setMainViewTab] = useState<'queue' | 'citizenAudit'>('queue');
   const [detailTab, setDetailTab] = useState<'overview' | 'audit' | 'notifications'>('overview');
 
@@ -170,6 +170,9 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
           };
         });
         setApplications(mapped);
+        if (mapped.length > 0) {
+          setSelectedAppId(mapped[0].id);
+        }
       })
       .catch((err) => {
         console.error("Failed to load RPT applications:", err);
@@ -182,11 +185,17 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
   }, []);
 
   const currentApp = useMemo(() => {
-    return applications.find((app) => app.id === selectedAppId);
+    return (
+      applications.find((app) => app.id === selectedAppId) ||
+      applications[0]
+    );
   }, [applications, selectedAppId]);
 
   const currentCitizenApp = useMemo(() => {
-    return citizenAuditTrail.find((app) => app.id === selectedCitizenAppId);
+    return (
+      citizenAuditTrail.find((app) => app.id === selectedCitizenAppId) ||
+      citizenAuditTrail[0]
+    );
   }, [citizenAuditTrail, selectedCitizenAppId]);
 
   const stats: AdminStats = useMemo(() => {
@@ -274,7 +283,9 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
       const updatedList = applications.filter(a => a.id !== appId);
       setApplications(updatedList);
 
-      if (selectedAppId === appId) {
+      if (updatedList.length > 0) {
+        setSelectedAppId(updatedList[0].id);
+      } else {
         setSelectedAppId('');
       }
 
@@ -285,6 +296,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     }
   };
 
+  // Foolproof Preview Lightbox Handler
   const handleOpenPreview = (doc: { name: string; url?: string }) => {
     let targetUrl = doc.url || '';
 
@@ -312,7 +324,9 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
       setTimeout(() => {
         setApplications(prev => {
           const filtered = prev.filter(a => a.id !== app.id);
-          if (selectedAppId === app.id) setSelectedAppId('');
+          if (filtered.length > 0 && selectedAppId === app.id) {
+            setSelectedAppId(filtered[0].id);
+          }
           return filtered;
         });
 
@@ -333,6 +347,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         };
 
         setCitizenAuditTrail(prev => [closedRecord, ...prev]);
+        setSelectedCitizenAppId(closedRecord.id);
         triggerToast(`Queue item ${app.referenceNumber} verified and moved to Audit Trail.`, 'success');
       }, 300);
     }
@@ -458,7 +473,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
 
     setApplications(prev => prev.filter(a => a.id !== currentApp.id));
     setCitizenAuditTrail(prev => [releasedApp, ...prev]);
-    setSelectedAppId('');
+    setSelectedCitizenAppId(releasedApp.id);
+    setMainViewTab('citizenAudit');
 
     triggerToast('Application approved and moved to Audit Trail.', 'success');
   };
@@ -469,13 +485,27 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     triggerToast(`Document package for ${target.referenceNumber} downloaded successfully.`, 'success');
   };
 
+  const toggleSelectAll = () => {
+    if (selectedAppIds.length === filteredApplications.length) {
+      setSelectedAppIds([]);
+    } else {
+      setSelectedAppIds(filteredApplications.map((a) => a.id));
+    }
+  };
+
+  const toggleSelectApp = (id: string) => {
+    setSelectedAppIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
   return (
     <div
       style={{
         marginLeft: isCollapsed ? '80px' : '256px',
         width: isCollapsed ? 'calc(100% - 80px)' : 'calc(100% - 256px)'
       }}
-      className="min-h-screen bg-slate-950 text-slate-100 p-4 sm:p-6 pt-24 transition-all duration-300 box-border flex flex-col font-sans relative selection:bg-blue-600 selection:text-white"
+      className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 p-4 sm:p-6 pt-24 transition-all duration-300 box-border flex flex-col font-sans relative selection:bg-blue-600 selection:text-white"
     >
       {toastMessage && (
         <div className="fixed top-20 right-6 z-50 animate-in fade-in slide-in-from-top-4 duration-300">
@@ -494,36 +524,38 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
       )}
 
       {/* Header Banner */}
-      <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-2xl border border-slate-200/90 dark:border-slate-800/80 shadow-xs">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-3">
-            <span className="p-2 bg-blue-600/20 border border-blue-500/30 rounded-xl text-blue-400">
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="flex items-center gap-3">
+            <span className="p-2.5 bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 rounded-xl border border-blue-100 dark:border-blue-900/50">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
               </svg>
             </span>
-            Real Property Assessment & Treasury Portal
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-400 mt-1.5 ml-0.5">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+              Real Property Assessment & Treasury Portal
+            </h1>
+          </div>
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1.5 ml-0.5">
             GovServe • Electronic Processing, Citizen Uploads Inspection & Document Verification
           </p>
         </div>
 
-        <div className="flex items-center gap-3 bg-slate-900/80 p-1.5 rounded-xl border border-slate-800">
+        <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
           <button
-            onClick={() => { setMainViewTab('queue'); setSelectedAppId(''); }}
+            onClick={() => setMainViewTab('queue')}
             className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${mainViewTab === 'queue'
-              ? 'bg-blue-600 text-white shadow'
-              : 'text-slate-400 hover:text-slate-200'
+              ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-2xs'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
               }`}
           >
             Active Queue ({applications.length})
           </button>
           <button
-            onClick={() => { setMainViewTab('citizenAudit'); setSelectedCitizenAppId(''); }}
+            onClick={() => setMainViewTab('citizenAudit')}
             className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${mainViewTab === 'citizenAudit'
-              ? 'bg-blue-600 text-white shadow'
-              : 'text-slate-400 hover:text-slate-200'
+              ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-2xs'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
               }`}
           >
             Citizen Documents Audit Trail ({citizenAuditTrail.length})
@@ -531,159 +563,167 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         </div>
       </div>
 
-      {/* Top Cards & Search Controls Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
-        <div className="bg-slate-900/60 p-5 rounded-2xl border border-slate-800/80 shadow-sm flex flex-col justify-between">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Under Evaluation</span>
-          <div className="text-3xl font-bold text-white mt-2">{stats.pendingReview}</div>
-        </div>
-        <div className="bg-slate-900/60 p-5 rounded-2xl border border-slate-800/80 shadow-sm flex flex-col justify-between">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Inspection / Other</span>
-          <div className="text-3xl font-bold text-white mt-2">{stats.pendingInspectionOrGIS}</div>
-        </div>
-        <div className="lg:col-span-2 bg-slate-900/60 p-4 rounded-2xl border border-slate-800/80 shadow-sm flex flex-col sm:flex-row gap-3 items-center">
-          <input
-            type="text"
-            placeholder="Search Ref No, Applicant, PIN..."
-            className="w-full sm:flex-1 px-4 py-2.5 rounded-xl border border-slate-700/80 bg-slate-950 text-slate-200 text-xs focus:outline-none focus:border-blue-500"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          <select
-            className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-700/80 bg-slate-950 text-slate-200 text-xs cursor-pointer focus:outline-none focus:border-blue-500"
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-          >
-            <option value="ALL">All Categories</option>
-            <option value="1.1 Transfer of Ownership">1.1 Transfer of Ownership</option>
-            <option value="1.2 Consolidation / Segregation">1.2 Consolidation / Segregation</option>
-            <option value="1.3 New Assessment / Reassessment / Reclassification">1.3 New / Reassessment</option>
-          </select>
-          <select
-            className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-700/80 bg-slate-950 text-slate-200 text-xs cursor-pointer focus:outline-none focus:border-blue-500"
-            value={selectedStatusFilter}
-            onChange={(e) => setSelectedStatusFilter(e.target.value)}
-          >
-            <option value="ALL">All Statuses</option>
-            <option value="Under Evaluation">Under Evaluation</option>
-            <option value="Field Inspection Scheduled">Field Inspection Scheduled</option>
-            <option value="Approved & Ready for Release">Approved & Ready for Release</option>
-          </select>
-        </div>
-      </div>
+      {/* ACTIVE QUEUE VIEW */}
+      {mainViewTab === 'queue' && (
+        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden gap-6 h-[calc(100vh-13rem)] min-h-0 w-full">
+          <div className="w-full lg:w-[420px] xl:w-[460px] flex-shrink-0 flex flex-col gap-4 min-h-0 h-1/2 lg:h-full">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/90 dark:border-slate-800/80 shadow-2xs">
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wider">Under Evaluation</span>
+                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-2">{stats.pendingReview}</div>
+              </div>
+              <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/90 dark:border-slate-800/80 shadow-2xs">
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wider">Inspection / Other</span>
+                <div className="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-2">{stats.pendingInspectionOrGIS}</div>
+              </div>
+            </div>
 
-      {/* Main Split-Screen Container matching your layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 items-start">
+            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/90 dark:border-slate-800/80 shadow-2xs flex flex-col gap-3">
+              <input
+                type="text"
+                placeholder="Search Ref No, Applicant, PIN..."
+                className="w-full px-3.5 py-2.5 border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-600/50"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <select
+                  className="text-xs p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-950 text-slate-700 dark:text-slate-200 font-medium cursor-pointer"
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                >
+                  <option value="ALL">All Categories</option>
+                  <option value="1.1 Transfer of Ownership">1.1 Transfer of Ownership</option>
+                  <option value="1.2 Consolidation / Segregation">1.2 Consolidation / Segregation</option>
+                  <option value="1.3 New Assessment / Reassessment / Reclassification">1.3 New / Reassessment</option>
+                </select>
+                <select
+                  className="text-xs p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-950 text-slate-700 dark:text-slate-200 font-medium cursor-pointer"
+                  value={selectedStatusFilter}
+                  onChange={(e) => setSelectedStatusFilter(e.target.value)}
+                >
+                  <option value="ALL">All Statuses</option>
+                  <option value="Under Evaluation">Under Evaluation</option>
+                  <option value="Field Inspection Scheduled">Field Inspection Scheduled</option>
+                  <option value="Approved & Ready for Release">Approved & Ready for Release</option>
+                </select>
+              </div>
+            </div>
 
-        {/* LEFT COLUMN: Queue / Archive List (Span 4) */}
-        <div className="lg:col-span-4 bg-slate-900/60 rounded-2xl border border-slate-800/80 shadow-sm overflow-hidden flex flex-col h-[650px]">
-          <div className="p-4 bg-slate-900/90 border-b border-slate-800 flex items-center gap-3">
-            <input type="checkbox" className="rounded border-slate-700 bg-slate-950 text-blue-600 focus:ring-0 cursor-pointer" />
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
-              {mainViewTab === 'queue' ? `Queue (${filteredApplications.length})` : `Archives (${citizenAuditTrail.length})`}
-            </span>
-          </div>
-
-          <div className="flex-1 overflow-y-auto divide-y divide-slate-800/60">
-            {mainViewTab === 'queue' ? (
-              filteredApplications.length === 0 ? (
-                <div className="p-12 text-center text-slate-500 text-xs">Application queue is currently empty.</div>
-              ) : (
-                filteredApplications.map(app => {
-                  const isSelected = selectedAppId === app.id;
-                  return (
-                    <div
-                      key={app.id}
-                      onClick={() => setSelectedAppId(app.id)}
-                      className={`p-4 cursor-pointer transition-colors flex items-start gap-3 ${isSelected ? 'bg-blue-600/10 border-l-4 border-blue-500' : 'hover:bg-slate-800/40'}`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => { }}
-                        className="mt-1 rounded border-slate-700 bg-slate-950 text-blue-600 cursor-pointer"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="font-mono font-bold text-xs text-white truncate">{app.referenceNumber}</span>
-                          <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-blue-400 font-semibold">{app.status}</span>
-                        </div>
-                        <p className="text-xs font-semibold text-slate-200 truncate">{app.applicantName}</p>
-                        <p className="text-[11px] text-slate-400 truncate mt-0.5">{app.category}</p>
-                      </div>
-                    </div>
-                  );
-                })
-              )
-            ) : (
-              citizenAuditTrail.length === 0 ? (
-                <div className="p-12 text-center text-slate-500 text-xs">No archived items found.</div>
-              ) : (
-                citizenAuditTrail.map(app => {
-                  const isSelected = selectedCitizenAppId === app.id;
-                  return (
-                    <div
-                      key={app.id}
-                      onClick={() => setSelectedCitizenAppId(app.id)}
-                      className={`p-4 cursor-pointer transition-colors flex items-start gap-3 ${isSelected ? 'bg-blue-600/10 border-l-4 border-blue-500' : 'hover:bg-slate-800/40'}`}
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="font-mono font-bold text-xs text-white truncate">{app.referenceNumber}</span>
-                          <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 font-semibold">Released</span>
-                        </div>
-                        <p className="text-xs font-semibold text-slate-200 truncate">{app.applicantName}</p>
-                        <p className="text-[11px] text-slate-400 truncate mt-0.5">{app.digitalRelease?.releasedAt || 'N/A'}</p>
-                      </div>
-                    </div>
-                  );
-                })
-              )
-            )}
-          </div>
-        </div>
-
-        {/* RIGHT COLUMN: Application Inspector / Detail Panel (Span 8) */}
-        <div className="lg:col-span-8 bg-slate-900/60 rounded-2xl border border-slate-800/80 shadow-sm overflow-hidden flex flex-col h-[650px]">
-          {mainViewTab === 'queue' ? (
-            !currentApp ? (
-              <div className="flex-1 flex flex-col items-center justify-center p-12 text-center text-slate-500">
-                <div className="w-16 h-16 rounded-2xl bg-slate-800/50 flex items-center justify-center mb-4 text-slate-400">
-                  <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round5" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
+            <div className="flex-1 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800/80 shadow-2xs overflow-hidden flex flex-col min-h-0">
+              <div className="p-3.5 bg-slate-50/80 dark:bg-slate-950 border-b border-slate-200/90 dark:border-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider flex justify-between items-center">
+                <div className="flex items-center gap-2.5">
+                  <input
+                    type="checkbox"
+                    checked={filteredApplications.length > 0 && selectedAppIds.length === filteredApplications.length}
+                    onChange={toggleSelectAll}
+                    className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                  />
+                  <span>Queue ({filteredApplications.length})</span>
                 </div>
-                <h3 className="text-sm font-bold text-white">No Application Selected</h3>
-                <p className="text-xs text-slate-400 mt-1 max-w-sm">Select an application from the queue to inspect documents and workflow steps.</p>
+              </div>
+
+              <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/50 p-2 space-y-1">
+                {filteredApplications.length === 0 ? (
+                  <div className="p-8 text-center text-slate-400 text-xs flex flex-col items-center justify-center space-y-2.5">
+                    <p>Application queue is currently empty.</p>
+                  </div>
+                ) : (
+                  filteredApplications.map((app) => {
+                    const isSelected = app.id === currentApp?.id;
+                    const isChecked = selectedAppIds.includes(app.id);
+
+                    return (
+                      <div
+                        key={app.id}
+                        className={`w-full text-left p-3 rounded-xl transition-all flex items-start gap-3 border ${isSelected
+                          ? 'bg-blue-50/60 dark:bg-blue-950/30 border-blue-500/40 shadow-2xs'
+                          : 'bg-transparent border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/40'
+                          }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => toggleSelectApp(app.id)}
+                          className="mt-1 rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer flex-shrink-0"
+                        />
+                        <button
+                          onClick={() => setSelectedAppId(app.id)}
+                          className="flex-1 text-left flex flex-col gap-1.5 cursor-pointer"
+                        >
+                          <div className="flex justify-between items-start gap-2">
+                            <span className="font-bold text-xs sm:text-sm text-slate-900 dark:text-slate-100 font-mono">
+                              {app.referenceNumber}
+                            </span>
+                            <div className="flex items-center gap-1.5 flex-shrink-0">
+                              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 border">
+                                {app.status}
+                              </span>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteApplication(app.id);
+                                }}
+                                title="Delete Application"
+                                className="text-slate-400 hover:text-rose-600 p-1 rounded transition-colors cursor-pointer"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          </div>
+                          <div className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
+                            {app.applicantName}
+                          </div>
+                          <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                            {app.category}
+                          </div>
+                        </button>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex-1 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800/80 shadow-2xs flex flex-col overflow-hidden min-h-0 h-1/2 lg:h-full">
+            {!currentApp ? (
+              <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-3">
+                <h3 className="text-base font-bold text-slate-700 dark:text-slate-300">No Application Selected</h3>
+                <p className="text-xs text-slate-400 max-w-sm">Select an application from the queue to inspect documents and workflow steps.</p>
               </div>
             ) : (
-              <div className="flex flex-col h-full bg-slate-900/40">
-                <div className="p-5 bg-slate-900 border-b border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <>
+                <div className="p-5 sm:p-6 border-b border-slate-200/90 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/40 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                   <div>
-                    <h2 className="text-base font-bold font-mono text-white">{currentApp.referenceNumber}</h2>
-                    <p className="text-xs text-slate-400 mt-0.5">Applicant: <span className="text-slate-200 font-semibold">{currentApp.applicantName}</span></p>
+                    <h2 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100 font-mono">
+                      {currentApp.referenceNumber}
+                    </h2>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                      Applicant: <span className="font-semibold text-slate-800 dark:text-slate-200">{currentApp.applicantName}</span>
+                    </p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => handleDeleteApplication(currentApp.id)}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 hover:bg-rose-100 border border-rose-200 cursor-pointer"
+                    >
+                      Delete Application
+                    </button>
                     <select
                       value={currentApp.status}
                       onChange={(e) => handleUpdateStatus(e.target.value as StatusType)}
-                      className="text-xs font-semibold px-3 py-2 border border-slate-700 rounded-xl bg-slate-950 text-slate-200 cursor-pointer focus:outline-none"
+                      className="text-xs font-semibold px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-100 cursor-pointer"
                     >
                       <option value="Under Evaluation">Under Evaluation</option>
                       <option value="Field Inspection Scheduled">Field Inspection Scheduled</option>
                       <option value="Approved & Ready for Release">Approved & Ready for Release</option>
                       <option value="Digital Certificate Issued">Digital Certificate Issued</option>
                     </select>
-                    <button
-                      onClick={() => handleDeleteApplication(currentApp.id)}
-                      className="px-3 py-2 bg-rose-950/40 hover:bg-rose-900 text-rose-300 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
-                    >
-                      Delete
-                    </button>
                   </div>
                 </div>
 
-                <div className="flex border-b border-slate-800 bg-slate-900/60 px-5 text-xs font-semibold">
+                <div className="flex border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-950 px-5 text-xs font-semibold">
                   {(
                     [
                       ['overview', 'Overview & Uploads'],
@@ -694,55 +734,75 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                     <button
                       key={tab}
                       onClick={() => setDetailTab(tab as any)}
-                      className={`py-3 px-4 border-b-2 transition-colors cursor-pointer ${detailTab === tab ? 'border-blue-500 text-blue-400 font-bold' : 'border-transparent text-slate-500 hover:text-slate-300'}`}
+                      className={`py-3.5 px-4 border-b-2 transition-colors cursor-pointer whitespace-nowrap ${detailTab === tab
+                        ? 'border-blue-600 text-blue-600 dark:text-blue-400 font-bold'
+                        : 'border-transparent text-slate-500 hover:text-slate-700'
+                        }`}
                     >
                       {label}
                     </button>
                   ))}
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-5 space-y-6">
+                <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6">
                   {detailTab === 'overview' && (
                     <>
-                      <div className="space-y-3">
-                        <h3 className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">Uploaded Documents ({currentApp.documents.length})</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <section className="space-y-3">
+                        <h3 className="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-[11px]">
+                          Documents Uploaded by Citizen ({currentApp.documents.length})
+                        </h3>
+                        <div className="space-y-3">
                           {currentApp.documents.map((doc) => (
-                            <div key={doc.id} className="p-3.5 border border-slate-800 rounded-xl bg-slate-950/50 flex flex-col justify-between gap-3 text-xs">
-                              <div>
-                                <p className="font-bold text-slate-200 truncate">{doc.name}</p>
-                                <p className="text-[10px] text-slate-400 mt-0.5">Status: <span className={doc.status === 'Verified' ? 'text-emerald-400' : doc.status === 'Rejected' ? 'text-rose-400' : 'text-amber-400'}>{doc.status}</span></p>
-                              </div>
-                              <div className="flex gap-2">
-                                <button onClick={() => handleOpenPreview(doc)} className="flex-1 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg font-semibold transition-colors cursor-pointer">Preview</button>
-                                <button onClick={() => handleDocumentStatusChange(doc.id, 'Verified')} className="flex-1 py-1.5 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white rounded-lg font-semibold transition-colors cursor-pointer">Verify</button>
-                                <button onClick={() => handleDocumentStatusChange(doc.id, 'Rejected')} className="flex-1 py-1.5 bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white rounded-lg font-semibold transition-colors cursor-pointer">Reject</button>
+                            <div key={doc.id} className="flex flex-col p-4 border rounded-xl text-xs bg-white dark:bg-slate-900 gap-3 shadow-2xs">
+                              <div className="flex justify-between items-center">
+                                <div>
+                                  <p className="font-bold text-slate-900 dark:text-white">{doc.name}</p>
+                                  <p className="text-[10px] text-slate-400">Status: {doc.status}</p>
+                                </div>
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => handleOpenPreview(doc)}
+                                    className="px-3 py-1.5 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900 rounded-lg font-semibold cursor-pointer"
+                                  >
+                                    Preview
+                                  </button>
+                                  <button
+                                    onClick={() => handleDocumentStatusChange(doc.id, 'Verified')}
+                                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold cursor-pointer transition-colors"
+                                  >
+                                    Verify
+                                  </button>
+                                  {/* High-visibility Rose Red Reject Button */}
+                                  <button
+                                    onClick={() => handleDocumentStatusChange(doc.id, 'Rejected')}
+                                    className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-semibold cursor-pointer shadow-xs transition-colors"
+                                  >
+                                    Reject
+                                  </button>
+                                </div>
                               </div>
                             </div>
                           ))}
                         </div>
-                      </div>
+                      </section>
 
-                      <div className="pt-4 border-t border-slate-800">
+                      <section className="pt-4 border-t">
                         <button
                           onClick={handleDigitalRelease}
-                          className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-colors shadow-lg cursor-pointer"
+                          className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-xs cursor-pointer"
                         >
                           Approve, Release & Move to Audit Trail
                         </button>
-                      </div>
+                      </section>
                     </>
                   )}
 
                   {detailTab === 'audit' && (
                     <div className="space-y-2">
                       {currentApp.auditLogs?.map((log) => (
-                        <div key={log.id} className="p-3 border border-slate-800 rounded-xl text-xs bg-slate-950/40">
-                          <p className="font-semibold text-slate-200">{log.action}</p>
-                          <div className="flex justify-between mt-1 text-[10px] text-slate-500">
-                            <span>{log.timestamp}</span>
-                            <span>{log.officer}</span>
-                          </div>
+                        <div key={log.id} className="p-3 border rounded-xl text-xs">
+                          <p className="font-bold">{log.action}</p>
+                          <span className="text-[10px] text-slate-400">{log.timestamp}</span>
                         </div>
                       ))}
                     </div>
@@ -751,77 +811,102 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                   {detailTab === 'notifications' && (
                     <div className="space-y-2">
                       {currentApp.notificationLogs?.map((notif) => (
-                        <div key={notif.id} className="p-3 border border-slate-800 rounded-xl text-xs bg-slate-950/40">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="px-1.5 py-0.5 bg-slate-800 rounded text-[9px] font-bold text-slate-300">{notif.type}</span>
-                            <span className={`text-[9px] font-bold ${notif.status === 'Delivered' ? 'text-emerald-500' : 'text-amber-500'}`}>{notif.status}</span>
-                          </div>
-                          <p className="text-slate-300">{notif.message}</p>
-                          <span className="block mt-1 text-[10px] text-slate-500">{notif.timestamp}</span>
+                        <div key={notif.id} className="p-3 border rounded-xl text-xs">
+                          <p>{notif.message}</p>
+                          <span className="text-[10px] text-slate-400">{notif.timestamp}</span>
                         </div>
                       ))}
                     </div>
                   )}
                 </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* CITIZEN DOCUMENTS AUDIT TRAIL VIEW */}
+      {mainViewTab === 'citizenAudit' && (
+        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden gap-6 h-[calc(100vh-13rem)] min-h-0 w-full">
+          <div className="w-full lg:w-[420px] xl:w-[460px] flex-shrink-0 flex flex-col gap-4 min-h-0 h-1/2 lg:h-full">
+            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xs flex justify-between items-center">
+              <div>
+                <h3 className="font-bold text-xs uppercase tracking-wider text-slate-700 dark:text-slate-300">Citizen Documents Trail</h3>
+                <p className="text-[11px] text-slate-400">Archived records</p>
               </div>
-            )
-          ) : (
-            !currentCitizenApp ? (
-              <div className="flex-1 flex flex-col items-center justify-center p-12 text-center text-slate-500">
-                <h3 className="text-sm font-bold text-white">No Archive Selected</h3>
-                <p className="text-xs text-slate-400 mt-1">Select an archived item from the left to review released files.</p>
+            </div>
+
+            <div className="flex-1 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xs overflow-hidden flex flex-col min-h-0">
+              <div className="flex-1 overflow-y-auto divide-y p-2 space-y-1">
+                {citizenAuditTrail.length === 0 ? (
+                  <div className="p-8 text-center text-slate-400 text-xs">No verified records in the audit trail.</div>
+                ) : (
+                  citizenAuditTrail.map((app) => (
+                    <div
+                      key={app.id}
+                      onClick={() => setSelectedCitizenAppId(app.id)}
+                      className="p-3 rounded-xl border cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/40"
+                    >
+                      <div className="font-bold text-xs font-mono">{app.referenceNumber}</div>
+                      <div className="text-xs text-slate-600 dark:text-slate-300">{app.applicantName}</div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex-1 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xs flex flex-col overflow-hidden min-h-0 h-1/2 lg:h-full">
+            {!currentCitizenApp ? (
+              <div className="flex-1 flex items-center justify-center p-8 text-center text-xs text-slate-400">
+                Select an archived record from the list.
               </div>
             ) : (
-              <div className="flex flex-col h-full bg-slate-900/40 p-6 space-y-6 overflow-y-auto">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h2 className="text-base font-bold font-mono text-white">{currentCitizenApp.referenceNumber}</h2>
-                    <p className="text-xs text-slate-400 mt-0.5">Applicant: <span className="text-slate-200 font-semibold">{currentCitizenApp.applicantName}</span></p>
-                  </div>
-                  <span className="px-3 py-1 bg-emerald-950 text-emerald-400 border border-emerald-800 rounded-xl text-xs font-bold">Released</span>
+              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                <h2 className="text-lg font-bold font-mono">{currentCitizenApp.referenceNumber}</h2>
+                <div className="space-y-2 pt-2">
+                  <h3 className="text-xs font-bold uppercase text-slate-500">Archived Documents</h3>
+                  {currentCitizenApp.documents.map((doc) => (
+                    <div key={doc.id} className="p-3 border rounded-xl flex justify-between items-center text-xs">
+                      <span>{doc.name}</span>
+                      <button
+                        onClick={() => handleOpenPreview(doc)}
+                        className="px-3 py-1 bg-blue-50 text-blue-700 rounded-lg font-semibold cursor-pointer"
+                      >
+                        Preview
+                      </button>
+                    </div>
+                  ))}
                 </div>
-
-                <div className="space-y-3">
-                  <h3 className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">Archived Documents</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {currentCitizenApp.documents.map((doc) => (
-                      <div key={doc.id} className="p-3 border border-slate-800 rounded-xl flex justify-between items-center text-xs bg-slate-950/50">
-                        <span className="font-semibold text-slate-200 truncate">{doc.name}</span>
-                        <button onClick={() => handleOpenPreview(doc)} className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-semibold cursor-pointer">Preview</button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="pt-2">
-                  <button onClick={() => handleDownloadCertificate(currentCitizenApp.id)} className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow cursor-pointer">
-                    Download Document Package
-                  </button>
-                </div>
+                <button
+                  onClick={() => handleDownloadCertificate(currentCitizenApp.id)}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-semibold cursor-pointer"
+                >
+                  Download Package
+                </button>
               </div>
-            )
-          )}
+            )}
+          </div>
         </div>
+      )}
 
-      </div>
-
-      {/* DOCUMENT PREVIEW LIGHTBOX MODAL */}
+      {/* POP-UP DOCUMENT PREVIEW LIGHTBOX MODAL */}
       {previewDocUrl && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl h-[85vh] shadow-2xl overflow-hidden flex flex-col">
-            <div className="p-4 bg-slate-950 text-white flex justify-between items-center border-b border-slate-800">
-              <div className="flex items-center gap-3">
-                <span className="text-xs uppercase font-bold text-blue-500">Document Inspector</span>
-                <span className="text-xs text-slate-400 truncate max-w-md">({previewDocTitle})</span>
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-4xl h-[85vh] shadow-2xl overflow-hidden flex flex-col">
+            <div className="p-4 bg-slate-900 text-white flex justify-between items-center border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <span className="text-xs uppercase font-bold text-blue-400">Document Inspector</span>
+                <span className="text-xs text-slate-300 truncate max-w-md">({previewDocTitle})</span>
               </div>
               <button
                 onClick={() => setPreviewDocUrl(null)}
-                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-bold cursor-pointer transition-colors"
+                className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-bold cursor-pointer transition-colors"
               >
                 Close ✕
               </button>
             </div>
-            <div className="flex-1 bg-slate-950/50 overflow-auto flex items-center justify-center p-4">
+            <div className="flex-1 bg-slate-100 dark:bg-slate-950 overflow-auto flex items-center justify-center p-4">
               {(() => {
                 const url = previewDocUrl;
                 const isPdf = url.toLowerCase().includes('.pdf') || url.startsWith('data:application/pdf') || url.toLowerCase().endsWith('.pdf');
