@@ -1,5 +1,5 @@
-// src/routes/business.routes.ts
 import { Router } from 'express';
+import multer from 'multer';
 import {
     getBusinessAssessments,
     createSalesDeclaration,
@@ -8,19 +8,16 @@ import {
     verifyOrNumber
 } from '../controllers/business.controller.js';
 
+const upload = multer({ limits: { fileSize: 50 * 1024 * 1024 } }); // 50MB limit
 const router = Router();
 
-// Citizen & Admin Assessment Queries
 router.get('/business-assessments', getBusinessAssessments);
 router.get('/admin/business-assessments', getBusinessAssessments);
 
-// Sales Declaration Submission (Must be POST)
-router.post('/business-assessments/sales-declaration', createSalesDeclaration);
+// 👈 Add upload.single('financialStatement') middleware here
+router.post('/business-assessments/sales-declaration', upload.single('financialStatement'), createSalesDeclaration);
 
-// Administrative Approvals & Status Updates
 router.patch('/admin/business-assessments/:id/status', updateAssessmentStatus);
-
-// Verification Gateways
 router.post('/verify/tax-bill', verifyTaxBill);
 router.post('/verify/or-number', verifyOrNumber);
 
