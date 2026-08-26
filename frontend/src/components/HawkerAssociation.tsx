@@ -111,6 +111,10 @@ export default function HawkerAssociation({
   const [reviewRemarks, setReviewRemarks] = useState("");
   const [inspectionNote, setInspectionNote] = useState("");
 
+  // Fullscreen Image Preview States
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [isZoomed, setIsZoomed] = useState(false);
+
   const [newForm, setNewForm] = useState({
     associationNumber: `HA-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
     associationName: "",
@@ -755,13 +759,20 @@ export default function HawkerAssociation({
                         </span>
 
                         {doc.mime_type.startsWith('image/') ? (
-                          <div className="w-full h-36 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700 bg-white">
+                          <div className="w-full h-36 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700 bg-white relative group">
                             <img
                               src={doc.file_url}
                               alt={doc.file_name}
-                              className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
-                              onClick={() => window.open(doc.file_url, '_blank')}
+                              className="w-full h-full object-cover transition-transform cursor-pointer"
+                              onClick={() => setPreviewImage(doc.file_url)}
                             />
+                            {/* Hover overlay indicator */}
+                            <div
+                              className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                              onClick={() => setPreviewImage(doc.file_url)}
+                            >
+                              <i className="fa-solid fa-magnifying-glass-plus text-white text-2xl"></i>
+                            </div>
                           </div>
                         ) : (
                           <div
@@ -775,8 +786,8 @@ export default function HawkerAssociation({
 
                         <div className="mt-3 w-full flex justify-between items-center px-1">
                           <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide ${doc.status === 'VERIFIED' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-400' :
-                              doc.status === 'REJECTED' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/50 dark:text-rose-400' :
-                                'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400'
+                            doc.status === 'REJECTED' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/50 dark:text-rose-400' :
+                              'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400'
                             }`}>
                             {doc.status}
                           </span>
@@ -970,6 +981,47 @@ export default function HawkerAssociation({
           </div>
         </div>
       )}
+
+      {/* NEW FULLSCREEN IMAGE LIGHTBOX MODAL */}
+      {previewImage && (
+        <div
+          className="fixed inset-0 z-[60] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 cursor-zoom-out transition-opacity duration-300"
+          onClick={() => {
+            setPreviewImage(null);
+            setIsZoomed(false);
+          }}
+        >
+          <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
+            {/* Close Button */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setPreviewImage(null);
+                setIsZoomed(false);
+              }}
+              className="absolute top-6 right-6 bg-slate-800/80 hover:bg-rose-600 text-white rounded-full w-12 h-12 flex items-center justify-center transition-colors z-10 shadow-lg cursor-pointer"
+              title="Close Preview"
+            >
+              <i className="fa-solid fa-xmark text-xl"></i>
+            </button>
+
+            {/* The Zoomable Image */}
+            <img
+              src={previewImage}
+              alt="Document Fullscreen Preview"
+              className={`transition-all duration-300 ease-in-out ${isZoomed
+                  ? "scale-150 cursor-zoom-out"
+                  : "scale-100 object-contain max-h-full max-w-full cursor-zoom-in"
+                }`}
+              onClick={(e) => {
+                e.stopPropagation(); // Prevents the background click from closing it
+                setIsZoomed(!isZoomed);
+              }}
+            />
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
