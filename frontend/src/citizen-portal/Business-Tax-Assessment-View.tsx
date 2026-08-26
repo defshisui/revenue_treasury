@@ -6,7 +6,7 @@ export interface BusinessTaxAssessmentViewProps {
   isCollapsed?: boolean;
 }
 
-type ActiveScreen = 'home' | 'assessment-list';
+type ActiveScreen = 'home' | 'assessment-list' | 'appointments-list';
 
 interface AttachmentFile {
   name: string;
@@ -28,6 +28,24 @@ interface AssessmentRecord {
   computedFees?: any;
 }
 
+interface AppointmentRecord {
+  id: string;
+  department: string;
+  appointmentType: string;
+  businessName?: string;
+  tin?: string;
+  address?: string;
+  description?: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  date: string;
+  timeSlot?: string;
+  remarks?: string;
+  status: 'PENDING' | 'APPROVED' | 'CANCELLED';
+  createdAt: string;
+}
+
 export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps> = ({ isCollapsed = false }) => {
   const [currentScreen, setCurrentScreen] = useState<ActiveScreen>('home');
   const [isModalOpen, setIsModalOpen] = useState<false | 'appointment' | 'tax-bill' | 'or-number' | 'sales-declaration'>(false);
@@ -43,6 +61,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
 
   // Functional Data States
   const [assessments, setAssessments] = useState<AssessmentRecord[]>([]);
+  const [userAppointments, setUserAppointments] = useState<AppointmentRecord[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
@@ -64,6 +83,24 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
     psicCode: '47110',
     tin: '',
     file: null as File | null
+  });
+
+  // Enhanced Real Appointment Form State with 11-Digit Phone Restriction
+  const [submitting, setSubmitting] = useState(false);
+  const [aptForm, setAptForm] = useState({
+    department: 'City Treasurer\'s Office',
+    appointmentType: '',
+    businessName: '',
+    tin: '',
+    address: '',
+    description: '',
+    fullName: user?.fullname || '',
+    email: user?.email || '',
+    phone: '',
+    date: '',
+    timeSlot: '09:00 AM - 10:00 AM',
+    remarks: '',
+    notARobot: false,
   });
 
   useEffect(() => {
@@ -97,7 +134,15 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
       }
     };
 
-    setUser(checkUserSession());
+    const activeUser = checkUserSession();
+    setUser(activeUser);
+    if (activeUser) {
+      setAptForm(prev => ({
+        ...prev,
+        fullName: activeUser.fullname,
+        email: activeUser.email
+      }));
+    }
 
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -111,6 +156,8 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
   useEffect(() => {
     if (currentScreen === 'assessment-list' && user) {
       fetchAssessments();
+    } else if (currentScreen === 'appointments-list' && user) {
+      fetchUserAppointments();
     }
   }, [currentScreen, user, statusFilter, currentPage]);
 
@@ -146,6 +193,24 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
     }
   };
 
+  const fetchUserAppointments = async () => {
+    setLoading(true);
+    try {
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (user?.token) headers['Authorization'] = `Bearer ${user.token}`;
+
+      const res = await fetch(`${API_BASE_URL}/appointments?email=${encodeURIComponent(user?.email || '')}`, { headers });
+      if (!res.ok) throw new Error("Failed to fetch appointments.");
+      const data = await res.json();
+      setUserAppointments(Array.isArray(data) ? data : (data.appointments || []));
+    } catch (err: any) {
+      console.error("Error fetching appointments:", err);
+      setUserAppointments([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('currentUser');
     localStorage.removeItem('user');
@@ -156,26 +221,21 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
     window.location.href = '/';
   };
 
-  const [submitting, setSubmitting] = useState(false);
-  const [aptForm, setAptForm] = useState({
-    department: 'City Treasurer\'s Office',
-    appointmentType: '',
-    address: '',
-    description: '',
-    fullName: user?.fullname || '',
-    email: user?.email || '',
-    phone: '',
-    date: '',
-    remarks: '',
-    notARobot: false,
-  });
-
   const handleAppointmentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // 📞 Strict 11-digit Phone Number Validation Check
+    const cleanPhone = aptForm.phone.trim();
+    if (!/^\d{11}$/.test(cleanPhone)) {
+      alert("Please enter a valid 11-digit phone number (e.g., 09123456789).");
+      return;
+    }
+
     if (!aptForm.notARobot) {
       alert("Please confirm you are not a robot.");
       return;
     }
+
     setSubmitting(true);
     try {
       const headers: HeadersInit = { 'Content-Type': 'application/json' };
@@ -187,7 +247,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
         body: JSON.stringify(aptForm)
       });
       if (!res.ok) throw new Error("Failed to submit appointment request.");
-      alert("Appointment submitted successfully!");
+      alert("Appointment submitted successfully! You can track its status in 'My Appointments'.");
       setIsModalOpen(false);
     } catch (err: any) {
       alert(err.message || "An error occurred.");
@@ -310,21 +370,8 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
             </div>
 
             <div className="hidden md:flex items-center space-x-6 text-xs font-semibold text-slate-600 dark:text-slate-300">
-              <span className="hover:text-blue-700 cursor-pointer" onClick={() => window.location.href = '/citizen-portal'}>HOME</span>
-
-              <div className="relative group py-2">
-                <span className="hover:text-blue-700 cursor-pointer flex items-center gap-1 select-none">
-                  SERVICES ▾
-                </span>
-                <div className="absolute left-0 top-full h-2 w-full"></div>
-                <div className="absolute left-0 top-[calc(100%+8px)] w-60 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 py-2 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-1 group-hover:translate-y-0">
-                  <button onClick={() => window.location.href = '/citizen-portal'} className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer">Home</button>
-                  <button onClick={() => window.location.href = '/market-vendor-tab'} className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer">Market &amp; Vendors Hub</button>
-                  <button onClick={() => window.location.href = '/real-property-tax-hub'} className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer">Real Property Tax Hub</button>
-                  <button onClick={() => window.location.href = '/business-tax-assessment'} className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer">Business Tax Assessment Hub</button>
-                </div>
-              </div>
-
+              <span className="hover:text-blue-700 cursor-pointer" onClick={() => { setCurrentScreen('home'); }}>HOME</span>
+              <span className="hover:text-blue-700 cursor-pointer" onClick={() => { setCurrentScreen('appointments-list'); }}>MY APPOINTMENTS</span>
               <span className="hover:text-blue-700 cursor-pointer">CONTACT US</span>
             </div>
 
@@ -349,6 +396,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                         <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{user.fullname}</p>
                         <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{user.email}</p>
                       </div>
+                      <button onClick={() => { setIsDropdownOpen(false); setCurrentScreen('appointments-list'); }} className="w-full text-left px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer">My Appointments</button>
                       <button onClick={() => { setIsDropdownOpen(false); window.location.href = '/edit-profile'; }} className="w-full text-left px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer">Edit Profile</button>
                       <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer border-t border-slate-100 dark:border-slate-800 mt-1 pt-2">Log Out</button>
                     </div>
@@ -368,12 +416,14 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
           <div className="absolute inset-0 opacity-30 bg-[radial-gradient(#3b82f6_1px,transparent_1px)] [background-size:16px_16px]"></div>
           <div className="relative z-10 text-center px-4">
             <h1 className="text-xl sm:text-3xl font-extrabold text-white tracking-wide">
-              {currentScreen === 'home' ? 'WELCOME TO BUSINESS TAX ASSESSMENT' : '2026 BUSINESS TAX PAYMENT'}
+              {currentScreen === 'home' ? 'WELCOME TO BUSINESS TAX ASSESSMENT' : currentScreen === 'appointments-list' ? 'MY APPOINTMENTS TRACKER' : '2026 BUSINESS TAX PAYMENT'}
             </h1>
             <p className="text-xs sm:text-sm text-slate-200 mt-1 max-w-xl mx-auto">
               {currentScreen === 'home'
                 ? "This portal is one of our digital Gov Serv initiatives catering to the needs of business owners in securing their permits and licenses."
-                : "Manage your online sales declarations and monitor permit assessment status."}
+                : currentScreen === 'appointments-list'
+                  ? "Monitor the review, approval, or cancellation status of your scheduled municipal appointments in real time."
+                  : "Manage your online sales declarations and monitor permit assessment status."}
             </p>
           </div>
         </div>
@@ -403,12 +453,15 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                     <h3 className="text-blue-900 dark:text-blue-400 font-bold text-sm tracking-wider uppercase mb-1">Appointment</h3>
                     <h4 className="text-slate-800 dark:text-slate-100 font-semibold text-base mb-3">&nbsp;</h4>
                     <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-6">
-                      Do you have any concerns regarding your Business Tax Assessment? You may visit the City Treasurer's Office by scheduling an appointment below:
+                      Do you have any concerns regarding your Business Tax Assessment? Schedule an appointment or track your existing appointments below:
                     </p>
                   </div>
-                  <div>
-                    <button onClick={() => openModal('appointment')} className="w-full sm:w-auto px-6 py-2.5 bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold rounded-full shadow-md transition-all cursor-pointer">
+                  <div className="flex flex-col sm:flex-row justify-center gap-2">
+                    <button onClick={() => openModal('appointment')} className="px-5 py-2.5 bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold rounded-full shadow-md transition-all cursor-pointer">
                       SET AN APPOINTMENT
+                    </button>
+                    <button onClick={() => setCurrentScreen('appointments-list')} className="px-5 py-2.5 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 text-slate-800 dark:text-slate-200 text-xs font-bold rounded-full shadow-md transition-all cursor-pointer">
+                      VIEW MY APPOINTMENTS
                     </button>
                   </div>
                 </div>
@@ -429,6 +482,57 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                     O.R. NUMBER VERIFICATION
                   </button>
                 </div>
+              </div>
+            </div>
+          ) : currentScreen === 'appointments-list' ? (
+            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-5 space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <button onClick={() => setCurrentScreen('home')} className="text-xs text-blue-700 hover:underline font-semibold flex items-center gap-1 cursor-pointer">
+                  ← Back to Home
+                </button>
+                <button onClick={() => openModal('appointment')} className="px-4 py-2 bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold rounded-md shadow-xs cursor-pointer">
+                  + Request New Appointment
+                </button>
+              </div>
+
+              <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-lg mt-4">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-blue-900 text-white font-semibold">
+                    <tr>
+                      <th className="p-3">DEPARTMENT</th>
+                      <th className="p-3">APPOINTMENT TYPE</th>
+                      <th className="p-3">BUSINESS NAME</th>
+                      <th className="p-3">SCHEDULE DATE & TIME</th>
+                      <th className="p-3 text-center">STATUS</th>
+                      <th className="p-3">REMARKS / NOTES</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {loading ? (
+                      <tr><td colSpan={6} className="p-8 text-center text-slate-500">Loading appointments...</td></tr>
+                    ) : userAppointments.length === 0 ? (
+                      <tr><td colSpan={6} className="p-8 text-center text-slate-400">No appointments found. Click "Request New Appointment" to schedule one.</td></tr>
+                    ) : (
+                      userAppointments.map(apt => (
+                        <tr key={apt.id} className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900/50">
+                          <td className="p-3 font-medium">{apt.department}</td>
+                          <td className="p-3 text-blue-600 font-semibold">{apt.appointmentType}</td>
+                          <td className="p-3">{apt.businessName || 'N/A'}</td>
+                          <td className="p-3 font-mono">{apt.date} ({apt.timeSlot || 'All Day'})</td>
+                          <td className="p-3 text-center">
+                            <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold ${apt.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-400' :
+                                apt.status === 'CANCELLED' ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/50 dark:text-rose-400' :
+                                  'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-400'
+                              }`}>
+                              {apt.status}
+                            </span>
+                          </td>
+                          <td className="p-3 italic text-slate-500">{apt.remarks || 'Under review by municipal staff.'}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
           ) : (
@@ -531,8 +635,8 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                           <td className="p-3">{item.businessOwner}</td>
                           <td className="p-3">
                             <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${item.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-400' :
-                                item.status === 'REJECTED' ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/50 dark:text-rose-400' :
-                                  'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-400'
+                              item.status === 'REJECTED' ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/50 dark:text-rose-400' :
+                                'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-400'
                               }`}>
                               {item.status}
                             </span>
@@ -605,11 +709,11 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
 
-          {/* APPOINTMENT MODAL */}
+          {/* ENHANCED APPOINTMENT MODAL WITH 11-DIGIT PHONE & REAL FIELDS */}
           {isModalOpen === 'appointment' && (
             <form onSubmit={handleAppointmentSubmit} className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-xl overflow-hidden">
               <div className="flex justify-between items-center px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
-                <h3 className="font-bold text-sm text-slate-800 dark:text-slate-100">Request New Appointment</h3>
+                <h3 className="font-bold text-sm text-slate-800 dark:text-slate-100">Schedule Municipal Appointment</h3>
                 <button type="button" onClick={closeModal} className="text-slate-400 hover:text-slate-600 font-bold text-lg cursor-pointer">✕</button>
               </div>
               <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto text-xs">
@@ -621,40 +725,65 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                     className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950"
                   >
                     <option>City Treasurer's Office</option>
-                    <option>Business Permits and Licensing Department</option>
+                    <option>Business Permits and Licensing Department (BPLD)</option>
+                    <option>Zoning and Urban Planning Office</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-semibold text-red-600 mb-1">* Appointment Type</label>
+                  <label className="block text-[11px] font-semibold text-red-600 mb-1">* Appointment Type / Purpose</label>
                   <select
                     required
                     value={aptForm.appointmentType}
                     onChange={(e) => setAptForm({ ...aptForm, appointmentType: e.target.value })}
                     className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950"
                   >
-                    <option value="">Nothing selected</option>
-                    <option value="Assessment">Business Tax Assessment</option>
-                    <option value="Payment">Payment Verification</option>
+                    <option value="">Select appointment purpose...</option>
+                    <option value="Business Tax Assessment Review">Business Tax Assessment Review</option>
+                    <option value="Payment Verification & Clearance">Payment Verification & Clearance Issuance</option>
+                    <option value="New Mayor's Permit Application Filing">New Mayor's Permit Application Filing</option>
+                    <option value="Renewal Consultation">Renewal Consultation & Discrepancy Resolution</option>
                   </select>
                 </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Registered Business Name</label>
+                    <input
+                      type="text"
+                      value={aptForm.businessName}
+                      onChange={(e) => setAptForm({ ...aptForm, businessName: e.target.value })}
+                      placeholder="Enter business name"
+                      className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Tax Identification Number (TIN)</label>
+                    <input
+                      type="text"
+                      value={aptForm.tin}
+                      onChange={(e) => setAptForm({ ...aptForm, tin: e.target.value })}
+                      placeholder="000-000-000-000"
+                      className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950"
+                    />
+                  </div>
+                </div>
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-500 mb-1">Appointment Address</label>
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Business / Office Address</label>
                   <input
                     type="text"
                     value={aptForm.address}
                     onChange={(e) => setAptForm({ ...aptForm, address: e.target.value })}
                     className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950"
-                    placeholder="Enter location / office branch"
+                    placeholder="Street, Barangay, City"
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-500 mb-1">Appointment Description</label>
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Detailed Concern / Description</label>
                   <input
                     type="text"
                     value={aptForm.description}
                     onChange={(e) => setAptForm({ ...aptForm, description: e.target.value })}
                     className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950"
-                    placeholder="Brief description of concerns"
+                    placeholder="Provide details regarding your assessment inquiry"
                   />
                 </div>
                 <div>
@@ -680,33 +809,53 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-semibold text-red-600 mb-1">* Phone Number</label>
+                  <label className="block text-[11px] font-semibold text-red-600 mb-1">* Phone Number (Exact 11 Digits)</label>
                   <input
                     required
                     type="text"
+                    maxLength={11}
                     value={aptForm.phone}
-                    onChange={(e) => setAptForm({ ...aptForm, phone: e.target.value })}
-                    placeholder="Enter phone number"
-                    className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950"
+                    onChange={(e) => setAptForm({ ...aptForm, phone: e.target.value.replace(/\D/g, '').slice(0, 11) })}
+                    placeholder="09123456789"
+                    className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950 font-mono"
                   />
+                  <span className="text-[10px] text-slate-400 mt-0.5 block">Must be exactly 11 digits (e.g. 09XXXXXXXXX). Current count: {aptForm.phone.length}/11</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-red-600 mb-1">* Preferred Date</label>
+                    <input
+                      required
+                      type="date"
+                      value={aptForm.date}
+                      onChange={(e) => setAptForm({ ...aptForm, date: e.target.value })}
+                      className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-red-600 mb-1">* Time Slot</label>
+                    <select
+                      value={aptForm.timeSlot}
+                      onChange={(e) => setAptForm({ ...aptForm, timeSlot: e.target.value })}
+                      className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950"
+                    >
+                      <option value="08:00 AM - 09:00 AM">08:00 AM - 09:00 AM</option>
+                      <option value="09:00 AM - 10:00 AM">09:00 AM - 10:00 AM</option>
+                      <option value="10:00 AM - 11:00 AM">10:00 AM - 11:00 AM</option>
+                      <option value="01:00 PM - 02:00 PM">01:00 PM - 02:00 PM</option>
+                      <option value="02:00 PM - 03:00 PM">02:00 PM - 03:00 PM</option>
+                      <option value="03:00 PM - 04:00 PM">03:00 PM - 04:00 PM</option>
+                    </select>
+                  </div>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-semibold text-red-600 mb-1">* Date</label>
-                  <input
-                    required
-                    type="date"
-                    value={aptForm.date}
-                    onChange={(e) => setAptForm({ ...aptForm, date: e.target.value })}
-                    className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-500 mb-1">Remarks (Optional)</label>
+                  <label className="block text-[11px] font-semibold text-slate-500 mb-1">Additional Remarks (Optional)</label>
                   <textarea
                     rows={2}
                     value={aptForm.remarks}
                     onChange={(e) => setAptForm({ ...aptForm, remarks: e.target.value })}
                     className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950 resize-none"
+                    placeholder="Any special instructions or accessibility requests..."
                   />
                 </div>
                 <div className="p-3 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950 flex items-center justify-between">
@@ -717,7 +866,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                       onChange={(e) => setAptForm({ ...aptForm, notARobot: e.target.checked })}
                       className="w-4 h-4 rounded text-blue-600"
                     />
-                    <span>I'm not a robot</span>
+                    <span>I confirm the information provided is accurate and I'm not a robot</span>
                   </label>
                   <span className="text-[10px] text-slate-400">reCAPTCHA</span>
                 </div>
@@ -725,7 +874,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
               <div className="flex justify-end gap-2 px-6 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
                 <button type="button" onClick={closeModal} className="px-4 py-2 border border-slate-300 rounded font-semibold hover:bg-slate-100 cursor-pointer">Cancel</button>
                 <button type="submit" disabled={submitting} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded shadow-xs cursor-pointer">
-                  {submitting ? 'Submitting...' : 'SUBMIT'}
+                  {submitting ? 'Submitting...' : 'SUBMIT APPOINTMENT'}
                 </button>
               </div>
             </form>
@@ -955,8 +1104,8 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                 <div>
                   <span className="block text-[10px] text-slate-400 font-bold uppercase">Status</span>
                   <span className={`inline-block px-2 py-0.5 rounded font-bold text-[10px] mt-0.5 ${selectedAssessmentView.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-800' :
-                      selectedAssessmentView.status === 'REJECTED' ? 'bg-rose-100 text-rose-800' :
-                        'bg-amber-100 text-amber-800'
+                    selectedAssessmentView.status === 'REJECTED' ? 'bg-rose-100 text-rose-800' :
+                      'bg-amber-100 text-amber-800'
                     }`}>
                     {selectedAssessmentView.status}
                   </span>
@@ -1025,7 +1174,6 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
               <button type="button" onClick={() => setPreviewFile(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer font-bold text-lg">✕</button>
             </div>
 
-            {/* 🔍 FIXED: Checks for base64 data:image/ or standard image extension */}
             <div className="h-[60vh] bg-slate-100 dark:bg-slate-950 rounded-2xl flex items-center justify-center border border-slate-200 dark:border-slate-800 overflow-hidden relative">
               {previewFile.url.startsWith('data:image/') || previewFile.url.match(/\.(jpeg|jpg|gif|png)$/i) ? (
                 <img src={previewFile.url} alt="Document Preview" className="max-h-full max-w-full object-contain" />
