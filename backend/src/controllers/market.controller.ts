@@ -1,0 +1,238 @@
+// src/controllers/market.controller.ts
+import type { Request, Response } from 'express';
+import pool from '../db.js';
+import { recordAudit } from './audit.controller.js';
+import type { SaveLeaseBody, FraudScanBody } from '../types/index.js';
+
+function resolvePaymentMethod(body: Partial<SaveLeaseBody>): string {
+  const raw = body.paymentMethod || body.payment_method;
+  return raw && String(raw).trim() !== '' ? String(raw).trim() : 'Cash / Direct';
+}
+
+export async function getTransactions(_req: Request, res: Response): Promise<void> {
+  try {
+    const result = await pool.query('SELECT * FROM market_leases ORDER BY created_at DESC');
+    const formatted = result.rows.map((row) => {
+      let formattedDate = '2026-06-15';
+      if (row.created_at) {
+        const d = new Date(row.created_at);
+        if (!isNaN(d.getTime())) formattedDate = d.toISOString().split('T')[0];
+      }
+      return {
+        id: row.id ? row.id.toString() : '1',
+        transactionId: `TX-${row.lease_id || row.id}`,
+        referenceNumber: row.lease_id || `REF-${row.id}`,
+        taxpayer: `${row.first_name || ''} ${row.last_name || ''}`.trim() || 'Unknown Taxpayer',
+        paymentType: 'Market Rental',
+        amount: parseFloat(row.amount_due) || 0,
+        paymentMethod: row.payment_method || 'Cash / Direct',
+        collector: 'Municipal Treasury',
+        date: formattedDate,
+        status: row.payment_status?.toLowerCase().includes('paid') ? 'Posted' : 'Pending',
+        remarks: `Stall ${row.stall_number || 'N/A'} (${row.market_name || 'Public Market'})`,
+      };
+    });
+    res.json(formatted);
+  } catch (err) {
+    console.error('Error fetching transactions:', err);
+    res.status(500).json({ message: 'Error loading transactions' });
+  }
+}
+
+export async function createTransaction(_req: Request, res: Response): Promise<void> {
+  res.status(201).json({ message: 'Transaction recorded successfully (mocked)' });
+}
+
+export async function getMarketLeases(_req: Request, res: Response): Promise<void> {
+  try {
+    const result = await pool.query('SELECT * FROM market_leases ORDER BY created_at DESC');
+    const formatted = result.rows.map((row) => ({
+      id: row.id.toString(),
+      leaseId: row.lease_id,
+      firstName: row.first_name,
+      lastName: row.last_name,
+      marketName: row.market_name,
+      section: row.section,
+      stallNumber: row.stall_number,
+      leaseStatus: row.lease_status,
+      amountDue: parseFloat(row.amount_due) || 0,
+      helperApprovalStatus: row.helper_approval_status,
+      advancePaymentStatus: row.advance_payment_status,
+      paymentStatus: row.payment_status,
+      paymentMethod: row.payment_method || 'Cash / Direct',
+      createdAt: row.created_at,
+    }));
+    res.json(formatted);
+  } catch (err) {
+    console.error('Error fetching market leases:', err);
+    res.status(500).json({ message: 'Error loading market leases' });
+  }
+}
+
+export async function createMarketLease(req: Request, res: Response): Promise<void> {
+  const body = req.body as SaveLeaseBody;
+  const { firstName, lastName, marketName, section, stallNumber,
+    leaseStatus, amountDue, helperApprovalStatus, advancePaymentStatus, paymentStatus } = body;
+  const resolvedPaymentMethod = resolvePaymentMethod(body);
+
+  try {
+    const result = await pool.query(
+      `INSERT INTO market_leases
+       (lease_id, first_name, last_name, market_name, section, stall_number, lease_status,
+        amount_due, helper_approval_status, advance_payment_status, payment_status, payment_method, created_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,NOW())
+       RETURNING *`,
+      [
+        body.leaseId || `LEASE-${Date.now()}`,
+        firstName, lastName, marketName, section, stallNumber,
+        leaseStatus || 'Active', amountDue || 0,
+        helperApprovalStatus || 'Pending',
+        advancePaymentStatus || 'Requested',
+        paymentStatus || 'Pending Payment',
+        resolvedPaymentMethod,
+      ]
+    );
+
+    await recordAudit(req, 'AUD-MARKET-SUBMIT', `${firstName}.${lastName}@citizen.gov.ph`, 'Citizen',
+      'Market Module', 'STALL_APPLICATION_SUBMITTED', 'INFO', null,
+      `Applied for Stall ${stallNumber} at ${marketName} via ${resolvedPaymentMethod}`);
+
+    res.status(201).json({ message: 'Lease application saved successfully', lease: result.rows[0] });
+  } catch (err) {
+    console.error('Error saving market lease:', err);
+    res.status(500).json({ message: 'Failed to save market lease application to database.' });
+  }
+}
+
+export async function updateMarketLease(req: Request, res: Response): Promise<void> {
+  const { id } = req.params;
+  const body = req.body as SaveLeaseBody;
+  const { firstName, lastName, marketName, section, stallNumber,
+    leaseStatus, amountDue, helperApprovalStatus, advancePaymentStatus, paymentStatus } = body;
+  const resolvedPaymentMethod = resolvePaymentMethod(body);
+
+  try {
+    const result = await pool.query(
+      `UPDATE market_leases
+       SET first_name=$1, last_name=$2, market_name=$3, section=$4, stall_number=$5,
+           lease_status=$6, amount_due=$7, helper_approval_status=$8,
+           advance_payment_status=$9, payment_status=$10, payment_method=$11
+       WHERE lease_id=$12 OR id::text=$12
+       RETURNING *`,
+      [firstName, lastName, marketName, section, stallNumber,
+       leaseStatus, amountDue || 0, helperApprovalStatus,
+       advancePaymentStatus, paymentStatus, resolvedPaymentMethod, id]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ message: 'Lease record not found' });
+      return;
+    }
+
+    await recordAudit(req, 'AUD-MARKET-UPDATE', 'system-admin@lgu.gov.ph', 'admin',
+      'Market Module', 'STALL_APPLICATION_UPDATED', 'INFO', null,
+      `Updated lease record for Stall ${stallNumber} (${id}) with payment method: ${resolvedPaymentMethod}`);
+
+    res.status(200).json({ message: 'Lease updated successfully', lease: result.rows[0] });
+  } catch (err) {
+    console.error('Error updating market lease:', err);
+    res.status(500).json({ message: 'Failed to update market lease in database.' });
+  }
+}
+
+export async function deleteMarketLease(req: Request, res: Response): Promise<void> {
+  const { id } = req.params;
+  try {
+    const result = await pool.query(
+      'DELETE FROM market_leases WHERE lease_id=$1 OR id::text=$1 RETURNING *',
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ message: 'Lease record not found in database' });
+      return;
+    }
+
+    await recordAudit(req, 'AUD-MARKET-DELETE', 'system-admin@lgu.gov.ph', 'admin',
+      'Market Module', 'STALL_LEASE_DELETED', 'WARNING', `Deleted lease record ${id}`, null);
+
+    res.status(200).json({ message: 'Lease deleted successfully from database', deletedLease: result.rows[0] });
+  } catch (err) {
+    console.error('Error deleting market lease:', err);
+    res.status(500).json({ message: 'Failed to delete market lease from database.' });
+  }
+}
+
+export async function fraudScan(req: Request, res: Response): Promise<void> {
+  const body = req.body as FraudScanBody;
+  const rawId = body.leaseId || body.id || body.lease_id;
+
+  if (!rawId) {
+    res.status(400).json({ error: 'Lease ID is required for fraud analysis.' });
+    return;
+  }
+
+  const searchId = String(rawId).trim();
+
+  try {
+    let leaseQuery = await pool.query('SELECT * FROM market_leases WHERE lease_id=$1', [searchId]);
+
+    if (leaseQuery.rows.length === 0 && !isNaN(Number(searchId))) {
+      leaseQuery = await pool.query('SELECT * FROM market_leases WHERE id=$1', [parseInt(searchId, 10)]);
+    }
+
+    if (leaseQuery.rows.length === 0) {
+      res.status(404).json({ error: 'Lease record not found in database.' });
+      return;
+    }
+
+    const lease = leaseQuery.rows[0];
+    let riskScore = 10;
+    const flags: string[] = [];
+
+    const amountDue = parseFloat(lease.amount_due) || 0;
+    if (amountDue > 50000) {
+      riskScore += 30;
+      flags.push(`High financial exposure detected: ₱${amountDue.toLocaleString()} exceeds standard median threshold.`);
+    }
+
+    try {
+      const allLeases = (await pool.query('SELECT * FROM market_leases')).rows;
+      const nameCollisions = allLeases.filter((l) =>
+        l.id !== lease.id &&
+        String(l.first_name || '').trim().toLowerCase() === String(lease.first_name || '').trim().toLowerCase() &&
+        String(l.last_name || '').trim().toLowerCase() === String(lease.last_name || '').trim().toLowerCase()
+      );
+      if (nameCollisions.length > 0) {
+        riskScore += 40;
+        flags.push(`Database collision alert: ${nameCollisions.length} other active lease record(s) found under identical name (${lease.first_name} ${lease.last_name}).`);
+      }
+    } catch (e) {
+      console.warn('Market leases batch scan warning:', (e as Error).message);
+    }
+
+    try {
+      const allAudits = (await pool.query('SELECT * FROM audit_logs')).rows;
+      const applicantName = `${lease.first_name || ''} ${lease.last_name || ''}`.trim().toLowerCase();
+      const suspiciousAudits = allAudits.filter((log) => {
+        const text = `${log.user_email || ''} ${log.previous_data || ''} ${log.new_data || ''}`.toLowerCase();
+        return applicantName && text.includes(applicantName) && ['WARNING', 'CRITICAL'].includes(log.severity);
+      });
+      if (suspiciousAudits.length > 0) {
+        riskScore += 20;
+        flags.push(`Security audit trail flags ${suspiciousAudits.length} prior warning or critical event(s) linked to applicant profile.`);
+      }
+    } catch (e) {
+      console.warn('Audit logs batch scan warning:', (e as Error).message);
+    }
+
+    if (riskScore > 99) riskScore = 99;
+    const riskLevel = riskScore > 60 ? 'High' : riskScore > 30 ? 'Medium' : 'Low';
+    if (flags.length === 0) flags.push('Database validation passed cleanly. No multi-stall name collisions or abnormal payment spikes found.');
+
+    res.status(200).json({ success: true, riskScore, riskLevel, flags });
+  } catch (err) {
+    console.error('Error executing database fraud scan:', err);
+    res.status(500).json({ error: 'Internal server error during AI fraud analysis.' });
+  }
+}

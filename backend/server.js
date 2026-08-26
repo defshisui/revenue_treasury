@@ -70,9 +70,9 @@ app.get(['/', '/health'], (req, res) => {
   });
 });
 
-const dbConnectionString = 
-  process.env.DATABASE_URL || 
-  process.env.DATABASE_PRIVATE_URL || 
+const dbConnectionString =
+  process.env.DATABASE_URL ||
+  process.env.DATABASE_PRIVATE_URL ||
   process.env.DATABASE_PUBLIC_URL;
 
 const isInternalDb = Boolean(
@@ -276,8 +276,8 @@ async function initializeDatabase() {
 initializeDatabase().catch(err => console.error('Database startup background error:', err.message || err));
 
 const loginAttemptsTracker = new Map();
-const LOCKOUT_LIMIT = 5; 
-const LOCKOUT_DURATION_SECONDS = 60; 
+const LOCKOUT_LIMIT = 5;
+const LOCKOUT_DURATION_SECONDS = 60;
 
 async function recordAudit(req, auditId, userEmail, userRole, moduleName, actionName, severity = 'INFO', prevData = null, newData = null) {
   try {
@@ -364,7 +364,7 @@ app.delete('/audit-logs', async (req, res) => {
     `, [clientIP, clientAgent]);
 
     await pool.query('DELETE FROM audit_logs WHERE audit_id != \'AUD-SYS-WIPE\';');
-    
+
     res.status(200).json({ message: 'Audit logs successfully cleared and archived.' });
   } catch (err) {
     console.error('Error clearing audit logs:', err);
@@ -456,10 +456,10 @@ app.get('/citizens/:userId', async (req, res) => {
 });
 
 app.post('/citizens', async (req, res) => {
-  const { 
-    userId, firstName, middleName, lastName, suffix, 
-    birthDate, houseNoStreet, barangay, city, 
-    occupation, sex, mobileNumber 
+  const {
+    userId, firstName, middleName, lastName, suffix,
+    birthDate, houseNoStreet, barangay, city,
+    occupation, sex, mobileNumber
   } = req.body;
 
   if (!userId || !firstName || !lastName || !mobileNumber || !birthDate || !houseNoStreet || !barangay || !city) {
@@ -523,10 +523,10 @@ app.post('/citizen-rpt-applications', upload.any(), async (req, res) => {
   const filePaths = req.files ? req.files.map(file => `/uploads/${file.filename}`) : [];
 
   // Safely resolve applicant name from multiple possible frontend payload formats
-  let resolvedApplicantName = 
-    appData.applicantName || 
-    appData.name || 
-    appData.ownerName || 
+  let resolvedApplicantName =
+    appData.applicantName ||
+    appData.name ||
+    appData.ownerName ||
     appData.fullName;
 
   if (!resolvedApplicantName && (appData.firstName || appData.lastName)) {
@@ -544,7 +544,7 @@ app.post('/citizen-rpt-applications', upload.any(), async (req, res) => {
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
       RETURNING *;
     `;
-    
+
     const values = [
       appData.id || randomUUID(),
       appData.controlNumber || null,
@@ -555,7 +555,7 @@ app.post('/citizen-rpt-applications', upload.any(), async (req, res) => {
       appData.filedDate || new Date().toISOString().split('T')[0],
       appData.status || 'Pending',
       appData.penalty || 0,
-      resolvedApplicantName, 
+      resolvedApplicantName,
       appData.pin || appData.propertyDetails?.pin || null,
       appData.taxDeclarationNumber || null,
       appData.propertyLocation || appData.propertyDetails?.address || null,
@@ -565,7 +565,7 @@ app.post('/citizen-rpt-applications', upload.any(), async (req, res) => {
     ];
 
     const result = await pool.query(query, values);
-    
+
     await recordAudit(
       req,
       'AUD-RPT-SUBMIT',
@@ -694,13 +694,13 @@ app.post('/market-leases', async (req, res) => {
   const {
     leaseId, firstName, lastName, marketName,
     section, stallNumber, leaseStatus, amountDue,
-    helperApprovalStatus, advancePaymentStatus, paymentStatus, 
+    helperApprovalStatus, advancePaymentStatus, paymentStatus,
     paymentMethod, payment_method
   } = req.body;
 
   const rawPaymentMethod = paymentMethod || payment_method;
-  const resolvedPaymentMethod = (rawPaymentMethod && String(rawPaymentMethod).trim() !== '') 
-    ? String(rawPaymentMethod).trim() 
+  const resolvedPaymentMethod = (rawPaymentMethod && String(rawPaymentMethod).trim() !== '')
+    ? String(rawPaymentMethod).trim()
     : 'Cash / Direct';
 
   try {
@@ -710,7 +710,7 @@ app.post('/market-leases', async (req, res) => {
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())
       RETURNING *;
     `;
-    
+
     const values = [
       leaseId || `LEASE-${Date.now()}`,
       firstName,
@@ -730,14 +730,14 @@ app.post('/market-leases', async (req, res) => {
     const newLease = result.rows[0];
 
     await recordAudit(
-      req, 
-      'AUD-MARKET-SUBMIT', 
-      `${firstName}.${lastName}@citizen.gov.ph`, 
-      'Citizen', 
-      'Market Module', 
-      'STALL_APPLICATION_SUBMITTED', 
-      'INFO', 
-      null, 
+      req,
+      'AUD-MARKET-SUBMIT',
+      `${firstName}.${lastName}@citizen.gov.ph`,
+      'Citizen',
+      'Market Module',
+      'STALL_APPLICATION_SUBMITTED',
+      'INFO',
+      null,
       `Applied for Stall ${stallNumber} at ${marketName} via ${resolvedPaymentMethod}`
     );
 
@@ -756,13 +756,13 @@ app.put('/market-leases/:id', async (req, res) => {
   const {
     firstName, lastName, marketName,
     section, stallNumber, leaseStatus, amountDue,
-    helperApprovalStatus, advancePaymentStatus, paymentStatus, 
+    helperApprovalStatus, advancePaymentStatus, paymentStatus,
     paymentMethod, payment_method
   } = req.body;
 
   const rawPaymentMethod = paymentMethod || payment_method;
-  const resolvedPaymentMethod = (rawPaymentMethod && String(rawPaymentMethod).trim() !== '') 
-    ? String(rawPaymentMethod).trim() 
+  const resolvedPaymentMethod = (rawPaymentMethod && String(rawPaymentMethod).trim() !== '')
+    ? String(rawPaymentMethod).trim()
     : 'Cash / Direct';
 
   try {
@@ -774,7 +774,7 @@ app.put('/market-leases/:id', async (req, res) => {
       WHERE lease_id = $12 OR id::text = $12
       RETURNING *;
     `;
-    
+
     const values = [
       firstName, lastName, marketName, section, stallNumber,
       leaseStatus, amountDue || 0, helperApprovalStatus,
@@ -788,14 +788,14 @@ app.put('/market-leases/:id', async (req, res) => {
     }
 
     await recordAudit(
-      req, 
-      'AUD-MARKET-UPDATE', 
-      'system-admin@lgu.gov.ph', 
-      'admin', 
-      'Market Module', 
-      'STALL_APPLICATION_UPDATED', 
-      'INFO', 
-      null, 
+      req,
+      'AUD-MARKET-UPDATE',
+      'system-admin@lgu.gov.ph',
+      'admin',
+      'Market Module',
+      'STALL_APPLICATION_UPDATED',
+      'INFO',
+      null,
       `Updated lease record for Stall ${stallNumber} (${id}) with payment method: ${resolvedPaymentMethod}`
     );
 
@@ -818,7 +818,7 @@ app.delete('/market-leases/:id', async (req, res) => {
       WHERE lease_id = $1 OR id::text = $1
       RETURNING *;
     `;
-    
+
     const result = await pool.query(query, [id]);
 
     if (result.rows.length === 0) {
@@ -826,14 +826,14 @@ app.delete('/market-leases/:id', async (req, res) => {
     }
 
     await recordAudit(
-      req, 
-      'AUD-MARKET-DELETE', 
-      'system-admin@lgu.gov.ph', 
-      'admin', 
-      'Market Module', 
-      'STALL_LEASE_DELETED', 
-      'WARNING', 
-      `Deleted lease record ${id}`, 
+      req,
+      'AUD-MARKET-DELETE',
+      'system-admin@lgu.gov.ph',
+      'admin',
+      'Market Module',
+      'STALL_LEASE_DELETED',
+      'WARNING',
+      `Deleted lease record ${id}`,
       null
     );
 
@@ -891,7 +891,7 @@ app.post('/api/hawkers', async (req, res) => {
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
       RETURNING *;
     `;
-    
+
     const values = [
       data.id || randomUUID(),
       data.associationNumber,
@@ -912,7 +912,7 @@ app.post('/api/hawkers', async (req, res) => {
     ];
 
     const result = await pool.query(query, values);
-    
+
     await recordAudit(
       req,
       'AUD-HAWKER-SUBMIT',
@@ -946,7 +946,7 @@ app.patch('/api/hawkers/:id', async (req, res) => {
       WHERE id::text = $3 OR association_number = $3
       RETURNING *;
     `;
-    
+
     const result = await pool.query(query, [status, remarks, id]);
 
     if (result.rows.length === 0) {
@@ -981,7 +981,7 @@ app.patch('/api/hawkers/:id', async (req, res) => {
 
 app.post('/api/ai/fraud-scan', async (req, res) => {
   const rawId = req.body.leaseId || req.body.id || req.body.lease_id;
-  
+
   if (!rawId) {
     return res.status(400).json({ error: "Lease ID is required for fraud analysis." });
   }
@@ -990,7 +990,7 @@ app.post('/api/ai/fraud-scan', async (req, res) => {
 
   try {
     let leaseQuery = await pool.query(
-      `SELECT * FROM market_leases WHERE lease_id = $1`, 
+      `SELECT * FROM market_leases WHERE lease_id = $1`,
       [searchId]
     );
 
@@ -1006,7 +1006,7 @@ app.post('/api/ai/fraud-scan', async (req, res) => {
     }
 
     const lease = leaseQuery.rows[0];
-    let riskScore = 10; 
+    let riskScore = 10;
     const flags = [];
 
     const amountDue = parseFloat(lease.amount_due) || 0;
@@ -1019,7 +1019,7 @@ app.post('/api/ai/fraud-scan', async (req, res) => {
       const allLeasesQuery = await pool.query(`SELECT * FROM market_leases`);
       const allLeases = allLeasesQuery.rows;
 
-      const matchingNameLeases = allLeases.filter(l => 
+      const matchingNameLeases = allLeases.filter(l =>
         l.id !== lease.id &&
         String(l.first_name || '').trim().toLowerCase() === String(lease.first_name || '').trim().toLowerCase() &&
         String(l.last_name || '').trim().toLowerCase() === String(lease.last_name || '').trim().toLowerCase()
@@ -1078,19 +1078,40 @@ app.post('/api/ai/fraud-scan', async (req, res) => {
 // ==========================================
 
 app.post('/login', async (req, res) => {
-  const { email, password, rememberMe } = req.body;
+  const { email, password, rememberMe } = req.body || {};
   const auditId = 'AUD-' + Math.floor(100000 + Math.random() * 900000);
 
   if (!email || !password) {
-    return res.status(400).json({ message: 'Email and password are required.' });
+    return res.status(400).json({
+      message: 'Email and password are required.'
+    });
   }
 
+  const normalizedEmail = String(email).trim().toLowerCase();
   const currentTime = Date.now();
-  const trackingData = loginAttemptsTracker.get(email) || { count: 0, lockUntil: 0 };
+  const trackingData =
+    loginAttemptsTracker.get(normalizedEmail) || {
+      count: 0,
+      lockUntil: 0
+    };
 
   if (trackingData.lockUntil > currentTime) {
-    const remainingSeconds = Math.ceil((trackingData.lockUntil - currentTime) / 1000);
-    await recordAudit(req, auditId, email, 'Unknown', 'Authentication', 'LOGIN_LOCKED_OUT', 'CRITICAL', null, `Locked for ${remainingSeconds}s`);
+    const remainingSeconds = Math.ceil(
+      (trackingData.lockUntil - currentTime) / 1000
+    );
+
+    await recordAudit(
+      req,
+      auditId,
+      normalizedEmail,
+      'Unknown',
+      'Authentication',
+      'LOGIN_LOCKED_OUT',
+      'CRITICAL',
+      null,
+      `Locked for ${remainingSeconds}s`
+    );
+
     return res.status(429).json({
       message: 'Too many failed login attempts.',
       retryAfterSeconds: remainingSeconds
@@ -1098,41 +1119,93 @@ app.post('/login', async (req, res) => {
   }
 
   try {
-    const queryText = 'SELECT * FROM users WHERE email ILIKE $1';
-    const result = await pool.query(queryText, [email.trim()]);
+    const result = await pool.query(
+      `SELECT id, name, email, password, role
+       FROM users
+       WHERE LOWER(TRIM(email)) = $1
+       LIMIT 1`,
+      [normalizedEmail]
+    );
 
     if (result.rows.length === 0) {
-      await recordAudit(req, auditId, email, 'Unknown', 'Authentication', 'LOGIN_FAILED', 'WARNING', null, 'User not found');
-      handleFailedAttempt(req, email, trackingData, currentTime, res);
-      return;
+      await recordAudit(
+        req,
+        auditId,
+        normalizedEmail,
+        'Unknown',
+        'Authentication',
+        'LOGIN_FAILED',
+        'WARNING',
+        null,
+        'User not found'
+      );
+
+      return handleFailedAttempt(
+        req,
+        normalizedEmail,
+        trackingData,
+        currentTime,
+        res
+      );
     }
 
     const user = result.rows[0];
 
     if (String(user.password).trim() !== String(password).trim()) {
-      await recordAudit(req, auditId, email, user.role || 'admin', 'Authentication', 'LOGIN_FAILED', 'WARNING', null, 'Incorrect password');
-      handleFailedAttempt(req, email, trackingData, currentTime, res);
-      return;
+      await recordAudit(
+        req,
+        auditId,
+        normalizedEmail,
+        user.role || 'citizen',
+        'Authentication',
+        'LOGIN_FAILED',
+        'WARNING',
+        null,
+        'Incorrect password'
+      );
+
+      return handleFailedAttempt(
+        req,
+        normalizedEmail,
+        trackingData,
+        currentTime,
+        res
+      );
     }
 
-    loginAttemptsTracker.delete(email);
-    await recordAudit(req, auditId, user.email, user.role || 'admin', 'Authentication', 'LOGIN_SUCCESS', 'INFO', null, `Successful session init (RememberMe: ${rememberMe})`);
+    loginAttemptsTracker.delete(normalizedEmail);
+
+    await recordAudit(
+      req,
+      auditId,
+      user.email,
+      user.role || 'citizen',
+      'Authentication',
+      'LOGIN_SUCCESS',
+      'INFO',
+      null,
+      `Successful session init (RememberMe: ${Boolean(rememberMe)})`
+    );
 
     return res.status(200).json({
       message: 'Login successful!',
-      user: { 
-        id: user.id, 
-        email: user.email, 
+      user: {
+        id: user.id,
+        email: user.email,
         role: user.role,
-        fullname: user.name 
+        fullname: user.name
       }
     });
 
   } catch (error) {
     console.error('Login Error:', error);
-    return res.status(500).json({ message: 'Internal server error.' });
+
+    return res.status(500).json({
+      message: 'Internal server error during login.'
+    });
   }
 });
+
 
 function handleFailedAttempt(req, email, trackingData, currentTime, res) {
   trackingData.count += 1;
