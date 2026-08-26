@@ -9,6 +9,7 @@ import {
   saveRPTApplication,
   type RPTApplicationRecord
 } from '../services/realpropertytaxService';
+import { API_BASE_URL } from '../config/api';
 
 interface ExtendedApplicationRecord extends Omit<RPTApplicationRecord, 'documents'> {
   referenceNumber: string;
@@ -248,20 +249,34 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     }
   };
 
-  const handleDeleteApplication = (appId: string) => {
+  // Connected Delete Handler to Database API
+  const handleDeleteApplication = async (appId: string) => {
     const targetApp = applications.find(a => a.id === appId);
     if (!targetApp) return;
 
-    const updatedList = applications.filter(a => a.id !== appId);
-    setApplications(updatedList);
+    try {
+      const response = await fetch(`${API_BASE_URL}/citizen-rpt-applications/${appId}`, {
+        method: 'DELETE',
+      });
 
-    if (updatedList.length > 0) {
-      setSelectedAppId(updatedList[0].id);
-    } else {
-      setSelectedAppId('');
+      if (!response.ok) {
+        throw new Error('Failed to delete application from server');
+      }
+
+      const updatedList = applications.filter(a => a.id !== appId);
+      setApplications(updatedList);
+
+      if (updatedList.length > 0) {
+        setSelectedAppId(updatedList[0].id);
+      } else {
+        setSelectedAppId('');
+      }
+
+      triggerToast(`Application ${targetApp.referenceNumber} has been deleted successfully.`, 'warning');
+    } catch (err) {
+      console.error("Delete error:", err);
+      triggerToast("Failed to delete application from the server database.", "error");
     }
-
-    triggerToast(`Application ${targetApp.referenceNumber} has been deleted successfully.`, 'warning');
   };
 
   const checkAndAutoCloseQueueItem = (app: ExtendedApplicationRecord, updatedDocs: typeof app.documents) => {
@@ -457,10 +472,10 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         <div className="fixed top-20 right-6 z-50 animate-in fade-in slide-in-from-top-4 duration-300">
           <div
             className={`px-4 py-3 rounded-xl shadow-lg border flex items-center gap-3 text-xs font-semibold ${toastMessage.type === 'success'
-                ? 'bg-emerald-950 text-emerald-200 border-emerald-800/80 shadow-emerald-950/20'
-                : toastMessage.type === 'warning'
-                  ? 'bg-amber-950 text-amber-200 border-amber-800/80 shadow-amber-950/20'
-                  : 'bg-rose-950 text-rose-200 border-rose-800/80 shadow-rose-950/20'
+              ? 'bg-emerald-950 text-emerald-200 border-emerald-800/80 shadow-emerald-950/20'
+              : toastMessage.type === 'warning'
+                ? 'bg-amber-950 text-amber-200 border-amber-800/80 shadow-amber-950/20'
+                : 'bg-rose-950 text-rose-200 border-rose-800/80 shadow-rose-950/20'
               }`}
           >
             <span className="w-2 h-2 rounded-full bg-current animate-pulse"></span>
@@ -491,8 +506,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
           <button
             onClick={() => setMainViewTab('queue')}
             className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${mainViewTab === 'queue'
-                ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-2xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+              ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-2xs'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
               }`}
           >
             Active Queue ({applications.length})
@@ -500,8 +515,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
           <button
             onClick={() => setMainViewTab('citizenAudit')}
             className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${mainViewTab === 'citizenAudit'
-                ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-2xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+              ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-2xs'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
               }`}
           >
             Citizen Documents Audit Trail ({citizenAuditTrail.length})
@@ -583,8 +598,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                       <div
                         key={app.id}
                         className={`w-full text-left p-3 rounded-xl transition-all flex items-start gap-3 border ${isSelected
-                            ? 'bg-blue-50/60 dark:bg-blue-950/30 border-blue-500/40 shadow-2xs'
-                            : 'bg-transparent border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/40'
+                          ? 'bg-blue-50/60 dark:bg-blue-950/30 border-blue-500/40 shadow-2xs'
+                          : 'bg-transparent border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/40'
                           }`}
                       >
                         <input
@@ -681,8 +696,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                       key={tab}
                       onClick={() => setDetailTab(tab as any)}
                       className={`py-3.5 px-4 border-b-2 transition-colors cursor-pointer whitespace-nowrap ${detailTab === tab
-                          ? 'border-blue-600 text-blue-600 dark:text-blue-400 font-bold'
-                          : 'border-transparent text-slate-500 hover:text-slate-700'
+                        ? 'border-blue-600 text-blue-600 dark:text-blue-400 font-bold'
+                        : 'border-transparent text-slate-500 hover:text-slate-700'
                         }`}
                     >
                       {label}
