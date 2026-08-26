@@ -233,10 +233,21 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
   useEffect(() => {
     async function fetchData() {
       try {
-        const appsRes = await fetch(`${API_BASE_URL}/citizen-rpt-applications`);
-        if (appsRes.ok) {
-          const data = await appsRes.json();
-          setApplications(data);
+        const activeUser = getStoredCitizenSession();
+
+        // Only fetch applications if a user is logged in
+        if (activeUser?.email) {
+          const appsRes = await fetch(`${API_BASE_URL}/citizen-rpt-applications?email=${encodeURIComponent(activeUser.email)}`);
+          if (appsRes.ok) {
+            const data = await appsRes.json();
+            // Filter strictly to ensure only the active user's applications are shown
+            const userApps = Array.isArray(data)
+              ? data.filter((app: RPTApplicationRecord) => app.email === activeUser.email)
+              : [];
+            setApplications(userApps);
+          }
+        } else {
+          setApplications([]);
         }
 
         const rptRes = await fetch(`${API_BASE_URL}/lgu-rpt-records`);
