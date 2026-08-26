@@ -229,7 +229,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
   const [paymentMethod, setPaymentMethod] = useState("GCash");
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
 
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewFile, setPreviewFile] = useState<{ name: string; url: string } | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState("ALL");
@@ -507,7 +507,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
         applicantType: rawApp.applicant_type || rawApp.applicantType || formData.applicantType,
         mobileNumber: rawApp.mobile_number || rawApp.mobileNumber || formData.mobileNumber,
         propertyLocation: rawApp.property_location || rawApp.propertyLocation || formData.propertyLocation,
-        propertyType: rawApp.property_type || rawApp.propertyType || formData.propertyType,
+        propertyType: rawApp.property_type || rawApp.property_type || formData.propertyType,
         filedDate: rawApp.filed_date || rawApp.filedDate || currentDate,
         status: rawApp.status || "Submitted",
         documents: rawApp.documents || attachedDocsList,
@@ -940,37 +940,41 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
                     return docArray.map((doc, idx) => {
                       const docStr = typeof doc === "string" ? doc : JSON.stringify(doc);
 
-                      // Directly read the server path saved by controller: "/uploads/filename.jpg"
                       let cleanPath = docStr.replace(/["'{}]/g, "").trim();
                       if (cleanPath.includes(": ")) {
                         cleanPath = cleanPath.split(": ")[1].trim();
                       }
 
-                      let imgUrl = null;
+                      let fileUrl = "";
+                      let fileName = cleanPath;
+
                       if (cleanPath.startsWith("/uploads/") || cleanPath.includes(".")) {
                         const pathOnly = cleanPath.startsWith("/uploads/") ? cleanPath : `/uploads/${cleanPath}`;
-                        imgUrl = `${API_BASE_URL}${pathOnly}`;
+                        fileUrl = `${API_BASE_URL}${pathOnly}`;
+                        fileName = pathOnly.split('/').pop() || cleanPath;
                       } else if (cleanPath.startsWith("http") || cleanPath.startsWith("blob:")) {
-                        imgUrl = cleanPath;
+                        fileUrl = cleanPath;
                       }
+
+                      const hasValidFile = Boolean(fileUrl);
 
                       return (
                         <div key={idx} className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-800 shadow-sm flex flex-col group relative">
-                          {imgUrl ? (
-                            <div className="w-full h-32 relative bg-slate-200 dark:bg-slate-700 flex flex-col items-center justify-center">
-                              {imgUrl.toLowerCase().includes('.pdf') ? (
+                          {hasValidFile ? (
+                            <div className="w-full h-32 relative bg-slate-200 dark:bg-slate-700 flex flex-col items-center justify-center overflow-hidden">
+                              {fileUrl.toLowerCase().includes('.pdf') ? (
                                 <div className="w-full h-full flex flex-col items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-500">
                                   <span className="text-[10px] font-bold">PDF DOCUMENT</span>
                                 </div>
                               ) : (
-                                <img src={imgUrl} alt={`Document ${idx}`} className="w-full h-full object-cover" />
+                                <img src={fileUrl} alt={`Document ${idx}`} className="w-full h-full object-cover" />
                               )}
                               <button
                                 type="button"
-                                onClick={() => setPreviewUrl(imgUrl)}
+                                onClick={() => setPreviewFile({ name: fileName, url: fileUrl })}
                                 className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-xs font-bold gap-1 cursor-pointer"
                               >
-                                <span>Preview File</span>
+                                <span>Preview Document</span>
                               </button>
                             </div>
                           ) : (
@@ -1027,19 +1031,33 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
         </div>
       )}
 
-      {previewUrl && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/90 backdrop-blur-sm p-4">
-          <div className="relative w-full max-w-4xl h-[85vh] bg-white dark:bg-slate-900 rounded-2xl overflow-hidden shadow-2xl flex flex-col">
-            <div className="flex justify-between items-center p-4 border-b border-slate-200 dark:border-slate-800">
-              <h3 className="font-bold text-slate-800 dark:text-slate-200">Document Preview</h3>
-              <button type="button" onClick={() => setPreviewUrl(null)} className="px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-xl font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer">Close ✕</button>
+      {/* EMBEDDED DOCUMENT PREVIEW MODAL */}
+      {previewFile && (
+        <div className="fixed inset-0 z-60 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-3xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+            <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <h4 className="font-bold text-slate-900 dark:text-white text-sm truncate max-w-[320px]">{previewFile.name}</h4>
+              </div>
+              <button type="button" onClick={() => setPreviewFile(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer font-bold text-lg">✕</button>
             </div>
-            <div className="flex-1 w-full h-full bg-slate-100 dark:bg-slate-950 overflow-auto flex items-center justify-center p-4">
-              {previewUrl.toLowerCase().includes('.pdf') ? (
-                <iframe src={previewUrl} className="w-full h-full border-0 rounded-lg bg-white" title="PDF Preview" />
+
+            <div className="h-[60vh] bg-slate-100 dark:bg-slate-950 rounded-2xl flex items-center justify-center border border-slate-200 dark:border-slate-800 overflow-hidden relative">
+              {previewFile.url.toLowerCase().match(/\.(jpeg|jpg|gif|png|webp)$/i) ? (
+                <img src={previewFile.url} alt="Document Preview" className="max-h-full max-w-full object-contain" />
               ) : (
-                <img src={previewUrl} alt="Preview" className="max-w-full max-h-full object-contain rounded-lg shadow-sm" />
+                <iframe src={previewFile.url} title="Document Preview" className="w-full h-full border-0 bg-white" />
               )}
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button
+                type="button"
+                onClick={() => setPreviewFile(null)}
+                className="px-5 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 font-bold rounded-xl text-xs cursor-pointer"
+              >
+                Close Preview
+              </button>
             </div>
           </div>
         </div>
