@@ -1,6 +1,9 @@
 // src/components/RealPropertyTaxView.tsx
 import React, { useState, useMemo, useEffect } from 'react';
-import type { StatusType } from '../types/treasury';
+import type {
+  StatusType,
+  AdminStats
+} from '../types/treasury';
 import {
   getRPTApplications,
   saveRPTApplication,
@@ -16,16 +19,12 @@ interface ExtendedApplicationRecord extends Omit<RPTApplicationRecord, 'document
   submissionDate: string;
   assignedOfficer?: string;
   paymentStatus?: 'Paid' | 'Pending';
-  taxDeclarationNumber: string;
-  assessedValue: number;
-  basicTaxDue: number;
-  sefTaxDue: number;
+  penaltyFee: number;
   propertyDetails: {
     pin: string;
     titleNumber: string;
     lotAreaSqM: number;
     address: string;
-    classification: 'Residential' | 'Commercial' | 'Industrial' | 'Agricultural';
     currentValuation?: number;
   };
   documents: {
@@ -52,11 +51,14 @@ interface ExtendedApplicationRecord extends Omit<RPTApplicationRecord, 'document
     status: 'Delivered' | 'Pending';
   }[];
 
+  aiFraudRisk?: 'Low' | 'Medium' | 'High';
+  aiFraudReason?: string;
+
   digitalRelease?: {
     releaseMethod: 'Digital';
     releasedAt?: string;
     releasedBy?: string;
-    certificateType: 'Tax Declaration' | 'Tax Clearance' | 'Official Receipt';
+    certificateType: 'Tax Declaration' | 'Certified True Copy' | 'Tax Declaration / CTC';
     digitalSignatureStatus: 'Pending' | 'Signed' | 'Invalidated';
     qrVerificationCode?: string;
     downloadCount: number;
@@ -65,11 +67,11 @@ interface ExtendedApplicationRecord extends Omit<RPTApplicationRecord, 'document
 }
 
 export interface RealPropertyTaxViewProps {
-  isCollapsed?: boolean;
+  isCollapsed: boolean;
 }
 
 export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
-  isCollapsed = false
+  isCollapsed
 }) => {
   const [applications, setApplications] = useState<ExtendedApplicationRecord[]>([]);
   const [citizenAuditTrail, setCitizenAuditTrail] = useState<ExtendedApplicationRecord[]>([]);
@@ -77,16 +79,18 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
 
   const [selectedAppId, setSelectedAppId] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedClassification, setSelectedClassification] = useState<string>('ALL');
+  const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('ALL');
 
   const [selectedAppIds, setSelectedAppIds] = useState<string[]>([]);
   const [mainViewTab, setMainViewTab] = useState<'queue' | 'citizenAudit'>('queue');
   const [detailTab, setDetailTab] = useState<'overview' | 'audit' | 'notifications'>('overview');
 
+  // Document Preview Lightbox State
   const [previewDocUrl, setPreviewDocUrl] = useState<string | null>(null);
   const [previewDocTitle, setPreviewDocTitle] = useState<string>('');
 
+  // Toast Notification Feedback State
   const [toastMessage, setToastMessage] = useState<{
     text: string;
     type: 'success' | 'warning' | 'error';
@@ -113,31 +117,23 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
             rawDocs = Object.values(rawDocs);
           }
 
-          const valuation = item.currentValuation || item.propertyDetails?.currentValuation || 1500000;
-          const basicTax = valuation * 0.01; // 1% Basic RPT
-          const sefTax = valuation * 0.01;   // 1% Special Education Fund
-
           return {
             ...item,
             id: item.id || `RPT-${Math.random().toString(36).substring(2, 9)}`,
-            applicantName: item.applicantName || item.ownerName || 'Unknown Owner',
+            applicantName: item.applicantName || item.ownerName || 'Unknown Applicant',
             status: item.status || 'Under Evaluation',
-            referenceNumber: item.controlNumber || item.referenceNumber || `RPT-2026-${item.id}`,
+            referenceNumber: item.controlNumber || item.referenceNumber || `REF-${item.id}`,
             applicantEmail: item.email || '',
             applicantPhone: item.mobileNumber || '',
-            category: item.service || 'Tax Assessment & Clearance',
+            category: item.service || '',
             submissionDate: item.filedDate || '',
-            taxDeclarationNumber: item.taxDeclarationNumber || `TD-${Math.floor(100000 + Math.random() * 900000)}`,
-            assessedValue: valuation,
-            basicTaxDue: basicTax,
-            sefTaxDue: sefTax,
-            propertyDetails: {
-              pin: item.pin || item.propertyDetails?.pin || '000-00-0000-000-00',
-              titleNumber: item.titleNumber || item.propertyDetails?.titleNumber || 'TCT-123456',
-              lotAreaSqM: item.lotAreaSqM || item.propertyDetails?.lotAreaSqM || 120,
-              address: item.propertyLocation || item.propertyDetails?.address || 'Barangay Central, City Proper',
-              classification: item.classification || item.propertyDetails?.classification || 'Residential',
-              currentValuation: valuation
+            penaltyFee: item.penalty ? Number(item.penalty) : 0,
+            propertyDetails: item.propertyDetails || {
+              pin: item.pin || '',
+              titleNumber: item.taxDeclarationNumber || '',
+              lotAreaSqM: item.lotAreaSqM || 0,
+              address: item.propertyLocation || '',
+              currentValuation: item.currentValuation || 0
             },
             documents: (Array.isArray(rawDocs) ? rawDocs : []).map((doc: any, idx: number) => {
               if (!doc) {
@@ -180,7 +176,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
       })
       .catch((err) => {
         console.error("Failed to load RPT applications:", err);
-        triggerToast("Failed to fetch assessment records from server database.", "error");
+        triggerToast("Failed to fetch applications from server database.", "error");
       });
 
     return () => {
@@ -202,18 +198,27 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     );
   }, [citizenAuditTrail, selectedCitizenAppId]);
 
-  const rptMetrics = useMemo(() => {
-    const totalAssessed = applications.reduce((acc, curr) => acc + (curr.assessedValue || 0), 0);
-    const totalBasicRPT = applications.reduce((acc, curr) => acc + (curr.basicTaxDue || 0), 0);
-    const totalSEF = applications.reduce((acc, curr) => acc + (curr.sefTaxDue || 0), 0);
-
+  const stats: AdminStats = useMemo(() => {
     return {
-      totalDeclarations: applications.length,
-      pendingValuation: applications.filter((a) => a.status === 'Under Evaluation').length,
-      gisPlotting: applications.filter((a) => a.status === 'Technical Plotting (GIS)' || a.status === 'Field Inspection Scheduled').length,
-      totalAssessedValue: totalAssessed,
-      projectedRPTRevenue: totalBasicRPT,
-      projectedSEFAllocation: totalSEF
+      totalApplications: applications.length,
+      pendingReview: applications.filter(
+        (a) => a.status === 'Under Evaluation'
+      ).length,
+      pendingInspectionOrGIS: applications.filter(
+        (a) =>
+          a.status === 'Field Inspection Scheduled' ||
+          a.status === 'Technical Plotting (GIS)'
+      ).length,
+      readyForRelease: applications.filter(
+        (a) =>
+          a.status === 'Approved & Ready for Release' ||
+          a.status === 'Digital Certificate Issued'
+      ).length,
+      totalPenaltiesCollected: applications.reduce(
+        (acc, curr) =>
+          acc + (curr.paymentStatus === 'Paid' ? curr.penaltyFee : 0),
+        0
+      )
     };
   }, [applications]);
 
@@ -222,18 +227,17 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
       const matchesSearch =
         app.referenceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
         app.applicantName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        app.taxDeclarationNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
         app.propertyDetails.pin.includes(searchTerm);
 
-      const matchesClassification =
-        selectedClassification === 'ALL' || app.propertyDetails.classification === selectedClassification;
+      const matchesCategory =
+        selectedCategory === 'ALL' || app.category === selectedCategory;
 
       const matchesStatus =
         selectedStatusFilter === 'ALL' || app.status === selectedStatusFilter;
 
-      return matchesSearch && matchesClassification && matchesStatus;
+      return matchesSearch && matchesCategory && matchesStatus;
     });
-  }, [applications, searchTerm, selectedClassification, selectedStatusFilter]);
+  }, [applications, searchTerm, selectedCategory, selectedStatusFilter]);
 
   const persistChanges = async (updatedList: ExtendedApplicationRecord[]) => {
     setApplications(updatedList);
@@ -252,7 +256,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
             service: target.category,
             filedDate: target.submissionDate,
             assignedOfficer: target.assignedOfficer,
-            taxDeclarationNumber: target.taxDeclarationNumber,
+            penalty: target.penaltyFee,
             propertyDetails: target.propertyDetails
           };
           await saveRPTApplication(servicePayload);
@@ -267,17 +271,13 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     const targetApp = applications.find(a => a.id === appId);
     if (!targetApp) return;
 
-    if (!confirm(`Are you sure you want to remove Tax Declaration ${targetApp.taxDeclarationNumber}?`)) {
-      return;
-    }
-
     try {
       const response = await fetch(`${API_BASE_URL}/citizen-rpt-applications/${appId}`, {
         method: 'DELETE',
       });
 
       if (!response.ok) {
-        throw new Error('Failed to delete property record from server');
+        throw new Error('Failed to delete application from server');
       }
 
       const updatedList = applications.filter(a => a.id !== appId);
@@ -289,13 +289,14 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         setSelectedAppId('');
       }
 
-      triggerToast(`Property record ${targetApp.referenceNumber} has been purged.`, 'warning');
+      triggerToast(`Application ${targetApp.referenceNumber} has been deleted successfully.`, 'warning');
     } catch (err) {
       console.error("Delete error:", err);
-      triggerToast("Failed to delete record from the treasury database.", "error");
+      triggerToast("Failed to delete application from the server database.", "error");
     }
   };
 
+  // Foolproof Preview Lightbox Handler
   const handleOpenPreview = (doc: { name: string; url?: string }) => {
     let targetUrl = doc.url || '';
 
@@ -303,8 +304,10 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
       targetUrl = doc.name;
     }
 
-    if (targetUrl.startsWith('data:') || targetUrl.startsWith('http://') || targetUrl.startsWith('https://')) {
-      // Direct base64 or remote URL
+    if (targetUrl.startsWith('data:')) {
+      // Base64 string ready for lightbox
+    } else if (targetUrl.startsWith('http://') || targetUrl.startsWith('https://')) {
+      // Fully qualified absolute URL
     } else if (targetUrl.startsWith('/uploads/')) {
       targetUrl = `${API_BASE_URL}${targetUrl}`;
     } else {
@@ -313,6 +316,41 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
 
     setPreviewDocTitle(doc.name);
     setPreviewDocUrl(targetUrl);
+  };
+
+  const checkAndAutoCloseQueueItem = (app: ExtendedApplicationRecord, updatedDocs: typeof app.documents) => {
+    const allVerified = updatedDocs.length > 0 && updatedDocs.every(d => d.status === 'Verified');
+    if (allVerified) {
+      setTimeout(() => {
+        setApplications(prev => {
+          const filtered = prev.filter(a => a.id !== app.id);
+          if (filtered.length > 0 && selectedAppId === app.id) {
+            setSelectedAppId(filtered[0].id);
+          }
+          return filtered;
+        });
+
+        const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 16);
+        const closedRecord: ExtendedApplicationRecord = {
+          ...app,
+          documents: updatedDocs,
+          status: 'Digital Certificate Issued',
+          auditLogs: [
+            {
+              id: `LOG-${Date.now()}`,
+              timestamp,
+              officer: 'System Automation',
+              action: 'All citizen uploaded documents verified. Automatically closed and transferred to Audit Trail.'
+            },
+            ...(app.auditLogs || [])
+          ]
+        };
+
+        setCitizenAuditTrail(prev => [closedRecord, ...prev]);
+        setSelectedCitizenAppId(closedRecord.id);
+        triggerToast(`Queue item ${app.referenceNumber} verified and moved to Audit Trail.`, 'success');
+      }, 300);
+    }
   };
 
   const handleUpdateStatus = (newStatus: StatusType) => {
@@ -325,15 +363,15 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         const newLog = {
           id: `LOG-${Date.now()}`,
           timestamp,
-          officer: app.assignedOfficer || 'Assessor Admin',
-          action: `Assessment status updated to "${newStatus}".`
+          officer: app.assignedOfficer || 'System Admin',
+          action: `Status updated to "${newStatus}".`
         };
 
         const newNotif = {
           id: `NOTIF-${Date.now()}`,
           timestamp,
           type: 'SMS' as const,
-          message: `RPT Update: Property Declaration ${app.taxDeclarationNumber} is now set to ${newStatus}.`,
+          message: `Your application ${app.referenceNumber} status has been updated to ${newStatus}.`,
           status: 'Delivered' as const
         };
 
@@ -348,7 +386,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     });
 
     persistChanges(updatedList);
-    triggerToast(`Assessment stage updated to "${newStatus}".`, 'success');
+    triggerToast(`Application workflow updated to "${newStatus}".`, 'success');
   };
 
   const handleDocumentStatusChange = (
@@ -358,10 +396,11 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     if (!currentApp) return;
 
     const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 16);
+    let updatedDocsState: typeof currentApp.documents = [];
 
     const updatedList = applications.map((app) => {
       if (app.id === currentApp.id) {
-        const updatedDocs = app.documents.map((doc) =>
+        updatedDocsState = app.documents.map((doc) =>
           doc.id === docId ? { ...doc, status } : doc
         );
 
@@ -369,13 +408,13 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         const newLog = {
           id: `LOG-${Date.now()}`,
           timestamp,
-          officer: app.assignedOfficer || 'Assessor Admin',
-          action: `Title/Boundary document "${docName}" marked as ${status}.`
+          officer: app.assignedOfficer || 'System Admin',
+          action: `Citizen uploaded document "${docName}" marked as ${status}.`
         };
 
         return {
           ...app,
-          documents: updatedDocs,
+          documents: updatedDocsState,
           auditLogs: [newLog, ...(app.auditLogs || [])]
         };
       }
@@ -383,14 +422,20 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     });
 
     persistChanges(updatedList);
-    triggerToast(`Document validation updated to ${status}.`, status === 'Verified' ? 'success' : 'warning');
+
+    if (status === 'Verified') {
+      triggerToast('Document successfully verified.', 'success');
+      checkAndAutoCloseQueueItem(currentApp, updatedDocsState);
+    } else if (status === 'Rejected') {
+      triggerToast('Document marked as rejected.', 'warning');
+    }
   };
 
   const handleDigitalRelease = () => {
     if (!currentApp) return;
 
     const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 16);
-    const qrVerificationCode = `RPT-CERT-${currentApp.taxDeclarationNumber}-${Date.now()}`.replace(/[^A-Za-z0-9-]/g, '');
+    const qrVerificationCode = `QC-${currentApp.referenceNumber}-${Date.now()}`.replace(/[^A-Za-z0-9-]/g, '');
 
     const releasedApp: ExtendedApplicationRecord = {
       ...currentApp,
@@ -398,8 +443,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
       digitalRelease: {
         releaseMethod: 'Digital' as const,
         releasedAt: timestamp,
-        releasedBy: currentApp.assignedOfficer || 'Municipal Assessor',
-        certificateType: 'Tax Clearance' as const,
+        releasedBy: currentApp.assignedOfficer || 'System Admin',
+        certificateType: 'Tax Declaration / CTC' as const,
         digitalSignatureStatus: 'Signed' as const,
         qrVerificationCode,
         downloadCount: (currentApp.digitalRelease?.downloadCount || 0) + 1,
@@ -409,10 +454,20 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         {
           id: `LOG-${Date.now()}`,
           timestamp,
-          officer: currentApp.assignedOfficer || 'Municipal Assessor',
-          action: 'Official Real Property Tax Clearance issued and archived.'
+          officer: currentApp.assignedOfficer || 'System Admin',
+          action: 'Application approved and archived.'
         },
         ...(currentApp.auditLogs || [])
+      ],
+      notificationLogs: [
+        {
+          id: `NOTIF-${Date.now()}`,
+          timestamp,
+          type: 'Email' as const,
+          message: `Your application ${currentApp.referenceNumber} has been approved.`,
+          status: 'Delivered' as const
+        },
+        ...(currentApp.notificationLogs || [])
       ]
     };
 
@@ -421,30 +476,13 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     setSelectedCitizenAppId(releasedApp.id);
     setMainViewTab('citizenAudit');
 
-    triggerToast('Official Tax Clearance approved and transferred to Treasury Archive.', 'success');
+    triggerToast('Application approved and moved to Audit Trail.', 'success');
   };
 
-  const handleExportCSV = () => {
-    const headers = ["Tax Dec No", "PIN", "Property Owner", "Classification", "Assessed Value", "Basic RPT (1%)", "SEF (1%)", "Status"];
-    const rows = applications.map((a) => [
-      `"${a.taxDeclarationNumber}"`,
-      `"${a.propertyDetails?.pin || ''}"`,
-      `"${a.applicantName}"`,
-      `"${a.propertyDetails?.classification || 'Residential'}"`,
-      a.assessedValue || 0,
-      a.basicTaxDue || 0,
-      a.sefTaxDue || 0,
-      `"${a.status}"`
-    ]);
-
-    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `RPT_TaxRoll_Masterlist_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleDownloadCertificate = (appId?: string) => {
+    const target = appId ? citizenAuditTrail.find(a => a.id === appId) || currentCitizenApp : currentCitizenApp;
+    if (!target) return;
+    triggerToast(`Document package for ${target.referenceNumber} downloaded successfully.`, 'success');
   };
 
   const toggleSelectAll = () => {
@@ -464,179 +502,107 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
   return (
     <div
       style={{
-        marginLeft: isCollapsed ? "80px" : "256px",
-        width: isCollapsed ? "calc(100% - 80px)" : "calc(100% - 256px)",
+        marginLeft: isCollapsed ? '80px' : '256px',
+        width: isCollapsed ? 'calc(100% - 80px)' : 'calc(100% - 256px)'
       }}
-      className="min-h-screen bg-slate-950 text-slate-100 p-8 pt-20 transition-all duration-300 box-border relative font-sans antialiased"
+      className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 p-4 sm:p-6 pt-24 transition-all duration-300 box-border flex flex-col font-sans relative selection:bg-blue-600 selection:text-white"
     >
-      {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed top-8 right-8 z-50 animate-in fade-in slide-in-from-top-4 duration-300">
+        <div className="fixed top-20 right-6 z-50 animate-in fade-in slide-in-from-top-4 duration-300">
           <div
-            className={`px-5 py-3.5 rounded-2xl shadow-2xl border backdrop-blur-xl flex items-center gap-3 text-xs font-bold tracking-wide ${toastMessage.type === 'success'
-                ? 'bg-emerald-950/90 text-emerald-300 border-emerald-500/40 shadow-emerald-950/50'
-                : toastMessage.type === 'warning'
-                  ? 'bg-amber-950/90 text-amber-300 border-amber-500/40 shadow-amber-950/50'
-                  : 'bg-rose-950/90 text-rose-300 border-rose-500/40 shadow-rose-950/50'
+            className={`px-4 py-3 rounded-xl shadow-lg border flex items-center gap-3 text-xs font-semibold ${toastMessage.type === 'success'
+              ? 'bg-emerald-950 text-emerald-200 border-emerald-800/80 shadow-emerald-950/20'
+              : toastMessage.type === 'warning'
+                ? 'bg-amber-950 text-amber-200 border-amber-800/80 shadow-amber-950/20'
+                : 'bg-rose-950 text-rose-200 border-rose-800/80 shadow-rose-950/20'
               }`}
           >
-            <span className="w-2.5 h-2.5 rounded-full bg-current animate-ping"></span>
+            <span className="w-2 h-2 rounded-full bg-current animate-pulse"></span>
             <span>{toastMessage.text}</span>
           </div>
         </div>
       )}
 
       {/* Header Banner */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-8 bg-slate-900/80 p-8 rounded-3xl border border-slate-800/80 shadow-2xl backdrop-blur-xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none"></div>
-        <div className="relative z-10">
-          <div className="flex items-center gap-2.5 mb-2">
-            <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse shadow-lg shadow-emerald-400/50"></span>
-            <span className="text-[11px] font-extrabold tracking-widest text-emerald-400 uppercase">
-              Assessor & Treasury Assessment Division
+      <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-2xl border border-slate-200/90 dark:border-slate-800/80 shadow-xs">
+        <div>
+          <div className="flex items-center gap-3">
+            <span className="p-2.5 bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 rounded-xl border border-blue-100 dark:border-blue-900/50">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
             </span>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+              Real Property Assessment & Treasury Portal
+            </h1>
           </div>
-          <h2 className="text-3xl font-black tracking-tight text-white">
-            Real Property Tax (RPT) & Assessment Roll
-          </h2>
-          <p className="text-xs font-medium text-slate-400 mt-1">
-            Land Assessments, Tax Declarations, Special Education Fund (SEF) & Clearance Issuance
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1.5 ml-0.5">
+            GovServe • Electronic Processing, Citizen Uploads Inspection & Document Verification
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 relative z-10">
-          <div className="flex items-center gap-1.5 bg-slate-950/80 p-1.5 rounded-2xl border border-slate-800">
-            <button
-              onClick={() => setMainViewTab('queue')}
-              className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${mainViewTab === 'queue'
-                  ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-900'
-                }`}
-            >
-              Tax Assessment Roll ({applications.length})
-            </button>
-            <button
-              onClick={() => setMainViewTab('citizenAudit')}
-              className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${mainViewTab === 'citizenAudit'
-                  ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-900'
-                }`}
-            >
-              Issued Clearances ({citizenAuditTrail.length})
-            </button>
-          </div>
-
+        <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
           <button
-            onClick={handleExportCSV}
-            className="bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-bold px-5 py-3 rounded-2xl transition-all duration-200 border border-slate-700/80 cursor-pointer flex items-center gap-2 shadow-lg"
+            onClick={() => setMainViewTab('queue')}
+            className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${mainViewTab === 'queue'
+              ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-2xs'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+              }`}
           >
-            <i className="fa-solid fa-file-csv text-sm text-emerald-400"></i> Export Tax Roll
+            Active Queue ({applications.length})
+          </button>
+          <button
+            onClick={() => setMainViewTab('citizenAudit')}
+            className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${mainViewTab === 'citizenAudit'
+              ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-2xs'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+              }`}
+          >
+            Citizen Documents Audit Trail ({citizenAuditTrail.length})
           </button>
         </div>
       </div>
 
-      {/* RPT Specific Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
-        <div className="bg-slate-900/60 hover:bg-slate-900/90 rounded-3xl p-6 border border-slate-800/80 shadow-xl transition-all duration-200 backdrop-blur-md">
-          <div className="flex justify-between items-start">
-            <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Tax Declarations</p>
-            <span className="p-3 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              <i className="fa-solid fa-building-user text-sm"></i>
-            </span>
-          </div>
-          <h4 className="text-3xl font-black text-white mt-4">{rptMetrics.totalDeclarations}</h4>
-          <p className="mt-2 text-[11px] text-emerald-400 font-semibold">Active assessment properties</p>
-        </div>
-
-        <div className="bg-slate-900/60 hover:bg-slate-900/90 rounded-3xl p-6 border border-slate-800/80 shadow-xl transition-all duration-200 backdrop-blur-md">
-          <div className="flex justify-between items-start">
-            <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Pending Re-Appraisal</p>
-            <span className="p-3 rounded-2xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
-              <i className="fa-solid fa-calculator text-sm"></i>
-            </span>
-          </div>
-          <h4 className="text-3xl font-black text-amber-400 mt-4">{rptMetrics.pendingValuation}</h4>
-          <p className="mt-2 text-[11px] text-slate-400 font-medium">Under market valuation</p>
-        </div>
-
-        <div className="bg-slate-900/60 hover:bg-slate-900/90 rounded-3xl p-6 border border-slate-800/80 shadow-xl transition-all duration-200 backdrop-blur-md">
-          <div className="flex justify-between items-start">
-            <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Total Assessed Value</p>
-            <span className="p-3 rounded-2xl bg-blue-500/10 text-blue-400 border border-blue-500/20">
-              <i className="fa-solid fa-scale-balanced text-sm"></i>
-            </span>
-          </div>
-          <h4 className="text-xl font-black text-white mt-4 truncate">
-            ₱{rptMetrics.totalAssessedValue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
-          </h4>
-          <p className="mt-2 text-[11px] text-slate-400 font-medium">Taxable land & structures</p>
-        </div>
-
-        <div className="bg-slate-900/60 hover:bg-slate-900/90 rounded-3xl p-6 border border-slate-800/80 shadow-xl transition-all duration-200 backdrop-blur-md">
-          <div className="flex justify-between items-start">
-            <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Basic RPT Levy (1%)</p>
-            <span className="p-3 rounded-2xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-              <i className="fa-solid fa-coins text-sm"></i>
-            </span>
-          </div>
-          <h4 className="text-xl font-black text-indigo-400 mt-4 truncate">
-            ₱{rptMetrics.projectedRPTRevenue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
-          </h4>
-          <p className="mt-2 text-[11px] text-slate-400 font-medium">General fund allocation</p>
-        </div>
-
-        <div className="bg-slate-900/60 hover:bg-slate-900/90 rounded-3xl p-6 border border-slate-800/80 shadow-xl transition-all duration-200 backdrop-blur-md">
-          <div className="flex justify-between items-start">
-            <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">SEF Allocation (1%)</p>
-            <span className="p-3 rounded-2xl bg-purple-500/10 text-purple-400 border border-purple-500/20">
-              <i className="fa-solid fa-graduation-cap text-sm"></i>
-            </span>
-          </div>
-          <h4 className="text-xl font-black text-purple-400 mt-4 truncate">
-            ₱{rptMetrics.projectedSEFAllocation.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
-          </h4>
-          <p className="mt-2 text-[11px] text-slate-400 font-medium">Special Education Fund</p>
-        </div>
-      </div>
-
-      {/* RPT TAX ROLL QUEUE */}
+      {/* ACTIVE QUEUE VIEW */}
       {mainViewTab === 'queue' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* Left Directory */}
-          <div className="lg:col-span-5 bg-slate-900/80 rounded-3xl border border-slate-800/80 p-6 shadow-2xl flex flex-col gap-5 backdrop-blur-xl">
-            <div className="flex flex-col gap-3">
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
-                  <i className="fa-solid fa-magnifying-glass text-xs"></i>
-                </span>
-                <input
-                  type="text"
-                  placeholder="Search TD No, PIN, Owner Name..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 text-xs font-medium rounded-2xl border border-slate-800 bg-slate-950 text-white placeholder:text-slate-500 focus:outline-none focus:border-emerald-500/80 transition-all shadow-inner"
-                />
+        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden gap-6 h-[calc(100vh-13rem)] min-h-0 w-full">
+          <div className="w-full lg:w-[420px] xl:w-[460px] flex-shrink-0 flex flex-col gap-4 min-h-0 h-1/2 lg:h-full">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/90 dark:border-slate-800/80 shadow-2xs">
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wider">Under Evaluation</span>
+                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-2">{stats.pendingReview}</div>
               </div>
+              <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/90 dark:border-slate-800/80 shadow-2xs">
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wider">Inspection / Other</span>
+                <div className="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-2">{stats.pendingInspectionOrGIS}</div>
+              </div>
+            </div>
 
-              <div className="grid grid-cols-2 gap-2.5">
+            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/90 dark:border-slate-800/80 shadow-2xs flex flex-col gap-3">
+              <input
+                type="text"
+                placeholder="Search Ref No, Applicant, PIN..."
+                className="w-full px-3.5 py-2.5 border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-600/50"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              <div className="grid grid-cols-2 gap-2">
                 <select
-                  value={selectedClassification}
-                  onChange={(e) => setSelectedClassification(e.target.value)}
-                  className="px-3.5 py-2.5 text-xs font-semibold rounded-2xl border border-slate-800 bg-slate-950 text-slate-300 focus:outline-none focus:border-emerald-500/80 cursor-pointer transition-all"
+                  className="text-xs p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-950 text-slate-700 dark:text-slate-200 font-medium cursor-pointer"
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
                 >
-                  <option value="ALL">All Property Classes</option>
-                  <option value="Residential">Residential</option>
-                  <option value="Commercial">Commercial</option>
-                  <option value="Industrial">Industrial</option>
-                  <option value="Agricultural">Agricultural</option>
+                  <option value="ALL">All Categories</option>
+                  <option value="1.1 Transfer of Ownership">1.1 Transfer of Ownership</option>
+                  <option value="1.2 Consolidation / Segregation">1.2 Consolidation / Segregation</option>
+                  <option value="1.3 New Assessment / Reassessment / Reclassification">1.3 New / Reassessment</option>
                 </select>
-
                 <select
+                  className="text-xs p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-950 text-slate-700 dark:text-slate-200 font-medium cursor-pointer"
                   value={selectedStatusFilter}
                   onChange={(e) => setSelectedStatusFilter(e.target.value)}
-                  className="px-3.5 py-2.5 text-xs font-semibold rounded-2xl border border-slate-800 bg-slate-950 text-slate-300 focus:outline-none focus:border-emerald-500/80 cursor-pointer transition-all"
                 >
-                  <option value="ALL">All Stages</option>
+                  <option value="ALL">All Statuses</option>
                   <option value="Under Evaluation">Under Evaluation</option>
                   <option value="Field Inspection Scheduled">Field Inspection Scheduled</option>
                   <option value="Approved & Ready for Release">Approved & Ready for Release</option>
@@ -644,24 +610,23 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
               </div>
             </div>
 
-            <div className="border border-slate-800 rounded-2xl overflow-hidden bg-slate-950/50">
-              <div className="p-3.5 bg-slate-950 border-b border-slate-800 text-[11px] font-extrabold text-slate-400 uppercase tracking-wider flex justify-between items-center">
+            <div className="flex-1 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800/80 shadow-2xs overflow-hidden flex flex-col min-h-0">
+              <div className="p-3.5 bg-slate-50/80 dark:bg-slate-950 border-b border-slate-200/90 dark:border-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider flex justify-between items-center">
                 <div className="flex items-center gap-2.5">
                   <input
                     type="checkbox"
                     checked={filteredApplications.length > 0 && selectedAppIds.length === filteredApplications.length}
                     onChange={toggleSelectAll}
-                    className="rounded-md border-slate-700 bg-slate-900 text-emerald-500 focus:ring-emerald-500/40 h-4 w-4 cursor-pointer"
+                    className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
                   />
-                  <span>Assessment Roll ({filteredApplications.length})</span>
+                  <span>Queue ({filteredApplications.length})</span>
                 </div>
               </div>
 
-              <div className="max-h-[520px] overflow-y-auto divide-y divide-slate-800/50 p-2 space-y-1">
+              <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/50 p-2 space-y-1">
                 {filteredApplications.length === 0 ? (
-                  <div className="p-12 text-center text-slate-500 text-xs italic">
-                    <i className="fa-solid fa-map text-2xl mb-3 block text-slate-600"></i>
-                    No real property assessment records match criteria.
+                  <div className="p-8 text-center text-slate-400 text-xs flex flex-col items-center justify-center space-y-2.5">
+                    <p>Application queue is currently empty.</p>
                   </div>
                 ) : (
                   filteredApplications.map((app) => {
@@ -671,45 +636,47 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                     return (
                       <div
                         key={app.id}
-                        className={`w-full p-3.5 rounded-2xl transition-all duration-200 flex items-start gap-3 border ${isSelected
-                            ? 'bg-emerald-950/30 border-emerald-500/50 shadow-lg shadow-emerald-950/20'
-                            : 'bg-transparent border-transparent hover:bg-slate-900/60'
+                        className={`w-full text-left p-3 rounded-xl transition-all flex items-start gap-3 border ${isSelected
+                          ? 'bg-blue-50/60 dark:bg-blue-950/30 border-blue-500/40 shadow-2xs'
+                          : 'bg-transparent border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/40'
                           }`}
                       >
                         <input
                           type="checkbox"
                           checked={isChecked}
                           onChange={() => toggleSelectApp(app.id)}
-                          className="mt-1 rounded-md border-slate-700 bg-slate-900 text-emerald-500 focus:ring-emerald-500/40 h-4 w-4 cursor-pointer flex-shrink-0"
+                          className="mt-1 rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer flex-shrink-0"
                         />
                         <button
                           onClick={() => setSelectedAppId(app.id)}
-                          className="flex-1 text-left flex flex-col gap-1 cursor-pointer"
+                          className="flex-1 text-left flex flex-col gap-1.5 cursor-pointer"
                         >
-                          <div className="flex justify-between items-center gap-2">
-                            <span className="font-mono font-bold text-xs text-emerald-400">
-                              {app.taxDeclarationNumber}
+                          <div className="flex justify-between items-start gap-2">
+                            <span className="font-bold text-xs sm:text-sm text-slate-900 dark:text-slate-100 font-mono">
+                              {app.referenceNumber}
                             </span>
-                            <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800/80">
-                              {app.status}
-                            </span>
+                            <div className="flex items-center gap-1.5 flex-shrink-0">
+                              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 border">
+                                {app.status}
+                              </span>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteApplication(app.id);
+                                }}
+                                title="Delete Application"
+                                className="text-slate-400 hover:text-rose-600 p-1 rounded transition-colors cursor-pointer"
+                              >
+                                ✕
+                              </button>
+                            </div>
                           </div>
-                          <div className="text-xs font-bold text-white truncate">
+                          <div className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
                             {app.applicantName}
                           </div>
-                          <div className="text-[11px] font-medium text-slate-400 truncate">
-                            PIN: {app.propertyDetails.pin} • {app.propertyDetails.classification}
+                          <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                            {app.category}
                           </div>
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteApplication(app.id);
-                          }}
-                          title="Purge Record"
-                          className="text-slate-500 hover:text-rose-400 p-1.5 rounded-xl hover:bg-rose-950/40 transition-colors cursor-pointer"
-                        >
-                          <i className="fa-solid fa-xmark text-xs"></i>
                         </button>
                       </div>
                     );
@@ -719,63 +686,57 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
             </div>
           </div>
 
-          {/* Right Detail Panel */}
-          <div className="lg:col-span-7 bg-slate-900/80 rounded-3xl border border-slate-800/80 shadow-2xl overflow-hidden backdrop-blur-xl">
+          <div className="flex-1 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800/80 shadow-2xs flex flex-col overflow-hidden min-h-0 h-1/2 lg:h-full">
             {!currentApp ? (
-              <div className="p-20 text-center space-y-4">
-                <div className="p-5 rounded-full bg-slate-800/50 text-slate-500 inline-block border border-slate-700/50">
-                  <i className="fa-solid fa-house-flag text-3xl"></i>
-                </div>
-                <h3 className="text-lg font-bold text-slate-200">No Assessment Selected</h3>
-                <p className="text-xs text-slate-400 max-w-sm mx-auto leading-relaxed">Select a property declaration from the assessment roll to calculate basic tax levies and inspect boundaries.</p>
+              <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-3">
+                <h3 className="text-base font-bold text-slate-700 dark:text-slate-300">No Application Selected</h3>
+                <p className="text-xs text-slate-400 max-w-sm">Select an application from the queue to inspect documents and workflow steps.</p>
               </div>
             ) : (
               <>
-                <div className="p-6 sm:p-8 border-b border-slate-800 bg-slate-950/60 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div className="p-5 sm:p-6 border-b border-slate-200/90 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/40 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                   <div>
-                    <h2 className="text-2xl font-black font-mono text-white flex items-center gap-2.5">
-                      <i className="fa-solid fa-landmark text-emerald-400 text-lg"></i> {currentApp.taxDeclarationNumber}
+                    <h2 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100 font-mono">
+                      {currentApp.referenceNumber}
                     </h2>
-                    <p className="text-xs text-slate-400 mt-1">
-                      Property Owner: <span className="font-bold text-slate-200">{currentApp.applicantName}</span>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                      Applicant: <span className="font-semibold text-slate-800 dark:text-slate-200">{currentApp.applicantName}</span>
                     </p>
                   </div>
-
-                  <div className="flex items-center gap-2.5">
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => handleDeleteApplication(currentApp.id)}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 hover:bg-rose-100 border border-rose-200 cursor-pointer"
+                    >
+                      Delete Application
+                    </button>
                     <select
                       value={currentApp.status}
                       onChange={(e) => handleUpdateStatus(e.target.value as StatusType)}
-                      className="px-4 py-2.5 text-xs font-bold rounded-2xl border border-slate-700 bg-slate-900 text-slate-200 focus:outline-none focus:border-emerald-500 cursor-pointer shadow-lg"
+                      className="text-xs font-semibold px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-100 cursor-pointer"
                     >
                       <option value="Under Evaluation">Under Evaluation</option>
                       <option value="Field Inspection Scheduled">Field Inspection Scheduled</option>
                       <option value="Approved & Ready for Release">Approved & Ready for Release</option>
                       <option value="Digital Certificate Issued">Digital Certificate Issued</option>
                     </select>
-
-                    <button
-                      onClick={() => handleDeleteApplication(currentApp.id)}
-                      className="bg-slate-800 hover:bg-rose-950 hover:text-rose-300 text-slate-400 font-bold px-4 py-2.5 rounded-2xl transition-all border border-slate-700/80 hover:border-rose-800 text-xs cursor-pointer shadow-lg"
-                    >
-                      Delete
-                    </button>
                   </div>
                 </div>
 
-                <div className="flex border-b border-slate-800 bg-slate-950/40 px-6 sm:px-8 text-xs font-bold gap-2">
+                <div className="flex border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-950 px-5 text-xs font-semibold">
                   {(
                     [
-                      ['overview', 'Property & Valuation Breakdown'],
-                      ['audit', `Audit Log (${currentApp.auditLogs?.length || 0})`],
-                      ['notifications', `Notice History (${currentApp.notificationLogs?.length || 0})`]
+                      ['overview', 'Overview & Uploads'],
+                      ['audit', `Audit Trail (${currentApp.auditLogs?.length || 0})`],
+                      ['notifications', `SMS / Email Log (${currentApp.notificationLogs?.length || 0})`]
                     ] as const
                   ).map(([tab, label]) => (
                     <button
                       key={tab}
                       onClick={() => setDetailTab(tab as any)}
-                      className={`py-4 px-4 border-b-2 transition-all cursor-pointer whitespace-nowrap ${detailTab === tab
-                          ? 'border-emerald-400 text-emerald-400 font-extrabold'
-                          : 'border-transparent text-slate-400 hover:text-slate-200'
+                      className={`py-3.5 px-4 border-b-2 transition-colors cursor-pointer whitespace-nowrap ${detailTab === tab
+                        ? 'border-blue-600 text-blue-600 dark:text-blue-400 font-bold'
+                        : 'border-transparent text-slate-500 hover:text-slate-700'
                         }`}
                     >
                       {label}
@@ -783,124 +744,78 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                   ))}
                 </div>
 
-                <div className="p-6 sm:p-8 space-y-6">
+                <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6">
                   {detailTab === 'overview' && (
                     <>
-                      {/* Property Technical Details & Tax Computation */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-5 rounded-2xl border border-slate-800 bg-slate-950/60">
-                        <div>
-                          <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Property Identification No. (PIN)</p>
-                          <p className="text-xs font-black font-mono text-white mt-1.5">{currentApp.propertyDetails.pin}</p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Land Title No. (TCT / OCT)</p>
-                          <p className="text-xs font-black font-mono text-white mt-1.5">{currentApp.propertyDetails.titleNumber}</p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Property Classification</p>
-                          <p className="text-xs font-bold text-slate-200 mt-1.5">{currentApp.propertyDetails.classification}</p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Total Lot Area</p>
-                          <p className="text-xs font-bold text-slate-200 mt-1.5">{currentApp.propertyDetails.lotAreaSqM} sq. meters</p>
-                        </div>
-                      </div>
-
-                      <div className="p-5 rounded-2xl border border-emerald-500/30 bg-emerald-950/20 space-y-3">
-                        <h4 className="text-xs font-black uppercase tracking-wider text-emerald-400">Assessor Assessment & Levy Schedule</h4>
-                        <div className="grid grid-cols-3 gap-3 text-xs pt-1">
-                          <div>
-                            <span className="text-[10px] text-slate-400 block font-semibold">Assessed Value</span>
-                            <span className="font-extrabold text-white text-sm mt-0.5 block">₱{currentApp.assessedValue.toLocaleString('en-PH')}</span>
-                          </div>
-                          <div>
-                            <span className="text-[10px] text-slate-400 block font-semibold">Basic RPT (1%)</span>
-                            <span className="font-extrabold text-emerald-400 text-sm mt-0.5 block">₱{currentApp.basicTaxDue.toLocaleString('en-PH')}</span>
-                          </div>
-                          <div>
-                            <span className="text-[10px] text-slate-400 block font-semibold">SEF (1%)</span>
-                            <span className="font-extrabold text-purple-400 text-sm mt-0.5 block">₱{currentApp.sefTaxDue.toLocaleString('en-PH')}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Submitted Documents */}
-                      <section className="space-y-4">
-                        <h3 className="font-extrabold text-slate-200 uppercase tracking-wider text-[11px] flex items-center gap-2">
-                          <i className="fa-solid fa-file-contract text-emerald-400"></i> Title & Boundary Evidence Documents ({currentApp.documents.length})
+                      <section className="space-y-3">
+                        <h3 className="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-[11px]">
+                          Documents Uploaded by Citizen ({currentApp.documents.length})
                         </h3>
-
                         <div className="space-y-3">
                           {currentApp.documents.map((doc) => (
-                            <div key={doc.id} className="p-4 rounded-2xl border border-slate-800 bg-slate-950/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                              <div>
-                                <p className="font-bold text-xs text-white">{doc.name}</p>
-                                <p className="text-[10px] text-slate-400 mt-0.5 font-medium">Status: <span className="font-bold text-slate-300">{doc.status}</span></p>
-                              </div>
-
-                              <div className="flex items-center gap-2">
-                                <button
-                                  onClick={() => handleOpenPreview(doc)}
-                                  className="bg-emerald-950/80 hover:bg-emerald-900/80 text-emerald-300 font-bold px-3.5 py-2 rounded-xl border border-emerald-800/80 text-xs cursor-pointer transition-all"
-                                >
-                                  Preview
-                                </button>
-                                <button
-                                  onClick={() => handleDocumentStatusChange(doc.id, 'Verified')}
-                                  className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold px-3.5 py-2 rounded-xl text-xs cursor-pointer transition-all shadow-md shadow-emerald-500/10"
-                                >
-                                  Verify
-                                </button>
-                                <button
-                                  onClick={() => handleDocumentStatusChange(doc.id, 'Rejected')}
-                                  className="bg-rose-600 hover:bg-rose-500 text-white font-extrabold px-3.5 py-2 rounded-xl text-xs cursor-pointer transition-all shadow-md shadow-rose-600/10"
-                                >
-                                  Reject
-                                </button>
+                            <div key={doc.id} className="flex flex-col p-4 border rounded-xl text-xs bg-white dark:bg-slate-900 gap-3 shadow-2xs">
+                              <div className="flex justify-between items-center">
+                                <div>
+                                  <p className="font-bold text-slate-900 dark:text-white">{doc.name}</p>
+                                  <p className="text-[10px] text-slate-400">Status: {doc.status}</p>
+                                </div>
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => handleOpenPreview(doc)}
+                                    className="px-3 py-1.5 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900 rounded-lg font-semibold cursor-pointer"
+                                  >
+                                    Preview
+                                  </button>
+                                  <button
+                                    onClick={() => handleDocumentStatusChange(doc.id, 'Verified')}
+                                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold cursor-pointer transition-colors"
+                                  >
+                                    Verify
+                                  </button>
+                                  {/* High-visibility Rose Red Reject Button */}
+                                  <button
+                                    onClick={() => handleDocumentStatusChange(doc.id, 'Rejected')}
+                                    className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-semibold cursor-pointer shadow-xs transition-colors"
+                                  >
+                                    Reject
+                                  </button>
+                                </div>
                               </div>
                             </div>
                           ))}
                         </div>
                       </section>
 
-                      <section className="pt-4 border-t border-slate-800">
+                      <section className="pt-4 border-t">
                         <button
                           onClick={handleDigitalRelease}
-                          className="w-full py-4 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-2xl text-xs cursor-pointer shadow-xl shadow-emerald-500/20 transition-all flex items-center justify-center gap-2.5 uppercase tracking-wider"
+                          className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-xs cursor-pointer"
                         >
-                          <i className="fa-solid fa-stamp text-sm"></i> Issue Official Tax Clearance & Transfer to Archive
+                          Approve, Release & Move to Audit Trail
                         </button>
                       </section>
                     </>
                   )}
 
                   {detailTab === 'audit' && (
-                    <div className="space-y-3">
-                      {currentApp.auditLogs?.length === 0 ? (
-                        <p className="text-xs text-slate-500 italic">No audit log generated for this property.</p>
-                      ) : (
-                        currentApp.auditLogs?.map((log) => (
-                          <div key={log.id} className="p-4 border border-slate-800 rounded-2xl text-xs bg-slate-950/50 space-y-1">
-                            <p className="font-semibold text-slate-200">{log.action}</p>
-                            <span className="text-[10px] text-slate-500 block font-medium">{log.timestamp} • {log.officer}</span>
-                          </div>
-                        ))
-                      )}
+                    <div className="space-y-2">
+                      {currentApp.auditLogs?.map((log) => (
+                        <div key={log.id} className="p-3 border rounded-xl text-xs">
+                          <p className="font-bold">{log.action}</p>
+                          <span className="text-[10px] text-slate-400">{log.timestamp}</span>
+                        </div>
+                      ))}
                     </div>
                   )}
 
                   {detailTab === 'notifications' && (
-                    <div className="space-y-3">
-                      {currentApp.notificationLogs?.length === 0 ? (
-                        <p className="text-xs text-slate-500 italic">No notice records present.</p>
-                      ) : (
-                        currentApp.notificationLogs?.map((notif) => (
-                          <div key={notif.id} className="p-4 border border-slate-800 rounded-2xl text-xs bg-slate-950/50 space-y-1">
-                            <p className="text-slate-200 font-medium">{notif.message}</p>
-                            <span className="text-[10px] text-slate-500 block">{notif.timestamp} • {notif.type}</span>
-                          </div>
-                        ))
-                      )}
+                    <div className="space-y-2">
+                      {currentApp.notificationLogs?.map((notif) => (
+                        <div key={notif.id} className="p-3 border rounded-xl text-xs">
+                          <p>{notif.message}</p>
+                          <span className="text-[10px] text-slate-400">{notif.timestamp}</span>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
@@ -910,34 +825,30 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         </div>
       )}
 
-      {/* ISSUED CLEARANCES ARCHIVE */}
+      {/* CITIZEN DOCUMENTS AUDIT TRAIL VIEW */}
       {mainViewTab === 'citizenAudit' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          <div className="lg:col-span-5 bg-slate-900/80 rounded-3xl border border-slate-800/80 p-6 shadow-2xl flex flex-col gap-5 backdrop-blur-xl">
-            <div>
-              <h3 className="font-extrabold text-xs uppercase tracking-wider text-white">Archived Tax Clearances</h3>
-              <p className="text-[11px] text-slate-400 mt-0.5">Historical property assessment clearances</p>
+        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden gap-6 h-[calc(100vh-13rem)] min-h-0 w-full">
+          <div className="w-full lg:w-[420px] xl:w-[460px] flex-shrink-0 flex flex-col gap-4 min-h-0 h-1/2 lg:h-full">
+            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xs flex justify-between items-center">
+              <div>
+                <h3 className="font-bold text-xs uppercase tracking-wider text-slate-700 dark:text-slate-300">Citizen Documents Trail</h3>
+                <p className="text-[11px] text-slate-400">Archived records</p>
+              </div>
             </div>
 
-            <div className="border border-slate-800 rounded-2xl overflow-hidden bg-slate-950/50">
-              <div className="max-h-[520px] overflow-y-auto divide-y divide-slate-800/50 p-2 space-y-1">
+            <div className="flex-1 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xs overflow-hidden flex flex-col min-h-0">
+              <div className="flex-1 overflow-y-auto divide-y p-2 space-y-1">
                 {citizenAuditTrail.length === 0 ? (
-                  <div className="p-12 text-center text-slate-500 text-xs italic">
-                    <i className="fa-solid fa-box-archive text-2xl mb-3 block text-slate-600"></i>
-                    No archived property clearances present.
-                  </div>
+                  <div className="p-8 text-center text-slate-400 text-xs">No verified records in the audit trail.</div>
                 ) : (
                   citizenAuditTrail.map((app) => (
                     <div
                       key={app.id}
                       onClick={() => setSelectedCitizenAppId(app.id)}
-                      className={`p-3.5 rounded-2xl border cursor-pointer my-1 transition-all duration-200 ${app.id === currentCitizenApp?.id
-                          ? 'bg-emerald-950/30 border-emerald-500/50'
-                          : 'border-transparent hover:bg-slate-900/60'
-                        }`}
+                      className="p-3 rounded-xl border cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/40"
                     >
-                      <div className="font-mono font-bold text-xs text-emerald-400">{app.taxDeclarationNumber}</div>
-                      <div className="text-xs font-semibold text-slate-200 mt-0.5">{app.applicantName}</div>
+                      <div className="font-bold text-xs font-mono">{app.referenceNumber}</div>
+                      <div className="text-xs text-slate-600 dark:text-slate-300">{app.applicantName}</div>
                     </div>
                   ))
                 )}
@@ -945,55 +856,57 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
             </div>
           </div>
 
-          <div className="lg:col-span-7 bg-slate-900/80 rounded-3xl border border-slate-800/80 p-6 sm:p-8 shadow-2xl backdrop-blur-xl">
+          <div className="flex-1 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xs flex flex-col overflow-hidden min-h-0 h-1/2 lg:h-full">
             {!currentCitizenApp ? (
-              <div className="p-16 text-center text-xs text-slate-500 italic">
-                Select an archived clearance record to inspect certified attachments.
+              <div className="flex-1 flex items-center justify-center p-8 text-center text-xs text-slate-400">
+                Select an archived record from the list.
               </div>
             ) : (
-              <div className="space-y-6">
-                <div>
-                  <h2 className="text-2xl font-black font-mono text-white">{currentCitizenApp.taxDeclarationNumber}</h2>
-                  <p className="text-xs text-slate-400 mt-1">Property Owner: <span className="font-bold text-slate-200">{currentCitizenApp.applicantName}</span></p>
-                </div>
-
-                <div className="space-y-3 pt-4 border-t border-slate-800">
-                  <h3 className="text-xs font-extrabold uppercase text-slate-400 tracking-wider">Certified Documents</h3>
+              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                <h2 className="text-lg font-bold font-mono">{currentCitizenApp.referenceNumber}</h2>
+                <div className="space-y-2 pt-2">
+                  <h3 className="text-xs font-bold uppercase text-slate-500">Archived Documents</h3>
                   {currentCitizenApp.documents.map((doc) => (
-                    <div key={doc.id} className="p-4 border border-slate-800 rounded-2xl flex justify-between items-center text-xs bg-slate-950/50">
-                      <span className="font-semibold text-slate-200">{doc.name}</span>
+                    <div key={doc.id} className="p-3 border rounded-xl flex justify-between items-center text-xs">
+                      <span>{doc.name}</span>
                       <button
                         onClick={() => handleOpenPreview(doc)}
-                        className="bg-emerald-950/80 text-emerald-300 font-bold px-4 py-2 rounded-xl text-xs cursor-pointer border border-emerald-800/80 hover:bg-emerald-900/80 transition-all"
+                        className="px-3 py-1 bg-blue-50 text-blue-700 rounded-lg font-semibold cursor-pointer"
                       >
                         Preview
                       </button>
                     </div>
                   ))}
                 </div>
+                <button
+                  onClick={() => handleDownloadCertificate(currentCitizenApp.id)}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-semibold cursor-pointer"
+                >
+                  Download Package
+                </button>
               </div>
             )}
           </div>
         </div>
       )}
 
-      {/* LIGHTBOX PREVIEW */}
+      {/* POP-UP DOCUMENT PREVIEW LIGHTBOX MODAL */}
       {previewDocUrl && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-6">
-          <div className="bg-slate-900 rounded-3xl max-w-5xl w-full h-[85vh] shadow-2xl border border-slate-800 overflow-hidden flex flex-col my-8">
-            <div className="p-5 bg-slate-950 text-white flex justify-between items-center border-b border-slate-800">
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-extrabold text-emerald-400 uppercase tracking-widest">Document Inspector</span>
-                <span className="text-xs text-slate-400 truncate max-w-md font-medium">({previewDocTitle})</span>
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-4xl h-[85vh] shadow-2xl overflow-hidden flex flex-col">
+            <div className="p-4 bg-slate-900 text-white flex justify-between items-center border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <span className="text-xs uppercase font-bold text-blue-400">Document Inspector</span>
+                <span className="text-xs text-slate-300 truncate max-w-md">({previewDocTitle})</span>
               </div>
               <button
                 onClick={() => setPreviewDocUrl(null)}
-                className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold cursor-pointer transition-colors"
+                className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-bold cursor-pointer transition-colors"
               >
                 Close ✕
               </button>
             </div>
-            <div className="flex-1 bg-slate-950 overflow-auto flex items-center justify-center p-6">
+            <div className="flex-1 bg-slate-100 dark:bg-slate-950 overflow-auto flex items-center justify-center p-4">
               {(() => {
                 const url = previewDocUrl;
                 const isPdf = url.toLowerCase().includes('.pdf') || url.startsWith('data:application/pdf') || url.toLowerCase().endsWith('.pdf');
@@ -1002,7 +915,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                   return (
                     <iframe
                       src={url}
-                      className="w-full h-full rounded-2xl border-0 shadow-2xl bg-white"
+                      className="w-full h-full rounded-xl border-0 shadow-inner bg-white"
                       title="PDF Document Preview"
                     />
                   );
@@ -1013,7 +926,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                     <img
                       src={url}
                       alt="Document Preview"
-                      className="max-w-none object-contain rounded-2xl shadow-2xl transition-transform duration-200 hover:scale-105 cursor-zoom-in"
+                      className="max-w-none object-contain rounded-xl shadow-lg transition-transform duration-200 hover:scale-105 cursor-zoom-in"
                       style={{ minHeight: '50vh', maxHeight: '75vh' }}
                     />
                   </div>
