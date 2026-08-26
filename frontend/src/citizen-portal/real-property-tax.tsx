@@ -213,12 +213,12 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
 
   const [applications, setApplications] = useState<RPTApplicationRecord[]>([]);
   const [formData, setFormData] = useState<RPTFormData>(createEmptyForm);
-  const [documents, setDocuments] = useState<{ [key: string]: string }>({
-    ownershipProof: "",
-    validId: "",
-    taxRecord: "",
-    propertySketch: "",
-    authorization: ""
+  const [documents, setDocuments] = useState<{ [key: string]: { name: string; url: string } }>({
+    ownershipProof: { name: "", url: "" },
+    validId: { name: "", url: "" },
+    taxRecord: { name: "", url: "" },
+    propertySketch: { name: "", url: "" },
+    authorization: { name: "", url: "" }
   });
 
   const initialView = new URLSearchParams(location.search).get("view");
@@ -356,10 +356,21 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
     setFormData((current) => ({ ...current, [name]: value }));
   }
 
+  // Exact Business Tax File-to-Base64 Conversion Reader
   function updateDocument(event: ChangeEvent<HTMLInputElement>) {
     const { name, files } = event.target;
-    const fileName = files?.[0]?.name || "";
-    setDocuments((current) => ({ ...current, [name]: fileName }));
+    const file = files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (uploadEvent) => {
+      const base64Url = uploadEvent.target?.result as string || "";
+      setDocuments((current) => ({
+        ...current,
+        [name]: { name: file.name, url: base64Url }
+      }));
+    };
+    reader.readAsDataURL(file);
   }
 
   function selectedRPT() {
@@ -438,7 +449,13 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
   function startApplication() {
     setCurrentView("form");
     setFormData(createEmptyForm());
-    setDocuments({ ownershipProof: "", validId: "", taxRecord: "", propertySketch: "", authorization: "" });
+    setDocuments({
+      ownershipProof: { name: "", url: "" },
+      validId: { name: "", url: "" },
+      taxRecord: { name: "", url: "" },
+      propertySketch: { name: "", url: "" },
+      authorization: { name: "", url: "" }
+    });
     setNotice("");
     setIsPreviewOpen(false);
     setIsFormOpen(true);
@@ -447,11 +464,11 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
 
   function openReview(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!documents.ownershipProof || !documents.validId) {
+    if (!documents.ownershipProof.name || !documents.validId.name) {
       setNotice("Attach proof of ownership and a valid government-issued ID before continuing.");
       return;
     }
-    if (formData.applicantType === "Authorized Representative" && !documents.authorization) {
+    if (formData.applicantType === "Authorized Representative" && !documents.authorization.name) {
       setNotice("Attach the authorization or Special Power of Attorney before continuing as a representative.");
       return;
     }
@@ -463,40 +480,33 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
     const generatedControlNo = makeControlNumber();
     const currentDate = new Date().toISOString().slice(0, 10);
 
-    const formDataPayload = new FormData();
-    formDataPayload.append("control_number", generatedControlNo);
-    formDataPayload.append("tax_declaration_number", formData.taxDeclarationNumber || "For issuance");
-    formDataPayload.append("owner_name", formData.ownerName);
-    formDataPayload.append("applicant_name", formData.applicantName);
-    formDataPayload.append("applicant_type", formData.applicantType);
-    formDataPayload.append("email", formData.email);
-    formDataPayload.append("mobile_number", formData.mobileNumber);
-    formDataPayload.append("service", formData.service);
-    formDataPayload.append("property_location", formData.propertyLocation);
-    formDataPayload.append("barangay", formData.barangay);
-    formDataPayload.append("property_type", formData.propertyType);
-    formDataPayload.append("status", "Submitted");
-    formDataPayload.append("filed_date", currentDate);
-    formDataPayload.append("notes", formData.notes);
+    const attachedDocsList = Object.values(documents)
+      .filter((doc) => doc.name)
+      .map((doc) => ({ name: doc.name, url: doc.url }));
 
-    const attachedDocsList = Object.entries(documents)
-      .filter((entry) => entry[1])
-      .map(([, val]) => ({ name: val, url: `/uploads/${val}` }));
-
-    formDataPayload.append("documents", JSON.stringify(attachedDocsList));
-
-    const fileInputNames = ["ownershipProof", "validId", "taxRecord", "propertySketch", "authorization"];
-    fileInputNames.forEach((name) => {
-      const fileInput = document.querySelector(`input[name="${name}"]`) as HTMLInputElement;
-      if (fileInput && fileInput.files && fileInput.files[0]) {
-        formDataPayload.append(name, fileInput.files[0]);
-      }
-    });
+    const formDataPayload = {
+      control_number: generatedControlNo,
+      tax_declaration_number: formData.taxDeclarationNumber || "For issuance",
+      owner_name: formData.ownerName,
+      applicant_name: formData.applicantName,
+      applicant_type: formData.applicantType,
+      email: formData.email,
+      mobile_number: formData.mobileNumber,
+      service: formData.service,
+      property_location: formData.propertyLocation,
+      barangay: formData.barangay,
+      property_type: formData.propertyType,
+      status: "Submitted",
+      filed_date: currentDate,
+      notes: formData.notes,
+      documents: JSON.stringify(attachedDocsList)
+    };
 
     try {
       const response = await fetch(`${API_BASE_URL}/citizen-rpt-applications`, {
         method: "POST",
-        body: formDataPayload,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formDataPayload),
       });
 
       if (!response.ok) throw new Error("Failed to submit application");
@@ -554,11 +564,11 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
   }
 
   const documentItems = [
-    { label: "Proof of ownership", value: documents.ownershipProof || "Not attached" },
-    { label: "Valid government-issued ID", value: documents.validId || "Not attached" },
-    { label: "Latest tax receipt or Tax Declaration", value: documents.taxRecord || "Not attached" },
-    { label: "Property sketch / plan, if applicable", value: documents.propertySketch || "Not attached" },
-    ...(formData.applicantType === "Authorized Representative" ? [{ label: "Authorization / SPA", value: documents.authorization || "Not attached" }] : []),
+    { label: "Proof of ownership", value: documents.ownershipProof.name || "Not attached" },
+    { label: "Valid government-issued ID", value: documents.validId.name || "Not attached" },
+    { label: "Latest tax receipt or Tax Declaration", value: documents.taxRecord.name || "Not attached" },
+    { label: "Property sketch / plan, if applicable", value: documents.propertySketch.name || "Not attached" },
+    ...(formData.applicantType === "Authorized Representative" ? [{ label: "Authorization / SPA", value: documents.authorization.name || "Not attached" }] : []),
   ];
 
   return (
@@ -930,7 +940,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
               </div>
               <Detail label="Property Location" value={selectedApplication.propertyLocation || "—"} />
 
-              {/* Uploaded Files Section (Preview Cards matching Business Tax) */}
+              {/* Uploaded Files Section matching Business Tax view structure */}
               <div className="bg-slate-50 dark:bg-slate-950 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2">
                 <div className="font-semibold text-slate-700 dark:text-slate-300">Submitted Documentary Requirements:</div>
                 {(() => {
@@ -954,21 +964,11 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
 
                     if (typeof fileObj === "object" && fileObj !== null) {
                       fileName = (fileObj as any).name || "Document";
-                      const rawUrl = (fileObj as any).url || "";
-
-                      if (rawUrl.startsWith("data:")) {
-                        fileUrl = rawUrl;
-                      } else if (rawUrl.startsWith("http")) {
-                        fileUrl = rawUrl;
-                      } else {
-                        const cleanPath = rawUrl.startsWith("/uploads/") ? rawUrl : `/uploads/${rawUrl}`;
-                        fileUrl = `${API_BASE_URL}${cleanPath}`;
-                      }
+                      fileUrl = (fileObj as any).url || "";
                     } else {
                       const docStr = String(fileObj);
                       fileName = docStr.includes(': ') ? docStr.split(': ')[1].trim() : docStr;
-                      const cleanPath = fileName.startsWith("/uploads/") ? fileName : `/uploads/${fileName}`;
-                      fileUrl = `${API_BASE_URL}${cleanPath}`;
+                      fileUrl = "";
                     }
 
                     return (
@@ -1027,7 +1027,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
         </div>
       )}
 
-      {/* EMBEDDED DOCUMENT PREVIEW MODAL */}
+      {/* EXACT BUSINESS TAX-STYLE DOCUMENT PREVIEW MODAL */}
       {previewFile && (
         <div className="fixed inset-0 z-60 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-3xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
@@ -1040,17 +1040,11 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
             </div>
 
             <div className="h-[60vh] bg-slate-100 dark:bg-slate-950 rounded-2xl flex items-center justify-center border border-slate-200 dark:border-slate-800 overflow-hidden relative">
-              {(() => {
-                const name = (previewFile.name || "").toLowerCase();
-                const url = (previewFile.url || "").toLowerCase();
-                const isImage = name.match(/\.(jpeg|jpg|gif|png|webp)$/i) || url.match(/\.(jpeg|jpg|gif|png|webp)$/i) || url.startsWith("data:image/");
-
-                if (isImage) {
-                  return <img src={previewFile.url} alt="Document Preview" className="max-h-full max-w-full object-contain" />;
-                } else {
-                  return <iframe src={previewFile.url} title="Document Preview" className="w-full h-full border-0 bg-white" />;
-                }
-              })()}
+              {previewFile.url.startsWith('data:image/') || previewFile.url.match(/\.(jpeg|jpg|gif|png)$/i) ? (
+                <img src={previewFile.url} alt="Document Preview" className="max-h-full max-w-full object-contain" />
+              ) : (
+                <iframe src={previewFile.url} title="Document Preview" className="w-full h-full border-0 bg-white" />
+              )}
             </div>
 
             <div className="flex justify-end pt-2">
