@@ -940,13 +940,20 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
                     return docArray.map((doc, idx) => {
                       const docStr = typeof doc === "string" ? doc : JSON.stringify(doc);
 
-                      const actualFileName = docStr.includes(': ') ? docStr.split(': ')[1].trim() : docStr;
-                      const isUpload = actualFileName.includes('.') || docStr.includes('/uploads/') || docStr.startsWith('http') || docStr.startsWith('blob:');
-                      const cleanPath = actualFileName.startsWith('/uploads/') ? actualFileName : `/uploads/${actualFileName}`;
+                      let fileName = docStr;
+                      if (docStr.includes(': ')) {
+                        fileName = docStr.split(': ')[1].trim();
+                      }
 
-                      const imgUrl = isUpload
-                        ? (cleanPath.startsWith('http') || cleanPath.startsWith('blob:') ? cleanPath : `${API_BASE_URL}${cleanPath}`)
-                        : null;
+                      const hasExtension = /\.(jpg|jpeg|png|gif|webp|pdf)$/i.test(fileName);
+
+                      let imgUrl = null;
+                      if (hasExtension) {
+                        const cleanPath = fileName.startsWith('/uploads/') ? fileName : `/uploads/${fileName}`;
+                        imgUrl = cleanPath.startsWith('http') || cleanPath.startsWith('blob:') ? cleanPath : `${API_BASE_URL}${cleanPath}`;
+                      } else if (docStr.includes('/uploads/') || docStr.startsWith('http') || docStr.startsWith('blob:')) {
+                        imgUrl = docStr.startsWith('http') || docStr.startsWith('blob:') ? docStr : `${API_BASE_URL}${docStr}`;
+                      }
 
                       return (
                         <div key={idx} className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-800 shadow-sm flex flex-col group relative">
