@@ -27,6 +27,21 @@ interface AssessmentRecord {
   remarks?: string;
 }
 
+interface AppointmentRecord {
+  id: string;
+  department: string;
+  appointmentType: string;
+  address?: string;
+  description?: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  date: string;
+  remarks?: string;
+  status: string;
+  createdAt: string;
+}
+
 interface AuditLog {
   id: string;
   adminName: string;
@@ -41,11 +56,12 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Active Tab State ('assessments' or 'audit_logs')
-  const [activeTab, setActiveTab] = useState<'assessments' | 'audit_logs'>('assessments');
+  // Active Tab State ('assessments' | 'appointments' | 'audit_logs')
+  const [activeTab, setActiveTab] = useState<'assessments' | 'appointments' | 'audit_logs'>('assessments');
 
   // Functional Data States
   const [assessments, setAssessments] = useState<AssessmentRecord[]>([]);
+  const [appointments, setAppointments] = useState<AppointmentRecord[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -129,6 +145,8 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
   useEffect(() => {
     if (activeTab === 'assessments') {
       fetchAdminAssessments();
+    } else if (activeTab === 'appointments') {
+      fetchAppointments();
     } else {
       fetchAuditLogs();
     }
@@ -198,6 +216,42 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
       setTotalPages(1);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAppointments = async () => {
+    setLoading(true);
+    try {
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (adminUser?.token) headers['Authorization'] = `Bearer ${adminUser.token}`;
+
+      const res = await fetch(`${API_BASE_URL}/admin/appointments`, { headers });
+      if (!res.ok) throw new Error("Failed to fetch appointments");
+      const data = await res.json();
+      setAppointments(Array.isArray(data) ? data : (data.appointments || []));
+    } catch (e) {
+      setAppointments([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAppointmentStatusUpdate = async (id: string, newStatus: string) => {
+    try {
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (adminUser?.token) headers['Authorization'] = `Bearer ${adminUser.token}`;
+
+      const res = await fetch(`${API_BASE_URL}/admin/appointments/${id}/status`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ status: newStatus })
+      });
+
+      if (!res.ok) throw new Error("Failed to update status");
+      alert(`Appointment marked as ${newStatus}.`);
+      fetchAppointments();
+    } catch (err: any) {
+      alert("Error updating appointment status.");
     }
   };
 
@@ -381,6 +435,15 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
               Tax Assessments & Filings
             </button>
             <button
+              onClick={() => setActiveTab('appointments')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeTab === 'appointments'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:bg-slate-50'
+                }`}
+            >
+              Scheduled Appointments
+            </button>
+            <button
               onClick={() => setActiveTab('audit_logs')}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeTab === 'audit_logs'
                   ? 'bg-blue-600 text-white shadow-sm'
@@ -550,6 +613,66 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
                   Next <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
                 </button>
               </div>
+            </div>
+          </section>
+        ) : activeTab === 'appointments' ? (
+          <section className="bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-xs space-y-5">
+            <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg> Citizen Appointments Management Schedule
+            </h3>
+            <div className="overflow-x-auto rounded-xl border border-slate-200/80 dark:border-slate-800">
+              <table className="w-full text-left text-xs whitespace-nowrap border-collapse">
+                <thead className="bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-200 dark:border-slate-800">
+                  <tr>
+                    <th className="p-4">APPLICANT</th>
+                    <th className="p-4">DEPARTMENT</th>
+                    <th className="p-4">APPOINTMENT TYPE</th>
+                    <th className="p-4">DATE</th>
+                    <th className="p-4">CONTACT INFO</th>
+                    <th className="p-4 text-center">STATUS</th>
+                    <th className="p-4 text-center">ACTIONS</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-slate-700 dark:text-slate-300">
+                  {appointments.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="text-center py-16 text-slate-400 italic">No scheduled citizen appointments found.</td>
+                    </tr>
+                  ) : (
+                    appointments.map(apt => (
+                      <tr key={apt.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                        <td className="p-4 font-bold text-slate-900 dark:text-white">{apt.fullName}</td>
+                        <td className="p-4">{apt.department}</td>
+                        <td className="p-4 font-semibold text-blue-600">{apt.appointmentType}</td>
+                        <td className="p-4 font-mono">{apt.date}</td>
+                        <td className="p-4 text-slate-500">{apt.phone} / {apt.email}</td>
+                        <td className="p-4 text-center">
+                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold border ${apt.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400' :
+                              apt.status === 'CANCELLED' ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/50 dark:text-rose-400' :
+                                'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-400'
+                            }`}>
+                            {apt.status}
+                          </span>
+                        </td>
+                        <td className="p-4 text-center space-x-2">
+                          <button
+                            onClick={() => handleAppointmentStatusUpdate(apt.id, 'APPROVED')}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-3 py-1 rounded-xl transition-all cursor-pointer shadow-xs"
+                          >
+                            Approve
+                          </button>
+                          <button
+                            onClick={() => handleAppointmentStatusUpdate(apt.id, 'CANCELLED')}
+                            className="bg-rose-600 hover:bg-rose-700 text-white font-medium px-3 py-1 rounded-xl transition-all cursor-pointer shadow-xs"
+                          >
+                            Cancel
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           </section>
         ) : (
