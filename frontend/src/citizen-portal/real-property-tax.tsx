@@ -230,7 +230,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
   const [paymentMethod, setPaymentMethod] = useState("GCash");
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
 
-  // NEW STATE: Holds the URL of the document being previewed
+  // NEW STATE: Holds the URL of the document being previewed[cite: 9]
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(false);
@@ -958,20 +958,23 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
                       return (
                         <div key={idx} className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-800 shadow-sm flex flex-col group">
                           {imgUrl ? (
-                            <button
-                              type="button"
-                              onClick={() => setPreviewUrl(imgUrl)}
-                              className="w-full h-32 block bg-slate-200 dark:bg-slate-700 p-0 border-0 outline-none cursor-pointer"
-                            >
+                            <div className="w-full h-32 relative bg-slate-200 dark:bg-slate-700 flex flex-col items-center justify-center">
                               {imgUrl.toLowerCase().includes('.pdf') ? (
-                                <div className="w-full h-full flex flex-col items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-blue-600 transition-colors">
+                                <div className="w-full h-full flex flex-col items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-500">
                                   <span className="text-3xl mb-1">📄</span>
-                                  <span className="text-[10px] font-bold">VIEW PDF</span>
+                                  <span className="text-[10px] font-bold">PDF DOCUMENT</span>
                                 </div>
                               ) : (
-                                <img src={imgUrl} alt={`Document ${idx}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                                <img src={imgUrl} alt={`Document ${idx}`} className="w-full h-full object-cover" />
                               )}
-                            </button>
+                              <button
+                                type="button"
+                                onClick={() => setPreviewUrl(imgUrl)}
+                                className="absolute inset-0 bg-slate-950/40 hover:bg-slate-950/60 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold gap-1 cursor-pointer"
+                              >
+                                🔍 Preview File
+                              </button>
+                            </div>
                           ) : (
                             <div className="w-full h-32 flex flex-col items-center justify-center p-3 text-center">
                               <span className="text-3xl mb-2">📄</span>
@@ -1022,7 +1025,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
         </div>
       )}
 
-      {/* NEW LIGHTBOX MODAL FOR PREVIEWING DOCUMENTS */}
+      {/* LIGHTBOX MODAL FOR PREVIEWING DOCUMENTS[cite: 9] */}
       {previewUrl && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/90 backdrop-blur-sm p-4">
           <div className="relative w-full max-w-4xl h-[85vh] bg-white dark:bg-slate-900 rounded-2xl overflow-hidden shadow-2xl flex flex-col">
@@ -1032,7 +1035,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
             </div>
             <div className="flex-1 w-full h-full bg-slate-100 dark:bg-slate-950 overflow-auto flex items-center justify-center p-4">
               {previewUrl.toLowerCase().includes('.pdf') ? (
-                <iframe src={previewUrl} className="w-full h-full border-0 rounded-lg" title="PDF Preview" />
+                <iframe src={previewUrl} className="w-full h-full border-0 rounded-lg bg-white" title="PDF Preview" />
               ) : (
                 <img src={previewUrl} alt="Preview" className="max-w-full max-h-full object-contain rounded-lg shadow-sm" />
               )}
