@@ -180,7 +180,7 @@ function makeControlNumber() {
   return `RPT-${period}-${random}`;
 }
 
-// SAFE FALLBACK: Checks if the date string already contains a "T"
+// SAFE FALLBACK: Checks if the date string already contains a "T" to avoid RangeError
 function formatDate(date: string) {
   if (!date) return "—";
   try {
@@ -472,6 +472,12 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
     formDataPayload.append("filed_date", currentDate);
     formDataPayload.append("notes", formData.notes);
 
+    // BULLETPROOF FALLBACK: Explicitly send a stringified list of document names 
+    const attachedDocsList = Object.entries(documents)
+      .filter(([_, val]) => val)
+      .map(([key, val]) => `${key}: ${val}`);
+    formDataPayload.append("documents", JSON.stringify(attachedDocsList));
+
     const fileInputNames = ["ownershipProof", "validId", "taxRecord", "propertySketch", "authorization"];
     fileInputNames.forEach((name) => {
       const fileInput = document.querySelector(`input[name="${name}"]`) as HTMLInputElement;
@@ -503,6 +509,8 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
         propertyType: rawApp.property_type || rawApp.propertyType || formData.propertyType,
         filedDate: rawApp.filed_date || rawApp.filedDate || currentDate,
         status: rawApp.status || "Submitted",
+        // Ensure documents are saved in local state immediately for the modal
+        documents: rawApp.documents || attachedDocsList,
       };
 
       setApplications([savedApp, ...applications]);
