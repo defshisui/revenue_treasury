@@ -1,76 +1,75 @@
-# React + TypeScript + Vite
+# Revenue & Treasury Management System
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This project is organized into separate **Backend** and **Frontend** applications.
 
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Project Structure
 
 ```
-
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+revenue-treasury-system/
+├── backend/                  # Express.js REST API & PostgreSQL Service
+│   ├── uploads/              # Uploaded documents / attachments
+│   ├── db.js                 # PostgreSQL Pool connection
+│   ├── server.js             # Express API server & routes
+│   ├── package.json          # Backend dependencies and scripts
+│   ├── .env.example          # Sample environment configuration
+│   └── .gitignore
+├── frontend/                 # React 19 + TypeScript + Vite Application
+│   ├── public/               # Static assets & icons
+│   ├── src/                  # React UI components, pages & services
+│   ├── index.html            # Entry HTML
+│   ├── vite.config.ts        # Vite build config
+│   ├── package.json          # Frontend dependencies and scripts
+│   ├── .env.example          # Frontend environment configuration
+│   └── .gitignore
+├── package.json              # Root orchestration scripts
+├── .gitignore                # Root gitignore rules
+└── README.md
 ```
-"# revenue_treasury" 
+
+## Quick Start
+
+### 1. Install Dependencies
+You can install dependencies for both services from the root folder:
+```bash
+npm run install:all
+```
+Or individually:
+```bash
+# Backend
+cd backend
+npm install
+
+# Frontend
+cd frontend
+npm install
+```
+
+### 2. Configure Environment Variables
+- **Backend**: Copy `backend/.env.example` to `backend/.env` and update your PostgreSQL credentials and server port.
+- **Frontend**: Copy `frontend/.env.example` to `frontend/.env` if you need to point to a custom API URL.
+
+### 3. Run Development Servers
+From the root directory:
+```bash
+# Run Frontend (Vite on http://localhost:5173)
+npm run dev:frontend
+
+# Run Backend (Express API on http://localhost:3000)
+npm run dev:backend
+```
+
+Or from their respective directories:
+```bash
+# Backend
+cd backend
+npm run dev
+
+# Frontend
+cd frontend
+npm run dev
+```
+
+### 4. Build Frontend for Production
+```bash
+npm run build:frontend
+```
