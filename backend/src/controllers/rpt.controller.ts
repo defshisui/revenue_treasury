@@ -19,13 +19,13 @@ export async function createRptApplication(req: Request, res: Response): Promise
   const appData = req.body as Record<string, string>;
   const files = (req as Request & { files?: Express.Multer.File[] }).files;
 
-  // Safely map attached files from Multer
+  // 1. Save the ACTUAL server path so the frontend can preview the image
   let filePaths: string[] = [];
   if (files && files.length > 0) {
-    filePaths = files.map((f) => `${f.fieldname}: ${f.originalname}`);
+    filePaths = files.map((f) => `/uploads/${f.filename}`);
   }
 
-  // BULLETPROOF FALLBACK: If Multer drops the physical files, use the text list sent by frontend
+  // 2. Fallback text if Multer drops the physical file
   if (filePaths.length === 0 && appData.documents) {
     try {
       filePaths = JSON.parse(appData.documents);
@@ -34,7 +34,6 @@ export async function createRptApplication(req: Request, res: Response): Promise
     }
   }
 
-  // Resolve Names safely
   const ownerName = appData.owner_name || appData.ownerName || '';
   let resolvedApplicantName = appData.applicant_name || appData.applicantName || ownerName || 'Unknown Applicant';
 
@@ -60,7 +59,7 @@ export async function createRptApplication(req: Request, res: Response): Promise
         appData.status || 'Submitted',
         appData.filed_date || new Date().toISOString().split('T')[0],
         appData.notes || null,
-        JSON.stringify(filePaths), // Save files as JSON array
+        JSON.stringify(filePaths),
       ]
     );
 
