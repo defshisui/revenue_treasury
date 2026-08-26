@@ -185,6 +185,14 @@ function formatDate(date: string) {
   return new Intl.DateTimeFormat("en-PH", { year: "numeric", month: "short", day: "numeric" }).format(new Date(`${date}T00:00:00`));
 }
 
+// Helper to determine status badge color
+const getStatusColor = (status: string) => {
+  const s = status.toUpperCase();
+  if (s === 'APPROVED' || s === 'COMPLETED' || s === 'READY FOR RELEASE') return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-400';
+  if (s === 'REJECTED') return 'bg-rose-100 text-rose-800 dark:bg-rose-950/50 dark:text-rose-400';
+  return 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-400';
+};
+
 export default function RealPropertyApplication({ isCollapsed = false }: RealPropertyApplicationProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -210,13 +218,20 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
   const [isFormOpen, setIsFormOpen] = useState(initialView === "form");
 
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
   const [notice, setNotice] = useState("");
   const [selectedApplication, setSelectedApplication] = useState<RPTApplicationRecord | null>(null);
   const [rptRecords, setRptRecords] = useState<CitizenRPTRecord[]>([]);
   const [selectedRPTId, setSelectedRPTId] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("GCash");
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
+
+  // Status View Filtering, Search & Pagination States
+  const [loading, setLoading] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [searchType, setSearchType] = useState("Tax Declaration");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
 
   useEffect(() => {
     setUser(getStoredCitizenSession());
@@ -232,6 +247,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
 
   useEffect(() => {
     async function fetchData() {
+      setLoading(true);
       try {
         const activeUser = getStoredCitizenSession();
 
@@ -258,6 +274,8 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
       } catch (error) {
         console.error("Failed to fetch database records:", error);
         setNotice("Could not connect to the database server.");
+      } finally {
+        setLoading(false);
       }
     }
     fetchData();
@@ -287,16 +305,29 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
     window.location.href = '/';
   };
 
+  // Memoized Filter & Pagination Logic
   const filteredApplications = useMemo(() => {
+    let result = applications;
+
+    if (statusFilter !== "ALL") {
+      result = result.filter(app => app.status.toUpperCase() === statusFilter.toUpperCase());
+    }
+
     const query = searchQuery.trim().toLowerCase();
-    if (!query) return applications;
-    return applications.filter((application) => [
-      application.taxDeclarationNumber,
-      application.ownerName,
-      application.controlNumber,
-      application.service,
-    ].join(" ").toLowerCase().includes(query));
-  }, [applications, searchQuery]);
+    if (query) {
+      result = result.filter(app => {
+        if (searchType === "Tax Declaration") return String(app.taxDeclarationNumber || "").toLowerCase().includes(query);
+        if (searchType === "Owner Name") return String(app.ownerName || "").toLowerCase().includes(query);
+        if (searchType === "Control No.") return String(app.controlNumber || "").toLowerCase().includes(query);
+        return true;
+      });
+    }
+
+    return result.sort((a, b) => new Date(b.filedDate).getTime() - new Date(a.filedDate).getTime());
+  }, [applications, statusFilter, searchType, searchQuery]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredApplications.length / pageSize));
+  const paginatedApplications = filteredApplications.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   function updateForm(event: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
     const { name, value } = event.target;
@@ -565,9 +596,9 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
         </div>
 
         {/* Main Body Content Container */}
-        <div className="max-w-6xl mx-auto px-4 py-8 w-full">
+        <div className="max-w-7xl mx-auto px-4 py-8 w-full">
           <section className={currentView === "hub" ? "" : "overflow-hidden rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm"}>
-            {currentView !== "hub" && (
+            {currentView !== "hub" && currentView !== "status" && (
               <div className="border-b border-slate-200 dark:border-slate-800 px-6 py-6 sm:px-8">
                 <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-blue-700">Office of the City Assessor</p>
                 <div className="mt-2">
@@ -674,25 +705,81 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
                 )}
               </div>
             ) : (
-              <div className="p-6 sm:p-8">
-                <div className="mb-4 flex justify-start">
-                  <button type="button" onClick={goHome} className="rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-5 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 shadow-sm transition-colors hover:bg-slate-50 cursor-pointer">
-                    ← Back Home
+              <div className="p-6 sm:p-8 space-y-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button onClick={goHome} className="text-xs text-blue-700 hover:underline font-semibold flex items-center gap-1 cursor-pointer">
+                    ← Back to Home
                   </button>
                 </div>
 
-                <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                  <p className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-bold text-blue-700">APPLICATION STATUS</p>
-                  <label className="text-xs font-bold uppercase tracking-wide text-slate-700 dark:text-slate-300">Search Tax Declaration<input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Tax Declaration, owner, or control no." className="mt-2 block w-full min-w-[260px] rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2.5 text-sm font-medium normal-case tracking-normal outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100" /></label>
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <button onClick={startApplication} className="px-4 py-2 bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold rounded-md shadow-xs cursor-pointer">
+                      + NEW RPT APPLICATION
+                    </button>
+                  </div>
                 </div>
 
-                <div className="mt-6 overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-800">
-                  <table className="w-full border-collapse text-left text-xs table-fixed">
-                    <thead className="bg-blue-800 text-white">
-                      <tr>{["#", "Tax Declaration", "Owner Name", "Control No.", "Transaction Status", "Services", "Filed Date", "Amount Due", "Payment Status", "Payment Method", "Action"].map((heading) => <th key={heading} className="px-2 py-3 text-[10px] font-bold uppercase tracking-wide">{heading}</th>)}</tr>
+                {/* Filters & Search Row */}
+                <div className="flex flex-col md:flex-row justify-between items-center gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+                  <div className="w-full md:w-64">
+                    <label className="block text-[11px] font-semibold text-slate-500 mb-1">Application Status</label>
+                    <select
+                      value={statusFilter}
+                      onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+                      className="w-full p-2 text-xs border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    >
+                      <option value="ALL">ALL</option>
+                      <option value="Submitted">Submitted / Pending</option>
+                      <option value="Approved">Approved</option>
+                      <option value="Rejected">Rejected</option>
+                      <option value="For Compliance">For Compliance</option>
+                      <option value="Processing">Processing</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+                    <div className="w-full sm:w-48">
+                      <label className="block text-[11px] font-semibold text-slate-500 mb-1">Search By:</label>
+                      <select
+                        value={searchType}
+                        onChange={(e) => { setSearchType(e.target.value); setCurrentPage(1); }}
+                        className="w-full p-2 text-xs border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      >
+                        <option value="Tax Declaration">Tax Declaration No.</option>
+                        <option value="Control No.">Control No.</option>
+                        <option value="Owner Name">Owner Name</option>
+                      </select>
+                    </div>
+                    <div className="w-full sm:w-64 pt-5">
+                      <div className="flex gap-1">
+                        <input
+                          type="text"
+                          value={searchQuery}
+                          onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+                          placeholder="Search records..."
+                          className="w-full p-2 text-xs border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                        />
+                        <button className="px-3 py-2 bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded cursor-pointer">
+                          Search
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800">
+                  <table className="w-full border-collapse text-left text-xs table-fixed min-w-[1000px]">
+                    <thead className="bg-blue-900 text-white font-semibold">
+                      <tr>
+                        {["#", "Tax Declaration", "Owner Name", "Control No.", "Status", "Services", "Filed Date", "Amount Due", "Payment Status", "Action"].map((heading, i) =>
+                          <th key={heading} className={`p-3 ${i === 0 ? 'w-10' : ''}`}>{heading}</th>
+                        )}
+                      </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900">
-                      {filteredApplications.length ? filteredApplications.map((application, index) => {
+                      {loading ? (
+                        <tr><td colSpan={10} className="p-8 text-center text-slate-500 bg-slate-50 dark:bg-slate-950/50">Loading applications from server...</td></tr>
+                      ) : paginatedApplications.length ? paginatedApplications.map((application, index) => {
                         const rptRecord = rptRecords.find((record) => String(record.taxDeclarationNumber || "").trim().toLowerCase() === String(application.taxDeclarationNumber || "").trim().toLowerCase());
                         const balance = rptRecord ? getRPTAmountDue(rptRecord) : null;
                         const isPaid = rptRecord ? (balance !== null && balance <= 0) || String(rptRecord.status || "").toLowerCase() === "paid" : false;
@@ -700,29 +787,53 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
 
                         return (
                           <tr key={application.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                            <td className="px-2 py-3 font-semibold text-slate-500">{index + 1}</td>
-                            <td className="px-2 py-3 font-bold text-slate-800 dark:text-slate-200">{application.taxDeclarationNumber}</td>
-                            <td className="px-2 py-3 text-slate-700 dark:text-slate-300">{application.ownerName}</td>
-                            <td className="px-2 py-3 font-mono font-semibold text-blue-700 dark:text-blue-400">{application.controlNumber}</td>
-                            <td className="px-2 py-3"><span className="rounded-full border border-blue-200 bg-blue-50 dark:bg-blue-950/40 px-2.5 py-1 font-bold text-blue-700 dark:text-blue-400">{application.status}</span></td>
-                            <td className="max-w-48 px-2 py-3 text-slate-600 dark:text-slate-400">{application.service}</td>
-                            <td className="px-2 py-3 text-slate-600 dark:text-slate-400">{formatDate(application.filedDate)}</td>
-                            <td className="px-2 py-3 font-bold text-slate-900 dark:text-white">{balance === null ? "—" : formatCurrency(balance)}</td>
-                            <td className="px-2 py-3"><span className="rounded-full border px-2.5 py-1 font-bold">{paymentStatus}</span></td>
-                            <td className="px-2 py-3 text-slate-600 dark:text-slate-400">{rptRecord?.paymentMethod || "—"}</td>
-                            <td className="px-2 py-3">
+                            <td className="p-3 font-semibold text-slate-500">{(currentPage - 1) * pageSize + index + 1}</td>
+                            <td className="p-3 font-bold text-slate-800 dark:text-slate-200">{application.taxDeclarationNumber}</td>
+                            <td className="p-3 text-slate-700 dark:text-slate-300 truncate" title={application.ownerName}>{application.ownerName}</td>
+                            <td className="p-3 font-mono font-semibold text-blue-700 dark:text-blue-400">{application.controlNumber}</td>
+                            <td className="p-3">
+                              <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold ${getStatusColor(application.status)}`}>
+                                {application.status}
+                              </span>
+                            </td>
+                            <td className="p-3 text-slate-600 dark:text-slate-400 truncate" title={application.service}>{application.service}</td>
+                            <td className="p-3 text-slate-600 dark:text-slate-400">{formatDate(application.filedDate)}</td>
+                            <td className="p-3 font-bold text-slate-900 dark:text-white">{balance === null ? "—" : formatCurrency(balance)}</td>
+                            <td className="p-3"><span className="text-slate-700 dark:text-slate-300 font-semibold">{paymentStatus}</span></td>
+                            <td className="p-3">
                               <div className="flex flex-col gap-2">
-                                <button type="button" onClick={() => setSelectedApplication(application)} className="font-bold text-blue-700 dark:text-blue-400 hover:text-blue-900 cursor-pointer">View details</button>
+                                <button type="button" onClick={() => setSelectedApplication(application)} className="text-left font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer">View Details</button>
                                 {rptRecord && balance !== null && balance > 0 && (
-                                  <button type="button" onClick={() => startPaymentForRecord(rptRecord)} className="font-bold text-blue-700 dark:text-blue-400 hover:text-blue-900 cursor-pointer">Pay RPT</button>
+                                  <button type="button" onClick={() => startPaymentForRecord(rptRecord)} className="text-left font-bold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer">Pay RPT</button>
                                 )}
                               </div>
                             </td>
                           </tr>
                         );
-                      }) : <tr><td colSpan={11} className="px-2 py-12 text-center text-sm font-medium text-slate-500">No application available.</td></tr>}
+                      }) : <tr><td colSpan={10} className="p-8 text-center text-sm font-medium text-slate-500 bg-slate-50 dark:bg-slate-950/50">No applications match your search criteria.</td></tr>}
                     </tbody>
                   </table>
+                </div>
+
+                {/* Functional Pagination Footer */}
+                <div className="flex justify-between items-center text-xs text-slate-500 pt-2">
+                  <span>Page {currentPage} of {totalPages}</span>
+                  <div className="flex gap-1">
+                    <button
+                      disabled={currentPage <= 1 || loading}
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      className="px-3 py-1 border border-slate-300 dark:border-slate-700 rounded disabled:opacity-40 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800"
+                    >
+                      Previous
+                    </button>
+                    <button
+                      disabled={currentPage >= totalPages || loading}
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      className="px-3 py-1 border border-slate-300 dark:border-slate-700 rounded disabled:opacity-40 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800"
+                    >
+                      Next
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -753,14 +864,14 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
       </footer>
 
       {selectedApplication && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
-          <div className="w-full max-w-2xl rounded-3xl bg-white dark:bg-slate-900 p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-xs p-4">
+          <div className="w-full max-w-2xl rounded-3xl bg-white dark:bg-slate-900 p-6 shadow-2xl max-h-[90vh] overflow-y-auto border border-slate-200 dark:border-slate-800">
             <div className="border-b border-slate-100 dark:border-slate-800 pb-4 flex justify-between items-center">
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-wider text-blue-700">Application Details</p>
                 <h3 className="mt-1 text-xl font-extrabold text-slate-900 dark:text-white">{selectedApplication.controlNumber}</h3>
               </div>
-              <button type="button" onClick={() => setSelectedApplication(null)} className="rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 cursor-pointer">Close</button>
+              <button type="button" onClick={() => setSelectedApplication(null)} className="rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 cursor-pointer">✕</button>
             </div>
 
             <div className="mt-5 space-y-5">
@@ -800,7 +911,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
               </div>
             </div>
 
-            <div className="mt-6 flex justify-end">
+            <div className="mt-6 flex justify-end pt-4 border-t border-slate-100 dark:border-slate-800">
               <button type="button" onClick={() => setSelectedApplication(null)} className="rounded-xl bg-blue-800 px-5 py-2.5 text-sm font-bold text-white hover:bg-blue-900 cursor-pointer">Done</button>
             </div>
           </div>
@@ -808,8 +919,8 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
       )}
 
       {isPaymentOpen && selectedRPT() && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
-          <div className="w-full max-w-md rounded-3xl bg-white dark:bg-slate-900 p-6 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-xs p-4">
+          <div className="w-full max-w-md rounded-3xl bg-white dark:bg-slate-900 p-6 shadow-2xl border border-slate-200 dark:border-slate-800">
             <div className="border-b border-slate-100 dark:border-slate-800 pb-4">
               <p className="text-[11px] font-bold uppercase tracking-wider text-blue-700">Real Property Tax Payment</p>
               <h3 className="mt-1 text-xl font-extrabold text-slate-900 dark:text-white">Pay Outstanding RPT</h3>
@@ -828,7 +939,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
                 </select>
               </label>
             </div>
-            <div className="mt-6 flex gap-3">
+            <div className="mt-6 flex gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
               <button type="button" onClick={() => setIsPaymentOpen(false)} className="flex-1 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 cursor-pointer">Cancel</button>
               <button type="button" onClick={confirmPayment} className="flex-1 rounded-xl bg-blue-800 px-4 py-3 text-sm font-bold text-white hover:bg-blue-900 cursor-pointer">Confirm Payment</button>
             </div>
