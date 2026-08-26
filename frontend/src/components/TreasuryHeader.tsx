@@ -19,9 +19,44 @@ export default function TreasuryHeader({
   isCollapsed,
 }: TreasuryHeaderProps) {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [adminUser, setAdminUser] = useState<{ fullname: string; firstName: string; initials: string; } | null>(null);
+
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
+
+  // Fetch logged-in user details from local/session storage
+  useEffect(() => {
+    const checkAdminSession = () => {
+      const rawData = localStorage.getItem('currentUser') ||
+        localStorage.getItem('user') ||
+        sessionStorage.getItem('currentUser') ||
+        sessionStorage.getItem('user');
+
+      if (!rawData) return null;
+
+      try {
+        const parsed = JSON.parse(rawData);
+        const target = parsed.user && typeof parsed.user === 'object' ? parsed.user : parsed;
+
+        const fullName = target.fullname || target.name || target.fullName || target.firstName || target.email;
+        if (!fullName) return null;
+
+        const nameParts = String(fullName).trim().split(" ");
+        const firstName = nameParts[0];
+        const initials = nameParts.length > 1
+          ? (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase()
+          : nameParts[0].slice(0, 2).toUpperCase();
+
+        return { fullname: String(fullName), firstName, initials };
+      } catch (e) {
+        console.error("Failed to parse admin session", e);
+        return null;
+      }
+    };
+
+    setAdminUser(checkAdminSession());
+  }, []);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -54,7 +89,7 @@ export default function TreasuryHeader({
         <button
           type="button"
           onClick={toggleTheme}
-          className="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+          className="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
           aria-label="Toggle theme"
         >
           {theme === "dark" ? (
@@ -71,7 +106,7 @@ export default function TreasuryHeader({
         {/* Notification */}
         <button
           type="button"
-          className="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors mr-1"
+          className="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors mr-1 cursor-pointer"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
@@ -85,16 +120,19 @@ export default function TreasuryHeader({
             onClick={() => setIsProfileMenuOpen((v) => !v)}
             className="flex items-center gap-2.5 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 px-2 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all cursor-pointer shadow-xs"
           >
+            {/* Dynamic Initials based on Account Name */}
             <div className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-600 text-[11px] font-bold text-white shadow-inner">
-              {activeRole.charAt(0)}
+              {adminUser ? adminUser.initials : activeRole.charAt(0)}
             </div>
 
             <div className="hidden md:flex flex-col items-start leading-none pr-2">
-              <span className="text-[13px] font-bold text-slate-800 dark:text-white mb-0.5">
-                {activeRole}
+              {/* Dynamic Name based on Account Name */}
+              <span className="text-[13px] font-bold text-slate-800 dark:text-white mb-0.5 truncate max-w-[120px]">
+                {adminUser ? adminUser.firstName : activeRole}
               </span>
+              {/* Uses the Active Role (e.g. Administrator) as the sub-title */}
               <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
-                Staff
+                {activeRole}
               </span>
             </div>
           </button>
@@ -102,6 +140,12 @@ export default function TreasuryHeader({
           {/* Inline Dropdown Menu (Drops downwards) */}
           {isProfileMenuOpen && (
             <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 py-1.5 z-50 overflow-hidden">
+              {/* Display full name in dropdown header */}
+              {adminUser && (
+                <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-800 mb-1">
+                  <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{adminUser.fullname}</p>
+                </div>
+              )}
               <button
                 onClick={() => {
                   setIsProfileMenuOpen(false);
@@ -115,8 +159,13 @@ export default function TreasuryHeader({
               <button
                 onClick={() => {
                   setIsProfileMenuOpen(false);
+                  // Using your existing logout logic here
+                  localStorage.removeItem('currentUser');
+                  localStorage.removeItem('user');
+                  sessionStorage.removeItem('currentUser');
+                  sessionStorage.removeItem('user');
                   notify("You have been logged out.");
-                  navigate("/");
+                  navigate("/login");
                 }}
                 className="w-full text-left px-4 py-2.5 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
               >
