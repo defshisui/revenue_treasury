@@ -1,8 +1,8 @@
-/* RPT_TABLE_WIDE_LAYOUT */
 import { useEffect, useMemo, useState, useRef } from "react";
 import type { ChangeEvent, FormEvent, ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import logoSystem from "/src/assets/logo-system.png";
+import { API_BASE_URL } from '../config/api';
 
 type ApplicantType = "Property Owner" | "Authorized Representative" | "Corporation / Company";
 
@@ -42,7 +42,7 @@ interface RPTApplicationRecord {
   paymentReference?: string;
   officialReceiptNumber?: string;
   paymentDate?: string;
-} 
+}
 
 interface CitizenRPTRecord {
   id: string;
@@ -86,7 +86,9 @@ interface RPTFormData {
   notes: string;
 }
 
-import { API_BASE_URL } from '../config/api';
+export interface RealPropertyApplicationProps {
+  isCollapsed?: boolean;
+}
 
 const services = [
   "Transfer of Ownership",
@@ -143,7 +145,7 @@ function getStoredCitizenSession() {
     const email = target.email || "";
     const nameParts = String(fullName).trim().split(" ");
     const firstName = nameParts[0];
-    const initials = nameParts.length > 1 
+    const initials = nameParts.length > 1
       ? (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase()
       : nameParts[0].slice(0, 2).toUpperCase();
 
@@ -183,24 +185,24 @@ function formatDate(date: string) {
   return new Intl.DateTimeFormat("en-PH", { year: "numeric", month: "short", day: "numeric" }).format(new Date(`${date}T00:00:00`));
 }
 
-export default function RealPropertyApplication() {
+export default function RealPropertyApplication({ isCollapsed = false }: RealPropertyApplicationProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   const [user, setUser] = useState<{ fullname: string; email: string; initials: string; firstName: string } | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const [applications, setApplications] = useState<RPTApplicationRecord[]>([]);
   const [formData, setFormData] = useState<RPTFormData>(createEmptyForm);
-  const [documents, setDocuments] = useState<{ [key: string]: string }>({ 
-    ownershipProof: "", 
-    validId: "", 
-    taxRecord: "", 
-    propertySketch: "", 
-    authorization: "" 
+  const [documents, setDocuments] = useState<{ [key: string]: string }>({
+    ownershipProof: "",
+    validId: "",
+    taxRecord: "",
+    propertySketch: "",
+    authorization: ""
   });
-  
+
   const initialView = new URLSearchParams(location.search).get("view");
   const [currentView, setCurrentView] = useState<"hub" | "status" | "form">(
     initialView === "status" ? "status" : initialView === "form" ? "form" : "hub"
@@ -271,7 +273,7 @@ export default function RealPropertyApplication() {
     sessionStorage.removeItem('user');
     setUser(null);
     setIsDropdownOpen(false);
-    window.location.href = '/'; 
+    window.location.href = '/';
   };
 
   const filteredApplications = useMemo(() => {
@@ -399,7 +401,7 @@ export default function RealPropertyApplication() {
 
   async function submitApplication() {
     const generatedControlNo = makeControlNumber();
-    
+
     const formDataPayload = new FormData();
     formDataPayload.append("controlNumber", generatedControlNo);
     formDataPayload.append("taxDeclarationNumber", formData.taxDeclarationNumber || "For issuance");
@@ -437,7 +439,7 @@ export default function RealPropertyApplication() {
       setIsPreviewOpen(false);
       setCurrentView("status");
       setIsFormOpen(false);
-      
+
       const assignedControlNumber = savedApp.controlNumber || generatedControlNo;
       setNotice(`Application submitted. Your control number is ${assignedControlNumber}.`);
       navigate("/citizen-rpt?view=status");
@@ -472,236 +474,250 @@ export default function RealPropertyApplication() {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-100 dark:bg-slate-950 font-sans text-slate-800 dark:text-slate-100">
-      <div className="w-full bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-xs">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => window.location.href = '/citizen-portal'}>
-            <div className="p-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xs flex items-center justify-center">
-              <img src={logoSystem} alt="System Logo" className="h-8 w-8 object-contain" />
-            </div>
-            <div className="flex flex-col">
-              <span className="font-extrabold text-lg tracking-tight text-slate-900 dark:text-white leading-tight">Gov Serv</span>
-              <span className="text-[10px] font-bold text-blue-700 dark:text-blue-400 tracking-wider uppercase">Unified Portal</span>
-            </div>
-          </div>
-
-          <div className="hidden md:flex items-center space-x-6 text-xs font-semibold text-slate-600 dark:text-slate-300">
-            <span className="hover:text-blue-700 cursor-pointer" onClick={() => window.location.href = '/citizen-portal'}>HOME</span>
-            
-            <div className="relative group py-2">
-              <span className="hover:text-blue-700 cursor-pointer flex items-center gap-1 select-none">SERVICES ▾</span>
-              <div className="absolute left-0 top-full h-2 w-full"></div>
-              <div className="absolute left-0 top-[calc(100%+8px)] w-60 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 py-2 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-1 group-hover:translate-y-0">
-                <button onClick={() => window.location.href = '/citizen-portal'} className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer">Home</button>
-                <button onClick={() => window.location.href = '/market-vendors-hub'} className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer">Market &amp; Vendors Hub</button>
-                <button onClick={() => window.location.href = '/citizen-rpt'} className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer">Real Property Tax Hub</button>
-                <button onClick={() => window.location.href = '/business-tax-assessment'} className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer">Business Tax Assessment Hub</button>
+    <div
+      style={{
+        marginLeft: isCollapsed ? "80px" : "0px",
+        width: isCollapsed ? "calc(100% - 80px)" : "100%",
+      }}
+      className="min-h-screen flex flex-col justify-between bg-slate-100 dark:bg-slate-950 font-sans text-slate-800 dark:text-slate-100 transition-all duration-300 box-border"
+    >
+      <div>
+        {/* Top Header / Banner Area */}
+        <div className="w-full bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-xs">
+          <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 cursor-pointer" onClick={() => window.location.href = '/citizen-portal'}>
+                <div className="p-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xs flex items-center justify-center">
+                  <img src={logoSystem} alt="System Logo" className="h-8 w-8 object-contain" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="font-extrabold text-lg tracking-tight text-slate-900 dark:text-white leading-tight">Gov Serv</span>
+                  <span className="text-[10px] font-bold text-blue-700 dark:text-blue-400 tracking-wider uppercase">Unified Portal</span>
+                </div>
               </div>
             </div>
 
-            <span className="hover:text-blue-700 cursor-pointer">CONTACT US</span>
-          </div>
+            <div className="hidden md:flex items-center space-x-6 text-xs font-semibold text-slate-600 dark:text-slate-300">
+              <span className="hover:text-blue-700 cursor-pointer" onClick={() => window.location.href = '/citizen-portal'}>HOME</span>
 
-          <div className="flex items-center space-x-3">
-            {user ? (
-              <div className="relative" ref={dropdownRef}>
-                <button onClick={() => setIsDropdownOpen(!isDropdownOpen)} className="flex items-center space-x-2.5 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-xl transition-all cursor-pointer shadow-xs group">
-                  <span className="text-xs font-extrabold text-slate-800 dark:text-slate-200 tracking-tight">Hi, {user.firstName}</span>
-                  <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-[10px] shadow-sm tracking-wider">{user.initials}</div>
-                </button>
+              <div className="relative group py-2">
+                <span className="hover:text-blue-700 cursor-pointer flex items-center gap-1 select-none">SERVICES ▾</span>
+                <div className="absolute left-0 top-full h-2 w-full"></div>
+                <div className="absolute left-0 top-[calc(100%+8px)] w-60 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 py-2 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-1 group-hover:translate-y-0">
+                  <button onClick={() => window.location.href = '/citizen-portal'} className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer">Home</button>
+                  <button onClick={() => window.location.href = '/market-vendors-hub'} className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer">Market &amp; Vendors Hub</button>
+                  <button onClick={() => window.location.href = '/citizen-rpt'} className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer">Real Property Tax Hub</button>
+                  <button onClick={() => window.location.href = '/business-tax-assessment'} className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer">Business Tax Assessment Hub</button>
+                </div>
+              </div>
 
-                {isDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-52 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 py-2 z-50">
-                    <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-800 mb-1">
-                      <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{user.fullname}</p>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{user.email}</p>
+              <span className="hover:text-blue-700 cursor-pointer">CONTACT US</span>
+            </div>
+
+            <div className="flex items-center space-x-3">
+              {user ? (
+                <div className="relative" ref={dropdownRef}>
+                  <button onClick={() => setIsDropdownOpen(!isDropdownOpen)} className="flex items-center space-x-2.5 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-xl transition-all cursor-pointer shadow-xs group">
+                    <span className="text-xs font-extrabold text-slate-800 dark:text-slate-200 tracking-tight">Hi, {user.firstName}</span>
+                    <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-[10px] shadow-sm tracking-wider">{user.initials}</div>
+                  </button>
+
+                  {isDropdownOpen && (
+                    <div className="absolute right-0 mt-2 w-52 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 py-2 z-50">
+                      <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-800 mb-1">
+                        <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{user.fullname}</p>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{user.email}</p>
+                      </div>
+                      <button onClick={() => { setIsDropdownOpen(false); window.location.href = '/edit-profile'; }} className="w-full text-left px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer">Edit Profile</button>
+                      <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer border-t border-slate-100 dark:border-slate-800 mt-1 pt-2">Log Out</button>
                     </div>
-                    <button onClick={() => { setIsDropdownOpen(false); window.location.href = '/edit-profile'; }} className="w-full text-left px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer">Edit Profile</button>
-                    <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer border-t border-slate-100 dark:border-slate-800 mt-1 pt-2">Log Out</button>
-                  </div>
+                  )}
+                </div>
+              ) : (
+                <button onClick={() => window.location.href = '/login'} className="bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs px-4 py-2 rounded-xl shadow transition-all cursor-pointer">Login / Register</button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Hero Banner Area */}
+        <div className="relative w-full bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 h-36 sm:h-48 overflow-hidden flex items-center justify-center border-b-4 border-blue-600">
+          <div className="absolute inset-0 opacity-30 bg-[radial-gradient(#3b82f6_1px,transparent_1px)] [background-size:16px_16px]"></div>
+          <div className="relative z-10 text-center px-4">
+            <h1 className="text-xl sm:text-3xl font-extrabold text-white tracking-wide uppercase">
+              {currentView === 'hub' ? 'WELCOME TO REAL PROPERTY TAX' : currentView === 'status' ? 'APPLICATION STATUS' : 'REAL PROPERTY TAX APPLICATION'}
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-200 mt-1 max-w-xl mx-auto">
+              Manage your real property tax services and submissions directly through the secure database portal.
+            </p>
+          </div>
+        </div>
+
+        {/* Main Body Content Container */}
+        <div className="max-w-6xl mx-auto px-4 py-8 w-full">
+          <section className={currentView === "hub" ? "" : "overflow-hidden rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm"}>
+            {currentView !== "hub" && (
+              <div className="border-b border-slate-200 dark:border-slate-800 px-6 py-6 sm:px-8">
+                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-blue-700">Office of the City Assessor</p>
+                <div className="mt-2">
+                  <h3 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white sm:text-3xl">Real Property Tax Portal</h3>
+                  <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">Submit a single tax declaration request, attach requirements, and track records stored securely.</p>
+                </div>
+              </div>
+            )}
+
+            {notice && <div role="status" className="mx-6 mt-6 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-900 sm:mx-8">{notice}</div>}
+
+            {currentView === "hub" ? (
+              <div className="py-2 sm:py-4">
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                  <button type="button" onClick={openApplicationStatus} className="group min-h-[205px] rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-7 text-left shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg cursor-pointer flex flex-col justify-between">
+                    <div>
+                      <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-950/50 text-2xl text-blue-600">✓</div>
+                      <h3 className="text-base font-extrabold uppercase tracking-wide text-blue-900 dark:text-blue-300">CHECK APPLICATION STATUS</h3>
+                      <p className="mt-3 max-w-xl text-sm leading-6 text-slate-600 dark:text-slate-400">Find your control number, review updates, or settle tax assessment balances.</p>
+                    </div>
+                    <span className="mt-6 inline-flex rounded-xl bg-blue-800 px-5 py-2.5 text-xs font-bold text-white shadow-sm transition group-hover:bg-blue-900 self-start">CHECK STATUS</span>
+                  </button>
+
+                  <button type="button" onClick={startApplication} className="group min-h-[205px] rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-7 text-left shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg cursor-pointer flex flex-col justify-between">
+                    <div>
+                      <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-950/50 text-2xl text-blue-600">▤</div>
+                      <h3 className="text-base font-extrabold uppercase tracking-wide text-blue-900 dark:text-blue-300">REAL PROPERTY TAX APPLICATION</h3>
+                      <p className="mt-3 max-w-xl text-sm leading-6 text-slate-600 dark:text-slate-400">Submit a new tax declaration request or property record update.</p>
+                    </div>
+                    <span className="mt-6 inline-flex rounded-xl bg-blue-800 px-5 py-2.5 text-xs font-bold text-white shadow-sm transition group-hover:bg-blue-900 self-start">PROCEED WITH RPT APPLICATION</span>
+                  </button>
+                </div>
+              </div>
+            ) : isFormOpen ? (
+              <div className="p-6 sm:p-8">
+                <div className="mb-5 flex justify-start">
+                  <button type="button" onClick={goHome} className="rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-5 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 shadow-sm transition-colors hover:bg-slate-50 cursor-pointer">
+                    ← Back Home
+                  </button>
+                </div>
+
+                {!isPreviewOpen ? (
+                  <form onSubmit={openReview} className="space-y-7">
+                    <div>
+                      <h3 className="text-base font-extrabold text-slate-900 dark:text-white">Transaction details</h3>
+                      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <Field label="Requested service" required><select name="service" value={formData.service} onChange={updateForm} className={inputClass}>{services.map((service) => <option key={service}>{service}</option>)}</select></Field>
+                        <Field label="Applying as" required><select name="applicantType" value={formData.applicantType} onChange={updateForm} className={inputClass}><option>Property Owner</option><option>Authorized Representative</option><option>Corporation / Company</option></select></Field>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-slate-100 dark:border-slate-800 pt-7">
+                      <h3 className="text-base font-extrabold text-slate-900 dark:text-white">Applicant information</h3>
+                      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        <Field label="Property owner / company name" required><input name="ownerName" value={formData.ownerName} onChange={updateForm} required className={inputClass} /></Field>
+                        <Field label="Applicant name" required><input name="applicantName" value={formData.applicantName} onChange={updateForm} required className={inputClass} /></Field>
+                        <Field label="Email address" required><input type="email" name="email" value={formData.email} onChange={updateForm} required className={inputClass} /></Field>
+                        <Field label="Mobile number" required><input name="mobileNumber" value={formData.mobileNumber} onChange={updateForm} inputMode="numeric" placeholder="09XXXXXXXXX" required className={inputClass} /></Field>
+                        <Field label="TIN"><input name="tin" value={formData.tin} onChange={updateForm} className={inputClass} /></Field>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-slate-100 dark:border-slate-800 pt-7">
+                      <h3 className="text-base font-extrabold text-slate-900 dark:text-white">Property information</h3>
+                      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        <Field label="Tax Declaration number"><input name="taxDeclarationNumber" value={formData.taxDeclarationNumber} onChange={updateForm} placeholder="e.g. 12345-67890" className={inputClass} /></Field>
+                        <Field label="Property type" required><select name="propertyType" value={formData.propertyType} onChange={updateForm} className={inputClass}><option>Residential</option><option>Commercial</option><option>Industrial</option><option>Agricultural</option><option>Mixed Use</option></select></Field>
+                        <Field label="Barangay" required><input name="barangay" value={formData.barangay} onChange={updateForm} required className={inputClass} /></Field>
+                        <div className="md:col-span-2 lg:col-span-3"><Field label="Property location" required><input name="propertyLocation" value={formData.propertyLocation} onChange={updateForm} placeholder="House / lot number, street, subdivision" required className={inputClass} /></Field></div>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-slate-100 dark:border-slate-800 pt-7">
+                      <h3 className="text-base font-extrabold text-slate-900 dark:text-white">Documentary requirements</h3>
+                      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        <UploadField label="Proof of ownership" name="ownershipProof" onChange={updateDocument} required help="Deed of Sale, title, or applicable proof" />
+                        <UploadField label="Valid government-issued ID" name="validId" onChange={updateDocument} required help="Owner or authorized applicant" />
+                        <UploadField label="Latest tax receipt or Tax Declaration" name="taxRecord" onChange={updateDocument} help="Attach if available" />
+                        <UploadField label="Property sketch / plan" name="propertySketch" onChange={updateDocument} help="Attach if applicable" />
+                        {formData.applicantType === "Authorized Representative" && <UploadField label="Authorization / Special Power of Attorney" name="authorization" onChange={updateDocument} required help="Required for representatives" />}
+                      </div>
+                    </div>
+
+                    <div className="border-t border-slate-100 dark:border-slate-800 pt-7"><Field label="Additional notes"><textarea name="notes" value={formData.notes} onChange={updateForm} rows={3} className={inputClass} placeholder="Add details that may help the assessor review this request." /></Field></div>
+
+                    <div className="flex flex-col-reverse gap-3 border-t border-slate-100 dark:border-slate-800 pt-6 sm:flex-row sm:justify-end">
+                      <button type="button" onClick={cancelApplication} className="rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-5 py-3 text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 cursor-pointer">Cancel</button>
+                      <button type="submit" className="rounded-xl bg-blue-800 px-6 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-blue-900 cursor-pointer">Review Application</button>
+                    </div>
+                  </form>
+                ) : (
+                  <section className="space-y-6">
+                    <div className="rounded-2xl border border-blue-100 bg-blue-50 p-5"><h3 className="text-lg font-extrabold text-blue-950">Review your application</h3></div>
+                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                      <Summary title="Transaction details" items={[["Service", formData.service], ["Applicant type", formData.applicantType], ["Tax Declaration", formData.taxDeclarationNumber || "For issuance"], ["Property type", formData.propertyType]]} />
+                      <Summary title="Applicant and property" items={[["Property owner", formData.ownerName], ["Applicant", formData.applicantName], ["Email", formData.email], ["Mobile", formData.mobileNumber], ["Property location", `${formData.propertyLocation}, ${formData.barangay}`]]} />
+                    </div>
+                    <Summary title="Attached documents" items={documentItems.map((item) => [item.label, item.value])} />
+                    <div className="flex flex-col-reverse gap-3 border-t border-slate-100 dark:border-slate-800 pt-6 sm:flex-row sm:justify-end">
+                      <button type="button" onClick={() => setIsPreviewOpen(false)} className="rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-5 py-3 text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 cursor-pointer">Back to Edit</button>
+                      <button type="button" onClick={submitApplication} className="rounded-xl bg-blue-800 px-6 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-blue-900 cursor-pointer">Confirm and Submit</button>
+                    </div>
+                  </section>
                 )}
               </div>
             ) : (
-              <button onClick={() => window.location.href = '/login'} className="bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs px-4 py-2 rounded-xl shadow transition-all cursor-pointer">Login / Register</button>
+              <div className="p-6 sm:p-8">
+                <div className="mb-4 flex justify-start">
+                  <button type="button" onClick={goHome} className="rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-5 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 shadow-sm transition-colors hover:bg-slate-50 cursor-pointer">
+                    ← Back Home
+                  </button>
+                </div>
+
+                <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                  <p className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-bold text-blue-700">APPLICATION STATUS</p>
+                  <label className="text-xs font-bold uppercase tracking-wide text-slate-700 dark:text-slate-300">Search Tax Declaration<input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Tax Declaration, owner, or control no." className="mt-2 block w-full min-w-[260px] rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2.5 text-sm font-medium normal-case tracking-normal outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100" /></label>
+                </div>
+
+                <div className="mt-6 overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-800">
+                  <table className="w-full border-collapse text-left text-xs table-fixed">
+                    <thead className="bg-blue-800 text-white">
+                      <tr>{["#", "Tax Declaration", "Owner Name", "Control No.", "Transaction Status", "Services", "Filed Date", "Amount Due", "Payment Status", "Payment Method", "Action"].map((heading) => <th key={heading} className="px-2 py-3 text-[10px] font-bold uppercase tracking-wide">{heading}</th>)}</tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900">
+                      {filteredApplications.length ? filteredApplications.map((application, index) => {
+                        const rptRecord = rptRecords.find((record) => String(record.taxDeclarationNumber || "").trim().toLowerCase() === String(application.taxDeclarationNumber || "").trim().toLowerCase());
+                        const balance = rptRecord ? getRPTAmountDue(rptRecord) : null;
+                        const isPaid = rptRecord ? (balance !== null && balance <= 0) || String(rptRecord.status || "").toLowerCase() === "paid" : false;
+                        const paymentStatus = rptRecord ? (isPaid ? "Paid" : (rptRecord.paymentStatus || "Unpaid")) : "Not available";
+
+                        return (
+                          <tr key={application.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                            <td className="px-2 py-3 font-semibold text-slate-500">{index + 1}</td>
+                            <td className="px-2 py-3 font-bold text-slate-800 dark:text-slate-200">{application.taxDeclarationNumber}</td>
+                            <td className="px-2 py-3 text-slate-700 dark:text-slate-300">{application.ownerName}</td>
+                            <td className="px-2 py-3 font-mono font-semibold text-blue-700 dark:text-blue-400">{application.controlNumber}</td>
+                            <td className="px-2 py-3"><span className="rounded-full border border-blue-200 bg-blue-50 dark:bg-blue-950/40 px-2.5 py-1 font-bold text-blue-700 dark:text-blue-400">{application.status}</span></td>
+                            <td className="max-w-48 px-2 py-3 text-slate-600 dark:text-slate-400">{application.service}</td>
+                            <td className="px-2 py-3 text-slate-600 dark:text-slate-400">{formatDate(application.filedDate)}</td>
+                            <td className="px-2 py-3 font-bold text-slate-900 dark:text-white">{balance === null ? "—" : formatCurrency(balance)}</td>
+                            <td className="px-2 py-3"><span className="rounded-full border px-2.5 py-1 font-bold">{paymentStatus}</span></td>
+                            <td className="px-2 py-3 text-slate-600 dark:text-slate-400">{rptRecord?.paymentMethod || "—"}</td>
+                            <td className="px-2 py-3">
+                              <div className="flex flex-col gap-2">
+                                <button type="button" onClick={() => setSelectedApplication(application)} className="font-bold text-blue-700 dark:text-blue-400 hover:text-blue-900 cursor-pointer">View details</button>
+                                {rptRecord && balance !== null && balance > 0 && (
+                                  <button type="button" onClick={() => startPaymentForRecord(rptRecord)} className="font-bold text-blue-700 dark:text-blue-400 hover:text-blue-900 cursor-pointer">Pay RPT</button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      }) : <tr><td colSpan={11} className="px-2 py-12 text-center text-sm font-medium text-slate-500">No application available.</td></tr>}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             )}
-          </div>
+          </section>
         </div>
       </div>
-
-      <div className="relative overflow-hidden bg-[#122261] rounded-3xl mx-4 sm:mx-6 lg:mx-auto max-w-7xl w-full mt-6 p-8 sm:p-12 text-white shadow-lg flex flex-col justify-center bg-[radial-gradient(#1e3a8a_1px,transparent_1px)] [background-size:16px_16px]">
-        <div className="absolute right-[-20px] bottom-[-40px] pointer-events-none opacity-10 select-none">
-          <img src={logoSystem} alt="" className="w-80 h-80 sm:w-96 sm:h-96 object-contain" />
-        </div>
-        <div className="relative z-10 flex flex-col items-start space-y-3 max-w-2xl">
-          <span className="bg-blue-500/30 text-blue-200 text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full border border-blue-400/30">REAL PROPERTY TAX PORTAL</span>
-          <h2 className="text-3xl font-black tracking-wide text-white md:text-4xl">WELCOME TO REAL PROPERTY TAX</h2>
-          <p className="text-xs sm:text-sm text-blue-100 leading-relaxed">Manage your real property tax services and submissions directly through the secure database portal.</p>
-        </div>
-      </div>
-
-      <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <section className={currentView === "hub" ? "" : "overflow-hidden rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm"}>
-          {currentView !== "hub" && (
-            <div className="border-b border-slate-200 dark:border-slate-800 px-6 py-6 sm:px-8">
-              <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-blue-700">Office of the City Assessor</p>
-              <div className="mt-2">
-                <h3 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white sm:text-4xl">Real Property Tax Application</h3>
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">Submit a single tax declaration request, attach requirements, and track records stored in PostgreSQL.</p>
-              </div>
-            </div>
-          )}
-
-          {notice && <div role="status" className="mx-6 mt-6 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-900 sm:mx-8">{notice}</div>}
-
-          {currentView === "hub" ? (
-            <div className="py-2 sm:py-4">
-              <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-                <button type="button" onClick={openApplicationStatus} className="group min-h-[205px] rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-7 text-left shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg cursor-pointer flex flex-col justify-between">
-                  <div>
-                    <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-950/50 text-2xl text-blue-600">✓</div>
-                    <h3 className="text-base font-extrabold uppercase tracking-wide text-blue-900 dark:text-blue-300">CHECK APPLICATION STATUS</h3>
-                    <p className="mt-3 max-w-xl text-sm leading-6 text-slate-600 dark:text-slate-400">Find your control number, review updates, or settle tax assessment balances.</p>
-                  </div>
-                  <span className="mt-6 inline-flex rounded-xl bg-blue-800 px-5 py-2.5 text-xs font-bold text-white shadow-sm transition group-hover:bg-blue-900 self-start">CHECK STATUS</span>
-                </button>
-
-                <button type="button" onClick={startApplication} className="group min-h-[205px] rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-7 text-left shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg cursor-pointer flex flex-col justify-between">
-                  <div>
-                    <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-950/50 text-2xl text-blue-600">▤</div>
-                    <h3 className="text-base font-extrabold uppercase tracking-wide text-blue-900 dark:text-blue-300">REAL PROPERTY TAX APPLICATION</h3>
-                    <p className="mt-3 max-w-xl text-sm leading-6 text-slate-600 dark:text-slate-400">Submit a new tax declaration request or property record update.</p>
-                  </div>
-                  <span className="mt-6 inline-flex rounded-xl bg-blue-800 px-5 py-2.5 text-xs font-bold text-white shadow-sm transition group-hover:bg-blue-900 self-start">PROCEED WITH RPT APPLICATION</span>
-                </button>
-              </div>
-            </div>
-          ) : isFormOpen ? (
-            <div className="p-6 sm:p-8">
-              <div className="mb-5 flex justify-start">
-                <button type="button" onClick={goHome} className="rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-5 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 shadow-sm transition-colors hover:bg-slate-50 cursor-pointer">
-                  ← Back Home
-                </button>
-              </div>
-
-              {!isPreviewOpen ? (
-                <form onSubmit={openReview} className="space-y-7">
-                  <div>
-                    <h3 className="text-base font-extrabold text-slate-900 dark:text-white">Transaction details</h3>
-                    <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-                      <Field label="Requested service" required><select name="service" value={formData.service} onChange={updateForm} className={inputClass}>{services.map((service) => <option key={service}>{service}</option>)}</select></Field>
-                      <Field label="Applying as" required><select name="applicantType" value={formData.applicantType} onChange={updateForm} className={inputClass}><option>Property Owner</option><option>Authorized Representative</option><option>Corporation / Company</option></select></Field>
-                    </div>
-                  </div>
-
-                  <div className="border-t border-slate-100 dark:border-slate-800 pt-7">
-                    <h3 className="text-base font-extrabold text-slate-900 dark:text-white">Applicant information</h3>
-                    <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-                      <Field label="Property owner / company name" required><input name="ownerName" value={formData.ownerName} onChange={updateForm} required className={inputClass} /></Field>
-                      <Field label="Applicant name" required><input name="applicantName" value={formData.applicantName} onChange={updateForm} required className={inputClass} /></Field>
-                      <Field label="Email address" required><input type="email" name="email" value={formData.email} onChange={updateForm} required className={inputClass} /></Field>
-                      <Field label="Mobile number" required><input name="mobileNumber" value={formData.mobileNumber} onChange={updateForm} inputMode="numeric" placeholder="09XXXXXXXXX" required className={inputClass} /></Field>
-                      <Field label="TIN"><input name="tin" value={formData.tin} onChange={updateForm} className={inputClass} /></Field>
-                    </div>
-                  </div>
-
-                  <div className="border-t border-slate-100 dark:border-slate-800 pt-7">
-                    <h3 className="text-base font-extrabold text-slate-900 dark:text-white">Property information</h3>
-                    <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-                      <Field label="Tax Declaration number"><input name="taxDeclarationNumber" value={formData.taxDeclarationNumber} onChange={updateForm} placeholder="e.g. 12345-67890" className={inputClass} /></Field>
-                      <Field label="Property type" required><select name="propertyType" value={formData.propertyType} onChange={updateForm} className={inputClass}><option>Residential</option><option>Commercial</option><option>Industrial</option><option>Agricultural</option><option>Mixed Use</option></select></Field>
-                      <Field label="Barangay" required><input name="barangay" value={formData.barangay} onChange={updateForm} required className={inputClass} /></Field>
-                      <div className="md:col-span-2 lg:col-span-3"><Field label="Property location" required><input name="propertyLocation" value={formData.propertyLocation} onChange={updateForm} placeholder="House / lot number, street, subdivision" required className={inputClass} /></Field></div>
-                    </div>
-                  </div>
-
-                  <div className="border-t border-slate-100 dark:border-slate-800 pt-7">
-                    <h3 className="text-base font-extrabold text-slate-900 dark:text-white">Documentary requirements</h3>
-                    <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-                      <UploadField label="Proof of ownership" name="ownershipProof" onChange={updateDocument} required help="Deed of Sale, title, or applicable proof" />
-                      <UploadField label="Valid government-issued ID" name="validId" onChange={updateDocument} required help="Owner or authorized applicant" />
-                      <UploadField label="Latest tax receipt or Tax Declaration" name="taxRecord" onChange={updateDocument} help="Attach if available" />
-                      <UploadField label="Property sketch / plan" name="propertySketch" onChange={updateDocument} help="Attach if applicable" />
-                      {formData.applicantType === "Authorized Representative" && <UploadField label="Authorization / Special Power of Attorney" name="authorization" onChange={updateDocument} required help="Required for representatives" />}
-                    </div>
-                  </div>
-
-                  <div className="border-t border-slate-100 dark:border-slate-800 pt-7"><Field label="Additional notes"><textarea name="notes" value={formData.notes} onChange={updateForm} rows={3} className={inputClass} placeholder="Add details that may help the assessor review this request." /></Field></div>
-
-                  <div className="flex flex-col-reverse gap-3 border-t border-slate-100 dark:border-slate-800 pt-6 sm:flex-row sm:justify-end">
-                    <button type="button" onClick={cancelApplication} className="rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-5 py-3 text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 cursor-pointer">Cancel</button>
-                    <button type="submit" className="rounded-xl bg-blue-800 px-6 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-blue-900 cursor-pointer">Review Application</button>
-                  </div>
-                </form>
-              ) : (
-                <section className="space-y-6">
-                  <div className="rounded-2xl border border-blue-100 bg-blue-50 p-5"><h3 className="text-lg font-extrabold text-blue-950">Review your application</h3></div>
-                  <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                    <Summary title="Transaction details" items={[["Service", formData.service], ["Applicant type", formData.applicantType], ["Tax Declaration", formData.taxDeclarationNumber || "For issuance"], ["Property type", formData.propertyType]]} />
-                    <Summary title="Applicant and property" items={[["Property owner", formData.ownerName], ["Applicant", formData.applicantName], ["Email", formData.email], ["Mobile", formData.mobileNumber], ["Property location", `${formData.propertyLocation}, ${formData.barangay}`]]} />
-                  </div>
-                  <Summary title="Attached documents" items={documentItems.map((item) => [item.label, item.value])} />
-                  <div className="flex flex-col-reverse gap-3 border-t border-slate-100 dark:border-slate-800 pt-6 sm:flex-row sm:justify-end">
-                    <button type="button" onClick={() => setIsPreviewOpen(false)} className="rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-5 py-3 text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 cursor-pointer">Back to Edit</button>
-                    <button type="button" onClick={submitApplication} className="rounded-xl bg-blue-800 px-6 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-blue-900 cursor-pointer">Confirm and Submit</button>
-                  </div>
-                </section>
-              )}
-            </div>
-          ) : (
-            <div className="p-6 sm:p-8">
-              <div className="mb-4 flex justify-start">
-                <button type="button" onClick={goHome} className="rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-5 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 shadow-sm transition-colors hover:bg-slate-50 cursor-pointer">
-                  ← Back Home
-                </button>
-              </div>
-
-              <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                <p className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-bold text-blue-700">APPLICATION STATUS</p>
-                <label className="text-xs font-bold uppercase tracking-wide text-slate-700 dark:text-slate-300">Search Tax Declaration<input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Tax Declaration, owner, or control no." className="mt-2 block w-full min-w-[260px] rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2.5 text-sm font-medium normal-case tracking-normal outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100" /></label>
-              </div>
-              
-              <div className="mt-6 overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-800">
-                <table className="w-full border-collapse text-left text-xs table-fixed">
-                  <thead className="bg-blue-800 text-white">
-                    <tr>{["#", "Tax Declaration", "Owner Name", "Control No.", "Transaction Status", "Services", "Filed Date", "Amount Due", "Payment Status", "Payment Method", "Action"].map((heading) => <th key={heading} className="px-2 py-3 text-[10px] font-bold uppercase tracking-wide">{heading}</th>)}</tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900">
-                    {filteredApplications.length ? filteredApplications.map((application, index) => {
-                      const rptRecord = rptRecords.find((record) => String(record.taxDeclarationNumber || "").trim().toLowerCase() === String(application.taxDeclarationNumber || "").trim().toLowerCase());
-                      const balance = rptRecord ? getRPTAmountDue(rptRecord) : null;
-                      const isPaid = rptRecord ? (balance !== null && balance <= 0) || String(rptRecord.status || "").toLowerCase() === "paid" : false;
-                      const paymentStatus = rptRecord ? (isPaid ? "Paid" : (rptRecord.paymentStatus || "Unpaid")) : "Not available";
-
-                      return (
-                        <tr key={application.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                          <td className="px-2 py-3 font-semibold text-slate-500">{index + 1}</td>
-                          <td className="px-2 py-3 font-bold text-slate-800 dark:text-slate-200">{application.taxDeclarationNumber}</td>
-                          <td className="px-2 py-3 text-slate-700 dark:text-slate-300">{application.ownerName}</td>
-                          <td className="px-2 py-3 font-mono font-semibold text-blue-700 dark:text-blue-400">{application.controlNumber}</td>
-                          <td className="px-2 py-3"><span className="rounded-full border border-blue-200 bg-blue-50 dark:bg-blue-950/40 px-2.5 py-1 font-bold text-blue-700 dark:text-blue-400">{application.status}</span></td>
-                          <td className="max-w-48 px-2 py-3 text-slate-600 dark:text-slate-400">{application.service}</td>
-                          <td className="px-2 py-3 text-slate-600 dark:text-slate-400">{formatDate(application.filedDate)}</td>
-                          <td className="px-2 py-3 font-bold text-slate-900 dark:text-white">{balance === null ? "—" : formatCurrency(balance)}</td>
-                          <td className="px-2 py-3"><span className="rounded-full border px-2.5 py-1 font-bold">{paymentStatus}</span></td>
-                          <td className="px-2 py-3 text-slate-600 dark:text-slate-400">{rptRecord?.paymentMethod || "—"}</td>
-                          <td className="px-2 py-3">
-                            <div className="flex flex-col gap-2">
-                              <button type="button" onClick={() => setSelectedApplication(application)} className="font-bold text-blue-700 dark:text-blue-400 hover:text-blue-900 cursor-pointer">View details</button>
-                              {rptRecord && balance !== null && balance > 0 && (
-                                <button type="button" onClick={() => startPaymentForRecord(rptRecord)} className="font-bold text-blue-700 dark:text-blue-400 hover:text-blue-900 cursor-pointer">Pay RPT</button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    }) : <tr><td colSpan={11} className="px-2 py-12 text-center text-sm font-medium text-slate-500">No application available.</td></tr>}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </section>
-      </main>
 
       <footer className="w-full bg-blue-950 text-slate-300 text-xs py-4 px-6 border-t border-blue-900 mt-12">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-3">
@@ -735,7 +751,7 @@ export default function RealPropertyApplication() {
               </div>
               <button type="button" onClick={() => setSelectedApplication(null)} className="rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 cursor-pointer">Close</button>
             </div>
-            
+
             <div className="mt-5 space-y-5">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Detail label="Tax Declaration Number" value={selectedApplication.taxDeclarationNumber} />
@@ -750,14 +766,14 @@ export default function RealPropertyApplication() {
                 <Detail label="Barangay" value={selectedApplication.barangay} />
               </div>
               <Detail label="Property Location" value={selectedApplication.propertyLocation} />
-              
+
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500 mb-2">Attached Documents</p>
                 <ul className="list-disc list-inside text-sm font-medium text-slate-800 dark:text-slate-200 space-y-1 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
                   {(() => {
                     let docs = selectedApplication.documents;
                     if (typeof docs === "string") {
-                      try { docs = JSON.parse(docs); } catch {}
+                      try { docs = JSON.parse(docs); } catch { }
                     }
                     if (docs && !Array.isArray(docs) && typeof docs === "object") {
                       docs = Object.entries(docs).filter(([_, v]) => v).map(([k, v]) => `${k}: ${v}`);
