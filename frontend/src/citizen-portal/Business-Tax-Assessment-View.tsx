@@ -1025,9 +1025,9 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
               <button type="button" onClick={() => setPreviewFile(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer font-bold text-lg">✕</button>
             </div>
 
-            {/* Live Embedded Preview Window */}
+            {/* 🔍 FIXED: Checks for base64 data:image/ or standard image extension */}
             <div className="h-[60vh] bg-slate-100 dark:bg-slate-950 rounded-2xl flex items-center justify-center border border-slate-200 dark:border-slate-800 overflow-hidden relative">
-              {previewFile.url.match(/\.(jpeg|jpg|gif|png)$/i) ? (
+              {previewFile.url.startsWith('data:image/') || previewFile.url.match(/\.(jpeg|jpg|gif|png)$/i) ? (
                 <img src={previewFile.url} alt="Document Preview" className="max-h-full max-w-full object-contain" />
               ) : (
                 <iframe src={previewFile.url} title="Document Preview" className="w-full h-full border-0" />
