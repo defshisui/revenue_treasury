@@ -1,5 +1,6 @@
 // src/components/HawkerAssociationApp.tsx
 import { useState, useEffect, useRef } from 'react';
+import logoSystem from '../assets/logo-system.png';
 import { submitHawkerApplication } from '../services/hawkerservice';
 
 interface Props {
@@ -21,8 +22,11 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
     const [isPreviewMode, setIsPreviewMode] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const [entriesCount, setEntriesCount] = useState('0');
+    const [entriesCount, setEntriesCount] = useState('10');
     const [searchQuery, setSearchQuery] = useState('');
+
+    // State to hold submitted applications for the table list
+    const [applications, setApplications] = useState<any[]>([]);
 
     // Logged-in user state & dropdown controls
     const [loggedInUser, setLoggedInUser] = useState<any>(null);
@@ -81,8 +85,8 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
 
                     if (fullname || email) {
                         const nameParts = fullname.split(' ');
-                        const initials = nameParts.length > 1 
-                            ? `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}`.toUpperCase() 
+                        const initials = nameParts.length > 1
+                            ? `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}`.toUpperCase()
                             : (fullname[0] || 'U').toUpperCase();
 
                         const userObj = {
@@ -113,7 +117,7 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
-        
+
         // Restrict phone number to 11 digits max (numbers only)
         if (name === 'telephone') {
             const numericValue = value.replace(/\D/g, '').slice(0, 11);
@@ -215,11 +219,16 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
 
         try {
             setIsSubmitting(true);
+
+            // Mock backend call
             await submitHawkerApplication(payload);
 
             if (onSubmitApplication) {
                 onSubmitApplication(payload);
             }
+
+            // Update local state so it appears in the table immediately
+            setApplications(prev => [payload, ...prev]);
 
             alert("Application successfully submitted to the LGU portal!");
             setFormData(initialFormState);
@@ -263,6 +272,12 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
         setIsUserMenuOpen(false);
     };
 
+    // Derived filtered list for search functionality
+    const displayedApplications = applications.filter(app =>
+        app.associationName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        app.associationNumber.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
     return (
         <div className="w-full min-h-screen bg-slate-100 font-sans text-slate-800 flex flex-col antialiased relative">
 
@@ -273,10 +288,10 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
                     <div className="flex items-center space-x-3.5 cursor-pointer group" onClick={showListView}>
                         <div className="overflow-hidden rounded-xl border border-slate-200/60 shadow-sm transition-transform duration-300 group-hover:scale-105 bg-white p-1">
-                            <img 
-                                src="/src/assets/logo-system.png" 
-                                alt="Gov Serv Logo" 
-                                className="h-12 w-auto object-contain" 
+                            <img
+                                src={logoSystem}
+                                alt="Gov Serv Logo"
+                                className="h-12 w-auto object-contain"
                             />
                         </div>
                         <div>
@@ -293,7 +308,7 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                     <div className="flex items-center space-x-3">
                         {loggedInUser ? (
                             <div className="relative" ref={dropdownRef}>
-                                <button 
+                                <button
                                     onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                                     className="flex items-center space-x-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 px-3.5 py-2 rounded-2xl transition-all cursor-pointer shadow-xs group"
                                 >
@@ -312,18 +327,18 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                             <p className="text-[11px] text-slate-500 truncate">{loggedInUser.email}</p>
                                         </div>
 
-                                        <button 
+                                        <button
                                             onClick={() => {
                                                 setIsUserMenuOpen(false);
                                                 window.location.href = '/edit-profile';
-                                            }} 
+                                            }}
                                             className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center space-x-2 cursor-pointer"
                                         >
                                             <span>Edit Profile</span>
                                         </button>
 
-                                        <button 
-                                            onClick={handleLogout} 
+                                        <button
+                                            onClick={handleLogout}
                                             className="w-full text-left px-4 py-2.5 text-xs font-bold text-rose-600 hover:bg-rose-50 transition-colors flex items-center space-x-2 cursor-pointer border-t border-slate-100 mt-1 pt-2"
                                         >
                                             <span>Log Out</span>
@@ -332,7 +347,7 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                 )}
                             </div>
                         ) : (
-                            <button 
+                            <button
                                 onClick={() => window.location.href = '/login'}
                                 className="bg-blue-900 hover:bg-blue-800 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow transition-all cursor-pointer"
                             >
@@ -362,8 +377,8 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
 
                     <div className="mt-4 space-y-6">
                         <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4">
-                            <button 
-                                onClick={showApplicationForm} 
+                            <button
+                                onClick={showApplicationForm}
                                 className="bg-blue-800 hover:bg-blue-900 text-white text-xs font-semibold py-2 px-4 rounded shadow-sm flex items-center justify-center space-x-1.5 transition-colors w-fit cursor-pointer"
                             >
                                 <span>Add new</span>
@@ -371,11 +386,11 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                             </button>
                             <div className="flex items-center space-x-2 justify-end">
                                 <span className="text-xs text-slate-600">Search:</span>
-                                <input 
-                                    type="text" 
+                                <input
+                                    type="text"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="border border-slate-300 rounded px-2.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 w-full sm:w-56" 
+                                    className="border border-slate-300 rounded px-2.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 w-full sm:w-56"
                                 />
                             </div>
                         </div>
@@ -392,14 +407,32 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr>
-                                        <td colSpan={5} className="bg-slate-50 py-20 text-center">
-                                            <div className="flex flex-col items-center justify-center space-y-1.5 text-slate-400">
-                                                <div className="text-2xl"><i className="fa-solid fa-inbox"></i></div>
-                                                <p className="text-xs font-medium">No Data</p>
-                                            </div>
-                                        </td>
-                                    </tr>
+                                    {displayedApplications.length > 0 ? (
+                                        displayedApplications.map((app) => (
+                                            <tr key={app.id} className="border-b border-slate-200 bg-white hover:bg-slate-50 transition-colors text-xs text-slate-700">
+                                                <td className="py-2.5 px-4 font-semibold text-blue-800">{app.associationNumber}</td>
+                                                <td className="py-2.5 px-4">{app.associationName}</td>
+                                                <td className="py-2.5 px-4">{app.submissionDate}</td>
+                                                <td className="py-2.5 px-4">
+                                                    <span className="px-2 py-1 rounded bg-amber-100 text-amber-800 font-bold uppercase tracking-wider text-[10px]">
+                                                        {app.status}
+                                                    </span>
+                                                </td>
+                                                <td className="py-2.5 px-4 text-center">
+                                                    <button className="text-blue-600 hover:text-blue-800 font-semibold hover:underline text-[11px] cursor-pointer">View</button>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan={5} className="bg-slate-50 py-20 text-center">
+                                                <div className="flex flex-col items-center justify-center space-y-1.5 text-slate-400">
+                                                    <div className="text-2xl"><i className="fa-solid fa-inbox"></i></div>
+                                                    <p className="text-xs font-medium">No Data Found</p>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    )}
                                 </tbody>
                             </table>
                         </div>
@@ -407,7 +440,7 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                         <div className="flex flex-col sm:flex-row justify-between items-center text-xs text-slate-600 pt-1 gap-4">
                             <div className="flex items-center space-x-2">
                                 <span>Ipakita</span>
-                                <select 
+                                <select
                                     value={entriesCount}
                                     onChange={(e) => setEntriesCount(e.target.value)}
                                     className="border border-slate-300 rounded px-1.5 py-0.5 bg-white text-xs focus:outline-none"
@@ -417,7 +450,7 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                     <option value="25">25</option>
                                     <option value="50">50</option>
                                 </select>
-                                <span>ng 0 entries</span>
+                                <span>ng {displayedApplications.length} entries</span>
                             </div>
                         </div>
                     </div>
@@ -445,7 +478,7 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                         <form onSubmit={handleInitialSubmitClick} className="mt-4 space-y-6">
                             <div className="flex flex-col md:flex-row justify-between items-center border-b border-slate-200 pb-5 gap-4">
                                 <div className="w-14 h-14 flex items-center justify-center border border-slate-200 rounded-full bg-white p-2 shadow-xs">
-                                    <img src="/src/assets/logo-system.png" alt="Logo Left" className="w-full h-full object-contain" />
+                                    <img src={logoSystem} alt="Logo Left" className="w-full h-full object-contain" />
                                 </div>
                                 <div className="text-center space-y-0.5">
                                     <p className="text-[10px] uppercase tracking-wider text-slate-500 font-medium">Government Service</p>
@@ -454,7 +487,7 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                     <p className="text-[9px] text-slate-500">Tel No. 1122-3344 Local 1234</p>
                                 </div>
                                 <div className="w-14 h-14 flex items-center justify-center border border-slate-200 rounded-full bg-white p-2 shadow-xs">
-                                    <img src="/src/assets/logo-system.png" alt="Logo Right" className="w-full h-full object-contain" />
+                                    <img src={logoSystem} alt="Logo Right" className="w-full h-full object-contain" />
                                 </div>
                             </div>
 
@@ -465,87 +498,87 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                 </div>
                                 <div className="flex items-center justify-between">
                                     <span className="text-slate-700">Date Submitted:</span>
-                                    <input 
-                                        type="text" 
-                                        value={formData.dateSubmitted} 
-                                        readOnly 
-                                        className="border border-slate-300 rounded px-2.5 py-1 w-56 bg-slate-100 text-slate-600 text-xs cursor-not-allowed focus:outline-none" 
+                                    <input
+                                        type="text"
+                                        value={formData.dateSubmitted}
+                                        readOnly
+                                        className="border border-slate-300 rounded px-2.5 py-1 w-56 bg-slate-100 text-slate-600 text-xs cursor-not-allowed focus:outline-none"
                                     />
                                 </div>
                                 <div className="flex items-center justify-between">
                                     <span className="text-slate-700">Application Status:</span>
-                                    <input 
-                                        type="text" 
-                                        value="New" 
-                                        readOnly 
-                                        className="border border-slate-300 rounded px-2.5 py-1 w-56 bg-slate-100 text-slate-600 text-xs cursor-not-allowed focus:outline-none" 
+                                    <input
+                                        type="text"
+                                        value="New"
+                                        readOnly
+                                        className="border border-slate-300 rounded px-2.5 py-1 w-56 bg-slate-100 text-slate-600 text-xs cursor-not-allowed focus:outline-none"
                                     />
                                 </div>
                                 <div className="flex items-center justify-between">
                                     <span className="text-slate-700">Association Number:</span>
-                                    <input 
-                                        type="text" 
-                                        value={formData.associationNumber} 
-                                        readOnly 
-                                        className="border border-slate-300 rounded px-2.5 py-1 w-56 bg-slate-100 text-slate-600 text-xs cursor-not-allowed focus:outline-none" 
+                                    <input
+                                        type="text"
+                                        value={formData.associationNumber}
+                                        readOnly
+                                        className="border border-slate-300 rounded px-2.5 py-1 w-56 bg-slate-100 text-slate-600 text-xs cursor-not-allowed focus:outline-none"
                                     />
                                 </div>
                             </div>
 
                             <div className="space-y-5 pt-1">
-                                
+
                                 {/* Group 1: Impormasyon */}
                                 <div>
                                     <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wide mb-2.5">Impormasyon</h3>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
                                         <div>
                                             <label className="block font-medium text-slate-700 mb-1">Pangalan Ng Samahan <span className="text-red-500">*</span></label>
-                                            <input 
-                                                type="text" 
-                                                name="associationName" 
-                                                value={formData.associationName} 
-                                                onChange={handleInputChange} 
-                                                readOnly={isPreviewMode} 
-                                                required 
-                                                className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`} 
+                                            <input
+                                                type="text"
+                                                name="associationName"
+                                                value={formData.associationName}
+                                                onChange={handleInputChange}
+                                                readOnly={isPreviewMode}
+                                                required
+                                                className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`}
                                             />
                                         </div>
                                         <div>
                                             <label className="block font-medium text-slate-700 mb-1">SEC Bilang</label>
-                                            <input 
-                                                type="text" 
-                                                name="secNumber" 
-                                                value={formData.secNumber} 
-                                                onChange={handleInputChange} 
-                                                readOnly={isPreviewMode} 
-                                                className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`} 
+                                            <input
+                                                type="text"
+                                                name="secNumber"
+                                                value={formData.secNumber}
+                                                onChange={handleInputChange}
+                                                readOnly={isPreviewMode}
+                                                className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`}
                                             />
                                         </div>
                                         <div>
                                             <label className="block font-medium text-slate-700 mb-1">Petsa ng Pagkākaloob</label>
-                                            <input 
-                                                type="text" 
-                                                name="dateGranted" 
+                                            <input
+                                                type="text"
+                                                name="dateGranted"
                                                 maxLength={10}
-                                                placeholder="MM/DD/YYYY" 
-                                                value={formData.dateGranted} 
-                                                onChange={handleInputChange} 
-                                                readOnly={isPreviewMode} 
-                                                className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`} 
+                                                placeholder="MM/DD/YYYY"
+                                                value={formData.dateGranted}
+                                                onChange={handleInputChange}
+                                                readOnly={isPreviewMode}
+                                                className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`}
                                             />
                                         </div>
                                         <div>
                                             <label className="block font-medium text-slate-700 mb-1">Telepono <span className="text-red-500">*</span></label>
-                                            <input 
-                                                type="text" 
-                                                name="telephone" 
+                                            <input
+                                                type="text"
+                                                name="telephone"
                                                 maxLength={11}
                                                 placeholder="11 digits max"
-                                                value={formData.telephone} 
-                                                onChange={handleInputChange} 
-                                                readOnly={isPreviewMode} 
-                                                required 
-                                                className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`} 
+                                                value={formData.telephone}
+                                                onChange={handleInputChange}
+                                                readOnly={isPreviewMode}
+                                                required
+                                                className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`}
                                             />
                                         </div>
                                     </div>
@@ -589,7 +622,7 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                 <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
                                     <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wide mb-1">Digital Vault Statutory Documents</h3>
                                     <p className="text-[11px] text-slate-500 mb-3">Upload required municipal compliance attachments for MDAD verification:</p>
-                                    
+
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                                         <div className="p-3 bg-white rounded-lg border border-slate-200">
                                             <p className="font-semibold text-slate-800 mb-1">SEC / DTI Permit</p>
@@ -612,49 +645,49 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
                                         <div>
                                             <label className="block font-medium text-slate-700 mb-1">Unang Pangalan <span className="text-red-500">*</span></label>
-                                            <input 
-                                                type="text" 
-                                                name="firstName" 
-                                                value={formData.firstName} 
-                                                onChange={handleInputChange} 
-                                                readOnly={isPreviewMode} 
-                                                required 
-                                                className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`} 
+                                            <input
+                                                type="text"
+                                                name="firstName"
+                                                value={formData.firstName}
+                                                onChange={handleInputChange}
+                                                readOnly={isPreviewMode}
+                                                required
+                                                className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`}
                                             />
                                         </div>
                                         <div>
                                             <label className="block font-medium text-slate-700 mb-1">Gitnang Pangalan</label>
-                                            <input 
-                                                type="text" 
-                                                name="middleName" 
-                                                value={formData.middleName} 
-                                                onChange={handleInputChange} 
-                                                readOnly={isPreviewMode} 
-                                                className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`} 
+                                            <input
+                                                type="text"
+                                                name="middleName"
+                                                value={formData.middleName}
+                                                onChange={handleInputChange}
+                                                readOnly={isPreviewMode}
+                                                className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`}
                                             />
                                         </div>
                                         <div>
                                             <label className="block font-medium text-slate-700 mb-1">Apelyido <span className="text-red-500">*</span></label>
-                                            <input 
-                                                type="text" 
-                                                name="lastName" 
-                                                value={formData.lastName} 
-                                                onChange={handleInputChange} 
-                                                readOnly={isPreviewMode} 
-                                                required 
-                                                className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`} 
+                                            <input
+                                                type="text"
+                                                name="lastName"
+                                                value={formData.lastName}
+                                                onChange={handleInputChange}
+                                                readOnly={isPreviewMode}
+                                                required
+                                                className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`}
                                             />
                                         </div>
                                         <div>
                                             <label className="block font-medium text-slate-700 mb-1">Email Address <span className="text-red-500">*</span></label>
-                                            <input 
-                                                type="email" 
-                                                name="email" 
-                                                value={formData.email} 
-                                                onChange={handleInputChange} 
-                                                readOnly={isPreviewMode} 
-                                                required 
-                                                className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`} 
+                                            <input
+                                                type="email"
+                                                name="email"
+                                                value={formData.email}
+                                                onChange={handleInputChange}
+                                                readOnly={isPreviewMode}
+                                                required
+                                                className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`}
                                             />
                                         </div>
                                     </div>
@@ -664,26 +697,26 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs pt-1">
                                     <div>
                                         <label className="block font-medium text-slate-700 mb-1">Isinumite ni: <span className="text-red-500">*</span></label>
-                                        <input 
-                                            type="text" 
-                                            name="submittedBy" 
-                                            value={formData.submittedBy} 
-                                            onChange={handleInputChange} 
-                                            readOnly={isPreviewMode} 
-                                            required 
-                                            className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`} 
+                                        <input
+                                            type="text"
+                                            name="submittedBy"
+                                            value={formData.submittedBy}
+                                            onChange={handleInputChange}
+                                            readOnly={isPreviewMode}
+                                            required
+                                            className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`}
                                         />
                                     </div>
                                     <div>
                                         <label className="block font-medium text-slate-700 mb-1">Email Address ng nagsumite: <span className="text-red-500">*</span></label>
-                                        <input 
-                                            type="email" 
-                                            name="submitterEmail" 
-                                            value={formData.submitterEmail} 
-                                            onChange={handleInputChange} 
-                                            readOnly={isPreviewMode} 
-                                            required 
-                                            className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`} 
+                                        <input
+                                            type="email"
+                                            name="submitterEmail"
+                                            value={formData.submitterEmail}
+                                            onChange={handleInputChange}
+                                            readOnly={isPreviewMode}
+                                            required
+                                            className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`}
                                         />
                                     </div>
                                 </div>
@@ -692,25 +725,25 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
 
                             {/* Form Action Buttons */}
                             <div className="flex items-center justify-center space-x-3 pt-4 border-t border-slate-100 mt-6">
-                                <button 
+                                <button
                                     type="button"
-                                    onClick={handleCancelClick} 
+                                    onClick={handleCancelClick}
                                     className="bg-white hover:bg-slate-50 text-blue-800 border border-blue-600 font-semibold text-xs py-1.5 px-6 rounded shadow-sm transition-colors cursor-pointer"
                                 >
                                     {isPreviewMode ? "Back to Edit" : "Kanselahin"}
                                 </button>
                                 {isPreviewMode ? (
-                                    <button 
+                                    <button
                                         type="button"
                                         disabled={isSubmitting}
-                                        onClick={handleFinalSubmit} 
+                                        onClick={handleFinalSubmit}
                                         className="bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs py-1.5 px-8 rounded shadow transition-colors cursor-pointer disabled:opacity-50"
                                     >
                                         {isSubmitting ? "Submitting..." : "Confirm & Submit"}
                                     </button>
                                 ) : (
-                                    <button 
-                                        type="submit" 
+                                    <button
+                                        type="submit"
                                         className="bg-blue-900 hover:bg-blue-950 text-white font-semibold text-xs py-1.5 px-8 rounded shadow transition-colors cursor-pointer"
                                     >
                                         Submit
