@@ -504,7 +504,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         marginLeft: isCollapsed ? '80px' : '256px',
         width: isCollapsed ? 'calc(100% - 80px)' : 'calc(100% - 256px)'
       }}
-      className="min-h-screen bg-slate-950 text-slate-100 p-4 sm:p-6 pt-24 transition-all duration-300 box-border flex flex-col font-sans relative selection:bg-blue-600 selection:text-white"
+      className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 p-4 sm:p-6 pt-24 transition-all duration-300 box-border flex flex-col font-sans relative selection:bg-blue-600 selection:text-white"
     >
       {toastMessage && (
         <div className="fixed top-20 right-6 z-50 animate-in fade-in slide-in-from-top-4 duration-300">
@@ -522,30 +522,30 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         </div>
       )}
 
-      {/* MATCHING DARK HEADER BANNER */}
-      <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 p-5 sm:p-6 rounded-2xl border border-slate-800 shadow-sm">
+      {/* HEADER BANNER WITH FULL LIGHT/DARK SUPPORT */}
+      <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
         <div>
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
-            <span className="text-[11px] font-bold text-blue-400 tracking-wider uppercase">
+            <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 tracking-wider uppercase">
               OFFICE OF THE CITY ASSESSOR & TREASURY
             </span>
           </div>
-          <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white mt-1">
+          <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white mt-1">
             Real Property Tax Assessment & Compliance Hub
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             Zoning Accreditation, Document Vault, Fee Licensing & Violation Enforcement
           </p>
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800">
+          <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-200 dark:border-slate-800">
             <button
               onClick={() => setMainViewTab('queue')}
               className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${mainViewTab === 'queue'
                 ? 'bg-blue-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-white'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
             >
               Active Queue ({applications.length})
@@ -554,7 +554,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
               onClick={() => setMainViewTab('citizenAudit')}
               className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${mainViewTab === 'citizenAudit'
                 ? 'bg-blue-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-white'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
             >
               Audit Trail ({citizenAuditTrail.length})
@@ -563,32 +563,22 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         </div>
       </div>
 
-      {/* STATS CARDS ROW (Matching Reference Image Layout) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-        <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 shadow-sm flex flex-col justify-between">
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Applications</span>
-          <div className="text-2xl font-black text-white mt-3">{stats.totalApplications}</div>
-          <span className="text-[10px] text-blue-400 font-semibold mt-1">Registered Submissions</span>
+      {/* STREAMLINED STATS CARDS ROW (Reduced to 3 relevant cards) */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+          <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Applications</span>
+          <div className="text-2xl font-black text-slate-900 dark:text-white mt-3">{stats.totalApplications}</div>
+          <span className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold mt-1">Registered Submissions</span>
         </div>
-        <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 shadow-sm flex flex-col justify-between">
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Under Evaluation</span>
-          <div className="text-2xl font-black text-blue-400 mt-3">{stats.pendingReview}</div>
-          <span className="text-[10px] text-slate-500 font-semibold mt-1">Requires document check</span>
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+          <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Under Evaluation</span>
+          <div className="text-2xl font-black text-blue-600 dark:text-blue-400 mt-3">{stats.pendingReview}</div>
+          <span className="text-[10px] text-slate-400 font-semibold mt-1">Requires document check</span>
         </div>
-        <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 shadow-sm flex flex-col justify-between">
-          <span className="text-[11px] font-bold text-slate-800 uppercase tracking-wider text-amber-400">Inspection / GIS</span>
-          <div className="text-2xl font-black text-amber-400 mt-3">{stats.pendingInspectionOrGIS}</div>
-          <span className="text-[10px] text-slate-500 font-semibold mt-1">Field schedule pending</span>
-        </div>
-        <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 shadow-sm flex flex-col justify-between">
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Ready for Release</span>
-          <div className="text-2xl font-black text-emerald-400 mt-3">{stats.readyForRelease}</div>
-          <span className="text-[10px] text-slate-500 font-semibold mt-1">Certificates ready</span>
-        </div>
-        <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 shadow-sm flex flex-col justify-between">
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Penalties Collected</span>
-          <div className="text-2xl font-black text-purple-400 mt-3">₱{stats.totalPenaltiesCollected.toLocaleString()}</div>
-          <span className="text-[10px] text-slate-500 font-semibold mt-1">Treasury payments</span>
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+          <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">Inspection / GIS</span>
+          <div className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-3">{stats.pendingInspectionOrGIS}</div>
+          <span className="text-[10px] text-slate-400 font-semibold mt-1">Field schedule pending</span>
         </div>
       </div>
 
@@ -596,17 +586,17 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
       {mainViewTab === 'queue' && (
         <div className="flex-1 flex flex-col lg:flex-row overflow-hidden gap-6 h-[calc(100vh-22rem)] min-h-0 w-full">
           <div className="w-full lg:w-[420px] xl:w-[460px] flex-shrink-0 flex flex-col gap-4 min-h-0 h-1/2 lg:h-full">
-            <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 shadow-sm flex flex-col gap-3">
+            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col gap-3">
               <input
                 type="text"
                 placeholder="Search Ref No, Applicant, PIN..."
-                className="w-full px-3.5 py-2.5 border border-slate-800 bg-slate-950 text-slate-100 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-600"
+                className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-600"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
               <div className="grid grid-cols-2 gap-2">
                 <select
-                  className="text-xs p-2.5 border border-slate-800 rounded-xl bg-slate-950 text-slate-300 font-medium cursor-pointer"
+                  className="text-xs p-2.5 border border-slate-300 dark:border-slate-800 rounded-xl bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-medium cursor-pointer"
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
                 >
@@ -616,7 +606,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                   <option value="1.3 New Assessment / Reassessment / Reclassification">1.3 New / Reassessment</option>
                 </select>
                 <select
-                  className="text-xs p-2.5 border border-slate-800 rounded-xl bg-slate-950 text-slate-300 font-medium cursor-pointer"
+                  className="text-xs p-2.5 border border-slate-300 dark:border-slate-800 rounded-xl bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-medium cursor-pointer"
                   value={selectedStatusFilter}
                   onChange={(e) => setSelectedStatusFilter(e.target.value)}
                 >
@@ -628,22 +618,22 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
               </div>
             </div>
 
-            <div className="flex-1 bg-slate-900 rounded-2xl border border-slate-800 shadow-sm overflow-hidden flex flex-col min-h-0">
-              <div className="p-3.5 bg-slate-950 border-b border-slate-800 text-xs font-bold text-slate-400 uppercase tracking-wider flex justify-between items-center">
+            <div className="flex-1 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden flex flex-col min-h-0">
+              <div className="p-3.5 bg-slate-100 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider flex justify-between items-center">
                 <div className="flex items-center gap-2.5">
                   <input
                     type="checkbox"
                     checked={filteredApplications.length > 0 && selectedAppIds.length === filteredApplications.length}
                     onChange={toggleSelectAll}
-                    className="rounded border-slate-700 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                    className="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
                   />
                   <span>Queue Masterlist ({filteredApplications.length})</span>
                 </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto divide-y divide-slate-800 p-2 space-y-1">
+              <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800 p-2 space-y-1">
                 {filteredApplications.length === 0 ? (
-                  <div className="p-8 text-center text-slate-500 text-xs flex flex-col items-center justify-center space-y-2.5">
+                  <div className="p-8 text-center text-slate-400 text-xs flex flex-col items-center justify-center space-y-2.5">
                     <p>No matching application records found</p>
                   </div>
                 ) : (
@@ -655,26 +645,26 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                       <div
                         key={app.id}
                         className={`w-full text-left p-3 rounded-xl transition-all flex items-start gap-3 border ${isSelected
-                          ? 'bg-blue-950/40 border-blue-600/60 shadow-sm'
-                          : 'bg-transparent border-transparent hover:bg-slate-800/50'
+                          ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-300 dark:border-blue-600/60 shadow-xs'
+                          : 'bg-transparent border-transparent hover:bg-slate-100 dark:hover:bg-slate-800/50'
                           }`}
                       >
                         <input
                           type="checkbox"
                           checked={isChecked}
                           onChange={() => toggleSelectApp(app.id)}
-                          className="mt-1 rounded border-slate-700 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer flex-shrink-0"
+                          className="mt-1 rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer flex-shrink-0"
                         />
                         <button
                           onClick={() => setSelectedAppId(app.id)}
                           className="flex-1 text-left flex flex-col gap-1.5 cursor-pointer"
                         >
                           <div className="flex justify-between items-start gap-2">
-                            <span className="font-bold text-xs sm:text-sm text-white font-mono">
+                            <span className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white font-mono">
                               {app.referenceNumber}
                             </span>
                             <div className="flex items-center gap-1.5 flex-shrink-0">
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-950 text-blue-300 border border-blue-800">
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
                                 {app.status}
                               </span>
                               <button
@@ -683,16 +673,16 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                                   handleDeleteApplication(app.id);
                                 }}
                                 title="Delete Application"
-                                className="text-slate-500 hover:text-rose-400 p-1 rounded transition-colors cursor-pointer"
+                                className="text-slate-400 hover:text-rose-600 p-1 rounded transition-colors cursor-pointer"
                               >
                                 ✕
                               </button>
                             </div>
                           </div>
-                          <div className="text-xs font-semibold text-slate-200 truncate">
+                          <div className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
                             {app.applicantName}
                           </div>
-                          <div className="text-[11px] text-slate-400 truncate">
+                          <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
                             {app.category}
                           </div>
                         </button>
@@ -704,34 +694,34 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
             </div>
           </div>
 
-          <div className="flex-1 bg-slate-900 rounded-2xl border border-slate-800 shadow-sm flex flex-col overflow-hidden min-h-0 h-1/2 lg:h-full">
+          <div className="flex-1 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col overflow-hidden min-h-0 h-1/2 lg:h-full">
             {!currentApp ? (
               <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-3">
-                <h3 className="text-base font-bold text-slate-300">No Application Selected</h3>
-                <p className="text-xs text-slate-500 max-w-sm">Select an application from the queue to inspect documents and workflow steps.</p>
+                <h3 className="text-base font-bold text-slate-700 dark:text-slate-300">No Application Selected</h3>
+                <p className="text-xs text-slate-400 max-w-sm">Select an application from the queue to inspect documents and workflow steps.</p>
               </div>
             ) : (
               <>
-                <div className="p-5 sm:p-6 border-b border-slate-800 bg-slate-950/60 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div className="p-5 sm:p-6 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                   <div>
-                    <h2 className="text-lg sm:text-xl font-black tracking-tight text-white font-mono">
+                    <h2 className="text-lg sm:text-xl font-black tracking-tight text-slate-900 dark:text-white font-mono">
                       {currentApp.referenceNumber}
                     </h2>
-                    <p className="text-xs text-slate-400 mt-1">
-                      Applicant: <span className="font-semibold text-slate-200">{currentApp.applicantName}</span>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                      Applicant: <span className="font-semibold text-slate-800 dark:text-slate-200">{currentApp.applicantName}</span>
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
                     <button
                       onClick={() => handleDeleteApplication(currentApp.id)}
-                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-rose-950/40 text-rose-400 hover:bg-rose-900/50 border border-rose-800 cursor-pointer"
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 hover:bg-rose-100 border border-rose-200 dark:border-rose-800 cursor-pointer"
                     >
                       Delete Application
                     </button>
                     <select
                       value={currentApp.status}
                       onChange={(e) => handleUpdateStatus(e.target.value as StatusType)}
-                      className="text-xs font-semibold px-3 py-2 border border-slate-700 rounded-xl bg-slate-950 text-white cursor-pointer"
+                      className="text-xs font-semibold px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-950 text-slate-800 dark:text-white cursor-pointer"
                     >
                       <option value="Under Evaluation">Under Evaluation</option>
                       <option value="Field Inspection Scheduled">Field Inspection Scheduled</option>
@@ -741,7 +731,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                   </div>
                 </div>
 
-                <div className="flex border-b border-slate-800 bg-slate-950 px-5 text-xs font-bold">
+                <div className="flex border-b border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-950 px-5 text-xs font-bold">
                   {(
                     [
                       ['overview', 'Overview & Uploads'],
@@ -753,8 +743,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                       key={tab}
                       onClick={() => setDetailTab(tab as any)}
                       className={`py-3.5 px-4 border-b-2 transition-colors cursor-pointer whitespace-nowrap ${detailTab === tab
-                        ? 'border-blue-500 text-blue-400 font-black'
-                        : 'border-transparent text-slate-400 hover:text-slate-200'
+                        ? 'border-blue-600 dark:border-blue-500 text-blue-600 dark:text-blue-400 font-black'
+                        : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
                         }`}
                     >
                       {label}
@@ -766,21 +756,21 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                   {detailTab === 'overview' && (
                     <>
                       <section className="space-y-3">
-                        <h3 className="font-bold text-slate-300 uppercase tracking-wider text-[11px]">
+                        <h3 className="font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider text-[11px]">
                           Documents Uploaded by Citizen ({currentApp.documents.length})
                         </h3>
                         <div className="space-y-3">
                           {currentApp.documents.map((doc) => (
-                            <div key={doc.id} className="flex flex-col p-4 border border-slate-800 rounded-xl text-xs bg-slate-950/40 gap-3">
+                            <div key={doc.id} className="flex flex-col p-4 border border-slate-200 dark:border-slate-800 rounded-xl text-xs bg-slate-50 dark:bg-slate-950/40 gap-3">
                               <div className="flex justify-between items-center">
                                 <div>
-                                  <p className="font-bold text-white">{doc.name}</p>
+                                  <p className="font-bold text-slate-900 dark:text-white">{doc.name}</p>
                                   <p className="text-[10px] text-slate-400">Status: {doc.status}</p>
                                 </div>
                                 <div className="flex gap-2">
                                   <button
                                     onClick={() => handleOpenPreview(doc)}
-                                    className="px-3 py-1.5 bg-blue-950 text-blue-300 border border-blue-800 rounded-lg font-semibold cursor-pointer"
+                                    className="px-3 py-1.5 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-lg font-semibold cursor-pointer"
                                   >
                                     Preview
                                   </button>
@@ -803,7 +793,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                         </div>
                       </section>
 
-                      <section className="pt-4 border-t border-slate-800">
+                      <section className="pt-4 border-t border-slate-200 dark:border-slate-800">
                         <button
                           onClick={handleDigitalRelease}
                           className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs cursor-pointer shadow-md"
@@ -817,9 +807,9 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                   {detailTab === 'audit' && (
                     <div className="space-y-2">
                       {currentApp.auditLogs?.map((log) => (
-                        <div key={log.id} className="p-3 border border-slate-800 rounded-xl text-xs bg-slate-950/40">
-                          <p className="font-bold text-slate-200">{log.action}</p>
-                          <span className="text-[10px] text-slate-500">{log.timestamp}</span>
+                        <div key={log.id} className="p-3 border border-slate-200 dark:border-slate-800 rounded-xl text-xs bg-slate-50 dark:bg-slate-950/40">
+                          <p className="font-bold text-slate-800 dark:text-slate-200">{log.action}</p>
+                          <span className="text-[10px] text-slate-400">{log.timestamp}</span>
                         </div>
                       ))}
                     </div>
@@ -828,9 +818,9 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                   {detailTab === 'notifications' && (
                     <div className="space-y-2">
                       {currentApp.notificationLogs?.map((notif) => (
-                        <div key={notif.id} className="p-3 border border-slate-800 rounded-xl text-xs bg-slate-950/40">
-                          <p className="text-slate-200">{notif.message}</p>
-                          <span className="text-[10px] text-slate-500">{notif.timestamp}</span>
+                        <div key={notif.id} className="p-3 border border-slate-200 dark:border-slate-800 rounded-xl text-xs bg-slate-50 dark:bg-slate-950/40">
+                          <p className="text-slate-800 dark:text-slate-200">{notif.message}</p>
+                          <span className="text-[10px] text-slate-400">{notif.timestamp}</span>
                         </div>
                       ))}
                     </div>
@@ -846,26 +836,26 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
       {mainViewTab === 'citizenAudit' && (
         <div className="flex-1 flex flex-col lg:flex-row overflow-hidden gap-6 h-[calc(100vh-22rem)] min-h-0 w-full">
           <div className="w-full lg:w-[420px] xl:w-[460px] flex-shrink-0 flex flex-col gap-4 min-h-0 h-1/2 lg:h-full">
-            <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 shadow-sm flex justify-between items-center">
+            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex justify-between items-center">
               <div>
-                <h3 className="font-bold text-xs uppercase tracking-wider text-slate-300">Citizen Documents Trail</h3>
-                <p className="text-[11px] text-slate-500">Archived records</p>
+                <h3 className="font-bold text-xs uppercase tracking-wider text-slate-700 dark:text-slate-300">Citizen Documents Trail</h3>
+                <p className="text-[11px] text-slate-400">Archived records</p>
               </div>
             </div>
 
-            <div className="flex-1 bg-slate-900 rounded-2xl border border-slate-800 shadow-sm overflow-hidden flex flex-col min-h-0">
-              <div className="flex-1 overflow-y-auto divide-y divide-slate-800 p-2 space-y-1">
+            <div className="flex-1 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden flex flex-col min-h-0">
+              <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800 p-2 space-y-1">
                 {citizenAuditTrail.length === 0 ? (
-                  <div className="p-8 text-center text-slate-500 text-xs">No verified records in the audit trail.</div>
+                  <div className="p-8 text-center text-slate-400 text-xs">No verified records in the audit trail.</div>
                 ) : (
                   citizenAuditTrail.map((app) => (
                     <div
                       key={app.id}
                       onClick={() => setSelectedCitizenAppId(app.id)}
-                      className="p-3 rounded-xl border border-slate-800 cursor-pointer hover:bg-slate-800/50 bg-slate-950/40"
+                      className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/50 bg-slate-50 dark:bg-slate-950/40"
                     >
-                      <div className="font-bold text-xs font-mono text-white">{app.referenceNumber}</div>
-                      <div className="text-xs text-slate-300">{app.applicantName}</div>
+                      <div className="font-bold text-xs font-mono text-slate-900 dark:text-white">{app.referenceNumber}</div>
+                      <div className="text-xs text-slate-600 dark:text-slate-300">{app.applicantName}</div>
                     </div>
                   ))
                 )}
@@ -873,22 +863,22 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
             </div>
           </div>
 
-          <div className="flex-1 bg-slate-900 rounded-2xl border border-slate-800 shadow-sm flex flex-col overflow-hidden min-h-0 h-1/2 lg:h-full">
+          <div className="flex-1 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col overflow-hidden min-h-0 h-1/2 lg:h-full">
             {!currentCitizenApp ? (
-              <div className="flex-1 flex items-center justify-center p-8 text-center text-xs text-slate-500">
+              <div className="flex-1 flex items-center justify-center p-8 text-center text-xs text-slate-400">
                 Select an archived record from the list.
               </div>
             ) : (
               <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                <h2 className="text-lg font-black font-mono text-white">{currentCitizenApp.referenceNumber}</h2>
+                <h2 className="text-lg font-black font-mono text-slate-900 dark:text-white">{currentCitizenApp.referenceNumber}</h2>
                 <div className="space-y-2 pt-2">
-                  <h3 className="text-xs font-bold uppercase text-slate-400">Archived Documents</h3>
+                  <h3 className="text-xs font-bold uppercase text-slate-500">Archived Documents</h3>
                   {currentCitizenApp.documents.map((doc) => (
-                    <div key={doc.id} className="p-3 border border-slate-800 rounded-xl flex justify-between items-center text-xs bg-slate-950/40">
-                      <span className="text-slate-200">{doc.name}</span>
+                    <div key={doc.id} className="p-3 border border-slate-200 dark:border-slate-800 rounded-xl flex justify-between items-center text-xs bg-slate-50 dark:bg-slate-950/40">
+                      <span className="text-slate-800 dark:text-slate-200">{doc.name}</span>
                       <button
                         onClick={() => handleOpenPreview(doc)}
-                        className="px-3 py-1 bg-blue-950 text-blue-300 border border-blue-800 rounded-lg font-semibold cursor-pointer"
+                        className="px-3 py-1 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-lg font-semibold cursor-pointer"
                       >
                         Preview
                       </button>
@@ -909,12 +899,12 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
 
       {/* POP-UP DOCUMENT PREVIEW LIGHTBOX MODAL */}
       {previewDocUrl && (
-        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl h-[85vh] shadow-2xl overflow-hidden flex flex-col">
-            <div className="p-4 bg-slate-950 text-white flex justify-between items-center border-b border-slate-800">
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-4xl h-[85vh] shadow-2xl overflow-hidden flex flex-col">
+            <div className="p-4 bg-slate-900 text-white flex justify-between items-center border-b border-slate-800">
               <div className="flex items-center gap-2">
                 <span className="text-xs uppercase font-bold text-blue-400">Document Inspector</span>
-                <span className="text-xs text-slate-400 truncate max-w-md">({previewDocTitle})</span>
+                <span className="text-xs text-slate-300 truncate max-w-md">({previewDocTitle})</span>
               </div>
               <button
                 onClick={() => setPreviewDocUrl(null)}
@@ -923,7 +913,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                 Close ✕
               </button>
             </div>
-            <div className="flex-1 bg-slate-950 overflow-auto flex items-center justify-center p-4">
+            <div className="flex-1 bg-slate-100 dark:bg-slate-950 overflow-auto flex items-center justify-center p-4">
               {(() => {
                 const url = previewDocUrl;
                 const isPdf = url.toLowerCase().includes('.pdf') || url.startsWith('data:application/pdf') || url.toLowerCase().endsWith('.pdf');
