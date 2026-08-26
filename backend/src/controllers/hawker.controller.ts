@@ -107,33 +107,33 @@ export async function updateHawkerStatus(req: Request, res: Response): Promise<v
 }
 
 // ==========================================
-// NEW: Delete Hawker Association
+// NEW: Delete Hawker Association (Mirrored from market stall logic)
 // ==========================================
 export async function deleteHawker(req: Request, res: Response): Promise<void> {
   const { id } = req.params;
 
   try {
-    // Attempt to delete based on the ID or the Association Number
+    // Checks for both the internal UUID or the string association_number
     const result = await pool.query(
-      `DELETE FROM hawker_associations
-       WHERE id::text=$1 OR association_number=$1
-       RETURNING *`,
+      'DELETE FROM hawker_associations WHERE association_number=$1 OR id::text=$1 RETURNING *',
       [id]
     );
 
-    if (result.rowCount === 0) {
-      res.status(404).json({ message: 'Hawker association record not found.' });
+    if (result.rows.length === 0) {
+      res.status(404).json({ message: 'Hawker record not found in database' });
       return;
     }
 
-    // Log the deletion in your audit trail
+    // Records the deletion in your audit logs perfectly
     await recordAudit(req, 'AUD-HAWKER-DELETE', 'system-admin@lgu.gov.ph', 'admin',
-      'Hawker Module', 'HAWKER_APPLICATION_DELETED', 'WARNING', null,
-      `Deleted association record: ${id}`);
+      'Hawker Module', 'HAWKER_ASSOCIATION_DELETED', 'WARNING', `Deleted hawker record ${id}`, null);
 
-    res.status(200).json({ message: 'Hawker association deleted successfully.' });
+    res.status(200).json({
+      message: 'Hawker association deleted successfully from database',
+      deletedRecord: result.rows[0]
+    });
   } catch (err) {
     console.error('Error deleting hawker association:', err);
-    res.status(500).json({ message: 'Failed to delete hawker association.' });
+    res.status(500).json({ message: 'Failed to delete hawker association from database.' });
   }
 }
