@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import type { FC } from 'react';
+import logoSystem from '../assets/logo-system.png';
 import { API_BASE_URL } from '../config/api';
 
 export interface MarketVendorsHubProps {
@@ -112,7 +113,7 @@ export const MarketVendorsHub: FC<MarketVendorsHubProps> = ({ isCollapsed = fals
               <div className="flex items-center gap-3 cursor-pointer" onClick={() => { window.location.href = '/citizen-portal'; }}>
                 <div className="p-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xs flex items-center justify-center">
                   <img
-                    src="/src/assets/logo-system.png"
+                    src={logoSystem}
                     alt="System Logo"
                     className="h-8 w-8 object-contain"
                   />
