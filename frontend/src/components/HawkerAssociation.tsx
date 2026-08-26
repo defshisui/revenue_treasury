@@ -43,13 +43,12 @@ const MARKET_ZONES = [
   "Welcome Rotonda Stall Area",
 ];
 
-// Moved outside the component to allow use during state initialization
+// Enrich data with LGU specific metadata
 const enrichWithLguMeta = (item: any): ExtendedHawkerRecord => ({
   ...item,
   lguMeta: item.lguMeta || {
     marketZone: MARKET_ZONES[Math.floor(Math.random() * MARKET_ZONES.length)],
     assignedStallCount: Math.floor(10 + Math.random() * 40),
-    // Map existing documents or inject mock data for visual testing if empty
     uploadedDocuments: item.lguMeta?.uploadedDocuments || item.uploadedDocuments || [
       {
         id: crypto.randomUUID(),
@@ -165,7 +164,7 @@ export default function HawkerAssociation({
       console.warn("Backend API unreachable, utilizing local storage:");
     }
 
-    // Fallback to local storage if backend fails
+    // Fallback to local storage
     const savedApplications = localStorage.getItem("hawker_applications");
     if (savedApplications) {
       try {
@@ -212,6 +211,7 @@ export default function HawkerAssociation({
     });
   }, [associations, selectedStatus, searchTerm]);
 
+  // Create Walk-in Record
   const handleCreateAssociation = async (e: React.FormEvent) => {
     e.preventDefault();
     const newRecord: ExtendedHawkerRecord = enrichWithLguMeta({
@@ -250,8 +250,6 @@ export default function HawkerAssociation({
 
     const updated = [newRecord, ...associations];
     setAssociations(updated);
-
-    // Sync Local Storage
     localStorage.setItem("hawker_applications", JSON.stringify(updated));
 
     try {
@@ -282,6 +280,7 @@ export default function HawkerAssociation({
     });
   };
 
+  // Update Status & Audit Trail
   const handleUpdateStatus = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedRecord) return;
@@ -315,8 +314,6 @@ export default function HawkerAssociation({
     });
 
     setAssociations(updated);
-
-    // Sync Local Storage
     localStorage.setItem("hawker_applications", JSON.stringify(updated));
 
     if (itemToUpdate) {
@@ -336,6 +333,7 @@ export default function HawkerAssociation({
     setReviewRemarks("");
   };
 
+  // Add Inspector Violation Notice
   const handleAddViolation = async () => {
     if (!selectedRecord || !inspectionNote.trim()) return;
 
@@ -365,8 +363,6 @@ export default function HawkerAssociation({
     });
 
     setAssociations(updated);
-
-    // Sync Local Storage
     localStorage.setItem("hawker_applications", JSON.stringify(updated));
 
     if (itemToUpdate) {
@@ -384,37 +380,39 @@ export default function HawkerAssociation({
     setInspectionNote("");
   };
 
-  // ROBUST & OPTIMISTIC DELETION (Mirrors the Market Stall Component)
+  // FULL DATABASE DELETE (Matches Market Stall Setup)
   const handleDelete = async (id: string) => {
-    if (window.confirm("Are you sure you want to delete this hawker association registry?")) {
-
+    if (window.confirm(`Are you sure you want to completely delete Hawker Association record ${id}?`)) {
       try {
-        // Attempt backend deletion
-        await fetch(`${API_BASE_URL}/api/hawkers/${id}`, { method: 'DELETE' });
+        // Send DELETE request directly to your DB
+        const response = await fetch(`${API_BASE_URL}/api/hawkers/${id}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          console.warn(`Server responded with ${response.status}. Deleting from UI anyway.`);
+        }
       } catch (err) {
         console.warn("Backend delete failed or unavailable, removing from local UI state anyway:", err);
       }
 
-      // Optimistically remove from UI State
-      setAssociations((prev) => {
-        const updated = prev.filter((item) => item.id !== id);
-
-        // Scrub it from localStorage so it stays deleted even after refresh
+      // Optimistically remove from UI State & Storage
+      setAssociations((prevLeases) => {
+        const updated = prevLeases.filter((l) => l.id !== id);
         try {
-          const savedStr = localStorage.getItem("hawker_applications");
-          if (savedStr) {
-            const savedArr = JSON.parse(savedStr);
-            const filteredArr = savedArr.filter((p: any) => p.id !== id);
-            localStorage.setItem("hawker_applications", JSON.stringify(filteredArr));
-          }
+          localStorage.setItem("hawker_applications", JSON.stringify(updated));
         } catch (e) {
-          console.error("Failed to sync deletion to local storage:", e);
+          console.error("Local storage error on delete");
         }
-
         return updated;
       });
 
-      if (onDeleteRecord) onDeleteRecord(id);
+      if (onDeleteRecord) {
+        onDeleteRecord(id);
+      }
     }
   };
 
