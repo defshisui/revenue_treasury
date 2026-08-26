@@ -1,3 +1,4 @@
+// src/components/real-property-tax.tsx
 import { useEffect, useMemo, useState, useRef } from "react";
 import type { ChangeEvent, FormEvent, ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -19,6 +20,11 @@ type RPTApplicationStatus =
 
 type RPTPaymentStatus = "Unpaid" | "Pending Payment" | "Paid";
 
+interface AttachmentFile {
+  name: string;
+  url: string;
+}
+
 interface RPTApplicationRecord {
   id: string;
   controlNumber: string;
@@ -34,7 +40,7 @@ interface RPTApplicationRecord {
   propertyType: string;
   status: RPTApplicationStatus;
   filedDate: string;
-  documents: string[] | Record<string, any>;
+  documents: AttachmentFile[] | string[] | Record<string, any>;
   rptRecordId?: string;
   amountDue?: number;
   paymentStatus?: RPTPaymentStatus;
@@ -475,7 +481,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
 
     const attachedDocsList = Object.entries(documents)
       .filter((entry) => entry[1])
-      .map(([key, val]) => `${key}: ${val}`);
+      .map(([, val]) => ({ name: val, url: `/uploads/${val}` }));
 
     formDataPayload.append("documents", JSON.stringify(attachedDocsList));
 
@@ -498,6 +504,11 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
       const savedAppResult = await response.json();
       const rawApp = savedAppResult.record || savedAppResult;
 
+      let parsedDocs = rawApp.documents;
+      if (typeof parsedDocs === "string") {
+        try { parsedDocs = JSON.parse(parsedDocs); } catch { parsedDocs = attachedDocsList; }
+      }
+
       const savedApp = {
         ...rawApp,
         controlNumber: rawApp.control_number || rawApp.controlNumber || generatedControlNo,
@@ -510,7 +521,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
         propertyType: rawApp.property_type || rawApp.property_type || formData.propertyType,
         filedDate: rawApp.filed_date || rawApp.filedDate || currentDate,
         status: rawApp.status || "Submitted",
-        documents: rawApp.documents || attachedDocsList,
+        documents: parsedDocs || attachedDocsList,
       };
 
       setApplications([savedApp, ...applications]);
@@ -919,79 +930,56 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
               </div>
               <Detail label="Property Location" value={selectedApplication.propertyLocation || "—"} />
 
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500 mb-2">Attached Documents</p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {(() => {
-                    let docs = selectedApplication.documents;
-                    if (typeof docs === "string") {
-                      try { docs = JSON.parse(docs); } catch { }
+              {/* Uploaded Files Section (Preview Cards matching Business Tax) */}
+              <div className="bg-slate-50 dark:bg-slate-950 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2">
+                <div className="font-semibold text-slate-700 dark:text-slate-300">Submitted Documentary Requirements:</div>
+                {(() => {
+                  let docs = selectedApplication.documents;
+                  if (typeof docs === "string") {
+                    try { docs = JSON.parse(docs); } catch { }
+                  }
+                  if (docs && !Array.isArray(docs) && typeof docs === "object") {
+                    docs = Object.values(docs).filter((v) => v);
+                  }
+
+                  const docArray = Array.isArray(docs) ? docs : [];
+
+                  if (docArray.length === 0) {
+                    return <p className="text-slate-400 italic text-xs">No files attached.</p>;
+                  }
+
+                  return docArray.map((fileObj, idx) => {
+                    let fileName = "Document";
+                    let fileUrl = "";
+
+                    if (typeof fileObj === "object" && fileObj !== null) {
+                      fileName = (fileObj as any).name || "Document";
+                      const rawUrl = (fileObj as any).url || "";
+                      fileUrl = rawUrl.startsWith("http") ? rawUrl : `${API_BASE_URL}${rawUrl}`;
+                    } else {
+                      const docStr = String(fileObj);
+                      fileName = docStr.includes(': ') ? docStr.split(': ')[1].trim() : docStr;
+                      const pathOnly = fileName.startsWith("/uploads/") ? fileName : `/uploads/${fileName}`;
+                      fileUrl = `${API_BASE_URL}${pathOnly}`;
                     }
-                    if (docs && !Array.isArray(docs) && typeof docs === "object") {
-                      docs = Object.values(docs).filter((v) => v);
-                    }
 
-                    const docArray = Array.isArray(docs) ? docs : [];
-
-                    if (docArray.length === 0) {
-                      return <p className="text-slate-500 italic text-sm col-span-full">No documents listed.</p>;
-                    }
-
-                    return docArray.map((doc, idx) => {
-                      const docStr = typeof doc === "string" ? doc : JSON.stringify(doc);
-
-                      let cleanPath = docStr.replace(/["'{}]/g, "").trim();
-                      if (cleanPath.includes(": ")) {
-                        cleanPath = cleanPath.split(": ")[1].trim();
-                      }
-
-                      let fileUrl = "";
-                      let fileName = cleanPath;
-
-                      if (cleanPath.startsWith("/uploads/") || cleanPath.includes(".")) {
-                        const pathOnly = cleanPath.startsWith("/uploads/") ? cleanPath : `/uploads/${cleanPath}`;
-                        fileUrl = `${API_BASE_URL}${pathOnly}`;
-                        fileName = pathOnly.split('/').pop() || cleanPath;
-                      } else if (cleanPath.startsWith("http") || cleanPath.startsWith("blob:")) {
-                        fileUrl = cleanPath;
-                      }
-
-                      const hasValidFile = Boolean(fileUrl);
-
-                      return (
-                        <div key={idx} className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-800 shadow-sm flex flex-col group relative">
-                          {hasValidFile ? (
-                            <div className="w-full h-32 relative bg-slate-200 dark:bg-slate-700 flex flex-col items-center justify-center overflow-hidden">
-                              {fileUrl.toLowerCase().includes('.pdf') ? (
-                                <div className="w-full h-full flex flex-col items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-500">
-                                  <span className="text-[10px] font-bold">PDF DOCUMENT</span>
-                                </div>
-                              ) : (
-                                <img src={fileUrl} alt={`Document ${idx}`} className="w-full h-full object-cover" />
-                              )}
-                              <button
-                                type="button"
-                                onClick={() => setPreviewFile({ name: fileName, url: fileUrl })}
-                                className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-xs font-bold gap-1 cursor-pointer"
-                              >
-                                <span>Preview Document</span>
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="w-full h-32 flex flex-col items-center justify-center p-3 text-center">
-                              <span className="text-[10px] font-medium text-slate-500 break-all line-clamp-3" title={docStr}>{docStr}</span>
-                            </div>
-                          )}
-                          <div className="p-2 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800">
-                            <p className="text-[10px] font-medium text-slate-600 dark:text-slate-300 truncate text-center" title={docStr}>
-                              {docStr}
-                            </p>
-                          </div>
-                        </div>
-                      );
-                    });
-                  })()}
-                </div>
+                    return (
+                      <div key={idx} className="flex justify-between items-center bg-white dark:bg-slate-900 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800">
+                        <span className="font-medium text-slate-800 dark:text-slate-200 truncate max-w-[260px] flex items-center gap-1.5 text-xs">
+                          <svg className="w-3.5 h-3.5 text-blue-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                          {fileName}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setPreviewFile({ name: fileName, url: fileUrl })}
+                          className="text-blue-600 font-bold hover:underline flex items-center gap-1 text-xs cursor-pointer"
+                        >
+                          Preview Document
+                        </button>
+                      </div>
+                    );
+                  });
+                })()}
               </div>
             </div>
 
@@ -1037,6 +1025,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
           <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-3xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
             <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-3">
               <div className="flex items-center gap-2">
+                <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
                 <h4 className="font-bold text-slate-900 dark:text-white text-sm truncate max-w-[320px]">{previewFile.name}</h4>
               </div>
               <button type="button" onClick={() => setPreviewFile(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer font-bold text-lg">✕</button>
