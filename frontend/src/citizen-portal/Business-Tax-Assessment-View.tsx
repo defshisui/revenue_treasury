@@ -1,3 +1,4 @@
+// src/components/BusinessTaxAssessmentView.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { API_BASE_URL } from '../config/api';
 
@@ -31,8 +32,9 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
   const [currentScreen, setCurrentScreen] = useState<ActiveScreen>('home');
   const [isModalOpen, setIsModalOpen] = useState<false | 'appointment' | 'tax-bill' | 'or-number' | 'sales-declaration'>(false);
 
-  // 🔍 State for viewing an individual assessment record modal
+  // State for viewing an individual assessment record modal & document preview
   const [selectedAssessmentView, setSelectedAssessmentView] = useState<AssessmentRecord | null>(null);
+  const [previewFile, setPreviewFile] = useState<{ name: string; url: string } | null>(null);
 
   // Authentication & Dropdown State
   const [user, setUser] = useState<{ fullname: string; email: string; initials: string; firstName: string; token: string } | null>(null);
@@ -537,7 +539,6 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                           </td>
                           <td className="p-3">{new Date(item.applicationDate).toLocaleDateString()}</td>
                           <td className="p-3">
-                            {/* 🔍 Fixed View Button to open record details modal */}
                             <button
                               onClick={() => setSelectedAssessmentView(item)}
                               className="text-blue-600 hover:underline font-semibold cursor-pointer"
@@ -917,7 +918,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
         </div>
       )}
 
-      {/* 🔍 INDIVIDUAL ASSESSMENT VIEW DETAILS MODAL */}
+      {/* INDIVIDUAL ASSESSMENT VIEW DETAILS MODAL */}
       {selectedAssessmentView && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
@@ -937,7 +938,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
               </button>
             </div>
 
-            <div className="space-y-3 text-xs">
+            <div className="space-y-3 text-xs max-h-[60vh] overflow-y-auto pr-1">
               <div className="grid grid-cols-2 gap-3 bg-slate-50 dark:bg-slate-950 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800">
                 <div>
                   <span className="block text-[10px] text-slate-400 font-bold uppercase">Business Name</span>
@@ -967,10 +968,45 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                 <div className="text-slate-600 dark:text-slate-400">{new Date(selectedAssessmentView.applicationDate).toLocaleDateString()}</div>
               </div>
 
+              {/* Uploaded Files Section */}
               <div className="bg-slate-50 dark:bg-slate-950 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2">
-                <div className="font-semibold text-slate-700 dark:text-slate-300">Treasurer's Office Remarks / Notes:</div>
+                <div className="font-semibold text-slate-700 dark:text-slate-300">Submitted Financial Documents:</div>
+                {selectedAssessmentView.attachments && selectedAssessmentView.attachments.length > 0 ? (
+                  selectedAssessmentView.attachments.map((file, idx) => (
+                    <div key={idx} className="flex justify-between items-center bg-white dark:bg-slate-900 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800">
+                      <span className="font-medium text-slate-800 dark:text-slate-200 truncate max-w-[220px] flex items-center gap-1.5">
+                        <svg className="w-3.5 h-3.5 text-blue-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                        {file.name}
+                      </span>
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setPreviewFile(file)}
+                          className="text-blue-600 font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                        >
+                          Preview
+                        </button>
+                        <a
+                          href={file.url}
+                          download
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-slate-600 dark:text-slate-300 hover:text-blue-600 font-bold cursor-pointer"
+                        >
+                          Download
+                        </a>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-slate-400 italic">No files attached.</p>
+                )}
+              </div>
+
+              <div className="bg-slate-50 dark:bg-slate-950 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2">
+                <div className="font-semibold text-slate-700 dark:text-slate-300">Treasurer's Office Remarks:</div>
                 <div className="text-slate-600 dark:text-slate-400 italic">
-                  {selectedAssessmentView.remarks || 'No remarks provided yet. Your declaration is currently under review by the assessment officer.'}
+                  {selectedAssessmentView.remarks || 'No remarks provided yet. Your declaration is currently under review.'}
                 </div>
               </div>
             </div>
@@ -983,6 +1019,46 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
               >
                 Close
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DOCUMENT PREVIEW MODAL */}
+      {previewFile && (
+        <div className="fixed inset-0 z-60 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+            <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                <h4 className="font-bold text-slate-900 dark:text-white text-sm truncate max-w-[320px]">{previewFile.name}</h4>
+              </div>
+              <button type="button" onClick={() => setPreviewFile(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer font-bold text-lg">✕</button>
+            </div>
+
+            <div className="h-64 bg-slate-100 dark:bg-slate-950 rounded-2xl flex flex-col items-center justify-center border border-slate-200 dark:border-slate-800 p-4 text-center">
+              <svg className="w-12 h-12 text-slate-400 mb-2" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+              <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Document Preview Ready</p>
+              <p className="text-[11px] text-slate-500 mt-1">Click below to download or view your uploaded submission.</p>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setPreviewFile(null)}
+                className="px-4 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 font-bold rounded-xl text-xs cursor-pointer"
+              >
+                Close
+              </button>
+              <a
+                href={previewFile.url}
+                download
+                target="_blank"
+                rel="noreferrer"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs cursor-pointer shadow-sm flex items-center gap-1.5"
+              >
+                Download File
+              </a>
             </div>
           </div>
         </div>
