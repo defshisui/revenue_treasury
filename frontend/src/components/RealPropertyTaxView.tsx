@@ -85,6 +85,10 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
   const [mainViewTab, setMainViewTab] = useState<'queue' | 'citizenAudit'>('queue');
   const [detailTab, setDetailTab] = useState<'overview' | 'audit' | 'notifications'>('overview');
 
+  // Document Preview Lightbox State
+  const [previewDocUrl, setPreviewDocUrl] = useState<string | null>(null);
+  const [previewDocTitle, setPreviewDocTitle] = useState<string>('');
+
   // Toast Notification Feedback State
   const [toastMessage, setToastMessage] = useState<{
     text: string;
@@ -135,7 +139,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
               return {
                 id: `DOC-${idx + 1}`,
                 name: doc,
-                type: 'PDF',
+                type: doc.includes('.pdf') ? 'PDF' : 'IMAGE',
                 status: 'Pending' as const,
                 uploadedAt: item.filedDate || ''
               };
@@ -249,7 +253,6 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     }
   };
 
-  // Connected Delete Handler to Database API
   const handleDeleteApplication = async (appId: string) => {
     const targetApp = applications.find(a => a.id === appId);
     if (!targetApp) return;
@@ -277,6 +280,21 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
       console.error("Delete error:", err);
       triggerToast("Failed to delete application from the server database.", "error");
     }
+  };
+
+  const handleOpenPreview = (docName: string) => {
+    // Check if docName is a server path or direct URL, otherwise build absolute url or fallback placeholder
+    let targetUrl = docName;
+    if (docName.includes('/uploads/')) {
+      const cleanPath = docName.includes(': /uploads/') ? docName.split(': ')[1] : docName;
+      targetUrl = cleanPath.startsWith('http') ? cleanPath : `${API_BASE_URL}${cleanPath}`;
+    } else if (!docName.startsWith('http') && !docName.startsWith('blob:')) {
+      // If it's just a file name string like "title.pdf", use a mock or standard upload path format if available
+      targetUrl = `${API_BASE_URL}/uploads/${docName}`;
+    }
+
+    setPreviewDocTitle(docName);
+    setPreviewDocUrl(targetUrl);
   };
 
   const checkAndAutoCloseQueueItem = (app: ExtendedApplicationRecord, updatedDocs: typeof app.documents) => {
@@ -722,6 +740,12 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                                 </div>
                                 <div className="flex gap-2">
                                   <button
+                                    onClick={() => handleOpenPreview(doc.name)}
+                                    className="px-3 py-1.5 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900 rounded-lg font-semibold cursor-pointer"
+                                  >
+                                    Preview
+                                  </button>
+                                  <button
                                     onClick={() => handleDocumentStatusChange(doc.id, 'Verified')}
                                     className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg font-semibold cursor-pointer"
                                   >
@@ -818,6 +842,20 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
             ) : (
               <div className="flex-1 overflow-y-auto p-6 space-y-4">
                 <h2 className="text-lg font-bold font-mono">{currentCitizenApp.referenceNumber}</h2>
+                <div className="space-y-2 pt-2">
+                  <h3 className="text-xs font-bold uppercase text-slate-500">Archived Documents</h3>
+                  {currentCitizenApp.documents.map((doc) => (
+                    <div key={doc.id} className="p-3 border rounded-xl flex justify-between items-center text-xs">
+                      <span>{doc.name}</span>
+                      <button
+                        onClick={() => handleOpenPreview(doc.name)}
+                        className="px-3 py-1 bg-blue-50 text-blue-700 rounded-lg font-semibold cursor-pointer"
+                      >
+                        Preview
+                      </button>
+                    </div>
+                  ))}
+                </div>
                 <button
                   onClick={() => handleDownloadCertificate(currentCitizenApp.id)}
                   className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-semibold cursor-pointer"
@@ -826,6 +864,44 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* POP-UP DOCUMENT PREVIEW LIGHTBOX MODAL */}
+      {previewDocUrl && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-4xl h-[85vh] shadow-2xl overflow-hidden flex flex-col">
+            <div className="p-4 bg-slate-900 text-white flex justify-between items-center border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <span className="text-xs uppercase font-bold text-blue-400">Document Inspector</span>
+                <span className="text-xs text-slate-300 truncate max-w-md">({previewDocTitle})</span>
+              </div>
+              <button
+                onClick={() => setPreviewDocUrl(null)}
+                className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-bold cursor-pointer transition-colors"
+              >
+                Close ✕
+              </button>
+            </div>
+            <div className="flex-1 bg-slate-100 dark:bg-slate-950 overflow-auto flex items-center justify-center p-4">
+              {previewDocUrl.toLowerCase().includes('.pdf') ? (
+                <iframe
+                  src={previewDocUrl}
+                  className="w-full h-full rounded-xl border-0 shadow-inner bg-white"
+                  title="PDF Document Preview"
+                />
+              ) : (
+                <div className="overflow-auto w-full h-full flex items-center justify-center">
+                  <img
+                    src={previewDocUrl}
+                    alt="Document Preview"
+                    className="max-w-none object-contain rounded-xl shadow-lg transition-transform duration-200 hover:scale-105 cursor-zoom-in"
+                    style={{ minHeight: '50vh', maxHeight: '75vh' }}
+                  />
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
