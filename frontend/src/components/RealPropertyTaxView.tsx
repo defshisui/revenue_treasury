@@ -151,7 +151,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                   id: `DOC-${idx + 1}`,
                   name: doc,
                   type: doc.includes('.pdf') ? 'PDF' : 'IMAGE',
-                  url: doc.startsWith('data:') || doc.startsWith('http') ? doc : `/uploads/${doc}`,
+                  url: doc.startsWith('data:') || doc.startsWith('http') ? doc : `${API_BASE_URL}/uploads/${doc}`,
                   status: 'Pending' as const,
                   uploadedAt: item.filedDate || ''
                 };
@@ -160,7 +160,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                 id: doc.id || `DOC-${idx + 1}`,
                 name: doc.name || doc.fileName || `Document ${idx + 1}`,
                 type: doc.type || 'PDF',
-                url: doc.url || '',
+                url: doc.url ? (doc.url.startsWith('data:') || doc.url.startsWith('http') ? doc.url : `${API_BASE_URL}${doc.url.startsWith('/') ? '' : '/'}${doc.url}`) : '',
                 status: doc.status || 'Pending',
                 uploadedAt: doc.uploadedAt || item.filedDate || ''
               };
@@ -296,17 +296,17 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     }
   };
 
-  // Fixed Preview Lightbox Handler with fallback support for base64 strings and absolute paths
+  // Foolproof Preview Lightbox Handler
   const handleOpenPreview = (doc: { name: string; url?: string }) => {
     let targetUrl = doc.url || '';
 
-    if (!targetUrl || targetUrl === '') {
+    if (!targetUrl || targetUrl.trim() === '') {
       targetUrl = doc.name;
     }
 
     if (targetUrl.startsWith('data:')) {
       // Base64 string ready for lightbox
-    } else if (targetUrl.startsWith('http')) {
+    } else if (targetUrl.startsWith('http://') || targetUrl.startsWith('https://')) {
       // Fully qualified absolute URL
     } else if (targetUrl.startsWith('/uploads/')) {
       targetUrl = `${API_BASE_URL}${targetUrl}`;
@@ -907,22 +907,31 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
               </button>
             </div>
             <div className="flex-1 bg-slate-100 dark:bg-slate-950 overflow-auto flex items-center justify-center p-4">
-              {previewDocUrl.toLowerCase().includes('.pdf') || previewDocUrl.startsWith('data:application/pdf') ? (
-                <iframe
-                  src={previewDocUrl}
-                  className="w-full h-full rounded-xl border-0 shadow-inner bg-white"
-                  title="PDF Document Preview"
-                />
-              ) : (
-                <div className="overflow-auto w-full h-full flex items-center justify-center">
-                  <img
-                    src={previewDocUrl}
-                    alt="Document Preview"
-                    className="max-w-none object-contain rounded-xl shadow-lg transition-transform duration-200 hover:scale-105 cursor-zoom-in"
-                    style={{ minHeight: '50vh', maxHeight: '75vh' }}
-                  />
-                </div>
-              )}
+              {(() => {
+                const url = previewDocUrl;
+                const isPdf = url.toLowerCase().includes('.pdf') || url.startsWith('data:application/pdf') || url.toLowerCase().endsWith('.pdf');
+
+                if (isPdf) {
+                  return (
+                    <iframe
+                      src={url}
+                      className="w-full h-full rounded-xl border-0 shadow-inner bg-white"
+                      title="PDF Document Preview"
+                    />
+                  );
+                }
+
+                return (
+                  <div className="overflow-auto w-full h-full flex items-center justify-center">
+                    <img
+                      src={url}
+                      alt="Document Preview"
+                      className="max-w-none object-contain rounded-xl shadow-lg transition-transform duration-200 hover:scale-105 cursor-zoom-in"
+                      style={{ minHeight: '50vh', maxHeight: '75vh' }}
+                    />
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>
