@@ -3,7 +3,6 @@ import type { Request, Response } from 'express';
 import { randomUUID } from 'crypto';
 import pool from '../db.js';
 import { recordAudit } from './audit.controller.js';
-import type { HawkerBody } from '../types/index.js';
 
 export async function getHawkers(_req: Request, res: Response): Promise<void> {
   try {
@@ -27,6 +26,8 @@ export async function getHawkers(_req: Request, res: Response): Promise<void> {
       status: row.status,
       remarks: row.remarks || '',
       memberCount: row.member_count || 0,
+      // Retrieve the saved documents and metadata
+      lguMeta: row.lgu_meta || null,
     }));
     res.json(formatted);
   } catch (err) {
@@ -36,15 +37,16 @@ export async function getHawkers(_req: Request, res: Response): Promise<void> {
 }
 
 export async function createHawker(req: Request, res: Response): Promise<void> {
-  const data = req.body as HawkerBody;
+  // Use 'any' here to accommodate the new lguMeta payload that includes Base64 strings
+  const data = req.body as any;
 
   try {
     const result = await pool.query(
       `INSERT INTO hawker_associations
        (id, association_number, association_name, sec_registration_no, date_issued, contact_number,
         first_name, middle_name, last_name, email, submitted_by, submitter_email,
-        submission_date, status, remarks, member_count)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+        submission_date, status, remarks, member_count, lgu_meta)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
        RETURNING *`,
       [
         data.id || randomUUID(),
@@ -63,6 +65,8 @@ export async function createHawker(req: Request, res: Response): Promise<void> {
         data.status || 'New',
         data.remarks || '',
         data.memberCount || 0,
+        // Convert the LGU metadata & digital vault files into a JSON string for the DB
+        data.lguMeta ? JSON.stringify(data.lguMeta) : null
       ]
     );
 
@@ -107,7 +111,7 @@ export async function updateHawkerStatus(req: Request, res: Response): Promise<v
 }
 
 // ==========================================
-// NEW: Delete Hawker Association (Mirrored from market stall logic)
+// Delete Hawker Association (Mirrored from market stall logic)
 // ==========================================
 export async function deleteHawker(req: Request, res: Response): Promise<void> {
   const { id } = req.params;
