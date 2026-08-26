@@ -7,6 +7,11 @@ export interface BusinessTaxAssessmentViewProps {
 
 type ActiveScreen = 'home' | 'assessment-list';
 
+interface AttachmentFile {
+  name: string;
+  url: string;
+}
+
 interface AssessmentRecord {
   id: string;
   trackingNumber: string;
@@ -16,11 +21,18 @@ interface AssessmentRecord {
   applicationDate: string;
   psicCode?: string;
   grossSales?: number;
+  tin?: string;
+  attachments?: AttachmentFile[];
+  remarks?: string;
+  computedFees?: any;
 }
 
 export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps> = ({ isCollapsed = false }) => {
   const [currentScreen, setCurrentScreen] = useState<ActiveScreen>('home');
   const [isModalOpen, setIsModalOpen] = useState<false | 'appointment' | 'tax-bill' | 'or-number' | 'sales-declaration'>(false);
+
+  // 🔍 State for viewing an individual assessment record modal
+  const [selectedAssessmentView, setSelectedAssessmentView] = useState<AssessmentRecord | null>(null);
 
   // Authentication & Dropdown State
   const [user, setUser] = useState<{ fullname: string; email: string; initials: string; firstName: string; token: string } | null>(null);
@@ -31,7 +43,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
   const [assessments, setAssessments] = useState<AssessmentRecord[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
-  
+
   // Search, Filter & Pagination States
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [searchType, setSearchType] = useState<string>('Tracking/MP No.');
@@ -40,24 +52,24 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
   const [totalPages, setTotalPages] = useState<number>(1);
   const pageSize = 10;
 
-  // Verification & Sales Declaration Form States (Updated with TIN & PSIC requirements)
+  // Verification & Sales Declaration Form States
   const [taxBillForm, setTaxBillForm] = useState({ permitNo: '', taxBillNo: '', tin: '' });
   const [orForm, setOrForm] = useState({ permitNo: '', orNo: '', tin: '' });
-  const [salesForm, setSalesForm] = useState({ 
-    businessName: '', 
-    grossSales: '', 
-    year: '2026', 
-    psicCode: '47110', 
+  const [salesForm, setSalesForm] = useState({
+    businessName: '',
+    grossSales: '',
+    year: '2026',
+    psicCode: '47110',
     tin: '',
-    file: null as File | null 
+    file: null as File | null
   });
 
   useEffect(() => {
     const checkUserSession = () => {
-      const rawData = localStorage.getItem('currentUser') || 
-                      localStorage.getItem('user') || 
-                      sessionStorage.getItem('currentUser') || 
-                      sessionStorage.getItem('user');
+      const rawData = localStorage.getItem('currentUser') ||
+        localStorage.getItem('user') ||
+        sessionStorage.getItem('currentUser') ||
+        sessionStorage.getItem('user');
 
       if (!rawData) return null;
 
@@ -72,7 +84,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
         const token = parsed.token || target.token || "";
         const nameParts = String(fullName).trim().split(" ");
         const firstName = nameParts[0];
-        const initials = nameParts.length > 1 
+        const initials = nameParts.length > 1
           ? (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase()
           : nameParts[0].slice(0, 2).toUpperCase();
 
@@ -94,7 +106,6 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Fetch Real Assessments from Backend when switching to list screen or changing page/filters
   useEffect(() => {
     if (currentScreen === 'assessment-list' && user) {
       fetchAssessments();
@@ -113,12 +124,8 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
       if (searchQuery) queryParams.append('search', searchQuery);
       queryParams.append('searchType', searchType);
 
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-      };
-      if (user?.token) {
-        headers['Authorization'] = `Bearer ${user.token}`;
-      }
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (user?.token) headers['Authorization'] = `Bearer ${user.token}`;
 
       const response = await fetch(`${API_BASE_URL}/business-assessments?${queryParams.toString()}`, { headers });
 
@@ -138,46 +145,16 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
   };
 
   const handleLogout = () => {
-    const userName = user?.fullname || user?.email || "Citizen User";
-    const userEmail = user?.email || "Unknown";
-
-    const auditPayload = JSON.stringify({
-      auditId: `AUD-${Math.floor(100000 + Math.random() * 900000)}`,
-      user: userName,
-      role: "Citizen",
-      module: "Authentication",
-      action: "User Logged Out",
-      severity: "INFO",
-      ipAddress: "127.0.0.1",
-      userAgent: navigator.userAgent,
-      previousData: `Active session for ${userEmail}`,
-      newData: "Session terminated / Logged out",
-      timestamp: new Date().toISOString()
-    });
-
-    if (navigator.sendBeacon) {
-      const blob = new Blob([auditPayload], { type: 'application/json' });
-      navigator.sendBeacon(`${API_BASE_URL}/audit-logs`, blob);
-    } else {
-      fetch(`${API_BASE_URL}/audit-logs`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: auditPayload,
-        keepalive: true
-      }).catch(err => console.error("Logout log failed:", err));
-    }
-
     localStorage.removeItem('currentUser');
     localStorage.removeItem('user');
     sessionStorage.removeItem('currentUser');
     sessionStorage.removeItem('user');
     setUser(null);
     setIsDropdownOpen(false);
-    
-    window.location.href = '/'; 
+    window.location.href = '/';
   };
 
-  // Form states
+  const [submitting, setSubmitting] = useState(false);
   const [aptForm, setAptForm] = useState({
     department: 'City Treasurer\'s Office',
     appointmentType: '',
@@ -190,8 +167,6 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
     remarks: '',
     notARobot: false,
   });
-
-  const [submitting, setSubmitting] = useState(false);
 
   const handleAppointmentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -300,7 +275,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
   };
 
   return (
-    <div 
+    <div
       style={{
         marginLeft: isCollapsed ? "80px" : "0px",
         width: isCollapsed ? "calc(100% - 80px)" : "100%",
@@ -314,11 +289,11 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
             <div className="flex items-center gap-3 cursor-pointer" onClick={() => window.location.href = '/citizen-portal'}>
               <div className="flex items-center gap-3">
                 <div className="p-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xs flex items-center justify-center">
-                  <img 
-                    src="/src/assets/logo-system.png" 
-                    alt="System Logo" 
-                    className="h-8 w-8 object-contain" 
-                    onError={(e)=>{(e.target as HTMLElement).style.display='none';}}
+                  <img
+                    src="/src/assets/logo-system.png"
+                    alt="System Logo"
+                    className="h-8 w-8 object-contain"
+                    onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
                   />
                 </div>
                 <div className="flex flex-col">
@@ -334,7 +309,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
 
             <div className="hidden md:flex items-center space-x-6 text-xs font-semibold text-slate-600 dark:text-slate-300">
               <span className="hover:text-blue-700 cursor-pointer" onClick={() => window.location.href = '/citizen-portal'}>HOME</span>
-              
+
               <div className="relative group py-2">
                 <span className="hover:text-blue-700 cursor-pointer flex items-center gap-1 select-none">
                   SERVICES ▾
@@ -354,7 +329,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
             <div className="flex items-center space-x-3">
               {user ? (
                 <div className="relative" ref={dropdownRef}>
-                  <button 
+                  <button
                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                     className="flex items-center space-x-2.5 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-xl transition-all cursor-pointer shadow-xs group"
                   >
@@ -394,7 +369,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
               {currentScreen === 'home' ? 'WELCOME TO BUSINESS TAX ASSESSMENT' : '2026 BUSINESS TAX PAYMENT'}
             </h1>
             <p className="text-xs sm:text-sm text-slate-200 mt-1 max-w-xl mx-auto">
-              {currentScreen === 'home' 
+              {currentScreen === 'home'
                 ? "This portal is one of our digital Gov Serv initiatives catering to the needs of business owners in securing their permits and licenses."
                 : "Manage your online sales declarations and monitor permit assessment status."}
             </p>
@@ -474,7 +449,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
               <div className="flex flex-col md:flex-row justify-between items-center gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
                 <div className="w-full md:w-64">
                   <label className="block text-[11px] font-semibold text-slate-500 mb-1">Application Status</label>
-                  <select 
+                  <select
                     value={statusFilter}
                     onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
                     className="w-full p-2 text-xs border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950"
@@ -488,7 +463,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                 <div className="flex items-center gap-2 w-full md:w-auto justify-end">
                   <div className="w-full sm:w-48">
                     <label className="block text-[11px] font-semibold text-slate-500 mb-1">Search By:</label>
-                    <select 
+                    <select
                       value={searchType}
                       onChange={(e) => setSearchType(e.target.value)}
                       className="w-full p-2 text-xs border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950"
@@ -499,12 +474,12 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                   </div>
                   <div className="w-full sm:w-64 pt-5">
                     <div className="flex gap-1">
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Search..." 
-                        className="w-full p-2 text-xs border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950" 
+                        placeholder="Search..."
+                        className="w-full p-2 text-xs border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950"
                       />
                       <button onClick={() => { setCurrentPage(1); fetchAssessments(); }} className="px-3 py-2 bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded cursor-pointer">
                         Search
@@ -553,17 +528,20 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                           <td className="p-3">{item.businessName}</td>
                           <td className="p-3">{item.businessOwner}</td>
                           <td className="p-3">
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                              item.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-400' :
-                              item.status === 'REJECTED' ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/50 dark:text-rose-400' :
-                              'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-400'
-                            }`}>
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${item.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-400' :
+                                item.status === 'REJECTED' ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/50 dark:text-rose-400' :
+                                  'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-400'
+                              }`}>
                               {item.status}
                             </span>
                           </td>
                           <td className="p-3">{new Date(item.applicationDate).toLocaleDateString()}</td>
                           <td className="p-3">
-                            <button onClick={() => window.location.href = `/assessment-detail/${item.id}`} className="text-blue-600 hover:underline font-semibold cursor-pointer">
+                            {/* 🔍 Fixed View Button to open record details modal */}
+                            <button
+                              onClick={() => setSelectedAssessmentView(item)}
+                              className="text-blue-600 hover:underline font-semibold cursor-pointer"
+                            >
                               View
                             </button>
                           </td>
@@ -578,15 +556,15 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
               <div className="flex justify-between items-center text-xs text-slate-500 pt-2">
                 <span>Page {currentPage} of {totalPages}</span>
                 <div className="flex gap-1">
-                  <button 
-                    disabled={currentPage <= 1 || loading} 
+                  <button
+                    disabled={currentPage <= 1 || loading}
                     onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                     className="px-3 py-1 border border-slate-300 dark:border-slate-700 rounded disabled:opacity-40 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800"
                   >
                     Previous
                   </button>
-                  <button 
-                    disabled={currentPage >= totalPages || loading} 
+                  <button
+                    disabled={currentPage >= totalPages || loading}
                     onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                     className="px-3 py-1 border border-slate-300 dark:border-slate-700 rounded disabled:opacity-40 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800"
                   >
@@ -625,7 +603,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
       {/* MODALS */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          
+
           {/* APPOINTMENT MODAL */}
           {isModalOpen === 'appointment' && (
             <form onSubmit={handleAppointmentSubmit} className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-xl overflow-hidden">
@@ -636,9 +614,9 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
               <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto text-xs">
                 <div>
                   <label className="block text-[11px] font-semibold text-red-600 mb-1">* Department</label>
-                  <select 
+                  <select
                     value={aptForm.department}
-                    onChange={(e) => setAptForm({...aptForm, department: e.target.value})}
+                    onChange={(e) => setAptForm({ ...aptForm, department: e.target.value })}
                     className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950"
                   >
                     <option>City Treasurer's Office</option>
@@ -647,10 +625,10 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                 </div>
                 <div>
                   <label className="block text-[11px] font-semibold text-red-600 mb-1">* Appointment Type</label>
-                  <select 
+                  <select
                     required
                     value={aptForm.appointmentType}
-                    onChange={(e) => setAptForm({...aptForm, appointmentType: e.target.value})}
+                    onChange={(e) => setAptForm({ ...aptForm, appointmentType: e.target.value })}
                     className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950"
                   >
                     <option value="">Nothing selected</option>
@@ -660,83 +638,83 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                 </div>
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-500 mb-1">Appointment Address</label>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     value={aptForm.address}
-                    onChange={(e) => setAptForm({...aptForm, address: e.target.value})}
-                    className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950" 
-                    placeholder="Enter location / office branch" 
+                    onChange={(e) => setAptForm({ ...aptForm, address: e.target.value })}
+                    className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950"
+                    placeholder="Enter location / office branch"
                   />
                 </div>
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-500 mb-1">Appointment Description</label>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     value={aptForm.description}
-                    onChange={(e) => setAptForm({...aptForm, description: e.target.value})}
-                    className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950" 
-                    placeholder="Brief description of concerns" 
+                    onChange={(e) => setAptForm({ ...aptForm, description: e.target.value })}
+                    className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950"
+                    placeholder="Brief description of concerns"
                   />
                 </div>
                 <div>
                   <label className="block text-[11px] font-semibold text-red-600 mb-1">* Full Name</label>
-                  <input 
+                  <input
                     required
-                    type="text" 
+                    type="text"
                     value={aptForm.fullName}
-                    onChange={(e) => setAptForm({...aptForm, fullName: e.target.value})}
+                    onChange={(e) => setAptForm({ ...aptForm, fullName: e.target.value })}
                     placeholder="Enter full name"
                     className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950"
                   />
                 </div>
                 <div>
                   <label className="block text-[11px] font-semibold text-red-600 mb-1">* Email Address</label>
-                  <input 
+                  <input
                     required
-                    type="email" 
+                    type="email"
                     value={aptForm.email}
-                    onChange={(e) => setAptForm({...aptForm, email: e.target.value})}
-                    placeholder="Enter email address" 
-                    className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950" 
+                    onChange={(e) => setAptForm({ ...aptForm, email: e.target.value })}
+                    placeholder="Enter email address"
+                    className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950"
                   />
                 </div>
                 <div>
                   <label className="block text-[11px] font-semibold text-red-600 mb-1">* Phone Number</label>
-                  <input 
+                  <input
                     required
-                    type="text" 
+                    type="text"
                     value={aptForm.phone}
-                    onChange={(e) => setAptForm({...aptForm, phone: e.target.value})}
-                    placeholder="Enter phone number" 
-                    className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950" 
+                    onChange={(e) => setAptForm({ ...aptForm, phone: e.target.value })}
+                    placeholder="Enter phone number"
+                    className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950"
                   />
                 </div>
                 <div>
                   <label className="block text-[11px] font-semibold text-red-600 mb-1">* Date</label>
-                  <input 
+                  <input
                     required
-                    type="date" 
+                    type="date"
                     value={aptForm.date}
-                    onChange={(e) => setAptForm({...aptForm, date: e.target.value})}
-                    className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950" 
+                    onChange={(e) => setAptForm({ ...aptForm, date: e.target.value })}
+                    className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950"
                   />
                 </div>
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-500 mb-1">Remarks (Optional)</label>
-                  <textarea 
-                    rows={2} 
+                  <textarea
+                    rows={2}
                     value={aptForm.remarks}
-                    onChange={(e) => setAptForm({...aptForm, remarks: e.target.value})}
-                    className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950 resize-none" 
+                    onChange={(e) => setAptForm({ ...aptForm, remarks: e.target.value })}
+                    className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950 resize-none"
                   />
                 </div>
                 <div className="p-3 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950 flex items-center justify-between">
                   <label className="flex items-center gap-2 cursor-pointer">
-                    <input 
-                      type="checkbox" 
+                    <input
+                      type="checkbox"
                       checked={aptForm.notARobot}
-                      onChange={(e) => setAptForm({...aptForm, notARobot: e.target.checked})}
-                      className="w-4 h-4 rounded text-blue-600" 
+                      onChange={(e) => setAptForm({ ...aptForm, notARobot: e.target.checked })}
+                      className="w-4 h-4 rounded text-blue-600"
                     />
                     <span>I'm not a robot</span>
                   </label>
@@ -762,35 +740,35 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
               <div className="p-6 space-y-4 text-xs">
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">Tax Identification Number (TIN)</label>
-                  <input 
+                  <input
                     required
-                    type="text" 
+                    type="text"
                     value={taxBillForm.tin}
-                    onChange={(e) => setTaxBillForm({...taxBillForm, tin: e.target.value})}
-                    placeholder="000-000-000-000" 
-                    className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950" 
+                    onChange={(e) => setTaxBillForm({ ...taxBillForm, tin: e.target.value })}
+                    placeholder="000-000-000-000"
+                    className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950"
                   />
                 </div>
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">Mayor's Permit Number</label>
-                  <input 
+                  <input
                     required
-                    type="text" 
+                    type="text"
                     value={taxBillForm.permitNo}
-                    onChange={(e) => setTaxBillForm({...taxBillForm, permitNo: e.target.value})}
-                    placeholder="Enter Mayor's Permit No." 
-                    className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950" 
+                    onChange={(e) => setTaxBillForm({ ...taxBillForm, permitNo: e.target.value })}
+                    placeholder="Enter Mayor's Permit No."
+                    className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950"
                   />
                 </div>
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">Tax Bill Number</label>
-                  <input 
+                  <input
                     required
-                    type="text" 
+                    type="text"
                     value={taxBillForm.taxBillNo}
-                    onChange={(e) => setTaxBillForm({...taxBillForm, taxBillNo: e.target.value})}
-                    placeholder="Enter Tax Bill No." 
-                    className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950" 
+                    onChange={(e) => setTaxBillForm({ ...taxBillForm, taxBillNo: e.target.value })}
+                    placeholder="Enter Tax Bill No."
+                    className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950"
                   />
                 </div>
               </div>
@@ -811,35 +789,35 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
               <div className="p-6 space-y-4 text-xs">
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">Tax Identification Number (TIN)</label>
-                  <input 
+                  <input
                     required
-                    type="text" 
+                    type="text"
                     value={orForm.tin}
-                    onChange={(e) => setOrForm({...orForm, tin: e.target.value})}
-                    placeholder="000-000-000-000" 
-                    className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950" 
+                    onChange={(e) => setOrForm({ ...orForm, tin: e.target.value })}
+                    placeholder="000-000-000-000"
+                    className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950"
                   />
                 </div>
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">Mayor's Permit Number</label>
-                  <input 
+                  <input
                     required
-                    type="text" 
+                    type="text"
                     value={orForm.permitNo}
-                    onChange={(e) => setOrForm({...orForm, permitNo: e.target.value})}
-                    placeholder="Enter Mayor's Permit No." 
-                    className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950" 
+                    onChange={(e) => setOrForm({ ...orForm, permitNo: e.target.value })}
+                    placeholder="Enter Mayor's Permit No."
+                    className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950"
                   />
                 </div>
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">O.R. Number</label>
-                  <input 
+                  <input
                     required
-                    type="text" 
+                    type="text"
                     value={orForm.orNo}
-                    onChange={(e) => setOrForm({...orForm, orNo: e.target.value})}
-                    placeholder="Enter Official Receipt (O.R.) No." 
-                    className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950" 
+                    onChange={(e) => setOrForm({ ...orForm, orNo: e.target.value })}
+                    placeholder="Enter Official Receipt (O.R.) No."
+                    className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950"
                   />
                 </div>
               </div>
@@ -860,31 +838,31 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
               <div className="p-6 space-y-4 text-xs max-h-[75vh] overflow-y-auto">
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">Business Name</label>
-                  <input 
+                  <input
                     required
-                    type="text" 
+                    type="text"
                     value={salesForm.businessName}
-                    onChange={(e) => setSalesForm({...salesForm, businessName: e.target.value})}
-                    placeholder="Enter registered business name" 
-                    className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950" 
+                    onChange={(e) => setSalesForm({ ...salesForm, businessName: e.target.value })}
+                    placeholder="Enter registered business name"
+                    className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950"
                   />
                 </div>
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">Tax Identification Number (TIN)</label>
-                  <input 
+                  <input
                     required
-                    type="text" 
+                    type="text"
                     value={salesForm.tin}
-                    onChange={(e) => setSalesForm({...salesForm, tin: e.target.value})}
-                    placeholder="000-000-000-000" 
-                    className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950" 
+                    onChange={(e) => setSalesForm({ ...salesForm, tin: e.target.value })}
+                    placeholder="000-000-000-000"
+                    className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950"
                   />
                 </div>
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">PSIC Code (Line of Business)</label>
                   <select
                     value={salesForm.psicCode}
-                    onChange={(e) => setSalesForm({...salesForm, psicCode: e.target.value})}
+                    onChange={(e) => setSalesForm({ ...salesForm, psicCode: e.target.value })}
                     className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950"
                   >
                     <option value="47110">47110 - Retail Sale in Non-Specialized Stores (Supermarkets/Sari-Sari)</option>
@@ -896,34 +874,34 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                 </div>
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">Gross Sales / Receipts (PHP)</label>
-                  <input 
+                  <input
                     required
-                    type="number" 
+                    type="number"
                     step="0.01"
                     value={salesForm.grossSales}
-                    onChange={(e) => setSalesForm({...salesForm, grossSales: e.target.value})}
-                    placeholder="0.00" 
-                    className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950" 
+                    onChange={(e) => setSalesForm({ ...salesForm, grossSales: e.target.value })}
+                    placeholder="0.00"
+                    className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950"
                   />
                 </div>
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">Tax Year</label>
-                  <input 
+                  <input
                     required
-                    type="text" 
+                    type="text"
                     value={salesForm.year}
-                    onChange={(e) => setSalesForm({...salesForm, year: e.target.value})}
-                    className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950" 
+                    onChange={(e) => setSalesForm({ ...salesForm, year: e.target.value })}
+                    className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950"
                   />
                 </div>
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">Financial Statement / ITR (PDF/Image)</label>
-                  <input 
+                  <input
                     required
-                    type="file" 
+                    type="file"
                     accept=".pdf,image/*"
-                    onChange={(e) => setSalesForm({...salesForm, file: e.target.files ? e.target.files[0] : null})}
-                    className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950 text-xs" 
+                    onChange={(e) => setSalesForm({ ...salesForm, file: e.target.files ? e.target.files[0] : null })}
+                    className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950 text-xs"
                   />
                 </div>
               </div>
@@ -936,6 +914,77 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
             </form>
           )}
 
+        </div>
+      )}
+
+      {/* 🔍 INDIVIDUAL ASSESSMENT VIEW DETAILS MODAL */}
+      {selectedAssessmentView && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+            <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-3">
+              <div>
+                <h3 className="font-bold text-slate-900 dark:text-white text-sm uppercase tracking-wide">
+                  Assessment Filing Details
+                </h3>
+                <p className="text-xs font-mono text-blue-600 dark:text-blue-400">{selectedAssessmentView.trackingNumber}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedAssessmentView(null)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer font-bold text-lg"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div className="grid grid-cols-2 gap-3 bg-slate-50 dark:bg-slate-950 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800">
+                <div>
+                  <span className="block text-[10px] text-slate-400 font-bold uppercase">Business Name</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">{selectedAssessmentView.businessName}</span>
+                </div>
+                <div>
+                  <span className="block text-[10px] text-slate-400 font-bold uppercase">Owner</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">{selectedAssessmentView.businessOwner}</span>
+                </div>
+                <div>
+                  <span className="block text-[10px] text-slate-400 font-bold uppercase">TIN</span>
+                  <span className="font-mono font-medium text-slate-700 dark:text-slate-300">{selectedAssessmentView.tin || 'N/A'}</span>
+                </div>
+                <div>
+                  <span className="block text-[10px] text-slate-400 font-bold uppercase">Status</span>
+                  <span className={`inline-block px-2 py-0.5 rounded font-bold text-[10px] mt-0.5 ${selectedAssessmentView.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-800' :
+                      selectedAssessmentView.status === 'REJECTED' ? 'bg-rose-100 text-rose-800' :
+                        'bg-amber-100 text-amber-800'
+                    }`}>
+                    {selectedAssessmentView.status}
+                  </span>
+                </div>
+              </div>
+
+              <div className="bg-slate-50 dark:bg-slate-950 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-1">
+                <div className="font-semibold text-slate-700 dark:text-slate-300">Application Date:</div>
+                <div className="text-slate-600 dark:text-slate-400">{new Date(selectedAssessmentView.applicationDate).toLocaleDateString()}</div>
+              </div>
+
+              <div className="bg-slate-50 dark:bg-slate-950 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2">
+                <div className="font-semibold text-slate-700 dark:text-slate-300">Treasurer's Office Remarks / Notes:</div>
+                <div className="text-slate-600 dark:text-slate-400 italic">
+                  {selectedAssessmentView.remarks || 'No remarks provided yet. Your declaration is currently under review by the assessment officer.'}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2 border-t border-slate-200 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setSelectedAssessmentView(null)}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs cursor-pointer shadow-xs"
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
