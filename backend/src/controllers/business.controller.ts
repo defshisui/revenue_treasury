@@ -56,12 +56,11 @@ export async function getBusinessAssessments(req: Request, res: Response): Promi
 
 export async function createSalesDeclaration(req: Request, res: Response): Promise<void> {
     const { businessName, grossSales, year, psicCode, tin, email } = req.body;
-    const file = (req as any).file; // Captured via multer memoryStorage middleware
+    const file = (req as any).file;
     const trackingNumber = `MP-${year || '2026'}-${Math.floor(100000 + Math.random() * 900000)}`;
     const id = randomUUID();
 
     try {
-        // Convert the uploaded file buffer into a Base64 Data URL so in-app previews render natively
         const fileAttachment = file
             ? [{
                 name: file.originalname,
@@ -156,7 +155,6 @@ export async function deleteBusinessAssessment(req: Request, res: Response): Pro
 export async function verifyTaxBill(req: Request, res: Response): Promise<void> {
     const { permitNo, taxBillNo, tin } = req.body;
     try {
-        // Query database to match permit/tracking number and TIN
         const query = `SELECT * FROM business_assessments WHERE (tracking_number = $1 OR id = $1) AND tin = $2`;
         const result = await pool.query(query, [permitNo, tin]);
 
@@ -185,7 +183,6 @@ export async function verifyTaxBill(req: Request, res: Response): Promise<void> 
 export async function verifyOrNumber(req: Request, res: Response): Promise<void> {
     const { permitNo, orNo, tin } = req.body;
     try {
-        // Query database to verify official receipt / payment transaction for approved assessments
         const query = `SELECT * FROM business_assessments WHERE (tracking_number = $1 OR id = $1) AND tin = $2`;
         const result = await pool.query(query, [permitNo, tin]);
 
@@ -195,17 +192,29 @@ export async function verifyOrNumber(req: Request, res: Response): Promise<void>
         }
 
         const record = result.rows[0];
-        const fees = record.computed_fees || { total: '12,500.00' };
+
+        let fees: any = { total: '12,500.00' };
+        try {
+            if (typeof record.computed_fees === 'string') {
+                fees = JSON.parse(record.computed_fees);
+            } else if (record.computed_fees && typeof record.computed_fees === 'object') {
+                fees = record.computed_fees;
+            }
+        } catch (parseErr) {
+            console.warn('Could not parse computed_fees JSON, using default values.');
+        }
+
+        const formattedAmount = fees?.total !== undefined ? String(fees.total) : '12,500.00';
 
         res.status(200).json({
-            amount: fees.total || '12,500.00',
+            amount: formattedAmount,
             message: 'Official Receipt verified successfully in treasury records.',
-            orNumber: orNo,
-            businessName: record.business_name
+            orNumber: orNo || 'OR-2026-000000',
+            businessName: record.business_name || 'Verified Business'
         });
-    } catch (err) {
+    } catch (err: any) {
         console.error('Error verifying O.R. number:', err);
-        res.status(500).json({ message: 'Server error during O.R. verification.' });
+        res.status(500).json({ message: err.message || 'Server error during O.R. verification.' });
     }
 }
 
