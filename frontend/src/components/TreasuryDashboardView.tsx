@@ -32,7 +32,7 @@ export interface TreasuryMetrics {
 export interface TreasuryDashboardViewProps {
   metrics?: TreasuryMetrics;
   transactions?: TransactionRecord[];
-  marketStalls?: StallRecord[]; 
+  marketStalls?: StallRecord[];
   isCollapsed: boolean;
   onNavigate?: (view: string) => void;
   fetchTransactions?: () => Promise<TransactionRecord[]>;
@@ -41,7 +41,7 @@ export interface TreasuryDashboardViewProps {
 }
 
 const ALL_TRANSACTION_DATES = [
-  "Aug 2026", "Jul 2026", "Jun 2026", "May 2026", "Apr 2026", "Mar 2026", 
+  "Aug 2026", "Jul 2026", "Jun 2026", "May 2026", "Apr 2026", "Mar 2026",
   "Feb 2026", "Jan 2026", "Dec 2025", "Nov 2025", "Oct 2025", "Sep 2025"
 ];
 
@@ -69,20 +69,20 @@ const ALL_PAYMENT_OPTIONS = [
 const ALL_EOR_OPTIONS = ["EOR", "NON-EOR"];
 
 const PAYMENT_OPTION_COLORS: Record<string, string> = {
-  "GCash": "#3b82f6", 
-  "Visa/Mastercard via Paymaya": "#f97316", 
-  "Maya (E-Wallet)": "#a855f7", 
-  "Online Banking via Paygate": "#84cc16", 
-  "Maya (QR)": "#06b6d4", 
-  "Bayad Center": "#eab308", 
-  "Manual Payment for Landbank of the Philippines": "#ec4899", 
-  "Landbank Online": "#6366f1" 
+  "GCash": "#3b82f6",
+  "Visa/Mastercard via Paymaya": "#f97316",
+  "Maya (E-Wallet)": "#a855f7",
+  "Online Banking via Paygate": "#84cc16",
+  "Maya (QR)": "#06b6d4",
+  "Bayad Center": "#eab308",
+  "Manual Payment for Landbank of the Philippines": "#ec4899",
+  "Landbank Online": "#6366f1"
 };
 
-export default function TreasuryDashboardView({ 
+export default function TreasuryDashboardView({
   metrics: initialMetrics,
-  transactions: initialTransactions = [], 
-  marketStalls: initialStalls = [], 
+  transactions: initialTransactions = [],
+  marketStalls: initialStalls = [],
   isCollapsed,
   onNavigate,
   fetchTransactions,
@@ -307,7 +307,7 @@ export default function TreasuryDashboardView({
   };
 
   return (
-    <div 
+    <div
       style={{
         marginLeft: isCollapsed ? "80px" : "256px",
         width: isCollapsed ? "calc(100% - 80px)" : "calc(100% - 256px)",
@@ -329,14 +329,14 @@ export default function TreasuryDashboardView({
 
         <div className="flex items-center gap-3">
           {onNavigate && (
-            <button 
+            <button
               onClick={() => onNavigate('home')}
               className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-xs font-semibold cursor-pointer hover:bg-slate-200 transition-colors"
             >
               Back Home
             </button>
           )}
-          <button 
+          <button
             onClick={loadPostgresData}
             className="px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 text-xs font-semibold cursor-pointer hover:bg-blue-100 transition-colors"
           >
@@ -688,13 +688,13 @@ export default function TreasuryDashboardView({
             <div className="flex flex-wrap items-center gap-3 text-xs mb-4">
               {activeMetrics.transactionsByType.map((item, idx) => (
                 <span key={idx} className="flex items-center gap-1.5 uppercase">
-                  <span className={`w-2.5 h-2.5 rounded-full ${idx === 0 ? 'bg-blue-500' : idx === 1 ? 'bg-amber-500' : 'bg-purple-500'} inline-block`}></span> 
+                  <span className={`w-2.5 h-2.5 rounded-full ${idx === 0 ? 'bg-blue-500' : idx === 1 ? 'bg-amber-500' : 'bg-purple-500'} inline-block`}></span>
                   {item.type} ({item.percentage}%)
                 </span>
               ))}
             </div>
             <div className="flex justify-center items-center py-4">
-              <div 
+              <div
                 className="w-36 h-36 rounded-full relative flex items-center justify-center shadow-xs"
                 style={{ background: `conic-gradient(${generateConicGradient(activeMetrics.transactionsByType)})` }}
               >
@@ -711,7 +711,7 @@ export default function TreasuryDashboardView({
           <div>
             <h3 className="text-base font-bold text-slate-900 dark:text-white m-0 mb-3">ePayment Transactions by Biller</h3>
             <div className="flex items-center justify-between">
-              <div 
+              <div
                 className="w-32 h-32 rounded-full relative flex items-center justify-center shadow-xs"
                 style={{ background: `conic-gradient(${generateConicGradient(activeMetrics.transactionsByBiller)})` }}
               >
@@ -722,7 +722,7 @@ export default function TreasuryDashboardView({
               <div className="flex flex-col gap-1 text-[11px] text-slate-600 dark:text-slate-300 max-h-36 overflow-y-auto pr-1">
                 {activeMetrics.transactionsByBiller.map((billerItem, idx) => (
                   <div key={idx} className="flex items-center gap-1.5">
-                    <span className={`w-2 h-2 rounded-full ${idx === 0 ? 'bg-blue-500' : idx === 1 ? 'bg-amber-500' : 'bg-purple-500'}`}></span> 
+                    <span className={`w-2 h-2 rounded-full ${idx === 0 ? 'bg-blue-500' : idx === 1 ? 'bg-amber-500' : 'bg-purple-500'}`}></span>
                     {billerItem.biller} ({billerItem.percentage}%)
                   </div>
                 ))}
@@ -739,7 +739,7 @@ export default function TreasuryDashboardView({
           <div>
             <h3 className="text-sm font-bold tracking-wider uppercase text-slate-900 dark:text-white m-0 mb-6">ePayment Transactions by Payment Option</h3>
             <div className="flex items-center justify-around gap-4 flex-wrap">
-              <div 
+              <div
                 className="w-44 h-44 rounded-full relative flex items-center justify-center shadow-md"
                 style={{ background: `conic-gradient(${generateConicGradient(activeMetrics.transactionsByPaymentOption)})` }}
               >
@@ -752,7 +752,7 @@ export default function TreasuryDashboardView({
               <div className="flex flex-col gap-2 text-xs text-slate-600 dark:text-slate-300 max-h-48 overflow-y-auto pr-2">
                 {activeMetrics.transactionsByPaymentOption.map((opt, idx) => (
                   <div key={idx} className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: PAYMENT_OPTION_COLORS[opt.option] || '#3b82f6' }}></span> 
+                    <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: PAYMENT_OPTION_COLORS[opt.option] || '#3b82f6' }}></span>
                     <span className="truncate max-w-[200px]" title={opt.option}>{opt.option}</span>
                   </div>
                 ))}
@@ -766,7 +766,7 @@ export default function TreasuryDashboardView({
           <div>
             <h3 className="text-sm font-bold tracking-wider uppercase text-slate-900 dark:text-white m-0 mb-6">Amount by Payment Option</h3>
             <div className="flex items-center justify-around gap-4 flex-wrap">
-              <div 
+              <div
                 className="w-44 h-44 rounded-full relative flex items-center justify-center shadow-md"
                 style={{ background: `conic-gradient(${generateConicGradient(activeMetrics.amountByPaymentOption)})` }}
               >
@@ -779,7 +779,7 @@ export default function TreasuryDashboardView({
               <div className="flex flex-col gap-2 text-xs text-slate-600 dark:text-slate-300 max-h-48 overflow-y-auto pr-2">
                 {activeMetrics.amountByPaymentOption.map((opt, idx) => (
                   <div key={idx} className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: PAYMENT_OPTION_COLORS[opt.option] || '#3b82f6' }}></span> 
+                    <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: PAYMENT_OPTION_COLORS[opt.option] || '#3b82f6' }}></span>
                     <span className="truncate max-w-[200px]" title={`${opt.option} (${opt.percentage}%)`}>{opt.option}</span>
                   </div>
                 ))}
@@ -845,7 +845,7 @@ export default function TreasuryDashboardView({
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-base font-bold text-slate-900 dark:text-white m-0">Live Postgres Transaction Ledger ({fiscalPeriod})</h3>
           {activeTxFeed.length > 0 && (
-            <button 
+            <button
               onClick={() => setShowAllModal(true)}
               className="text-xs text-blue-600 dark:text-blue-400 font-semibold cursor-pointer hover:underline bg-transparent border-none p-0"
             >
@@ -905,7 +905,7 @@ export default function TreasuryDashboardView({
                 <h3 className="text-lg font-bold text-slate-900 dark:text-white m-0">Complete Postgres Database Ledger ({fiscalPeriod})</h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 m-0 mt-1">Showing all records ({activeTxFeed.length} entries)</p>
               </div>
-              <button 
+              <button
                 onClick={() => setShowAllModal(false)}
                 className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white flex items-center justify-center font-bold border-none cursor-pointer"
               >
@@ -949,7 +949,7 @@ export default function TreasuryDashboardView({
               </div>
             </div>
             <div className="flex justify-end p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
-              <button 
+              <button
                 onClick={() => setShowAllModal(false)}
                 className="px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold text-xs cursor-pointer border-none hover:bg-slate-300 dark:hover:bg-slate-700 transition-colors"
               >
