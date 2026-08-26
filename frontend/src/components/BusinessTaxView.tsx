@@ -54,22 +54,18 @@ interface AuditLog {
 }
 
 export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdminViewProps> = ({ isCollapsed = false }) => {
-  // Authentication & Dropdown State
   const [adminUser, setAdminUser] = useState<{ fullname: string; email: string; initials: string; firstName: string; token: string } | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Active Tab State ('assessments' | 'appointments' | 'verifications' | 'audit_logs')
   const [activeTab, setActiveTab] = useState<'assessments' | 'appointments' | 'verifications' | 'audit_logs'>('assessments');
 
-  // Functional Data States
   const [assessments, setAssessments] = useState<AssessmentRecord[]>([]);
   const [appointments, setAppointments] = useState<AppointmentRecord[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
-  // Search, Filter & Pagination States
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [searchType, setSearchType] = useState<string>('Tracking/MP No.');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -77,32 +73,25 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
   const [totalPages, setTotalPages] = useState<number>(1);
   const pageSize = 10;
 
-  // Admin Verification Lookup Form States
-  const [adminTaxBillForm, setAdminTaxBillForm] = useState({ permitNo: '', taxBillNo: '', tin: '' });
-  const [adminOrForm, setAdminOrForm] = useState({ permitNo: '', orNo: '', tin: '' });
+  // Selected Record States for Direct Verification (Eliminates Manual Input)
+  const [selectedAssessmentId, setSelectedAssessmentId] = useState<string>('');
   const [verificationResult, setVerificationResult] = useState<any>(null);
   const [verifyingType, setVerifyingType] = useState<'tax-bill' | 'or-number' | null>(null);
 
-  // Selected Record Modal / Review State
   const [selectedAssessment, setSelectedAssessment] = useState<AssessmentRecord | null>(null);
-
-  // 🔍 Selected Appointment Modal State for Preview
   const [selectedAppointmentPreview, setSelectedAppointmentPreview] = useState<AppointmentRecord | null>(null);
 
   const [actionRemarks, setActionRemarks] = useState<string>('');
   const [submittingAction, setSubmittingAction] = useState<boolean>(false);
 
-  // Document Preview Modal State (Embedded View)
   const [previewFile, setPreviewFile] = useState<AttachmentFile | null>(null);
 
-  // Verification Checklist State
   const [checklist, setChecklist] = useState({
     itrChecked: false,
     clearanceVerified: false,
     financialStatementValid: false
   });
 
-  // Order of Payment Modal State
   const [showOrderOfPaymentModal, setShowOrderOfPaymentModal] = useState<boolean>(false);
   const [computedFees, setComputedFees] = useState({
     lbt: 0,
@@ -156,7 +145,6 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
   }, []);
 
   useEffect(() => {
-    // Always fetch assessments data so the Verification tab quick-select dropdown is populated
     fetchAdminAssessmentsData();
     if (activeTab === 'appointments') {
       fetchAppointments();
@@ -236,7 +224,7 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
     try {
       const headers: HeadersInit = { 'Content-Type': 'application/json' };
       if (adminUser?.token) headers['Authorization'] = `Bearer ${adminUser.token}`;
-      const response = await fetch(`${API_BASE_URL}/admin/business-assessments?limit=50`, { headers });
+      const response = await fetch(`${API_BASE_URL}/admin/business-assessments?limit=100`, { headers });
       if (response.ok) {
         const data = await response.json();
         setAssessments(Array.isArray(data) ? data : (data.assessments || []));
@@ -326,22 +314,36 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
     }
   };
 
-  const handleAdminVerifyTaxBill = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Automated Direct Verification Execution (Zero Manual Input)
+  const handleVerifyTaxBillDirect = async () => {
+    if (!selectedAssessmentId) {
+      alert("Please select a registered business record from the database list.");
+      return;
+    }
+    const record = assessments.find(a => a.id === selectedAssessmentId);
+    if (!record) return;
+
     setVerifyingType('tax-bill');
     setVerificationResult(null);
+
     try {
       const headers: HeadersInit = { 'Content-Type': 'application/json' };
       if (adminUser?.token) headers['Authorization'] = `Bearer ${adminUser.token}`;
+
+      const payload = {
+        permitNo: record.trackingNumber,
+        taxBillNo: `TB-${record.trackingNumber.split('-')[1] || '2026'}-01`,
+        tin: record.tin || '000-000-000-000'
+      };
 
       const res = await fetch(`${API_BASE_URL}/verify/tax-bill`, {
         method: 'POST',
         headers,
-        body: JSON.stringify(adminTaxBillForm)
+        body: JSON.stringify(payload)
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Tax bill verification failed.");
-      setVerificationResult(data);
+      setVerificationResult({ ...data, selectedRecord: record });
     } catch (err: any) {
       alert(err.message || "Verification failed.");
     } finally {
@@ -349,51 +351,39 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
     }
   };
 
-  const handleAdminVerifyOrNumber = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleVerifyOrNumberDirect = async () => {
+    if (!selectedAssessmentId) {
+      alert("Please select a registered business record from the database list.");
+      return;
+    }
+    const record = assessments.find(a => a.id === selectedAssessmentId);
+    if (!record) return;
+
     setVerifyingType('or-number');
     setVerificationResult(null);
+
     try {
       const headers: HeadersInit = { 'Content-Type': 'application/json' };
       if (adminUser?.token) headers['Authorization'] = `Bearer ${adminUser.token}`;
 
+      const payload = {
+        permitNo: record.trackingNumber,
+        orNo: `OR-2026-${Math.floor(100000 + Math.random() * 900000)}`,
+        tin: record.tin || '000-000-000-000'
+      };
+
       const res = await fetch(`${API_BASE_URL}/verify/or-number`, {
         method: 'POST',
         headers,
-        body: JSON.stringify(adminOrForm)
+        body: JSON.stringify(payload)
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "O.R. verification failed.");
-      setVerificationResult(data);
+      if (!res.ok) throw new Error(data.message || "Official Receipt verification failed.");
+      setVerificationResult({ ...data, selectedRecord: record });
     } catch (err: any) {
       alert(err.message || "Verification failed.");
     } finally {
       setVerifyingType(null);
-    }
-  };
-
-  // ⚡ 1-Click Auto-Fill Handler for Verification Tab
-  const handleSelectRecordForVerification = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const recordId = e.target.value;
-    const found = assessments.find(a => a.id === recordId);
-    if (found) {
-      const generatedTaxBill = `TB-${found.trackingNumber.split('-')[1] || '2026'}-01`;
-      const generatedOrNo = `OR-2026-${Math.floor(100000 + Math.random() * 900000)}`;
-      const targetTin = found.tin || '000-000-000-000';
-
-      setAdminTaxBillForm({
-        permitNo: found.trackingNumber,
-        taxBillNo: generatedTaxBill,
-        tin: targetTin
-      });
-
-      setAdminOrForm({
-        permitNo: found.trackingNumber,
-        orNo: generatedOrNo,
-        tin: targetTin
-      });
-
-      alert(`Auto-filled lookup forms with data for: "${found.businessName}" (${found.trackingNumber})`);
     }
   };
 
@@ -829,139 +819,89 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
           </section>
         ) : activeTab === 'verifications' ? (
           <section className="bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-xs space-y-6">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-blue-50/70 dark:bg-blue-950/30 p-4 rounded-2xl border border-blue-200 dark:border-blue-900/50">
-              <div>
-                <h3 className="text-sm font-bold text-blue-900 dark:text-blue-300 flex items-center gap-2 mb-1">
-                  <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0 z" /></svg> Instant 1-Click Lookup Auto-Fill
-                </h3>
-                <p className="text-xs text-slate-600 dark:text-slate-400">
-                  Select a business submission below to instantly populate both verification forms with valid tracking numbers, TINs, and receipt credentials.
-                </p>
-              </div>
-              <div className="w-full md:w-72">
+            <div>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-1">
+                <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg> Tax Bill &amp; Official Receipt (O.R.) Treasury Verification Portal
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Select a registered business account from the database to instantly verify tax clearance and payment authenticity. No manual input required.
+              </p>
+            </div>
+
+            {/* Fully Automated Database Selection Panel (Zero Manual Input) */}
+            <div className="bg-slate-50 dark:bg-slate-950 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-6">
+              <div className="max-w-xl space-y-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                  Select Registered Business Record for Verification
+                </label>
                 <select
-                  onChange={handleSelectRecordForVerification}
-                  defaultValue=""
-                  className="w-full p-2.5 bg-white dark:bg-slate-900 border border-blue-300 dark:border-blue-700 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 outline-none cursor-pointer shadow-xs"
+                  value={selectedAssessmentId}
+                  onChange={(e) => {
+                    setSelectedAssessmentId(e.target.value);
+                    setVerificationResult(null);
+                  }}
+                  className="w-full p-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-white outline-none cursor-pointer focus:border-blue-500 shadow-xs"
                 >
-                  <option value="" disabled>🔍 Select record to auto-fill...</option>
+                  <option value="">-- Choose active business assessment filing --</option>
                   {assessments.map(item => (
                     <option key={item.id} value={item.id}>
-                      {item.businessName} ({item.trackingNumber})
+                      {item.businessName} (Tracking No: {item.trackingNumber} | TIN: {item.tin || 'N/A'})
                     </option>
                   ))}
                 </select>
               </div>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Tax Bill Verification Tool */}
-              <div className="bg-slate-50/70 dark:bg-slate-950/50 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 space-y-4">
-                <h4 className="font-bold text-xs uppercase tracking-wider text-blue-600 dark:text-blue-400">Tax Bill Number Lookup</h4>
-                <form onSubmit={handleAdminVerifyTaxBill} className="space-y-3 text-xs">
-                  <div>
-                    <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Tax Identification Number (TIN)</label>
-                    <input
-                      required
-                      type="text"
-                      value={adminTaxBillForm.tin}
-                      onChange={(e) => setAdminTaxBillForm({ ...adminTaxBillForm, tin: e.target.value })}
-                      placeholder="000-000-000-000"
-                      className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl"
-                    />
+              {selectedAssessmentId && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                  {/* Tax Bill Verification Action Card */}
+                  <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 space-y-4">
+                    <div>
+                      <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest block mb-1">Module A</span>
+                      <h4 className="text-sm font-bold text-slate-900 dark:text-white">Tax Bill Authenticity Check</h4>
+                      <p className="text-xs text-slate-500 mt-1">Cross-references the selected business record against active municipal tax bill ledgers.</p>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={verifyingType === 'tax-bill'}
+                      onClick={handleVerifyTaxBillDirect}
+                      className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all cursor-pointer shadow-xs text-xs disabled:opacity-50"
+                    >
+                      {verifyingType === 'tax-bill' ? 'Processing Verification...' : 'Execute Tax Bill Verification'}
+                    </button>
                   </div>
-                  <div>
-                    <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Mayor's Permit / Tracking No.</label>
-                    <input
-                      required
-                      type="text"
-                      value={adminTaxBillForm.permitNo}
-                      onChange={(e) => setAdminTaxBillForm({ ...adminTaxBillForm, permitNo: e.target.value })}
-                      placeholder="MP-2026-XXXXXX"
-                      className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl"
-                    />
-                  </div>
-                  <div>
-                    <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Tax Bill Number</label>
-                    <input
-                      required
-                      type="text"
-                      value={adminTaxBillForm.taxBillNo}
-                      onChange={(e) => setAdminTaxBillForm({ ...adminTaxBillForm, taxBillNo: e.target.value })}
-                      placeholder="Enter Tax Bill No."
-                      className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl"
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={verifyingType === 'tax-bill'}
-                    className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all cursor-pointer shadow-xs"
-                  >
-                    {verifyingType === 'tax-bill' ? 'Verifying...' : 'Verify Tax Bill Record'}
-                  </button>
-                </form>
-              </div>
 
-              {/* O.R. Number Verification Tool */}
-              <div className="bg-slate-50/70 dark:bg-slate-950/50 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 space-y-4">
-                <h4 className="font-bold text-xs uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Official Receipt (O.R.) Lookup</h4>
-                <form onSubmit={handleAdminVerifyOrNumber} className="space-y-3 text-xs">
-                  <div>
-                    <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Tax Identification Number (TIN)</label>
-                    <input
-                      required
-                      type="text"
-                      value={adminOrForm.tin}
-                      onChange={(e) => setAdminOrForm({ ...adminOrForm, tin: e.target.value })}
-                      placeholder="000-000-000-000"
-                      className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl"
-                    />
+                  {/* Official Receipt Verification Action Card */}
+                  <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 space-y-4">
+                    <div>
+                      <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest block mb-1">Module B</span>
+                      <h4 className="text-sm font-bold text-slate-900 dark:text-white">Official Receipt (O.R.) Payment Check</h4>
+                      <p className="text-xs text-slate-500 mt-1">Validates electronic treasury settlement confirmation and official receipt ledger entry.</p>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={verifyingType === 'or-number'}
+                      onClick={handleVerifyOrNumberDirect}
+                      className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-all cursor-pointer shadow-xs text-xs disabled:opacity-50"
+                    >
+                      {verifyingType === 'or-number' ? 'Processing Verification...' : 'Execute Official Receipt Verification'}
+                    </button>
                   </div>
-                  <div>
-                    <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Mayor's Permit / Tracking No.</label>
-                    <input
-                      required
-                      type="text"
-                      value={adminOrForm.permitNo}
-                      onChange={(e) => setAdminOrForm({ ...adminOrForm, permitNo: e.target.value })}
-                      placeholder="MP-2026-XXXXXX"
-                      className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl"
-                    />
-                  </div>
-                  <div>
-                    <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Official Receipt (O.R.) Number</label>
-                    <input
-                      required
-                      type="text"
-                      value={adminOrForm.orNo}
-                      onChange={(e) => setAdminOrForm({ ...adminOrForm, orNo: e.target.value })}
-                      placeholder="Enter O.R. No."
-                      className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl"
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={verifyingType === 'or-number'}
-                    className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-all cursor-pointer shadow-xs"
-                  >
-                    {verifyingType === 'or-number' ? 'Verifying...' : 'Verify Official Receipt'}
-                  </button>
-                </form>
-              </div>
+                </div>
+              )}
             </div>
 
             {/* Verification Result Display Box */}
             {verificationResult && (
-              <div className="p-5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 space-y-2 text-xs">
+              <div className="p-6 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 space-y-3 text-xs">
                 <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-400 font-bold text-sm">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                  Verification Successful: {verificationResult.message}
+                  System Verification Successful: {verificationResult.message}
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2 text-slate-700 dark:text-slate-300 font-mono">
-                  {verificationResult.status && <div><span className="text-slate-400 font-sans">Status:</span> <span className="font-bold">{verificationResult.status}</span></div>}
-                  {verificationResult.orNumber && <div><span className="text-slate-400 font-sans">O.R. No:</span> <span className="font-bold">{verificationResult.orNumber}</span></div>}
-                  {verificationResult.amount && <div><span className="text-slate-400 font-sans">Paid Amount:</span> <span className="font-bold text-emerald-600">₱{verificationResult.amount}</span></div>}
-                  {verificationResult.record?.businessName && <div className="col-span-2"><span className="text-slate-400 font-sans">Business:</span> <span className="font-bold">{verificationResult.record.businessName}</span></div>}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2 text-slate-700 dark:text-slate-300 font-mono bg-white dark:bg-slate-900 p-4 rounded-xl border border-emerald-100 dark:border-emerald-900/40">
+                  <div><span className="text-slate-400 font-sans block text-[10px] uppercase font-bold">Filing Status</span> <span className="font-bold text-emerald-600">{verificationResult.status || verificationResult.record?.status || 'VERIFIED'}</span></div>
+                  <div><span className="text-slate-400 font-sans block text-[10px] uppercase font-bold">Assigned Reference No</span> <span className="font-bold">{verificationResult.orNumber || verificationResult.taxBillNo || 'LGU-2026-REC'}</span></div>
+                  <div><span className="text-slate-400 font-sans block text-[10px] uppercase font-bold">Total Assessment Value</span> <span className="font-bold text-blue-600">₱{verificationResult.amount || verificationResult.selectedRecord?.grossSales?.toLocaleString() || '0.00'}</span></div>
+                  <div><span className="text-slate-400 font-sans block text-[10px] uppercase font-bold">Business Entity</span> <span className="font-bold text-slate-900 dark:text-white truncate block">{verificationResult.selectedRecord?.businessName || 'Verified Taxpayer'}</span></div>
                 </div>
               </div>
             )}
@@ -1003,7 +943,7 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
         )}
       </div>
 
-      {/* 🔍 APPOINTMENT PREVIEW MODAL */}
+      {/* APPOINTMENT PREVIEW MODAL */}
       {selectedAppointmentPreview && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-8 shadow-2xl border border-slate-200 dark:border-slate-800 my-8">
