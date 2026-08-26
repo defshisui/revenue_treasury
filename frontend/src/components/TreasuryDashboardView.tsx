@@ -334,23 +334,21 @@ export default function TreasuryDashboardView({
 
         <div className="flex items-center flex-wrap gap-3">
 
-          {/* ======== ADDED: QUICK NAVIGATION MODULE PORTALS ======== */}
-          {onNavigate && (
-            <div className="flex items-center gap-2 border-r border-slate-300 dark:border-slate-700 pr-3">
-              <button
-                onClick={() => onNavigate('rpt')}
-                className="px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 text-xs font-bold cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900 transition-colors flex items-center gap-1.5"
-              >
-                RPT Portal ↗
-              </button>
-              <button
-                onClick={() => onNavigate('business_tax')}
-                className="px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 text-xs font-bold cursor-pointer hover:bg-emerald-100 dark:hover:bg-emerald-900 transition-colors flex items-center gap-1.5"
-              >
-                Business Tax Hub ↗
-              </button>
-            </div>
-          )}
+          {/* ======== QUICK NAVIGATION MODULE PORTALS ======== */}
+          <div className="flex items-center gap-2 border-r border-slate-300 dark:border-slate-700 pr-3">
+            <button
+              onClick={() => onNavigate ? onNavigate('rpt') : console.log("RPT clicked")}
+              className="px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 text-xs font-bold cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900 transition-colors flex items-center gap-1.5"
+            >
+              RPT Portal ↗
+            </button>
+            <button
+              onClick={() => onNavigate ? onNavigate('business_tax') : console.log("Business Tax clicked")}
+              className="px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 text-xs font-bold cursor-pointer hover:bg-emerald-100 dark:hover:bg-emerald-900 transition-colors flex items-center gap-1.5"
+            >
+              Business Tax Hub ↗
+            </button>
+          </div>
           {/* ======================================================== */}
 
           {onNavigate && (
