@@ -4,14 +4,15 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "start": "node backend/server.js",
-    "dev": "nodemon backend/server.js",
+    "start": "npm --prefix backend start",
+    "dev": "npm --prefix backend run dev",
     "install:all": "npm --prefix backend install && npm --prefix frontend install",
     "dev:frontend": "npm --prefix frontend run dev",
     "dev:backend": "npm --prefix backend run dev",
     "build:frontend": "npm --prefix frontend run build",
     "start:backend": "npm --prefix backend run start",
-    "lint:frontend": "npm --prefix frontend run lint"
+    "lint:frontend": "npm --prefix frontend run lint",
+    "postinstall": "npm run install:all"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
