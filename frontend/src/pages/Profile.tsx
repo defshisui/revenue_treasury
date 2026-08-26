@@ -165,8 +165,38 @@ export default function Profile() {
    */
   function handleProfileSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setErrorMessage("");
-    setStatusMessage("Official LGU profile information updated successfully.");
+
+    try {
+      // 1. Fetch current session data
+      const storageKey = localStorage.getItem('currentUser') ? 'currentUser' : 'user';
+      const rawData = localStorage.getItem(storageKey);
+
+      if (rawData) {
+        const parsedData = JSON.parse(rawData);
+
+        // 2. Update the name and email directly in the user object
+        if (parsedData.user && typeof parsedData.user === 'object') {
+          parsedData.user.fullname = profileData.fullName;
+          parsedData.user.email = profileData.email;
+        } else {
+          parsedData.fullname = profileData.fullName;
+          parsedData.email = profileData.email;
+        }
+
+        // 3. Save it back to local storage
+        localStorage.setItem(storageKey, JSON.stringify(parsedData));
+
+        // 4. Dispatch the event so TreasuryHeader immediately updates
+        window.dispatchEvent(new Event('profileUpdated'));
+      }
+
+      setErrorMessage("");
+      setStatusMessage("Official LGU profile information updated successfully.");
+
+    } catch (e) {
+      console.error("Failed to update profile data in storage", e);
+      setErrorMessage("Failed to save changes to session storage.");
+    }
   }
 
   /*
@@ -197,6 +227,13 @@ export default function Profile() {
    */
   const pageBackground = isDarkMode ? "#020617" : "#f8fafc";
 
+  // Re-calculate initials on render based on the current state (profileData)
+  const currentFullName = profileData.fullName || "Administrator";
+  const nameParts = String(currentFullName).trim().split(" ");
+  const currentInitials = nameParts.length > 1
+    ? (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase()
+    : nameParts[0].slice(0, 2).toUpperCase();
+
   return (
     <div
       className={`min-h-screen w-full overflow-x-auto transition-colors duration-300 ${isDarkMode ? "text-slate-100" : "text-slate-800"
@@ -220,8 +257,8 @@ export default function Profile() {
             type="button"
             onClick={() => setIsDarkMode((current) => !current)}
             className={`flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold shadow-sm transition cursor-pointer ${isDarkMode
-                ? "border-slate-800 bg-slate-900 text-slate-200 hover:bg-slate-800"
-                : "border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
+              ? "border-slate-800 bg-slate-900 text-slate-200 hover:bg-slate-800"
+              : "border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
               }`}
           >
             {isDarkMode ? (
@@ -277,7 +314,7 @@ export default function Profile() {
                       <img src={avatarUrl} alt="Profile" className="h-full w-full object-cover" />
                     ) : (
                       <div className="flex h-24 w-24 items-center justify-center rounded-full bg-blue-600 text-3xl font-bold text-white shadow-inner">
-                        {initialUser?.initials || activeRole.charAt(0)}
+                        {currentInitials}
                       </div>
                     )}
                   </div>
