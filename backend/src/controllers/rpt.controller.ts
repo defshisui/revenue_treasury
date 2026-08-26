@@ -74,6 +74,28 @@ export async function createRptApplication(req: Request, res: Response): Promise
   }
 }
 
+export async function deleteRptApplication(req: Request, res: Response): Promise<void> {
+  const { id } = req.params;
+
+  try {
+    const result = await pool.query('DELETE FROM rpt_applications WHERE id = $1 RETURNING *', [id]);
+
+    if (result.rowCount === 0) {
+      res.status(404).json({ message: 'RPT application not found' });
+      return;
+    }
+
+    await recordAudit(req, 'AUD-RPT-DELETE', 'admin@gov.ph', 'Admin',
+      'RPT Module', 'RPT_APPLICATION_DELETED', 'WARNING', null,
+      `Deleted RPT application ID: ${id}`);
+
+    res.json({ success: true, message: 'RPT application deleted successfully' });
+  } catch (err) {
+    console.error('Error deleting RPT application:', err);
+    res.status(500).json({ message: 'Failed to delete RPT application from database.' });
+  }
+}
+
 export async function getLguRptRecords(_req: Request, res: Response): Promise<void> {
   try {
     const result = await pool.query('SELECT * FROM lgu_rpt_records ORDER BY id DESC');
