@@ -25,6 +25,15 @@ export async function createRptApplication(req: Request, res: Response): Promise
     filePaths = files.map((f) => `${f.fieldname}: ${f.originalname}`);
   }
 
+  // BULLETPROOF FALLBACK: If Multer drops the physical files, use the text list sent by frontend
+  if (filePaths.length === 0 && appData.documents) {
+    try {
+      filePaths = JSON.parse(appData.documents);
+    } catch {
+      filePaths = [appData.documents];
+    }
+  }
+
   // Resolve Names safely
   const ownerName = appData.owner_name || appData.ownerName || '';
   let resolvedApplicantName = appData.applicant_name || appData.applicantName || ownerName || 'Unknown Applicant';
