@@ -108,6 +108,8 @@ export default function Login() {
       setIsErrorState(true);
       if (error.name === "AbortError") {
         setErrorMessage("Request timed out. Please check your connection.");
+      } else if (error.message?.includes("Failed to fetch") || error.message?.includes("NetworkError")) {
+        setErrorMessage(`Cannot reach server at (${API_BASE_URL}). Please verify backend is running and CORS is enabled.`);
       } else {
         setErrorMessage(error.message || "Network error. Please try again later.");
       }

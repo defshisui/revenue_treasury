@@ -86,6 +86,30 @@ pool.connect(async (err, client, release) => {
   // Auto-initialize tables if they don't exist yet
   try {
     await pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+          id SERIAL PRIMARY KEY,
+          name VARCHAR(255) NOT NULL,
+          email VARCHAR(255) UNIQUE NOT NULL,
+          password VARCHAR(255) NOT NULL,
+          role VARCHAR(50) DEFAULT 'treasury-staff',
+          created_at TIMESTAMP DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS audit_logs (
+          id SERIAL PRIMARY KEY,
+          audit_id VARCHAR(50) NOT NULL,
+          user_email VARCHAR(255) NOT NULL,
+          user_role VARCHAR(50) NOT NULL,
+          module VARCHAR(100) NOT NULL,
+          action VARCHAR(100) NOT NULL,
+          severity VARCHAR(50) DEFAULT 'INFO',
+          ip_address VARCHAR(100),
+          user_agent TEXT,
+          previous_data TEXT,
+          new_data TEXT,
+          timestamp TIMESTAMP DEFAULT NOW()
+      );
+
       CREATE TABLE IF NOT EXISTS citizens (
           id SERIAL PRIMARY KEY,
           user_id INT REFERENCES users(id) ON DELETE CASCADE,
@@ -205,6 +229,13 @@ pool.connect(async (err, client, release) => {
     await pool.query(`
       ALTER TABLE rpt_applications 
       ADD COLUMN IF NOT EXISTS documents TEXT[];
+    `);
+
+    // Seed default administrator account if users table is empty
+    await pool.query(`
+      INSERT INTO users (name, email, password, role)
+      VALUES ('System Administrator', 'admin@treasury.gov.ph', 'admin123', 'admin')
+      ON CONFLICT (email) DO NOTHING;
     `);
 
     console.log('✅ Database tables checked/initialized successfully.');
