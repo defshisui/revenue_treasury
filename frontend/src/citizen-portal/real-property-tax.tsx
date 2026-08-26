@@ -444,34 +444,36 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
   async function submitApplication() {
     const generatedControlNo = makeControlNumber();
 
-    const formDataPayload = new FormData();
-    formDataPayload.append("controlNumber", generatedControlNo);
-    formDataPayload.append("taxDeclarationNumber", formData.taxDeclarationNumber || "For issuance");
-    formDataPayload.append("ownerName", formData.ownerName);
-    formDataPayload.append("applicantName", formData.applicantName);
-    formDataPayload.append("applicantType", formData.applicantType);
-    formDataPayload.append("email", formData.email);
-    formDataPayload.append("mobileNumber", formData.mobileNumber);
-    formDataPayload.append("service", formData.service);
-    formDataPayload.append("propertyLocation", formData.propertyLocation);
-    formDataPayload.append("barangay", formData.barangay);
-    formDataPayload.append("propertyType", formData.propertyType);
-    formDataPayload.append("status", "Submitted");
-    formDataPayload.append("filedDate", new Date().toISOString().slice(0, 10));
-    formDataPayload.append("notes", formData.notes);
-
-    const fileInputNames = ["ownershipProof", "validId", "taxRecord", "propertySketch", "authorization"];
-    fileInputNames.forEach((name) => {
-      const fileInput = document.querySelector(`input[name="${name}"]`) as HTMLInputElement;
-      if (fileInput && fileInput.files && fileInput.files[0]) {
-        formDataPayload.append(name, fileInput.files[0]);
-      }
-    });
+    // Create a structured JSON payload instead of FormData
+    // This guarantees mock backends (like json-server) correctly save all text fields
+    const payload = {
+      controlNumber: generatedControlNo,
+      taxDeclarationNumber: formData.taxDeclarationNumber || "For issuance",
+      ownerName: formData.ownerName,
+      applicantName: formData.applicantName,
+      applicantType: formData.applicantType,
+      email: formData.email,
+      mobileNumber: formData.mobileNumber,
+      service: formData.service,
+      propertyLocation: formData.propertyLocation,
+      barangay: formData.barangay,
+      propertyType: formData.propertyType,
+      status: "Submitted",
+      filedDate: new Date().toISOString().slice(0, 10),
+      notes: formData.notes,
+      // Map attached documents to an array of identifiable strings to display in modal
+      documents: Object.entries(documents)
+        .filter(([_, val]) => val)
+        .map(([key, val]) => `${key}: ${val}`)
+    };
 
     try {
       const response = await fetch(`${API_BASE_URL}/citizen-rpt-applications`, {
         method: "POST",
-        body: formDataPayload,
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) throw new Error("Failed to submit application");
@@ -869,25 +871,25 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
             <div className="border-b border-slate-100 dark:border-slate-800 pb-4 flex justify-between items-center">
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-wider text-blue-700">Application Details</p>
-                <h3 className="mt-1 text-xl font-extrabold text-slate-900 dark:text-white">{selectedApplication.controlNumber}</h3>
+                <h3 className="mt-1 text-xl font-extrabold text-slate-900 dark:text-white">{selectedApplication.controlNumber || "—"}</h3>
               </div>
               <button type="button" onClick={() => setSelectedApplication(null)} className="rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 cursor-pointer">✕</button>
             </div>
 
             <div className="mt-5 space-y-5">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Detail label="Tax Declaration Number" value={selectedApplication.taxDeclarationNumber} />
-                <Detail label="Status" value={selectedApplication.status} />
-                <Detail label="Owner Name" value={selectedApplication.ownerName} />
-                <Detail label="Applicant Name" value={selectedApplication.applicantName} />
-                <Detail label="Applicant Type" value={selectedApplication.applicantType} />
-                <Detail label="Service Requested" value={selectedApplication.service} />
-                <Detail label="Email Address" value={selectedApplication.email} />
-                <Detail label="Mobile Number" value={selectedApplication.mobileNumber} />
-                <Detail label="Property Type" value={selectedApplication.propertyType} />
-                <Detail label="Barangay" value={selectedApplication.barangay} />
+                <Detail label="Tax Declaration Number" value={selectedApplication.taxDeclarationNumber || "—"} />
+                <Detail label="Status" value={selectedApplication.status || "—"} />
+                <Detail label="Owner Name" value={selectedApplication.ownerName || "—"} />
+                <Detail label="Applicant Name" value={selectedApplication.applicantName || "—"} />
+                <Detail label="Applicant Type" value={selectedApplication.applicantType || "—"} />
+                <Detail label="Service Requested" value={selectedApplication.service || "—"} />
+                <Detail label="Email Address" value={selectedApplication.email || "—"} />
+                <Detail label="Mobile Number" value={selectedApplication.mobileNumber || "—"} />
+                <Detail label="Property Type" value={selectedApplication.propertyType || "—"} />
+                <Detail label="Barangay" value={selectedApplication.barangay || "—"} />
               </div>
-              <Detail label="Property Location" value={selectedApplication.propertyLocation} />
+              <Detail label="Property Location" value={selectedApplication.propertyLocation || "—"} />
 
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500 mb-2">Attached Documents</p>
