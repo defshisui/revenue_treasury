@@ -108,57 +108,67 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     getRPTApplications()
       .then((data) => {
         if (!isMounted) return;
-        const mapped: ExtendedApplicationRecord[] = (Array.isArray(data) ? data : []).map((item: any) => ({
-          ...item,
-          id: item.id || `RPT-${Math.random().toString(36).substring(2, 9)}`,
-          applicantName: item.applicantName || item.ownerName || 'Unknown Applicant',
-          status: item.status || 'Under Evaluation',
-          referenceNumber: item.controlNumber || item.referenceNumber || `REF-${item.id}`,
-          applicantEmail: item.email || '',
-          applicantPhone: item.mobileNumber || '',
-          category: item.service || '',
-          submissionDate: item.filedDate || '',
-          penaltyFee: item.penalty ? Number(item.penalty) : 0,
-          propertyDetails: item.propertyDetails || {
-            pin: item.pin || '',
-            titleNumber: item.taxDeclarationNumber || '',
-            lotAreaSqM: item.lotAreaSqM || 0,
-            address: item.propertyLocation || '',
-            currentValuation: item.currentValuation || 0
-          },
-          documents: (Array.isArray(item.documents) ? item.documents : []).map((doc: any, idx: number) => {
-            if (!doc) {
+        const mapped: ExtendedApplicationRecord[] = (Array.isArray(data) ? data : []).map((item: any) => {
+          let rawDocs = item.documents;
+          if (typeof rawDocs === 'string') {
+            try { rawDocs = JSON.parse(rawDocs); } catch { rawDocs = []; }
+          }
+          if (rawDocs && !Array.isArray(rawDocs) && typeof rawDocs === 'object') {
+            rawDocs = Object.values(rawDocs);
+          }
+
+          return {
+            ...item,
+            id: item.id || `RPT-${Math.random().toString(36).substring(2, 9)}`,
+            applicantName: item.applicantName || item.ownerName || 'Unknown Applicant',
+            status: item.status || 'Under Evaluation',
+            referenceNumber: item.controlNumber || item.referenceNumber || `REF-${item.id}`,
+            applicantEmail: item.email || '',
+            applicantPhone: item.mobileNumber || '',
+            category: item.service || '',
+            submissionDate: item.filedDate || '',
+            penaltyFee: item.penalty ? Number(item.penalty) : 0,
+            propertyDetails: item.propertyDetails || {
+              pin: item.pin || '',
+              titleNumber: item.taxDeclarationNumber || '',
+              lotAreaSqM: item.lotAreaSqM || 0,
+              address: item.propertyLocation || '',
+              currentValuation: item.currentValuation || 0
+            },
+            documents: (Array.isArray(rawDocs) ? rawDocs : []).map((doc: any, idx: number) => {
+              if (!doc) {
+                return {
+                  id: `DOC-${idx + 1}`,
+                  name: `Document ${idx + 1}`,
+                  type: 'PDF',
+                  url: '',
+                  status: 'Pending' as const,
+                  uploadedAt: item.filedDate || ''
+                };
+              }
+              if (typeof doc === 'string') {
+                return {
+                  id: `DOC-${idx + 1}`,
+                  name: doc,
+                  type: doc.includes('.pdf') ? 'PDF' : 'IMAGE',
+                  url: doc.startsWith('data:') || doc.startsWith('http') ? doc : `/uploads/${doc}`,
+                  status: 'Pending' as const,
+                  uploadedAt: item.filedDate || ''
+                };
+              }
               return {
-                id: `DOC-${idx + 1}`,
-                name: `Document ${idx + 1}`,
-                type: 'PDF',
-                url: '',
-                status: 'Pending' as const,
-                uploadedAt: item.filedDate || ''
+                id: doc.id || `DOC-${idx + 1}`,
+                name: doc.name || doc.fileName || `Document ${idx + 1}`,
+                type: doc.type || 'PDF',
+                url: doc.url || '',
+                status: doc.status || 'Pending',
+                uploadedAt: doc.uploadedAt || item.filedDate || ''
               };
-            }
-            if (typeof doc === 'string') {
-              return {
-                id: `DOC-${idx + 1}`,
-                name: doc,
-                type: doc.includes('.pdf') ? 'PDF' : 'IMAGE',
-                url: doc.startsWith('data:') || doc.startsWith('http') ? doc : `/uploads/${doc}`,
-                status: 'Pending' as const,
-                uploadedAt: item.filedDate || ''
-              };
-            }
-            return {
-              id: doc.id || `DOC-${idx + 1}`,
-              name: doc.name || doc.fileName || `Document ${idx + 1}`,
-              type: doc.type || 'PDF',
-              url: doc.url || '',
-              status: doc.status || 'Pending',
-              uploadedAt: doc.uploadedAt || item.filedDate || ''
-            };
-          }),
-          auditLogs: item.auditLogs || [],
-          notificationLogs: item.notificationLogs || []
-        }));
+            }),
+            auditLogs: item.auditLogs || [],
+            notificationLogs: item.notificationLogs || []
+          };
+        });
         setApplications(mapped);
         if (mapped.length > 0) {
           setSelectedAppId(mapped[0].id);
