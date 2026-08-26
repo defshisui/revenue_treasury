@@ -3,14 +3,20 @@ import React, { useState, useMemo } from "react";
 import type { HawkerAssociationRecord, HawkerAssociationStatus } from "../types/treasury";
 import { API_BASE_URL } from '../config/api';
 
+// NEW: Define the structure for the Digital Vault Documents
+export interface HawkerDocument {
+  id: string;
+  document_type: string;
+  file_url: string;
+  file_name: string;
+  mime_type: string;
+  status: string;
+}
+
 interface LguExtensionMeta {
   marketZone?: string;
   assignedStallCount?: number;
-  documents?: {
-    secCert: boolean;
-    memberRoster: boolean;
-    barangayClearance: boolean;
-  };
+  uploadedDocuments?: HawkerDocument[];
   feesPaid: boolean;
   orNumber?: string;
   violationsCount: number;
@@ -43,11 +49,33 @@ const enrichWithLguMeta = (item: any): ExtendedHawkerRecord => ({
   lguMeta: item.lguMeta || {
     marketZone: MARKET_ZONES[Math.floor(Math.random() * MARKET_ZONES.length)],
     assignedStallCount: Math.floor(10 + Math.random() * 40),
-    documents: {
-      secCert: Boolean(item.secRegistrationNo),
-      memberRoster: true,
-      barangayClearance: true,
-    },
+    // Map existing documents or inject mock data for visual testing if empty
+    uploadedDocuments: item.lguMeta?.uploadedDocuments || item.uploadedDocuments || [
+      {
+        id: crypto.randomUUID(),
+        document_type: "SEC_DTI_PERMIT",
+        file_url: "https://placehold.co/600x400/png?text=SEC+Permit+Preview",
+        file_name: "sec_permit_2026.png",
+        mime_type: "image/png",
+        status: "VERIFIED"
+      },
+      {
+        id: crypto.randomUUID(),
+        document_type: "MEMBER_ROSTER",
+        file_url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+        file_name: "member_list.pdf",
+        mime_type: "application/pdf",
+        status: "PENDING"
+      },
+      {
+        id: crypto.randomUUID(),
+        document_type: "BARANGAY_CLEARANCE",
+        file_url: "https://placehold.co/400x600/jpeg?text=Clearance",
+        file_name: "brgy_clearance.jpg",
+        mime_type: "image/jpeg",
+        status: "VERIFIED"
+      }
+    ],
     feesPaid: item.status === "Approved",
     orNumber: item.status === "Approved" ? `OR-${Math.floor(100000 + Math.random() * 900000)}` : undefined,
     violationsCount: 0,
@@ -229,7 +257,6 @@ export default function HawkerAssociation({
       lguMeta: {
         marketZone: newForm.marketZone,
         assignedStallCount: Number(newForm.assignedStallCount),
-        documents: { secCert: true, memberRoster: true, barangayClearance: true },
         feesPaid: true,
         orNumber: `OR-${Math.floor(100000 + Math.random() * 900000)}`,
         violationsCount: 0,
@@ -372,16 +399,27 @@ export default function HawkerAssociation({
     setInspectionNote("");
   };
 
+  // ROBUST DATABASE DELETION
   const handleDelete = async (id: string) => {
-    if (confirm("Are you sure you want to delete this hawker association registry?")) {
+    if (confirm("Are you sure you want to delete this hawker association registry? This will permanently remove the record from the database.")) {
+
+      // Optimistically remove from UI
       const updated = associations.filter((item) => item.id !== id);
       setAssociations(updated);
-      if (onDeleteRecord) onDeleteRecord(id);
 
       try {
-        await fetch(`${API_BASE_URL}/api/hawkers/${id}`, { method: 'DELETE' });
+        const response = await fetch(`${API_BASE_URL}/api/hawkers/${id}`, { method: 'DELETE' });
+
+        if (!response.ok) {
+          throw new Error("Failed to delete from database");
+        }
+
+        if (onDeleteRecord) onDeleteRecord(id);
       } catch (err) {
-        console.warn("Storage sync delete fallback");
+        console.error("Delete failed:", err);
+        alert("Failed to delete record from the database. Restoring view.");
+        // If DB deletion fails, restore the list by fetching again
+        fetchApplications();
       }
     }
   };
@@ -587,9 +625,9 @@ export default function HawkerAssociation({
                     </td>
                     <td className="p-4 text-center">
                       <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold border ${item.status === "Approved" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
-                          item.status === "New" ? "bg-blue-50 text-blue-700 border-blue-200" :
-                            item.status === "Under Review" ? "bg-amber-50 text-amber-700 border-amber-200" :
-                              "bg-rose-50 text-rose-700 border-rose-200"
+                        item.status === "New" ? "bg-blue-50 text-blue-700 border-blue-200" :
+                          item.status === "Under Review" ? "bg-amber-50 text-amber-700 border-amber-200" :
+                            "bg-rose-50 text-rose-700 border-rose-200"
                         }`}>
                         {item.status}
                       </span>
@@ -626,7 +664,7 @@ export default function HawkerAssociation({
       {/* MODAL: ADVANCED LGU REVIEW & DOCUMENT VAULT DRAWER */}
       {isReviewModalOpen && selectedRecord && (
         <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-2xl w-full p-8 shadow-2xl border border-slate-200 dark:border-slate-800 my-8">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-4xl w-full p-8 shadow-2xl border border-slate-200 dark:border-slate-800 my-8">
             <div className="flex justify-between items-start border-b border-slate-100 dark:border-slate-800 pb-4 mb-4">
               <div>
                 <h3 className="text-base font-bold text-slate-900 dark:text-white">LGU Municipal Review & Compliance Vault</h3>
@@ -638,7 +676,7 @@ export default function HawkerAssociation({
             </div>
 
             {/* Modal Tabs Header */}
-            <div className="flex border-b border-slate-200 dark:border-slate-800 mb-6 gap-6 text-xs font-semibold">
+            <div className="flex border-b border-slate-200 dark:border-slate-800 mb-6 gap-6 text-xs font-semibold overflow-x-auto whitespace-nowrap">
               <button
                 type="button"
                 onClick={() => setActiveTab("details")}
@@ -651,14 +689,14 @@ export default function HawkerAssociation({
                 onClick={() => setActiveTab("documents")}
                 className={`pb-3 border-b-2 cursor-pointer transition-colors ${activeTab === "documents" ? "border-blue-600 text-blue-600" : "border-transparent text-slate-400"}`}
               >
-                2. Digital Vault (Sec / Clearance)
+                2. Digital Vault (Docs)
               </button>
               <button
                 type="button"
                 onClick={() => setActiveTab("compliance")}
                 className={`pb-3 border-b-2 cursor-pointer transition-colors ${activeTab === "compliance" ? "border-blue-600 text-blue-600" : "border-transparent text-slate-400"}`}
               >
-                3. Market Inspections & Violations
+                3. Market Inspections
               </button>
               <button
                 type="button"
@@ -711,46 +749,58 @@ export default function HawkerAssociation({
               </form>
             )}
 
-            {/* TAB 2: DIGITAL VAULT */}
+            {/* TAB 2: DIGITAL VAULT WITH IMAGE / PDF VIEW */}
             {activeTab === "documents" && (
               <div className="space-y-4 text-xs">
-                <p className="text-slate-500 mb-2">Verified statutory documents attached by applicant during online submission:</p>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                    <div className="flex items-center gap-3">
-                      <i className="fa-solid fa-file-shield text-emerald-600 text-lg"></i>
-                      <div>
-                        <p className="font-bold text-slate-900 dark:text-white">SEC / DTI Registration Certificate</p>
-                        <p className="text-[10px] text-slate-400">Reg No: {selectedRecord.secRegistrationNo || "Not Provided"}</p>
-                      </div>
-                    </div>
-                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">Verified</span>
-                  </div>
+                <p className="text-slate-500 mb-2">Verified statutory documents uploaded by the applicant to the database:</p>
 
-                  <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                    <div className="flex items-center gap-3">
-                      <i className="fa-solid fa-users-rectangle text-blue-600 text-lg"></i>
-                      <div>
-                        <p className="font-bold text-slate-900 dark:text-white">Certified Member Roster List</p>
-                        <p className="text-[10px] text-slate-400">Includes active vendor signatures</p>
-                      </div>
-                    </div>
-                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">Attached</span>
-                  </div>
+                {selectedRecord.lguMeta?.uploadedDocuments && selectedRecord.lguMeta.uploadedDocuments.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
+                    {selectedRecord.lguMeta.uploadedDocuments.map((doc) => (
+                      <div key={doc.id} className="p-3 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col items-center">
+                        <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider mb-2 text-center">
+                          {doc.document_type.replace(/_/g, ' ')}
+                        </span>
 
-                  <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                    <div className="flex items-center gap-3">
-                      <i className="fa-solid fa-building-columns text-indigo-600 text-lg"></i>
-                      <div>
-                        <p className="font-bold text-slate-900 dark:text-white">Barangay Hall Headquarter Clearance</p>
-                        <p className="text-[10px] text-slate-400">Local jurisdiction approval stamp</p>
-                      </div>
-                    </div>
-                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">Valid</span>
-                  </div>
-                </div>
+                        {/* Display Logic Based on mime_type */}
+                        {doc.mime_type.startsWith('image/') ? (
+                          <div className="w-full h-36 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700 bg-white">
+                            <img
+                              src={doc.file_url}
+                              alt={doc.file_name}
+                              className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
+                              onClick={() => window.open(doc.file_url, '_blank')}
+                            />
+                          </div>
+                        ) : (
+                          <div
+                            className="w-full h-36 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                            onClick={() => window.open(doc.file_url, '_blank')}
+                          >
+                            <i className="fa-solid fa-file-pdf text-rose-500 text-4xl mb-2"></i>
+                            <span className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold hover:underline">View Document (PDF)</span>
+                          </div>
+                        )}
 
-                <div className="flex justify-end pt-4 border-t border-slate-100 dark:border-slate-800">
+                        <div className="mt-3 w-full flex justify-between items-center px-1">
+                          <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide ${doc.status === 'VERIFIED' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-400' :
+                              doc.status === 'REJECTED' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/50 dark:text-rose-400' :
+                                'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400'
+                            }`}>
+                            {doc.status}
+                          </span>
+                          <span className="text-[10px] text-slate-400 truncate max-w-[100px]" title={doc.file_name}>{doc.file_name}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-8 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl text-center">
+                    <p className="text-slate-500">No documents found for this association.</p>
+                  </div>
+                )}
+
+                <div className="flex justify-end pt-4 border-t border-slate-100 dark:border-slate-800 mt-4">
                   <button type="button" onClick={() => setIsReviewModalOpen(false)} className="px-5 py-2 font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl cursor-pointer">Close Vault</button>
                 </div>
               </div>
@@ -784,7 +834,7 @@ export default function HawkerAssociation({
                   </div>
                 </div>
 
-                <div className="flex justify-end pt-4 border-t border-slate-100 dark:border-slate-800">
+                <div className="flex justify-end pt-4 border-t border-slate-100 dark:border-slate-800 mt-4">
                   <button type="button" onClick={() => setIsReviewModalOpen(false)} className="px-5 py-2 font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl cursor-pointer">Done</button>
                 </div>
               </div>
@@ -806,7 +856,7 @@ export default function HawkerAssociation({
                   ))}
                 </div>
 
-                <div className="flex justify-end pt-4 border-t border-slate-100 dark:border-slate-800">
+                <div className="flex justify-end pt-4 border-t border-slate-100 dark:border-slate-800 mt-4">
                   <button type="button" onClick={() => setIsReviewModalOpen(false)} className="px-5 py-2 font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl cursor-pointer">Close</button>
                 </div>
               </div>
