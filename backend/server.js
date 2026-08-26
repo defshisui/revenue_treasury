@@ -69,11 +69,17 @@ app.get(['/', '/health'], (req, res) => {
   });
 });
 
+const isInternalDb = process.env.DATABASE_URL && (
+  process.env.DATABASE_URL.includes('railway.internal') ||
+  process.env.DATABASE_URL.includes('localhost') ||
+  process.env.DATABASE_URL.includes('127.0.0.1')
+);
+
 const pool = new Pool(
   process.env.DATABASE_URL
     ? {
         connectionString: process.env.DATABASE_URL,
-        ssl: { rejectUnauthorized: false }
+        ssl: isInternalDb ? false : { rejectUnauthorized: false }
       }
     : {
         host: process.env.DB_HOST || 'localhost',
@@ -1124,6 +1130,8 @@ function handleFailedAttempt(req, email, trackingData, currentTime, res) {
   }
 }
 
-app.listen(PORT, () => {
-  console.log(`Municipal Treasury Backend Service running on port ${PORT}`);
+const parsedPort = parseInt(process.env.PORT || '3000', 10);
+
+app.listen(parsedPort, '0.0.0.0', () => {
+  console.log(`Municipal Treasury Backend Service running on http://0.0.0.0:${parsedPort}`);
 });
