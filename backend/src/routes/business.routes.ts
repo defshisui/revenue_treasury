@@ -10,13 +10,18 @@ import {
     verifyOrNumber
 } from '../controllers/business.controller.js';
 
-const upload = multer({ limits: { fileSize: 50 * 1024 * 1024 } }); // 50MB limit
+// 🔍 CRITICAL FIX: Use memoryStorage so file.buffer can be converted to base64 for previews
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 50 * 1024 * 1024 } // 50MB limit
+});
+
 const router = Router();
 
 router.get('/business-assessments', getBusinessAssessments);
 router.get('/admin/business-assessments', getBusinessAssessments);
 
-// Sales Declaration Submission with file upload middleware[cite: 5]
+// Sales Declaration Submission with memory storage file upload middleware[cite: 5]
 router.post('/business-assessments/sales-declaration', upload.single('financialStatement'), createSalesDeclaration);
 
 // Admin Actions: Status Updates & Deletions
