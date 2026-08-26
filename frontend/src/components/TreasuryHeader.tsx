@@ -19,7 +19,8 @@ export default function TreasuryHeader({
   isCollapsed,
 }: TreasuryHeaderProps) {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
-  const [adminUser, setAdminUser] = useState<{ fullname: string; firstName: string; initials: string; } | null>(null);
+  // Updated state to include avatar
+  const [adminUser, setAdminUser] = useState<{ fullname: string; firstName: string; initials: string; avatar: string | null; } | null>(null);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
@@ -45,13 +46,16 @@ export default function TreasuryHeader({
         const fullName = target.fullname || target.name || target.fullName || target.firstName || target.email;
         if (!fullName) return;
 
+        // Retrieve avatar from storage
+        const avatar = target.avatar || target.profile_picture || null;
+
         const nameParts = String(fullName).trim().split(" ");
         const firstName = nameParts[0];
         const initials = nameParts.length > 1
           ? (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase()
           : nameParts[0].slice(0, 2).toUpperCase();
 
-        setAdminUser({ fullname: String(fullName), firstName, initials });
+        setAdminUser({ fullname: String(fullName), firstName, initials, avatar });
       } catch (e) {
         console.error("Failed to parse admin session", e);
         setAdminUser(null);
@@ -134,9 +138,13 @@ export default function TreasuryHeader({
             onClick={() => setIsProfileMenuOpen((v) => !v)}
             className="flex items-center gap-2.5 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 px-2 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all cursor-pointer shadow-xs"
           >
-            {/* Dynamic Initials based on Account Name */}
-            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-600 text-[11px] font-bold text-white shadow-inner">
-              {adminUser ? adminUser.initials : activeRole.charAt(0)}
+            {/* Dynamic Avatar or Initials */}
+            <div className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-blue-600 text-[11px] font-bold text-white shadow-inner shrink-0">
+              {adminUser?.avatar ? (
+                <img src={adminUser.avatar} alt="Profile" className="h-full w-full object-cover" />
+              ) : (
+                adminUser ? adminUser.initials : activeRole.charAt(0)
+              )}
             </div>
 
             <div className="hidden md:flex flex-col items-start leading-none pr-2">
@@ -173,6 +181,7 @@ export default function TreasuryHeader({
               <button
                 onClick={() => {
                   setIsProfileMenuOpen(false);
+                  // Using your existing logout logic here
                   localStorage.removeItem('currentUser');
                   localStorage.removeItem('user');
                   sessionStorage.removeItem('currentUser');
