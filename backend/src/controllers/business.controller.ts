@@ -56,24 +56,29 @@ export async function getBusinessAssessments(req: Request, res: Response): Promi
 
 export async function createSalesDeclaration(req: Request, res: Response): Promise<void> {
     const { businessName, grossSales, year, psicCode, tin, email } = req.body;
-    const trackingNumber = `MP-${year}-${Math.floor(100000 + Math.random() * 900000)}`;
+    const file = (req as any).file; // Captured via multer middleware
+    const trackingNumber = `MP-${year || '2026'}-${Math.floor(100000 + Math.random() * 900000)}`;
     const id = randomUUID();
 
     try {
+        const fileAttachment = file
+            ? [{ name: file.originalname, url: `https://placeholder-storage/${file.originalname}` }]
+            : [{ name: 'Financial_Statement.pdf', url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf' }];
+
         const result = await pool.query(
             `INSERT INTO business_assessments 
-       (id, tracking_number, business_name, business_owner, status, psic_code, gross_sales, tin, email, attachments)
-       VALUES ($1, $2, $3, $4, 'PENDING', $5, $6, $7, $8, $9) RETURNING *`,
+            (id, tracking_number, business_name, business_owner, status, psic_code, gross_sales, tin, email, attachments)
+            VALUES ($1, $2, $3, $4, 'PENDING', $5, $6, $7, $8, $9) RETURNING *`,
             [
                 id,
                 trackingNumber,
-                businessName,
+                businessName || 'Unnamed Business',
                 email ? email.split('@')[0] : 'Declared Owner',
-                psicCode,
-                grossSales,
-                tin,
-                email,
-                JSON.stringify([{ name: 'Financial_Statement.pdf', url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf' }])
+                psicCode || '47110',
+                grossSales || 0,
+                tin || '',
+                email || '',
+                JSON.stringify(fileAttachment)
             ]
         );
 
@@ -95,8 +100,8 @@ export async function updateAssessmentStatus(req: Request, res: Response): Promi
     try {
         const result = await pool.query(
             `UPDATE business_assessments 
-       SET status = $1, remarks = $2, computed_fees = $3 
-       WHERE id = $4 RETURNING *`,
+            SET status = $1, remarks = $2, computed_fees = $3 
+            WHERE id = $4 RETURNING *`,
             [status, remarks, JSON.stringify(computedFees || {}), id]
         );
 
