@@ -472,10 +472,12 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
     formDataPayload.append("filed_date", currentDate);
     formDataPayload.append("notes", formData.notes);
 
-    // BULLETPROOF FALLBACK: Explicitly send a stringified list of document names 
+    // BULLETPROOF FALLBACK: Explicitly send a stringified list of document names
+    // Using a safe entry mapping that avoids unused variables
     const attachedDocsList = Object.entries(documents)
-      .filter(([_, val]) => val)
+      .filter((entry) => entry[1])
       .map(([key, val]) => `${key}: ${val}`);
+
     formDataPayload.append("documents", JSON.stringify(attachedDocsList));
 
     const fileInputNames = ["ownershipProof", "validId", "taxRecord", "propertySketch", "authorization"];
@@ -509,7 +511,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
         propertyType: rawApp.property_type || rawApp.propertyType || formData.propertyType,
         filedDate: rawApp.filed_date || rawApp.filedDate || currentDate,
         status: rawApp.status || "Submitted",
-        // Ensure documents are saved in local state immediately for the modal
         documents: rawApp.documents || attachedDocsList,
       };
 
@@ -926,23 +927,51 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
 
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500 mb-2">Attached Documents</p>
-                <ul className="list-disc list-inside text-sm font-medium text-slate-800 dark:text-slate-200 space-y-1 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {(() => {
                     let docs = selectedApplication.documents;
                     if (typeof docs === "string") {
                       try { docs = JSON.parse(docs); } catch { }
                     }
                     if (docs && !Array.isArray(docs) && typeof docs === "object") {
-                      docs = Object.entries(docs).filter(([_, v]) => v).map(([k, v]) => `${k}: ${v}`);
+                      // FIX: Replaced .map(([k, v]) => v) with Object.values to prevent TS warning
+                      docs = Object.values(docs).filter((v) => v);
                     }
 
-                    return Array.isArray(docs) && docs.length > 0 ? (
-                      docs.map((doc, idx) => <li key={idx}>{typeof doc === "string" ? doc : JSON.stringify(doc)}</li>)
-                    ) : (
-                      <p className="text-slate-500 italic">No documents listed.</p>
-                    );
+                    const docArray = Array.isArray(docs) ? docs : [];
+
+                    if (docArray.length === 0) {
+                      return <p className="text-slate-500 italic text-sm col-span-full">No documents listed.</p>;
+                    }
+
+                    return docArray.map((doc, idx) => {
+                      const docStr = typeof doc === "string" ? doc : JSON.stringify(doc);
+
+                      // Check if it looks like an uploaded file path
+                      const isUpload = docStr.includes('/uploads/') || docStr.startsWith('http') || docStr.startsWith('blob:');
+                      const cleanDocStr = docStr.includes(': /uploads/') ? docStr.split(': ')[1] : docStr;
+
+                      const imgUrl = isUpload
+                        ? (cleanDocStr.startsWith('http') || cleanDocStr.startsWith('blob:') ? cleanDocStr : `${API_BASE_URL}${cleanDocStr}`)
+                        : null;
+
+                      return (
+                        <div key={idx} className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-800 shadow-sm flex flex-col group">
+                          {imgUrl ? (
+                            <a href={imgUrl} target="_blank" rel="noopener noreferrer" className="w-full h-32 block bg-slate-200 dark:bg-slate-700">
+                              <img src={imgUrl} alt={`Document ${idx}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                            </a>
+                          ) : (
+                            <div className="w-full h-32 flex flex-col items-center justify-center p-3 text-center">
+                              <span className="text-3xl mb-2">📄</span>
+                              <span className="text-[10px] font-medium text-slate-500 break-all line-clamp-3" title={docStr}>{docStr}</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    });
                   })()}
-                </ul>
+                </div>
               </div>
             </div>
 
