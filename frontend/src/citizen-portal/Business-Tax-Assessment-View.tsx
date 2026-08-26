@@ -424,19 +424,19 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                     Home
                   </button>
                   <button
-                    onClick={() => window.location.href = '/Market-Vendor'}
+                    onClick={() => window.location.href = '/market-vendor-tab'}
                     className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer"
                   >
                     Market &amp; Vendors Hub
                   </button>
                   <button
-                    onClick={() => window.location.href = '/real-property-tax-hub'}
+                    onClick={() => window.location.href = '/citizen-rpt'}
                     className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer"
                   >
                     Real Property Tax Hub
                   </button>
                   <button
-                    onClick={() => window.location.href = '/Bsiness-Tax-Assessment-View'}
+                    onClick={() => window.location.href = '/business-tax-assessment'}
                     className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer"
                   >
                     Business Tax Assessment Hub
