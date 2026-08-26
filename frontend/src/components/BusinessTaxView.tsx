@@ -255,6 +255,30 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
     }
   };
 
+  // 🗑️ Added Delete Appointment Handler
+  const handleDeleteAppointment = async (id: string) => {
+    if (!window.confirm("Are you sure you want to permanently delete this appointment record?")) {
+      return;
+    }
+
+    try {
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (adminUser?.token) headers['Authorization'] = `Bearer ${adminUser.token}`;
+
+      const res = await fetch(`${API_BASE_URL}/admin/appointments/${id}`, {
+        method: 'DELETE',
+        headers
+      });
+
+      if (!res.ok) throw new Error("Failed to delete appointment record.");
+
+      alert("Appointment deleted successfully.");
+      fetchAppointments();
+    } catch (err: any) {
+      alert(`Error deleting appointment: ${err.message || "Server error"}`);
+    }
+  };
+
   const fetchAuditLogs = async () => {
     setLoading(true);
     try {
@@ -663,9 +687,16 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
                           </button>
                           <button
                             onClick={() => handleAppointmentStatusUpdate(apt.id, 'CANCELLED')}
-                            className="bg-rose-600 hover:bg-rose-700 text-white font-medium px-3 py-1 rounded-xl transition-all cursor-pointer shadow-xs"
+                            className="bg-amber-600 hover:bg-amber-700 text-white font-medium px-3 py-1 rounded-xl transition-all cursor-pointer shadow-xs"
                           >
                             Cancel
+                          </button>
+                          {/* 🗑️ Delete Appointment Button */}
+                          <button
+                            onClick={() => handleDeleteAppointment(apt.id)}
+                            className="bg-rose-600 hover:bg-rose-700 text-white font-medium px-3 py-1 rounded-xl transition-all cursor-pointer shadow-xs"
+                          >
+                            Delete
                           </button>
                         </td>
                       </tr>
@@ -896,7 +927,6 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
               <button type="button" onClick={() => setPreviewFile(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer font-bold text-lg">✕</button>
             </div>
 
-            {/* 🔍 FIXED: Checks for base64 data:image/ or standard image extension */}
             <div className="h-[60vh] bg-slate-100 dark:bg-slate-950 rounded-2xl flex items-center justify-center border border-slate-200 dark:border-slate-800 overflow-hidden relative">
               {previewFile.url.startsWith('data:image/') || previewFile.url.match(/\.(jpeg|jpg|gif|png)$/i) ? (
                 <img src={previewFile.url} alt="Document Preview" className="max-h-full max-w-full object-contain" />
