@@ -85,6 +85,11 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
     file: null as File | null
   });
 
+  // Captcha State
+  const [captchaNum1, setCaptchaNum1] = useState(0);
+  const [captchaNum2, setCaptchaNum2] = useState(0);
+  const [captchaInput, setCaptchaInput] = useState('');
+
   // Enhanced Real Appointment Form State with 11-Digit Phone Restriction
   const [submitting, setSubmitting] = useState(false);
   const [aptForm, setAptForm] = useState({
@@ -100,7 +105,6 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
     date: '',
     timeSlot: '09:00 AM - 10:00 AM',
     remarks: '',
-    notARobot: false,
   });
 
   useEffect(() => {
@@ -231,8 +235,9 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
       return;
     }
 
-    if (!aptForm.notARobot) {
-      alert("Please confirm you are not a robot.");
+    // 🧮 Functional Math Captcha Validation Check
+    if (parseInt(captchaInput.trim(), 10) !== captchaNum1 + captchaNum2) {
+      alert("Incorrect CAPTCHA answer. Please solve the math problem correctly.");
       return;
     }
 
@@ -329,6 +334,11 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
   };
 
   const openModal = (type: 'appointment' | 'tax-bill' | 'or-number' | 'sales-declaration') => {
+    if (type === 'appointment') {
+      setCaptchaNum1(Math.floor(Math.random() * 10) + 1);
+      setCaptchaNum2(Math.floor(Math.random() * 10) + 1);
+      setCaptchaInput('');
+    }
     setIsModalOpen(type);
   };
 
@@ -521,8 +531,8 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                           <td className="p-3 font-mono">{apt.date} ({apt.timeSlot || 'All Day'})</td>
                           <td className="p-3 text-center">
                             <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold ${apt.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-400' :
-                                apt.status === 'CANCELLED' ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/50 dark:text-rose-400' :
-                                  'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-400'
+                              apt.status === 'CANCELLED' ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/50 dark:text-rose-400' :
+                                'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-400'
                               }`}>
                               {apt.status}
                             </span>
@@ -709,7 +719,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
 
-          {/* ENHANCED APPOINTMENT MODAL WITH 11-DIGIT PHONE & REAL FIELDS */}
+          {/* ENHANCED APPOINTMENT MODAL WITH 11-DIGIT PHONE & MATH CAPTCHA */}
           {isModalOpen === 'appointment' && (
             <form onSubmit={handleAppointmentSubmit} className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-xl overflow-hidden">
               <div className="flex justify-between items-center px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
@@ -858,19 +868,39 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                     placeholder="Any special instructions or accessibility requests..."
                   />
                 </div>
-                <div className="p-3 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950 flex items-center justify-between">
-                  <label className="flex items-center gap-2 cursor-pointer">
+
+                {/* Functional Math Captcha Box */}
+                <div className="p-3 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-950 flex flex-col sm:flex-row items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 text-xs font-semibold">
+                    <span className="bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 px-2.5 py-1 rounded font-mono">
+                      {captchaNum1} + {captchaNum2} = ?
+                    </span>
+                    <span className="text-slate-600 dark:text-slate-400">Security Verification</span>
+                  </div>
+                  <div className="flex items-center gap-2">
                     <input
-                      type="checkbox"
-                      checked={aptForm.notARobot}
-                      onChange={(e) => setAptForm({ ...aptForm, notARobot: e.target.checked })}
-                      className="w-4 h-4 rounded text-blue-600"
+                      required
+                      type="number"
+                      value={captchaInput}
+                      onChange={(e) => setCaptchaInput(e.target.value)}
+                      placeholder="Answer"
+                      className="w-20 p-1.5 text-xs text-center border border-slate-300 dark:border-slate-700 rounded bg-white dark:bg-slate-900 font-mono"
                     />
-                    <span>I confirm the information provided is accurate and I'm not a robot</span>
-                  </label>
-                  <span className="text-[10px] text-slate-400">reCAPTCHA</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCaptchaNum1(Math.floor(Math.random() * 10) + 1);
+                        setCaptchaNum2(Math.floor(Math.random() * 10) + 1);
+                        setCaptchaInput('');
+                      }}
+                      className="text-[10px] text-blue-600 hover:underline font-bold cursor-pointer"
+                    >
+                      Refresh
+                    </button>
+                  </div>
                 </div>
               </div>
+
               <div className="flex justify-end gap-2 px-6 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
                 <button type="button" onClick={closeModal} className="px-4 py-2 border border-slate-300 rounded font-semibold hover:bg-slate-100 cursor-pointer">Cancel</button>
                 <button type="submit" disabled={submitting} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded shadow-xs cursor-pointer">
