@@ -22,6 +22,11 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
     const [isPreviewMode, setIsPreviewMode] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // New state for Read-Only View Mode
+    const [isViewOnly, setIsViewOnly] = useState(false);
+    const [viewedAppStatus, setViewedAppStatus] = useState<string>('New');
+    const [viewedAppRemarks, setViewedAppRemarks] = useState<string>('');
+
     const [entriesCount, setEntriesCount] = useState('10');
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -165,12 +170,42 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
         }));
 
         setIsPreviewMode(false);
+        setIsViewOnly(false);
+        setIsModalOpen(true);
+    };
+
+    // Handler to open an application in View-Only Mode
+    const handleViewClick = (app: any) => {
+        setFormData({
+            associationName: app.associationName || '',
+            secNumber: app.secRegistrationNo || '',
+            dateGranted: app.dateIssued || '',
+            telephone: app.contactNumber || '',
+            marketZone: app.lguMeta?.marketZone || MARKET_ZONES[0],
+            assignedStallCount: app.lguMeta?.assignedStallCount?.toString() || '15',
+            firstName: app.chairperson?.firstName || '',
+            middleName: app.chairperson?.middleName || '',
+            lastName: app.chairperson?.lastName || '',
+            email: app.chairperson?.email || '',
+            submittedBy: app.submittedBy || '',
+            submitterEmail: app.submitterEmail || '',
+            dateSubmitted: app.submissionDate || '',
+            associationNumber: app.associationNumber || '',
+            documents: app.lguMeta?.documents || initialFormState.documents,
+        });
+
+        setViewedAppStatus(app.status || 'New');
+        setViewedAppRemarks(app.remarks || '');
+
+        setIsPreviewMode(true); // Makes inputs read-only based on existing logic
+        setIsViewOnly(true);
         setIsModalOpen(true);
     };
 
     const showListView = () => {
         setIsModalOpen(false);
         setIsPreviewMode(false);
+        setIsViewOnly(false);
         setIsConfirmationOpen(false);
     };
 
@@ -242,15 +277,21 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
     };
 
     const handleCancelClick = () => {
-        if (isPreviewMode) {
+        if (isPreviewMode && !isViewOnly) {
             setIsPreviewMode(false);
+        } else if (isViewOnly) {
+            showListView();
         } else {
             setIsConfirmationOpen(true);
         }
     };
 
     const handleModalCloseClick = () => {
-        setIsConfirmationOpen(true);
+        if (isViewOnly) {
+            showListView();
+        } else {
+            setIsConfirmationOpen(true);
+        }
     };
 
     const handleConfirmYes = () => {
@@ -282,27 +323,27 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
         <div className="w-full min-h-screen bg-slate-100 font-sans text-slate-800 flex flex-col antialiased relative">
 
             {/* =====================================================
-                MAIN NAVIGATION HEADER
+                MARKET STALL UNIFIED PORTAL HEADER
             ====================================================== */}
-            <header className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-                    <div className="flex items-center space-x-3.5 cursor-pointer group" onClick={showListView}>
-                        <div className="overflow-hidden rounded-xl border border-slate-200/60 shadow-sm transition-transform duration-300 group-hover:scale-105 bg-white p-1">
+            <header className="bg-[#1e3a8a] border-b border-blue-900 sticky top-0 z-40 shadow-md">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+                    <div className="flex items-center space-x-3 cursor-pointer group" onClick={showListView}>
+                        <div className="bg-white rounded-full p-1 shadow-sm transition-transform duration-300 group-hover:scale-105">
                             <img
                                 src={logoSystem}
-                                alt="Gov Serv Logo"
-                                className="h-12 w-auto object-contain"
+                                alt="QC Logo"
+                                className="h-9 w-9 object-contain"
                             />
                         </div>
                         <div>
-                            <h1 className="text-lg font-extrabold text-slate-900 tracking-tight">Gov Serv</h1>
-                            <p className="text-[11px] text-slate-500 font-semibold tracking-wide uppercase">Unified Portal</p>
+                            <h1 className="text-sm font-extrabold text-white tracking-wide uppercase">QC E-Services</h1>
+                            <p className="text-[10px] text-blue-200 font-medium tracking-wider uppercase">Market Stall & Vendor Management</p>
                         </div>
                     </div>
 
-                    <div className="hidden md:flex items-center space-x-8 text-sm font-semibold text-slate-700">
-                        <span className="hover:text-blue-700 cursor-pointer">HOME</span>
-                        <span className="hover:text-blue-700 cursor-pointer flex items-center gap-1">SERVICES ▾</span>
+                    <div className="hidden md:flex items-center space-x-8 text-xs font-semibold text-blue-100">
+                        <span className="hover:text-white transition-colors cursor-pointer">Home</span>
+                        <span className="hover:text-white transition-colors cursor-pointer flex items-center gap-1">Services ▾</span>
                     </div>
 
                     <div className="flex items-center space-x-3">
@@ -310,14 +351,14 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                             <div className="relative" ref={dropdownRef}>
                                 <button
                                     onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                                    className="flex items-center space-x-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 px-3.5 py-2 rounded-2xl transition-all cursor-pointer shadow-xs group"
+                                    className="flex items-center space-x-2 bg-blue-800 hover:bg-blue-700 border border-blue-700 px-3 py-1.5 rounded-full transition-all cursor-pointer shadow-xs group"
                                 >
-                                    <span className="text-sm font-extrabold text-slate-800 tracking-tight">
-                                        Hi, {loggedInUser.firstName}
-                                    </span>
-                                    <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-sm tracking-wider">
+                                    <div className="w-6 h-6 rounded-full bg-white text-[#1e3a8a] flex items-center justify-center font-bold text-[10px] shadow-sm tracking-wider">
                                         {loggedInUser.initials}
                                     </div>
+                                    <span className="text-xs font-bold text-white tracking-tight pr-1">
+                                        {loggedInUser.firstName}
+                                    </span>
                                 </button>
 
                                 {isUserMenuOpen && (
@@ -328,10 +369,7 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                         </div>
 
                                         <button
-                                            onClick={() => {
-                                                setIsUserMenuOpen(false);
-                                                window.location.href = '/edit-profile';
-                                            }}
+                                            onClick={() => { setIsUserMenuOpen(false); window.location.href = '/edit-profile'; }}
                                             className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center space-x-2 cursor-pointer"
                                         >
                                             <span>Edit Profile</span>
@@ -349,7 +387,7 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                         ) : (
                             <button
                                 onClick={() => window.location.href = '/login'}
-                                className="bg-blue-900 hover:bg-blue-800 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow transition-all cursor-pointer"
+                                className="bg-white hover:bg-slate-100 text-[#1e3a8a] font-bold text-xs px-5 py-2 rounded-full shadow-sm transition-all cursor-pointer"
                             >
                                 Login / Register
                             </button>
@@ -379,7 +417,7 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                         <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4">
                             <button
                                 onClick={showApplicationForm}
-                                className="bg-blue-800 hover:bg-blue-900 text-white text-xs font-semibold py-2 px-4 rounded shadow-sm flex items-center justify-center space-x-1.5 transition-colors w-fit cursor-pointer"
+                                className="bg-[#1e3a8a] hover:bg-blue-900 text-white text-xs font-semibold py-2 px-4 rounded shadow-sm flex items-center justify-center space-x-1.5 transition-colors w-fit cursor-pointer"
                             >
                                 <span>Add new</span>
                                 <i className="fa-solid fa-plus text-[10px]"></i>
@@ -390,7 +428,7 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                     type="text"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="border border-slate-300 rounded px-2.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 w-full sm:w-56"
+                                    className="border border-slate-300 rounded px-2.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-[#1e3a8a] w-full sm:w-56"
                                 />
                             </div>
                         </div>
@@ -398,7 +436,7 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                         <div className="overflow-x-auto border border-slate-200 rounded">
                             <table className="w-full text-left border-collapse">
                                 <thead>
-                                    <tr className="bg-blue-900 text-white text-[11px] uppercase tracking-wider">
+                                    <tr className="bg-[#1e3a8a] text-white text-[11px] uppercase tracking-wider">
                                         <th className="py-2.5 px-4 font-semibold">Association Number</th>
                                         <th className="py-2.5 px-4 font-semibold">Pangalan ng Samahan</th>
                                         <th className="py-2.5 px-4 font-semibold">Petsa ng Pagsusumite</th>
@@ -414,12 +452,20 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                                 <td className="py-2.5 px-4">{app.associationName}</td>
                                                 <td className="py-2.5 px-4">{app.submissionDate}</td>
                                                 <td className="py-2.5 px-4">
-                                                    <span className="px-2 py-1 rounded bg-amber-100 text-amber-800 font-bold uppercase tracking-wider text-[10px]">
-                                                        {app.status}
+                                                    <span className={`px-2 py-1 rounded font-bold uppercase tracking-wider text-[10px] ${app.status === 'Approved' ? 'bg-emerald-100 text-emerald-800' :
+                                                            app.status === 'Rejected' || app.status === 'Suspended' ? 'bg-rose-100 text-rose-800' :
+                                                                'bg-amber-100 text-amber-800'
+                                                        }`}>
+                                                        {app.status || 'New'}
                                                     </span>
                                                 </td>
                                                 <td className="py-2.5 px-4 text-center">
-                                                    <button className="text-blue-600 hover:text-blue-800 font-semibold hover:underline text-[11px] cursor-pointer">View</button>
+                                                    <button
+                                                        onClick={() => handleViewClick(app)}
+                                                        className="text-[#1e3a8a] hover:text-blue-800 font-semibold hover:underline text-[11px] cursor-pointer"
+                                                    >
+                                                        View
+                                                    </button>
                                                 </td>
                                             </tr>
                                         ))
@@ -445,7 +491,6 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                     onChange={(e) => setEntriesCount(e.target.value)}
                                     className="border border-slate-300 rounded px-1.5 py-0.5 bg-white text-xs focus:outline-none"
                                 >
-                                    <option value="0">0</option>
                                     <option value="10">10</option>
                                     <option value="25">25</option>
                                     <option value="50">50</option>
@@ -465,7 +510,7 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                     <div className="bg-white border border-slate-300 rounded-lg max-w-4xl w-full p-6 md:p-8 relative shadow-2xl my-8 max-h-[90vh] overflow-y-auto">
                         <div className="flex flex-col md:flex-row justify-between items-center border-b border-slate-200 pb-4 gap-4 sticky top-0 bg-white z-10">
                             <h1 className="text-slate-800 font-bold text-sm tracking-wide uppercase">
-                                {isPreviewMode ? "CLARIFICATION PREVIEW - HAWKER ASSOCIATION APPLICATION" : "HAWKER ASSOCIATION APPLICATION & LGU COMPLIANCE"}
+                                {isViewOnly ? "HAWKER ASSOCIATION APPLICATION - RECORD VIEW" : (isPreviewMode ? "CLARIFICATION PREVIEW - HAWKER ASSOCIATION APPLICATION" : "HAWKER ASSOCIATION APPLICATION & LGU COMPLIANCE")}
                             </h1>
                             <button
                                 onClick={handleModalCloseClick}
@@ -507,12 +552,23 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                 </div>
                                 <div className="flex items-center justify-between">
                                     <span className="text-slate-700">Application Status:</span>
-                                    <input
-                                        type="text"
-                                        value="New"
-                                        readOnly
-                                        className="border border-slate-300 rounded px-2.5 py-1 w-56 bg-slate-100 text-slate-600 text-xs cursor-not-allowed focus:outline-none"
-                                    />
+                                    {isViewOnly ? (
+                                        <div className="w-56 text-right md:text-left md:pl-1">
+                                            <span className={`px-3 py-1 rounded-full font-bold uppercase tracking-wider text-[10px] border ${viewedAppStatus === 'Approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                                                    viewedAppStatus === 'Rejected' || viewedAppStatus === 'Suspended' ? 'bg-rose-50 text-rose-700 border-rose-200' :
+                                                        'bg-amber-50 text-amber-700 border-amber-200'
+                                                }`}>
+                                                {viewedAppStatus}
+                                            </span>
+                                        </div>
+                                    ) : (
+                                        <input
+                                            type="text"
+                                            value="New"
+                                            readOnly
+                                            className="border border-slate-300 rounded px-2.5 py-1 w-56 bg-slate-100 text-slate-600 text-xs cursor-not-allowed focus:outline-none"
+                                        />
+                                    )}
                                 </div>
                                 <div className="flex items-center justify-between">
                                     <span className="text-slate-700">Association Number:</span>
@@ -523,6 +579,16 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                         className="border border-slate-300 rounded px-2.5 py-1 w-56 bg-slate-100 text-slate-600 text-xs cursor-not-allowed focus:outline-none"
                                     />
                                 </div>
+
+                                {/* Only display remarks if in View-Only mode and remarks exist */}
+                                {isViewOnly && viewedAppRemarks && (
+                                    <div className="col-span-1 md:col-span-2 mt-3 p-3 bg-blue-50/50 border border-blue-200 rounded-lg">
+                                        <h4 className="text-[11px] font-bold text-blue-800 uppercase tracking-wider mb-1">
+                                            <i className="fa-solid fa-comment-dots mr-1"></i> LGU Official Remarks / Assessment
+                                        </h4>
+                                        <p className="text-xs text-blue-900 font-medium">{viewedAppRemarks}</p>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="space-y-5 pt-1">
@@ -725,29 +791,41 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
 
                             {/* Form Action Buttons */}
                             <div className="flex items-center justify-center space-x-3 pt-4 border-t border-slate-100 mt-6">
-                                <button
-                                    type="button"
-                                    onClick={handleCancelClick}
-                                    className="bg-white hover:bg-slate-50 text-blue-800 border border-blue-600 font-semibold text-xs py-1.5 px-6 rounded shadow-sm transition-colors cursor-pointer"
-                                >
-                                    {isPreviewMode ? "Back to Edit" : "Kanselahin"}
-                                </button>
-                                {isPreviewMode ? (
+                                {isViewOnly ? (
                                     <button
                                         type="button"
-                                        disabled={isSubmitting}
-                                        onClick={handleFinalSubmit}
-                                        className="bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs py-1.5 px-8 rounded shadow transition-colors cursor-pointer disabled:opacity-50"
+                                        onClick={showListView}
+                                        className="bg-white hover:bg-slate-50 text-blue-800 border border-blue-600 font-semibold text-xs py-1.5 px-8 rounded shadow-sm transition-colors cursor-pointer"
                                     >
-                                        {isSubmitting ? "Submitting..." : "Confirm & Submit"}
+                                        Close View
                                     </button>
                                 ) : (
-                                    <button
-                                        type="submit"
-                                        className="bg-blue-900 hover:bg-blue-950 text-white font-semibold text-xs py-1.5 px-8 rounded shadow transition-colors cursor-pointer"
-                                    >
-                                        Submit
-                                    </button>
+                                    <>
+                                        <button
+                                            type="button"
+                                            onClick={handleCancelClick}
+                                            className="bg-white hover:bg-slate-50 text-blue-800 border border-blue-600 font-semibold text-xs py-1.5 px-6 rounded shadow-sm transition-colors cursor-pointer"
+                                        >
+                                            {isPreviewMode ? "Back to Edit" : "Kanselahin"}
+                                        </button>
+                                        {isPreviewMode ? (
+                                            <button
+                                                type="button"
+                                                disabled={isSubmitting}
+                                                onClick={handleFinalSubmit}
+                                                className="bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs py-1.5 px-8 rounded shadow transition-colors cursor-pointer disabled:opacity-50"
+                                            >
+                                                {isSubmitting ? "Submitting..." : "Confirm & Submit"}
+                                            </button>
+                                        ) : (
+                                            <button
+                                                type="submit"
+                                                className="bg-[#1e3a8a] hover:bg-blue-950 text-white font-semibold text-xs py-1.5 px-8 rounded shadow transition-colors cursor-pointer"
+                                            >
+                                                Submit
+                                            </button>
+                                        )}
+                                    </>
                                 )}
                             </div>
                         </form>
