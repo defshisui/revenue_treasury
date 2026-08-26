@@ -147,7 +147,7 @@ function getStoredCitizenSession() {
     const firstName = nameParts[0];
     const initials = nameParts.length > 1
       ? (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase()
-      : nameParts[0].slice(0, 2).toUpperCase();
+      : (nameParts[0].slice(0, 2) || "U").toUpperCase();
 
     return { fullname: String(fullName), email, firstName, initials };
   } catch {
@@ -185,9 +185,9 @@ function formatDate(date: string) {
   return new Intl.DateTimeFormat("en-PH", { year: "numeric", month: "short", day: "numeric" }).format(new Date(`${date}T00:00:00`));
 }
 
-// Helper to determine status badge color
-const getStatusColor = (status: string) => {
-  const s = status.toUpperCase();
+// SAFE HELPER: Uses a fallback to prevent undefined errors
+const getStatusColor = (status?: string) => {
+  const s = (status || "Submitted").toUpperCase();
   if (s === 'APPROVED' || s === 'COMPLETED' || s === 'READY FOR RELEASE') return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-400';
   if (s === 'REJECTED') return 'bg-rose-100 text-rose-800 dark:bg-rose-950/50 dark:text-rose-400';
   return 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-400';
@@ -255,7 +255,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
           const appsRes = await fetch(`${API_BASE_URL}/citizen-rpt-applications?email=${encodeURIComponent(activeUser.email)}`);
           if (appsRes.ok) {
             const data = await appsRes.json();
-            // Data normalization maps backend keys (snake_case/lowercase) to frontend keys (camelCase)
             const userApps = Array.isArray(data)
               ? data.map((app: any) => ({
                 ...app,
@@ -268,6 +267,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
                 propertyLocation: app.propertyLocation || app.property_location || app.propertylocation || "",
                 propertyType: app.propertyType || app.property_type || app.propertytype || "",
                 filedDate: app.filedDate || app.filed_date || app.created_at || "",
+                status: app.status || "Submitted",
               })).filter((app: RPTApplicationRecord) => app.email === activeUser.email)
               : [];
             setApplications(userApps);
@@ -319,7 +319,8 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
     let result = applications;
 
     if (statusFilter !== "ALL") {
-      result = result.filter(app => app.status.toUpperCase() === statusFilter.toUpperCase());
+      // SAFE FALLBACK: Add (app.status || "") to prevent undefined error
+      result = result.filter(app => (app.status || "Submitted").toUpperCase() === statusFilter.toUpperCase());
     }
 
     const query = searchQuery.trim().toLowerCase();
@@ -332,7 +333,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
       });
     }
 
-    return result.sort((a, b) => new Date(b.filedDate).getTime() - new Date(a.filedDate).getTime());
+    return result.sort((a, b) => new Date(b.filedDate || 0).getTime() - new Date(a.filedDate || 0).getTime());
   }, [applications, statusFilter, searchType, searchQuery]);
 
   const totalPages = Math.max(1, Math.ceil(filteredApplications.length / pageSize));
@@ -454,7 +455,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
     const generatedControlNo = makeControlNumber();
     const currentDate = new Date().toISOString().slice(0, 10);
 
-    // Payload includes BOTH camelCase and snake_case versions to bypass any backend schema mismatches.
     const payload = {
       controlNumber: generatedControlNo,
       control_number: generatedControlNo,
@@ -497,7 +497,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
 
       const rawApp = await response.json();
 
-      // Normalize the newly saved app immediately for UI display
       const savedApp = {
         ...rawApp,
         controlNumber: rawApp.controlNumber || rawApp.control_number || generatedControlNo,
@@ -509,6 +508,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
         propertyLocation: rawApp.propertyLocation || rawApp.property_location || payload.propertyLocation,
         propertyType: rawApp.propertyType || rawApp.property_type || payload.propertyType,
         filedDate: rawApp.filedDate || rawApp.filed_date || payload.filedDate,
+        status: rawApp.status || "Submitted",
       };
 
       setApplications([savedApp, ...applications]);
@@ -826,7 +826,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
                             <td className="p-3 font-mono font-semibold text-blue-700 dark:text-blue-400">{application.controlNumber}</td>
                             <td className="p-3">
                               <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold ${getStatusColor(application.status)}`}>
-                                {application.status}
+                                {application.status || "Submitted"}
                               </span>
                             </td>
                             <td className="p-3 text-slate-600 dark:text-slate-400 truncate" title={application.service}>{application.service}</td>
