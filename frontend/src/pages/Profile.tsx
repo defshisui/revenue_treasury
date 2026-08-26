@@ -4,6 +4,7 @@ import { useLocation, Link } from "react-router-dom";
 
 import { useProfileForm } from "../hooks/useProfileForm";
 import { usePasswordForm } from "../hooks/usePasswordForm";
+import { API_BASE_URL } from "../config/api"; // Added API config import
 
 interface ProfileLocationState {
   activeRole?: string;
@@ -91,6 +92,7 @@ export default function Profile() {
 
       const fullName = target.fullname || target.name || target.fullName || target.firstName || "";
       const email = target.email || "";
+      const avatar = target.avatar || target.profile_picture || null;
 
       let initials = activeRole.charAt(0);
       if (fullName) {
@@ -100,7 +102,7 @@ export default function Profile() {
           : nameParts[0].slice(0, 2).toUpperCase();
       }
 
-      return { fullName, email, initials };
+      return { fullName, email, initials, avatar };
     } catch (e) {
       console.error("Failed to parse admin session", e);
       return null;
@@ -125,7 +127,7 @@ export default function Profile() {
   /*
    * AVATAR
    */
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(initialUser?.avatar || null);
 
   /*
    * PASSWORD
@@ -139,9 +141,9 @@ export default function Profile() {
   const [errorMessage, setErrorMessage] = useState("");
 
   /*
-   * IMAGE UPLOAD
+   * IMAGE UPLOAD (UPDATED FOR DATABASE)
    */
-  function handleImageUpload(event: React.ChangeEvent<HTMLInputElement>) {
+  async function handleImageUpload(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
 
     if (!file) {
@@ -154,57 +156,126 @@ export default function Profile() {
       return;
     }
 
-    const imageUrl = URL.createObjectURL(file);
-    setAvatarUrl(imageUrl);
-    setErrorMessage("");
-    setStatusMessage("Profile picture updated successfully.");
+    try {
+      // 1. Get Session Token
+      const storageKey = localStorage.getItem('currentUser') ? 'currentUser' : 'user';
+      const rawData = localStorage.getItem(storageKey);
+      if (!rawData) throw new Error("Session expired.");
+
+      const parsedData = JSON.parse(rawData);
+      const token = parsedData.token || (parsedData.user && parsedData.user.token);
+
+      // 2. Prepare Form Data
+      const formData = new FormData();
+      formData.append("avatar", file);
+
+      // 3. Send to Database
+      const response = await fetch(`${API_BASE_URL}/admin/upload-avatar`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to upload image to server.");
+      }
+
+      const data = await response.json();
+      const newAvatarUrl = data.avatarUrl || URL.createObjectURL(file);
+
+      // 4. Update Local Storage so it persists on reload
+      if (parsedData.user && typeof parsedData.user === 'object') {
+        parsedData.user.avatar = newAvatarUrl;
+      } else {
+        parsedData.avatar = newAvatarUrl;
+      }
+      localStorage.setItem(storageKey, JSON.stringify(parsedData));
+
+      // 5. Update UI
+      setAvatarUrl(newAvatarUrl);
+      setErrorMessage("");
+      setStatusMessage("Profile picture updated successfully.");
+      window.dispatchEvent(new Event('profileUpdated'));
+
+    } catch (error: any) {
+      console.error("Upload Error:", error);
+      // Fallback for visual update if backend is not yet connected
+      const localUrl = URL.createObjectURL(file);
+      setAvatarUrl(localUrl);
+      setErrorMessage("");
+      setStatusMessage("Profile picture updated locally (Database connection failed).");
+    }
   }
 
   /*
-   * PROFILE SUBMIT
+   * PROFILE SUBMIT (UPDATED FOR DATABASE)
    */
-  function handleProfileSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleProfileSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setErrorMessage("");
+    setStatusMessage("");
 
     try {
       // 1. Fetch current session data
       const storageKey = localStorage.getItem('currentUser') ? 'currentUser' : 'user';
       const rawData = localStorage.getItem(storageKey);
 
-      if (rawData) {
-        const parsedData = JSON.parse(rawData);
-
-        // 2. Update the name and email directly in the user object
-        if (parsedData.user && typeof parsedData.user === 'object') {
-          parsedData.user.fullname = profileData.fullName;
-          parsedData.user.email = profileData.email;
-        } else {
-          parsedData.fullname = profileData.fullName;
-          parsedData.email = profileData.email;
-        }
-
-        // 3. Save it back to local storage
-        localStorage.setItem(storageKey, JSON.stringify(parsedData));
-
-        // 4. Dispatch the event so TreasuryHeader immediately updates
-        window.dispatchEvent(new Event('profileUpdated'));
+      if (!rawData) {
+        throw new Error("No active session found. Please log in again.");
       }
 
-      setErrorMessage("");
-      setStatusMessage("Official LGU profile information updated successfully.");
+      const parsedData = JSON.parse(rawData);
+      const token = parsedData.token || (parsedData.user && parsedData.user.token);
 
-    } catch (e) {
-      console.error("Failed to update profile data in storage", e);
-      setErrorMessage("Failed to save changes to session storage.");
+      // 2. Send Update to Database
+      const response = await fetch(`${API_BASE_URL}/admin/profile`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          fullname: profileData.fullName,
+          email: profileData.email,
+          phone: profileData.phone,
+          department: profileData.department,
+          address: profileData.address
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to update profile in database.");
+      }
+
+      // 3. Update the local storage for immediate frontend reflection
+      if (parsedData.user && typeof parsedData.user === 'object') {
+        parsedData.user.fullname = profileData.fullName;
+        parsedData.user.email = profileData.email;
+      } else {
+        parsedData.fullname = profileData.fullName;
+        parsedData.email = profileData.email;
+      }
+
+      localStorage.setItem(storageKey, JSON.stringify(parsedData));
+
+      // 4. Dispatch the event so TreasuryHeader immediately updates
+      window.dispatchEvent(new Event('profileUpdated'));
+      setStatusMessage("Official LGU profile information updated successfully in database.");
+
+    } catch (e: any) {
+      console.error("Failed to update profile", e);
+      setErrorMessage(e.message || "Failed to save changes to the server.");
     }
   }
 
   /*
-   * PASSWORD SUBMIT
+   * PASSWORD SUBMIT (UPDATED FOR DATABASE)
    */
-  function handlePasswordSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handlePasswordSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-
     setErrorMessage("");
     setStatusMessage("");
 
@@ -218,8 +289,43 @@ export default function Profile() {
       return;
     }
 
-    resetPasswordForm();
-    setStatusMessage("Account security password updated successfully.");
+    try {
+      // 1. Fetch current session data
+      const storageKey = localStorage.getItem('currentUser') ? 'currentUser' : 'user';
+      const rawData = localStorage.getItem(storageKey);
+
+      if (!rawData) {
+        throw new Error("No active session found. Please log in again.");
+      }
+
+      const parsedData = JSON.parse(rawData);
+      const token = parsedData.token || (parsedData.user && parsedData.user.token);
+
+      // 2. Send Password Update to Database
+      const response = await fetch(`${API_BASE_URL}/admin/change-password`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          currentPassword: passwordData.currentPassword,
+          newPassword: passwordData.newPassword
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Incorrect current password or server error.");
+      }
+
+      resetPasswordForm();
+      setStatusMessage("Account security password securely updated in database.");
+
+    } catch (e: any) {
+      console.error("Failed to update password", e);
+      setErrorMessage(e.message || "Failed to secure new password on the server.");
+    }
   }
 
   /*
