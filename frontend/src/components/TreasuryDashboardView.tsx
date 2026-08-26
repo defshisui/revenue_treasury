@@ -200,7 +200,6 @@ export default function TreasuryDashboardView({
 
   const activeTxFeed = txs.filter(tx => matchesFiscalPeriod(tx.date));
 
-  // --- AUTO-COMPUTE METRICS FROM LIVE TRANSACTIONS ---
   const computedMetrics: TreasuryMetrics = (() => {
     const totalEpayments = txs.length;
     const totalEORs = txs.filter(t => t.status === 'Posted' || !t.status).length;
@@ -315,9 +314,15 @@ export default function TreasuryDashboardView({
       className="min-h-screen bg-slate-50/60 dark:bg-slate-950 text-slate-800 dark:text-slate-100 p-6 pt-24 transition-all duration-300 box-border"
       ref={dropdownRef}
     >
-      {/* Header & Year Selector */}
-      <div className="flex justify-between items-start bg-white dark:bg-slate-900/60 p-6 rounded-2xl mb-6 flex-wrap gap-4 shadow-xs border border-slate-200/80 dark:border-slate-800 backdrop-blur-md">
+      {/* HEADER & YEAR SELECTOR & MODULE LINKS */}
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center bg-white dark:bg-slate-900/60 p-6 rounded-2xl mb-6 flex-wrap gap-4 shadow-xs border border-slate-200/80 dark:border-slate-800 backdrop-blur-md">
         <div>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse"></span>
+            <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 tracking-wider uppercase">
+              OFFICE OF THE CITY ASSESSOR & TREASURY
+            </span>
+          </div>
           <h2 className="text-xl font-bold mb-1 text-slate-900 dark:text-white flex items-center gap-3">
             Treasury ePayment Dashboard
             {loading && <span className="text-xs font-normal text-blue-500 animate-pulse">(Querying PostgreSQL...)</span>}
@@ -327,7 +332,27 @@ export default function TreasuryDashboardView({
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center flex-wrap gap-3">
+
+          {/* ======== ADDED: QUICK NAVIGATION MODULE PORTALS ======== */}
+          {onNavigate && (
+            <div className="flex items-center gap-2 border-r border-slate-300 dark:border-slate-700 pr-3">
+              <button
+                onClick={() => onNavigate('rpt')}
+                className="px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 text-xs font-bold cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900 transition-colors flex items-center gap-1.5"
+              >
+                RPT Portal ↗
+              </button>
+              <button
+                onClick={() => onNavigate('business_tax')}
+                className="px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 text-xs font-bold cursor-pointer hover:bg-emerald-100 dark:hover:bg-emerald-900 transition-colors flex items-center gap-1.5"
+              >
+                Business Tax Hub ↗
+              </button>
+            </div>
+          )}
+          {/* ======================================================== */}
+
           {onNavigate && (
             <button
               onClick={() => onNavigate('home')}
