@@ -467,58 +467,59 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         marginLeft: isCollapsed ? "80px" : "256px",
         width: isCollapsed ? "calc(100% - 80px)" : "calc(100% - 256px)",
       }}
-      className="min-h-screen bg-slate-50/60 dark:bg-slate-950 text-slate-800 dark:text-slate-100 p-6 pt-24 transition-all duration-300 box-border relative"
+      className="min-h-screen bg-slate-950 text-slate-100 p-8 pt-20 transition-all duration-300 box-border relative font-sans antialiased"
     >
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed top-20 right-6 z-50 animate-in fade-in slide-in-from-top-4 duration-300">
+        <div className="fixed top-8 right-8 z-50 animate-in fade-in slide-in-from-top-4 duration-300">
           <div
-            className={`px-4 py-3 rounded-xl shadow-lg border flex items-center gap-3 text-xs font-semibold ${toastMessage.type === 'success'
-                ? 'bg-emerald-950 text-emerald-200 border-emerald-800/80 shadow-emerald-950/20'
+            className={`px-5 py-3.5 rounded-2xl shadow-2xl border backdrop-blur-xl flex items-center gap-3 text-xs font-bold tracking-wide ${toastMessage.type === 'success'
+                ? 'bg-emerald-950/90 text-emerald-300 border-emerald-500/40 shadow-emerald-950/50'
                 : toastMessage.type === 'warning'
-                  ? 'bg-amber-950 text-amber-200 border-amber-800/80 shadow-amber-950/20'
-                  : 'bg-rose-950 text-rose-200 border-rose-800/80 shadow-rose-950/20'
+                  ? 'bg-amber-950/90 text-amber-300 border-amber-500/40 shadow-amber-950/50'
+                  : 'bg-rose-950/90 text-rose-300 border-rose-500/40 shadow-rose-950/50'
               }`}
           >
-            <span className="w-2 h-2 rounded-full bg-current animate-pulse"></span>
+            <span className="w-2.5 h-2.5 rounded-full bg-current animate-ping"></span>
             <span>{toastMessage.text}</span>
           </div>
         </div>
       )}
 
       {/* Header Banner */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8 bg-white dark:bg-slate-900/60 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs backdrop-blur-md">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="h-2 w-2 rounded-full bg-emerald-600 animate-pulse"></span>
-            <span className="text-[11px] font-semibold tracking-wider text-emerald-600 dark:text-emerald-400 uppercase">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-8 bg-slate-900/80 p-8 rounded-3xl border border-slate-800/80 shadow-2xl backdrop-blur-xl relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none"></div>
+        <div className="relative z-10">
+          <div className="flex items-center gap-2.5 mb-2">
+            <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse shadow-lg shadow-emerald-400/50"></span>
+            <span className="text-[11px] font-extrabold tracking-widest text-emerald-400 uppercase">
               Assessor & Treasury Assessment Division
             </span>
           </div>
-          <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+          <h2 className="text-3xl font-black tracking-tight text-white">
             Real Property Tax (RPT) & Assessment Roll
           </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+          <p className="text-xs font-medium text-slate-400 mt-1">
             Land Assessments, Tax Declarations, Special Education Fund (SEF) & Clearance Issuance
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
-          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
+        <div className="flex flex-wrap items-center gap-3 relative z-10">
+          <div className="flex items-center gap-1.5 bg-slate-950/80 p-1.5 rounded-2xl border border-slate-800">
             <button
               onClick={() => setMainViewTab('queue')}
-              className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${mainViewTab === 'queue'
-                  ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+              className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${mainViewTab === 'queue'
+                  ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-900'
                 }`}
             >
               Tax Assessment Roll ({applications.length})
             </button>
             <button
               onClick={() => setMainViewTab('citizenAudit')}
-              className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${mainViewTab === 'citizenAudit'
-                  ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+              className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${mainViewTab === 'citizenAudit'
+                  ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-900'
                 }`}
             >
               Issued Clearances ({citizenAuditTrail.length})
@@ -527,85 +528,85 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
 
           <button
             onClick={handleExportCSV}
-            className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold px-4 py-2.5 rounded-xl transition-all border border-slate-200 dark:border-slate-700 cursor-pointer flex items-center gap-1.5"
+            className="bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-bold px-5 py-3 rounded-2xl transition-all duration-200 border border-slate-700/80 cursor-pointer flex items-center gap-2 shadow-lg"
           >
-            <i className="fa-solid fa-file-csv text-xs"></i> Export Tax Roll
+            <i className="fa-solid fa-file-csv text-sm text-emerald-400"></i> Export Tax Roll
           </button>
         </div>
       </div>
 
       {/* RPT Specific Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
-        <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs">
+        <div className="bg-slate-900/60 hover:bg-slate-900/90 rounded-3xl p-6 border border-slate-800/80 shadow-xl transition-all duration-200 backdrop-blur-md">
           <div className="flex justify-between items-start">
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Tax Declarations</p>
-            <span className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400">
-              <i className="fa-solid fa-building-user text-xs"></i>
+            <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Tax Declarations</p>
+            <span className="p-3 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              <i className="fa-solid fa-building-user text-sm"></i>
             </span>
           </div>
-          <h4 className="text-2xl font-bold text-slate-900 dark:text-white mt-3">{rptMetrics.totalDeclarations}</h4>
-          <p className="mt-2 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">Active assessment properties</p>
+          <h4 className="text-3xl font-black text-white mt-4">{rptMetrics.totalDeclarations}</h4>
+          <p className="mt-2 text-[11px] text-emerald-400 font-semibold">Active assessment properties</p>
         </div>
 
-        <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs">
+        <div className="bg-slate-900/60 hover:bg-slate-900/90 rounded-3xl p-6 border border-slate-800/80 shadow-xl transition-all duration-200 backdrop-blur-md">
           <div className="flex justify-between items-start">
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Pending Re-Appraisal</p>
-            <span className="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400">
-              <i className="fa-solid fa-calculator text-xs"></i>
+            <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Pending Re-Appraisal</p>
+            <span className="p-3 rounded-2xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
+              <i className="fa-solid fa-calculator text-sm"></i>
             </span>
           </div>
-          <h4 className="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-3">{rptMetrics.pendingValuation}</h4>
-          <p className="mt-2 text-[11px] text-slate-400">Under market valuation</p>
+          <h4 className="text-3xl font-black text-amber-400 mt-4">{rptMetrics.pendingValuation}</h4>
+          <p className="mt-2 text-[11px] text-slate-400 font-medium">Under market valuation</p>
         </div>
 
-        <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs">
+        <div className="bg-slate-900/60 hover:bg-slate-900/90 rounded-3xl p-6 border border-slate-800/80 shadow-xl transition-all duration-200 backdrop-blur-md">
           <div className="flex justify-between items-start">
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Total Assessed Value</p>
-            <span className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400">
-              <i className="fa-solid fa-scale-balanced text-xs"></i>
+            <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Total Assessed Value</p>
+            <span className="p-3 rounded-2xl bg-blue-500/10 text-blue-400 border border-blue-500/20">
+              <i className="fa-solid fa-scale-balanced text-sm"></i>
             </span>
           </div>
-          <h4 className="text-lg font-bold text-slate-900 dark:text-white mt-3 truncate">
+          <h4 className="text-xl font-black text-white mt-4 truncate">
             ₱{rptMetrics.totalAssessedValue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
           </h4>
-          <p className="mt-2 text-[11px] text-slate-400">Taxable land & structures</p>
+          <p className="mt-2 text-[11px] text-slate-400 font-medium">Taxable land & structures</p>
         </div>
 
-        <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs">
+        <div className="bg-slate-900/60 hover:bg-slate-900/90 rounded-3xl p-6 border border-slate-800/80 shadow-xl transition-all duration-200 backdrop-blur-md">
           <div className="flex justify-between items-start">
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Basic RPT Levy (1%)</p>
-            <span className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400">
-              <i className="fa-solid fa-coins text-xs"></i>
+            <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Basic RPT Levy (1%)</p>
+            <span className="p-3 rounded-2xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+              <i className="fa-solid fa-coins text-sm"></i>
             </span>
           </div>
-          <h4 className="text-lg font-bold text-indigo-600 dark:text-indigo-400 mt-3 truncate">
+          <h4 className="text-xl font-black text-indigo-400 mt-4 truncate">
             ₱{rptMetrics.projectedRPTRevenue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
           </h4>
-          <p className="mt-2 text-[11px] text-slate-400">General fund allocation</p>
+          <p className="mt-2 text-[11px] text-slate-400 font-medium">General fund allocation</p>
         </div>
 
-        <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs">
+        <div className="bg-slate-900/60 hover:bg-slate-900/90 rounded-3xl p-6 border border-slate-800/80 shadow-xl transition-all duration-200 backdrop-blur-md">
           <div className="flex justify-between items-start">
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">SEF Allocation (1%)</p>
-            <span className="p-2 rounded-xl bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400">
-              <i className="fa-solid fa-graduation-cap text-xs"></i>
+            <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">SEF Allocation (1%)</p>
+            <span className="p-3 rounded-2xl bg-purple-500/10 text-purple-400 border border-purple-500/20">
+              <i className="fa-solid fa-graduation-cap text-sm"></i>
             </span>
           </div>
-          <h4 className="text-lg font-bold text-purple-600 dark:text-purple-400 mt-3 truncate">
+          <h4 className="text-xl font-black text-purple-400 mt-4 truncate">
             ₱{rptMetrics.projectedSEFAllocation.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
           </h4>
-          <p className="mt-2 text-[11px] text-slate-400">Special Education Fund</p>
+          <p className="mt-2 text-[11px] text-slate-400 font-medium">Special Education Fund</p>
         </div>
       </div>
 
       {/* RPT TAX ROLL QUEUE */}
       {mainViewTab === 'queue' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* Left Directory */}
-          <div className="lg:col-span-5 bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-xs flex flex-col gap-4">
+          <div className="lg:col-span-5 bg-slate-900/80 rounded-3xl border border-slate-800/80 p-6 shadow-2xl flex flex-col gap-5 backdrop-blur-xl">
             <div className="flex flex-col gap-3">
               <div className="relative">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                <span className="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
                   <i className="fa-solid fa-magnifying-glass text-xs"></i>
                 </span>
                 <input
@@ -613,15 +614,15 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                   placeholder="Search TD No, PIN, Owner Name..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 transition-all"
+                  className="w-full pl-10 pr-4 py-3 text-xs font-medium rounded-2xl border border-slate-800 bg-slate-950 text-white placeholder:text-slate-500 focus:outline-none focus:border-emerald-500/80 transition-all shadow-inner"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2.5">
                 <select
                   value={selectedClassification}
                   onChange={(e) => setSelectedClassification(e.target.value)}
-                  className="px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-950 text-slate-700 dark:text-slate-200 focus:outline-none focus:border-emerald-500 cursor-pointer"
+                  className="px-3.5 py-2.5 text-xs font-semibold rounded-2xl border border-slate-800 bg-slate-950 text-slate-300 focus:outline-none focus:border-emerald-500/80 cursor-pointer transition-all"
                 >
                   <option value="ALL">All Property Classes</option>
                   <option value="Residential">Residential</option>
@@ -633,7 +634,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                 <select
                   value={selectedStatusFilter}
                   onChange={(e) => setSelectedStatusFilter(e.target.value)}
-                  className="px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-950 text-slate-700 dark:text-slate-200 focus:outline-none focus:border-emerald-500 cursor-pointer"
+                  className="px-3.5 py-2.5 text-xs font-semibold rounded-2xl border border-slate-800 bg-slate-950 text-slate-300 focus:outline-none focus:border-emerald-500/80 cursor-pointer transition-all"
                 >
                   <option value="ALL">All Stages</option>
                   <option value="Under Evaluation">Under Evaluation</option>
@@ -643,23 +644,23 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
               </div>
             </div>
 
-            <div className="border border-slate-200/80 dark:border-slate-800 rounded-xl overflow-hidden">
-              <div className="p-3 bg-slate-100 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 text-[11px] font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider flex justify-between items-center">
-                <div className="flex items-center gap-2">
+            <div className="border border-slate-800 rounded-2xl overflow-hidden bg-slate-950/50">
+              <div className="p-3.5 bg-slate-950 border-b border-slate-800 text-[11px] font-extrabold text-slate-400 uppercase tracking-wider flex justify-between items-center">
+                <div className="flex items-center gap-2.5">
                   <input
                     type="checkbox"
                     checked={filteredApplications.length > 0 && selectedAppIds.length === filteredApplications.length}
                     onChange={toggleSelectAll}
-                    className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 h-3.5 w-3.5 cursor-pointer"
+                    className="rounded-md border-slate-700 bg-slate-900 text-emerald-500 focus:ring-emerald-500/40 h-4 w-4 cursor-pointer"
                   />
                   <span>Assessment Roll ({filteredApplications.length})</span>
                 </div>
               </div>
 
-              <div className="max-h-[500px] overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60 p-1">
+              <div className="max-h-[520px] overflow-y-auto divide-y divide-slate-800/50 p-2 space-y-1">
                 {filteredApplications.length === 0 ? (
-                  <div className="p-12 text-center text-slate-400 text-xs italic">
-                    <i className="fa-solid fa-map text-xl mb-2 block"></i>
+                  <div className="p-12 text-center text-slate-500 text-xs italic">
+                    <i className="fa-solid fa-map text-2xl mb-3 block text-slate-600"></i>
                     No real property assessment records match criteria.
                   </div>
                 ) : (
@@ -670,33 +671,33 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                     return (
                       <div
                         key={app.id}
-                        className={`w-full p-3 rounded-xl transition-all flex items-start gap-3 border my-1 ${isSelected
-                            ? 'bg-emerald-50/60 dark:bg-emerald-950/30 border-emerald-500/40 shadow-2xs'
-                            : 'bg-transparent border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/40'
+                        className={`w-full p-3.5 rounded-2xl transition-all duration-200 flex items-start gap-3 border ${isSelected
+                            ? 'bg-emerald-950/30 border-emerald-500/50 shadow-lg shadow-emerald-950/20'
+                            : 'bg-transparent border-transparent hover:bg-slate-900/60'
                           }`}
                       >
                         <input
                           type="checkbox"
                           checked={isChecked}
                           onChange={() => toggleSelectApp(app.id)}
-                          className="mt-1 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 h-3.5 w-3.5 cursor-pointer flex-shrink-0"
+                          className="mt-1 rounded-md border-slate-700 bg-slate-900 text-emerald-500 focus:ring-emerald-500/40 h-4 w-4 cursor-pointer flex-shrink-0"
                         />
                         <button
                           onClick={() => setSelectedAppId(app.id)}
                           className="flex-1 text-left flex flex-col gap-1 cursor-pointer"
                         >
                           <div className="flex justify-between items-center gap-2">
-                            <span className="font-mono font-bold text-xs text-slate-900 dark:text-white">
+                            <span className="font-mono font-bold text-xs text-emerald-400">
                               {app.taxDeclarationNumber}
                             </span>
-                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                            <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800/80">
                               {app.status}
                             </span>
                           </div>
-                          <div className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
+                          <div className="text-xs font-bold text-white truncate">
                             {app.applicantName}
                           </div>
-                          <div className="text-[11px] text-slate-400 truncate">
+                          <div className="text-[11px] font-medium text-slate-400 truncate">
                             PIN: {app.propertyDetails.pin} • {app.propertyDetails.classification}
                           </div>
                         </button>
@@ -706,7 +707,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                             handleDeleteApplication(app.id);
                           }}
                           title="Purge Record"
-                          className="text-slate-400 hover:text-rose-600 p-1 rounded transition-colors cursor-pointer"
+                          className="text-slate-500 hover:text-rose-400 p-1.5 rounded-xl hover:bg-rose-950/40 transition-colors cursor-pointer"
                         >
                           <i className="fa-solid fa-xmark text-xs"></i>
                         </button>
@@ -719,32 +720,32 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
           </div>
 
           {/* Right Detail Panel */}
-          <div className="lg:col-span-7 bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs overflow-hidden">
+          <div className="lg:col-span-7 bg-slate-900/80 rounded-3xl border border-slate-800/80 shadow-2xl overflow-hidden backdrop-blur-xl">
             {!currentApp ? (
-              <div className="p-16 text-center space-y-3">
-                <div className="p-4 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 inline-block">
-                  <i className="fa-solid fa-house-flag text-2xl"></i>
+              <div className="p-20 text-center space-y-4">
+                <div className="p-5 rounded-full bg-slate-800/50 text-slate-500 inline-block border border-slate-700/50">
+                  <i className="fa-solid fa-house-flag text-3xl"></i>
                 </div>
-                <h3 className="text-base font-bold text-slate-700 dark:text-slate-300">No Assessment Selected</h3>
-                <p className="text-xs text-slate-400 max-w-sm mx-auto">Select a property declaration from the assessment roll to calculate basic tax levies and inspect boundaries.</p>
+                <h3 className="text-lg font-bold text-slate-200">No Assessment Selected</h3>
+                <p className="text-xs text-slate-400 max-w-sm mx-auto leading-relaxed">Select a property declaration from the assessment roll to calculate basic tax levies and inspect boundaries.</p>
               </div>
             ) : (
               <>
-                <div className="p-6 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/40 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div className="p-6 sm:p-8 border-b border-slate-800 bg-slate-950/60 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                   <div>
-                    <h2 className="text-xl font-bold font-mono text-slate-900 dark:text-white flex items-center gap-2">
-                      <i className="fa-solid fa-landmark text-emerald-600 text-base"></i> {currentApp.taxDeclarationNumber}
+                    <h2 className="text-2xl font-black font-mono text-white flex items-center gap-2.5">
+                      <i className="fa-solid fa-landmark text-emerald-400 text-lg"></i> {currentApp.taxDeclarationNumber}
                     </h2>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                      Property Owner: <span className="font-semibold text-slate-800 dark:text-slate-200">{currentApp.applicantName}</span>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Property Owner: <span className="font-bold text-slate-200">{currentApp.applicantName}</span>
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2.5">
                     <select
                       value={currentApp.status}
                       onChange={(e) => handleUpdateStatus(e.target.value as StatusType)}
-                      className="px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 focus:outline-none cursor-pointer"
+                      className="px-4 py-2.5 text-xs font-bold rounded-2xl border border-slate-700 bg-slate-900 text-slate-200 focus:outline-none focus:border-emerald-500 cursor-pointer shadow-lg"
                     >
                       <option value="Under Evaluation">Under Evaluation</option>
                       <option value="Field Inspection Scheduled">Field Inspection Scheduled</option>
@@ -754,14 +755,14 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
 
                     <button
                       onClick={() => handleDeleteApplication(currentApp.id)}
-                      className="bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-500 dark:bg-slate-800 dark:text-slate-400 font-semibold px-3 py-2 rounded-xl transition-all border border-slate-200 dark:border-slate-700 text-xs cursor-pointer"
+                      className="bg-slate-800 hover:bg-rose-950 hover:text-rose-300 text-slate-400 font-bold px-4 py-2.5 rounded-2xl transition-all border border-slate-700/80 hover:border-rose-800 text-xs cursor-pointer shadow-lg"
                     >
                       Delete
                     </button>
                   </div>
                 </div>
 
-                <div className="flex border-b border-slate-200 dark:border-slate-800 bg-slate-100/60 dark:bg-slate-950 px-6 text-xs font-semibold">
+                <div className="flex border-b border-slate-800 bg-slate-950/40 px-6 sm:px-8 text-xs font-bold gap-2">
                   {(
                     [
                       ['overview', 'Property & Valuation Breakdown'],
@@ -772,9 +773,9 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                     <button
                       key={tab}
                       onClick={() => setDetailTab(tab as any)}
-                      className={`py-3 px-4 border-b-2 transition-colors cursor-pointer whitespace-nowrap ${detailTab === tab
-                          ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400 font-bold'
-                          : 'border-transparent text-slate-500 hover:text-slate-700'
+                      className={`py-4 px-4 border-b-2 transition-all cursor-pointer whitespace-nowrap ${detailTab === tab
+                          ? 'border-emerald-400 text-emerald-400 font-extrabold'
+                          : 'border-transparent text-slate-400 hover:text-slate-200'
                         }`}
                     >
                       {label}
@@ -782,77 +783,77 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                   ))}
                 </div>
 
-                <div className="p-6 space-y-6">
+                <div className="p-6 sm:p-8 space-y-6">
                   {detailTab === 'overview' && (
                     <>
                       {/* Property Technical Details & Tax Computation */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-5 rounded-2xl border border-slate-800 bg-slate-950/60">
                         <div>
-                          <p className="text-[11px] font-semibold text-slate-400 uppercase">Property Identification No. (PIN)</p>
-                          <p className="text-xs font-bold font-mono text-slate-900 dark:text-white mt-1">{currentApp.propertyDetails.pin}</p>
+                          <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Property Identification No. (PIN)</p>
+                          <p className="text-xs font-black font-mono text-white mt-1.5">{currentApp.propertyDetails.pin}</p>
                         </div>
                         <div>
-                          <p className="text-[11px] font-semibold text-slate-400 uppercase">Land Title No. (TCT / OCT)</p>
-                          <p className="text-xs font-bold font-mono text-slate-900 dark:text-white mt-1">{currentApp.propertyDetails.titleNumber}</p>
+                          <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Land Title No. (TCT / OCT)</p>
+                          <p className="text-xs font-black font-mono text-white mt-1.5">{currentApp.propertyDetails.titleNumber}</p>
                         </div>
                         <div>
-                          <p className="text-[11px] font-semibold text-slate-400 uppercase">Property Classification</p>
-                          <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 mt-1">{currentApp.propertyDetails.classification}</p>
+                          <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Property Classification</p>
+                          <p className="text-xs font-bold text-slate-200 mt-1.5">{currentApp.propertyDetails.classification}</p>
                         </div>
                         <div>
-                          <p className="text-[11px] font-semibold text-slate-400 uppercase">Total Lot Area</p>
-                          <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 mt-1">{currentApp.propertyDetails.lotAreaSqM} sq. meters</p>
+                          <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Total Lot Area</p>
+                          <p className="text-xs font-bold text-slate-200 mt-1.5">{currentApp.propertyDetails.lotAreaSqM} sq. meters</p>
                         </div>
                       </div>
 
-                      <div className="p-4 rounded-xl border border-emerald-200/80 dark:border-emerald-900/40 bg-emerald-50/30 dark:bg-emerald-950/10 space-y-2">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">Assessor Assessment & Levy Schedule</h4>
-                        <div className="grid grid-cols-3 gap-2 text-xs pt-1">
+                      <div className="p-5 rounded-2xl border border-emerald-500/30 bg-emerald-950/20 space-y-3">
+                        <h4 className="text-xs font-black uppercase tracking-wider text-emerald-400">Assessor Assessment & Levy Schedule</h4>
+                        <div className="grid grid-cols-3 gap-3 text-xs pt-1">
                           <div>
-                            <span className="text-[10px] text-slate-500 block">Assessed Value</span>
-                            <span className="font-bold text-slate-900 dark:text-white">₱{currentApp.assessedValue.toLocaleString('en-PH')}</span>
+                            <span className="text-[10px] text-slate-400 block font-semibold">Assessed Value</span>
+                            <span className="font-extrabold text-white text-sm mt-0.5 block">₱{currentApp.assessedValue.toLocaleString('en-PH')}</span>
                           </div>
                           <div>
-                            <span className="text-[10px] text-slate-500 block">Basic RPT (1%)</span>
-                            <span className="font-bold text-slate-900 dark:text-white">₱{currentApp.basicTaxDue.toLocaleString('en-PH')}</span>
+                            <span className="text-[10px] text-slate-400 block font-semibold">Basic RPT (1%)</span>
+                            <span className="font-extrabold text-emerald-400 text-sm mt-0.5 block">₱{currentApp.basicTaxDue.toLocaleString('en-PH')}</span>
                           </div>
                           <div>
-                            <span className="text-[10px] text-slate-500 block">SEF (1%)</span>
-                            <span className="font-bold text-slate-900 dark:text-white">₱{currentApp.sefTaxDue.toLocaleString('en-PH')}</span>
+                            <span className="text-[10px] text-slate-400 block font-semibold">SEF (1%)</span>
+                            <span className="font-extrabold text-purple-400 text-sm mt-0.5 block">₱{currentApp.sefTaxDue.toLocaleString('en-PH')}</span>
                           </div>
                         </div>
                       </div>
 
                       {/* Submitted Documents */}
-                      <section className="space-y-3">
-                        <h3 className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[11px] flex items-center gap-2">
-                          <i className="fa-solid fa-file-contract text-emerald-600"></i> Title & Boundary Evidence Documents ({currentApp.documents.length})
+                      <section className="space-y-4">
+                        <h3 className="font-extrabold text-slate-200 uppercase tracking-wider text-[11px] flex items-center gap-2">
+                          <i className="fa-solid fa-file-contract text-emerald-400"></i> Title & Boundary Evidence Documents ({currentApp.documents.length})
                         </h3>
 
                         <div className="space-y-3">
                           {currentApp.documents.map((doc) => (
-                            <div key={doc.id} className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                            <div key={doc.id} className="p-4 rounded-2xl border border-slate-800 bg-slate-950/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                               <div>
-                                <p className="font-semibold text-xs text-slate-900 dark:text-white">{doc.name}</p>
-                                <p className="text-[10px] text-slate-400 mt-0.5">Status: <span className="font-medium text-slate-600 dark:text-slate-300">{doc.status}</span></p>
+                                <p className="font-bold text-xs text-white">{doc.name}</p>
+                                <p className="text-[10px] text-slate-400 mt-0.5 font-medium">Status: <span className="font-bold text-slate-300">{doc.status}</span></p>
                               </div>
 
                               <div className="flex items-center gap-2">
                                 <button
                                   onClick={() => handleOpenPreview(doc)}
-                                  className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 font-semibold px-3 py-1.5 rounded-xl border border-emerald-200 dark:border-emerald-900 text-xs cursor-pointer transition-colors"
+                                  className="bg-emerald-950/80 hover:bg-emerald-900/80 text-emerald-300 font-bold px-3.5 py-2 rounded-xl border border-emerald-800/80 text-xs cursor-pointer transition-all"
                                 >
                                   Preview
                                 </button>
                                 <button
                                   onClick={() => handleDocumentStatusChange(doc.id, 'Verified')}
-                                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3 py-1.5 rounded-xl text-xs cursor-pointer transition-colors"
+                                  className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold px-3.5 py-2 rounded-xl text-xs cursor-pointer transition-all shadow-md shadow-emerald-500/10"
                                 >
                                   Verify
                                 </button>
                                 <button
                                   onClick={() => handleDocumentStatusChange(doc.id, 'Rejected')}
-                                  className="bg-rose-600 hover:bg-rose-700 text-white font-semibold px-3 py-1.5 rounded-xl text-xs cursor-pointer transition-colors"
+                                  className="bg-rose-600 hover:bg-rose-500 text-white font-extrabold px-3.5 py-2 rounded-xl text-xs cursor-pointer transition-all shadow-md shadow-rose-600/10"
                                 >
                                   Reject
                                 </button>
@@ -862,26 +863,26 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                         </div>
                       </section>
 
-                      <section className="pt-4 border-t border-slate-100 dark:border-slate-800">
+                      <section className="pt-4 border-t border-slate-800">
                         <button
                           onClick={handleDigitalRelease}
-                          className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs cursor-pointer shadow-md shadow-emerald-500/20 transition-all flex items-center justify-center gap-2"
+                          className="w-full py-4 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-2xl text-xs cursor-pointer shadow-xl shadow-emerald-500/20 transition-all flex items-center justify-center gap-2.5 uppercase tracking-wider"
                         >
-                          <i className="fa-solid fa-stamp"></i> Issue Official Tax Clearance & Transfer to Archive
+                          <i className="fa-solid fa-stamp text-sm"></i> Issue Official Tax Clearance & Transfer to Archive
                         </button>
                       </section>
                     </>
                   )}
 
                   {detailTab === 'audit' && (
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       {currentApp.auditLogs?.length === 0 ? (
-                        <p className="text-xs text-slate-400 italic">No audit log generated for this property.</p>
+                        <p className="text-xs text-slate-500 italic">No audit log generated for this property.</p>
                       ) : (
                         currentApp.auditLogs?.map((log) => (
-                          <div key={log.id} className="p-3 border border-slate-200 dark:border-slate-800 rounded-xl text-xs bg-slate-50/50 dark:bg-slate-950/50">
-                            <p className="font-semibold text-slate-800 dark:text-slate-200">{log.action}</p>
-                            <span className="text-[10px] text-slate-400 mt-1 block">{log.timestamp} • {log.officer}</span>
+                          <div key={log.id} className="p-4 border border-slate-800 rounded-2xl text-xs bg-slate-950/50 space-y-1">
+                            <p className="font-semibold text-slate-200">{log.action}</p>
+                            <span className="text-[10px] text-slate-500 block font-medium">{log.timestamp} • {log.officer}</span>
                           </div>
                         ))
                       )}
@@ -889,14 +890,14 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                   )}
 
                   {detailTab === 'notifications' && (
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       {currentApp.notificationLogs?.length === 0 ? (
-                        <p className="text-xs text-slate-400 italic">No notice records present.</p>
+                        <p className="text-xs text-slate-500 italic">No notice records present.</p>
                       ) : (
                         currentApp.notificationLogs?.map((notif) => (
-                          <div key={notif.id} className="p-3 border border-slate-200 dark:border-slate-800 rounded-xl text-xs bg-slate-50/50 dark:bg-slate-950/50">
-                            <p className="text-slate-800 dark:text-slate-200">{notif.message}</p>
-                            <span className="text-[10px] text-slate-400 mt-1 block">{notif.timestamp} • {notif.type}</span>
+                          <div key={notif.id} className="p-4 border border-slate-800 rounded-2xl text-xs bg-slate-950/50 space-y-1">
+                            <p className="text-slate-200 font-medium">{notif.message}</p>
+                            <span className="text-[10px] text-slate-500 block">{notif.timestamp} • {notif.type}</span>
                           </div>
                         ))
                       )}
@@ -911,18 +912,18 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
 
       {/* ISSUED CLEARANCES ARCHIVE */}
       {mainViewTab === 'citizenAudit' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          <div className="lg:col-span-5 bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-xs flex flex-col gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          <div className="lg:col-span-5 bg-slate-900/80 rounded-3xl border border-slate-800/80 p-6 shadow-2xl flex flex-col gap-5 backdrop-blur-xl">
             <div>
-              <h3 className="font-bold text-xs uppercase tracking-wider text-slate-900 dark:text-white">Archived Tax Clearances</h3>
+              <h3 className="font-extrabold text-xs uppercase tracking-wider text-white">Archived Tax Clearances</h3>
               <p className="text-[11px] text-slate-400 mt-0.5">Historical property assessment clearances</p>
             </div>
 
-            <div className="border border-slate-200/80 dark:border-slate-800 rounded-xl overflow-hidden">
-              <div className="max-h-[500px] overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60 p-1">
+            <div className="border border-slate-800 rounded-2xl overflow-hidden bg-slate-950/50">
+              <div className="max-h-[520px] overflow-y-auto divide-y divide-slate-800/50 p-2 space-y-1">
                 {citizenAuditTrail.length === 0 ? (
-                  <div className="p-12 text-center text-slate-400 text-xs italic">
-                    <i className="fa-solid fa-box-archive text-xl mb-2 block"></i>
+                  <div className="p-12 text-center text-slate-500 text-xs italic">
+                    <i className="fa-solid fa-box-archive text-2xl mb-3 block text-slate-600"></i>
                     No archived property clearances present.
                   </div>
                 ) : (
@@ -930,13 +931,13 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                     <div
                       key={app.id}
                       onClick={() => setSelectedCitizenAppId(app.id)}
-                      className={`p-3 rounded-xl border cursor-pointer my-1 transition-all ${app.id === currentCitizenApp?.id
-                          ? 'bg-emerald-50/60 dark:bg-emerald-950/30 border-emerald-500/40'
-                          : 'border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/40'
+                      className={`p-3.5 rounded-2xl border cursor-pointer my-1 transition-all duration-200 ${app.id === currentCitizenApp?.id
+                          ? 'bg-emerald-950/30 border-emerald-500/50'
+                          : 'border-transparent hover:bg-slate-900/60'
                         }`}
                     >
-                      <div className="font-mono font-bold text-xs text-slate-900 dark:text-white">{app.taxDeclarationNumber}</div>
-                      <div className="text-xs font-medium text-slate-700 dark:text-slate-300">{app.applicantName}</div>
+                      <div className="font-mono font-bold text-xs text-emerald-400">{app.taxDeclarationNumber}</div>
+                      <div className="text-xs font-semibold text-slate-200 mt-0.5">{app.applicantName}</div>
                     </div>
                   ))
                 )}
@@ -944,24 +945,26 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
             </div>
           </div>
 
-          <div className="lg:col-span-7 bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-xs">
+          <div className="lg:col-span-7 bg-slate-900/80 rounded-3xl border border-slate-800/80 p-6 sm:p-8 shadow-2xl backdrop-blur-xl">
             {!currentCitizenApp ? (
-              <div className="p-16 text-center text-xs text-slate-400 italic">
+              <div className="p-16 text-center text-xs text-slate-500 italic">
                 Select an archived clearance record to inspect certified attachments.
               </div>
             ) : (
-              <div className="space-y-4">
-                <h2 className="text-xl font-bold font-mono text-slate-900 dark:text-white">{currentCitizenApp.taxDeclarationNumber}</h2>
-                <p className="text-xs text-slate-500">Property Owner: <span className="font-bold text-slate-800 dark:text-slate-200">{currentCitizenApp.applicantName}</span></p>
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-2xl font-black font-mono text-white">{currentCitizenApp.taxDeclarationNumber}</h2>
+                  <p className="text-xs text-slate-400 mt-1">Property Owner: <span className="font-bold text-slate-200">{currentCitizenApp.applicantName}</span></p>
+                </div>
 
-                <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                  <h3 className="text-xs font-bold uppercase text-slate-500">Certified Documents</h3>
+                <div className="space-y-3 pt-4 border-t border-slate-800">
+                  <h3 className="text-xs font-extrabold uppercase text-slate-400 tracking-wider">Certified Documents</h3>
                   {currentCitizenApp.documents.map((doc) => (
-                    <div key={doc.id} className="p-3 border border-slate-200 dark:border-slate-800 rounded-xl flex justify-between items-center text-xs bg-slate-50/50 dark:bg-slate-950/50">
-                      <span className="font-semibold text-slate-800 dark:text-slate-200">{doc.name}</span>
+                    <div key={doc.id} className="p-4 border border-slate-800 rounded-2xl flex justify-between items-center text-xs bg-slate-950/50">
+                      <span className="font-semibold text-slate-200">{doc.name}</span>
                       <button
                         onClick={() => handleOpenPreview(doc)}
-                        className="bg-emerald-50 text-emerald-700 font-semibold px-3 py-1 rounded-lg text-xs cursor-pointer border border-emerald-200"
+                        className="bg-emerald-950/80 text-emerald-300 font-bold px-4 py-2 rounded-xl text-xs cursor-pointer border border-emerald-800/80 hover:bg-emerald-900/80 transition-all"
                       >
                         Preview
                       </button>
@@ -976,21 +979,21 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
 
       {/* LIGHTBOX PREVIEW */}
       {previewDocUrl && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-4xl w-full h-[85vh] shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col my-8">
-            <div className="p-4 bg-slate-900 text-white flex justify-between items-center border-b border-slate-800">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">Document Inspector</span>
-                <span className="text-xs text-slate-300 truncate max-w-md">({previewDocTitle})</span>
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-6">
+          <div className="bg-slate-900 rounded-3xl max-w-5xl w-full h-[85vh] shadow-2xl border border-slate-800 overflow-hidden flex flex-col my-8">
+            <div className="p-5 bg-slate-950 text-white flex justify-between items-center border-b border-slate-800">
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-extrabold text-emerald-400 uppercase tracking-widest">Document Inspector</span>
+                <span className="text-xs text-slate-400 truncate max-w-md font-medium">({previewDocTitle})</span>
               </div>
               <button
                 onClick={() => setPreviewDocUrl(null)}
-                className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold cursor-pointer transition-colors"
+                className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold cursor-pointer transition-colors"
               >
                 Close ✕
               </button>
             </div>
-            <div className="flex-1 bg-slate-100 dark:bg-slate-950 overflow-auto flex items-center justify-center p-4">
+            <div className="flex-1 bg-slate-950 overflow-auto flex items-center justify-center p-6">
               {(() => {
                 const url = previewDocUrl;
                 const isPdf = url.toLowerCase().includes('.pdf') || url.startsWith('data:application/pdf') || url.toLowerCase().endsWith('.pdf');
@@ -999,7 +1002,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                   return (
                     <iframe
                       src={url}
-                      className="w-full h-full rounded-xl border-0 shadow-inner bg-white"
+                      className="w-full h-full rounded-2xl border-0 shadow-2xl bg-white"
                       title="PDF Document Preview"
                     />
                   );
@@ -1010,7 +1013,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                     <img
                       src={url}
                       alt="Document Preview"
-                      className="max-w-none object-contain rounded-xl shadow-lg transition-transform duration-200 hover:scale-105 cursor-zoom-in"
+                      className="max-w-none object-contain rounded-2xl shadow-2xl transition-transform duration-200 hover:scale-105 cursor-zoom-in"
                       style={{ minHeight: '50vh', maxHeight: '75vh' }}
                     />
                   </div>
