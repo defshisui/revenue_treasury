@@ -180,7 +180,6 @@ function makeControlNumber() {
   return `RPT-${period}-${random}`;
 }
 
-// SAFE FALLBACK: Checks if the date string already contains a "T" to avoid RangeError
 function formatDate(date: string) {
   if (!date) return "—";
   try {
@@ -230,7 +229,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
   const [paymentMethod, setPaymentMethod] = useState("GCash");
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
 
-  // NEW STATE: Holds the URL of the document being previewed[cite: 9]
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(false);
@@ -475,7 +473,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
     formDataPayload.append("filed_date", currentDate);
     formDataPayload.append("notes", formData.notes);
 
-    // BULLETPROOF FALLBACK: Explicitly send a stringified list of document names
     const attachedDocsList = Object.entries(documents)
       .filter((entry) => entry[1])
       .map(([key, val]) => `${key}: ${val}`);
@@ -562,7 +559,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
       className="min-h-screen flex flex-col justify-between bg-slate-100 dark:bg-slate-950 font-sans text-slate-800 dark:text-slate-100 transition-all duration-300 box-border"
     >
       <div>
-        {/* Top Header / Banner Area */}
         <div className="w-full bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-xs">
           <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
             <div className="flex items-center gap-3">
@@ -620,7 +616,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
           </div>
         </div>
 
-        {/* Hero Banner Area */}
         <div className="relative w-full bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 h-36 sm:h-48 overflow-hidden flex items-center justify-center border-b-4 border-blue-600">
           <div className="absolute inset-0 opacity-30 bg-[radial-gradient(#3b82f6_1px,transparent_1px)] [background-size:16px_16px]"></div>
           <div className="relative z-10 text-center px-4">
@@ -633,7 +628,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
           </div>
         </div>
 
-        {/* Main Body Content Container */}
         <div className="max-w-7xl mx-auto px-4 py-8 w-full">
           <section className={currentView === "hub" ? "" : "overflow-hidden rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm"}>
             {currentView !== "hub" && currentView !== "status" && (
@@ -758,7 +752,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
                   </div>
                 </div>
 
-                {/* Filters & Search Row */}
                 <div className="flex flex-col md:flex-row justify-between items-center gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
                   <div className="w-full md:w-64">
                     <label className="block text-[11px] font-semibold text-slate-500 mb-1">Application Status</label>
@@ -853,7 +846,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
                   </table>
                 </div>
 
-                {/* Functional Pagination Footer */}
                 <div className="flex justify-between items-center text-xs text-slate-500 pt-2">
                   <span>Page {currentPage} of {totalPages}</span>
                   <div className="flex gap-1">
@@ -948,15 +940,16 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
                     return docArray.map((doc, idx) => {
                       const docStr = typeof doc === "string" ? doc : JSON.stringify(doc);
 
-                      const isUpload = docStr.includes('/uploads/') || docStr.startsWith('http') || docStr.startsWith('blob:');
-                      const cleanDocStr = docStr.includes(': /uploads/') ? docStr.split(': ')[1] : docStr;
+                      const actualFileName = docStr.includes(': ') ? docStr.split(': ')[1].trim() : docStr;
+                      const isUpload = actualFileName.includes('.') || docStr.includes('/uploads/') || docStr.startsWith('http') || docStr.startsWith('blob:');
+                      const cleanPath = actualFileName.startsWith('/uploads/') ? actualFileName : `/uploads/${actualFileName}`;
 
                       const imgUrl = isUpload
-                        ? (cleanDocStr.startsWith('http') || cleanDocStr.startsWith('blob:') ? cleanDocStr : `${API_BASE_URL}${cleanDocStr}`)
+                        ? (cleanPath.startsWith('http') || cleanPath.startsWith('blob:') ? cleanPath : `${API_BASE_URL}${cleanPath}`)
                         : null;
 
                       return (
-                        <div key={idx} className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-800 shadow-sm flex flex-col group">
+                        <div key={idx} className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-800 shadow-sm flex flex-col group relative">
                           {imgUrl ? (
                             <div className="w-full h-32 relative bg-slate-200 dark:bg-slate-700 flex flex-col items-center justify-center">
                               {imgUrl.toLowerCase().includes('.pdf') ? (
@@ -970,9 +963,10 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
                               <button
                                 type="button"
                                 onClick={() => setPreviewUrl(imgUrl)}
-                                className="absolute inset-0 bg-slate-950/40 hover:bg-slate-950/60 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold gap-1 cursor-pointer"
+                                className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-xs font-bold gap-1 cursor-pointer"
                               >
-                                🔍 Preview File
+                                <span className="text-lg">🔍</span>
+                                <span>Preview File</span>
                               </button>
                             </div>
                           ) : (
@@ -981,6 +975,11 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
                               <span className="text-[10px] font-medium text-slate-500 break-all line-clamp-3" title={docStr}>{docStr}</span>
                             </div>
                           )}
+                          <div className="p-2 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800">
+                            <p className="text-[10px] font-medium text-slate-600 dark:text-slate-300 truncate text-center" title={docStr}>
+                              {docStr}
+                            </p>
+                          </div>
                         </div>
                       );
                     });
@@ -1025,7 +1024,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
         </div>
       )}
 
-      {/* LIGHTBOX MODAL FOR PREVIEWING DOCUMENTS[cite: 9] */}
       {previewUrl && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/90 backdrop-blur-sm p-4">
           <div className="relative w-full max-w-4xl h-[85vh] bg-white dark:bg-slate-900 rounded-2xl overflow-hidden shadow-2xl flex flex-col">
