@@ -940,18 +940,18 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
                     return docArray.map((doc, idx) => {
                       const docStr = typeof doc === "string" ? doc : JSON.stringify(doc);
 
-                      const parts = docStr.split(':');
-                      let rawFileName = parts.length > 1 ? parts[parts.length - 1].trim() : docStr.trim();
-                      rawFileName = rawFileName.replace(/["'{}]/g, "").trim();
-
-                      const hasExtension = /\.(jpg|jpeg|png|gif|webp|pdf)$/i.test(rawFileName);
+                      // Directly read the server path saved by controller: "/uploads/filename.jpg"
+                      let cleanPath = docStr.replace(/["'{}]/g, "").trim();
+                      if (cleanPath.includes(": ")) {
+                        cleanPath = cleanPath.split(": ")[1].trim();
+                      }
 
                       let imgUrl = null;
-                      if (hasExtension || rawFileName.includes('/uploads/')) {
-                        const cleanFileName = rawFileName.includes('/uploads/') ? rawFileName.split('/uploads/').pop() : rawFileName;
-                        imgUrl = `${API_BASE_URL}/uploads/${cleanFileName}`;
-                      } else if (rawFileName.startsWith('http') || rawFileName.startsWith('blob:')) {
-                        imgUrl = rawFileName;
+                      if (cleanPath.startsWith("/uploads/") || cleanPath.includes(".")) {
+                        const pathOnly = cleanPath.startsWith("/uploads/") ? cleanPath : `/uploads/${cleanPath}`;
+                        imgUrl = `${API_BASE_URL}${pathOnly}`;
+                      } else if (cleanPath.startsWith("http") || cleanPath.startsWith("blob:")) {
+                        imgUrl = cleanPath;
                       }
 
                       return (
@@ -960,7 +960,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
                             <div className="w-full h-32 relative bg-slate-200 dark:bg-slate-700 flex flex-col items-center justify-center">
                               {imgUrl.toLowerCase().includes('.pdf') ? (
                                 <div className="w-full h-full flex flex-col items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-500">
-                                  <span className="text-3xl mb-1">📄</span>
                                   <span className="text-[10px] font-bold">PDF DOCUMENT</span>
                                 </div>
                               ) : (
@@ -971,13 +970,11 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
                                 onClick={() => setPreviewUrl(imgUrl)}
                                 className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-xs font-bold gap-1 cursor-pointer"
                               >
-                                <span className="text-lg">🔍</span>
                                 <span>Preview File</span>
                               </button>
                             </div>
                           ) : (
                             <div className="w-full h-32 flex flex-col items-center justify-center p-3 text-center">
-                              <span className="text-3xl mb-2">📄</span>
                               <span className="text-[10px] font-medium text-slate-500 break-all line-clamp-3" title={docStr}>{docStr}</span>
                             </div>
                           )}
