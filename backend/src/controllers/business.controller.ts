@@ -160,3 +160,69 @@ export async function verifyTaxBill(_req: Request, res: Response): Promise<void>
 export async function verifyOrNumber(_req: Request, res: Response): Promise<void> {
     res.status(200).json({ amount: '12,500.00', message: 'Official Receipt verified successfully.' });
 }
+
+export async function createAppointment(req: Request, res: Response): Promise<void> {
+    const { department, appointmentType, address, description, fullName, email, phone, date, remarks } = req.body;
+    const id = randomUUID();
+
+    try {
+        const result = await pool.query(
+            `INSERT INTO appointments 
+            (id, department, appointment_type, address, description, full_name, email, phone, appointment_date, remarks, status)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'PENDING') RETURNING *`,
+            [id, department, appointmentType, address, description, fullName, email, phone, date, remarks]
+        );
+
+        await recordAudit(req, 'AUD-APT-SUBMIT', email || 'citizen@gov.ph', 'Citizen',
+            'Appointments Module', 'APPOINTMENT_REQUESTED', 'INFO', null,
+            `Scheduled appointment for ${fullName} under ${department} on ${date}`);
+
+        res.status(201).json({ message: 'Appointment submitted successfully', record: result.rows[0] });
+    } catch (err) {
+        console.error('Error saving appointment:', err);
+        res.status(500).json({ message: 'Failed to submit appointment.' });
+    }
+}
+
+export async function getAppointments(_req: Request, res: Response): Promise<void> {
+    try {
+        const result = await pool.query('SELECT * FROM appointments ORDER BY created_at DESC');
+        const formatted = result.rows.map(row => ({
+            id: row.id,
+            department: row.department,
+            appointmentType: row.appointment_type,
+            address: row.address,
+            description: row.description,
+            fullName: row.full_name,
+            email: row.email,
+            phone: row.phone,
+            date: row.appointment_date,
+            remarks: row.remarks,
+            status: row.status,
+            createdAt: row.created_at
+        }));
+        res.json({ appointments: formatted });
+    } catch (err) {
+        console.error('Error fetching appointments:', err);
+        res.status(500).json({ message: 'Failed to load appointments.' });
+    }
+}
+
+export async function updateAppointmentStatus(req: Request, res: Response): Promise<void> {
+    const { id } = req.params;
+    const { status } = req.body;
+    try {
+        const result = await pool.query(
+            `UPDATE appointments SET status = $1 WHERE id = $2 RETURNING *`,
+            [status, id]
+        );
+        if (result.rows.length === 0) {
+            res.status(404).json({ message: 'Appointment not found.' });
+            return;
+        }
+        res.status(200).json({ message: 'Appointment status updated.', record: result.rows[0] });
+    } catch (err) {
+        console.error('Error updating appointment status:', err);
+        res.status(500).json({ message: 'Failed to update status.' });
+    }
+}
