@@ -99,74 +99,13 @@ function hasSharedAdminRPTRecords(): boolean {
   }
 }
 
-function formatMoney(value: number | null | undefined): string {
-  if (value === null || value === undefined) return "Not available";
-  return new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(value);
-}
+import { formatMoney, formatDate } from "../utils/format";
+import { StatusBadge } from "../components/ui/StatusBadge";
+import { Panel } from "../components/ui/Panel";
+import { Field } from "../components/ui/Field";
+import { EmptyState } from "../components/ui/EmptyState";
+import { AccessScreen } from "../components/ui/AccessScreen";
 
-function formatDate(value: string | null | undefined): string {
-  if (!value) return "Not available";
-  const date = new Date(value + (value.length === 10 ? "T00:00:00" : ""));
-  return Number.isNaN(date.getTime())
-    ? value
-    : new Intl.DateTimeFormat("en-PH", { year: "numeric", month: "short", day: "numeric" }).format(date);
-}
-
-function statusClass(status: string): string {
-  const normalized = status.toLowerCase();
-  if (normalized === "paid" || normalized === "approved" || normalized === "completed" || normalized === "ready for release") {
-    return "bg-emerald-50 text-emerald-700 border-emerald-200";
-  }
-  if (normalized === "rejected" || normalized === "failed" || normalized === "overdue") {
-    return "bg-rose-50 text-rose-700 border-rose-200";
-  }
-  if (normalized === "for compliance" || normalized === "unpaid" || normalized === "partially paid") {
-    return "bg-amber-50 text-amber-800 border-amber-200";
-  }
-  return "bg-blue-50 text-blue-700 border-blue-200";
-}
-
-function StatusBadge({ status }: { status: string | null | undefined }) {
-  if (!status) return <span className="text-sm text-slate-500">Not available</span>;
-  return <span className={"inline-flex rounded-full border px-2.5 py-1 text-[11px] font-bold " + statusClass(status)}>{status}</span>;
-}
-
-function Panel({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <section className={"rounded-2xl border border-slate-200 bg-white shadow-sm " + className}>{children}</section>;
-}
-
-function Field({ label, value }: { label: string; value: ReactNode }) {
-  return (
-    <div className="border-b border-slate-100 py-3 last:border-b-0">
-      <dt className="text-[11px] font-bold uppercase tracking-wider text-slate-500">{label}</dt>
-      <dd className="mt-1 text-sm font-medium text-slate-800">{value}</dd>
-    </div>
-  );
-}
-
-function EmptyState({ title, body, action }: { title: string; body: string; action?: ReactNode }) {
-  return (
-    <Panel className="p-10 text-center">
-      <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-lg text-slate-500">○</div>
-      <h3 className="text-base font-bold text-slate-900">{title}</h3>
-      <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">{body}</p>
-      {action && <div className="mt-5">{action}</div>}
-    </Panel>
-  );
-}
-
-function AccessScreen({ title, body }: { title: string; body: string }) {
-  return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-100 p-6 font-sans">
-      <Panel className="w-full max-w-lg p-8 text-center">
-        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-2xl text-blue-700">▣</div>
-        <h1 className="text-xl font-extrabold text-slate-900">{title}</h1>
-        <p className="mt-3 text-sm leading-6 text-slate-600">{body}</p>
-        <a href="/" className="mt-6 inline-flex rounded-xl bg-blue-700 px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-800">Back to sign in</a>
-      </Panel>
-    </main>
-  );
-}
 
 export default function CitizenRPT() {
   const navigate = useNavigate();
