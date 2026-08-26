@@ -18,42 +18,40 @@ export async function getRptApplications(_req: Request, res: Response): Promise<
 export async function createRptApplication(req: Request, res: Response): Promise<void> {
   const appData = req.body as Record<string, string>;
   const files = (req as Request & { files?: Express.Multer.File[] }).files;
-  const filePaths: string[] = files ? (files as Express.Multer.File[]).map((f) => `/uploads/${f.filename}`) : [];
 
-  let resolvedApplicantName =
-    appData.applicantName || appData.name || appData.ownerName || appData.fullName;
+  // Safely map attached files from Multer
+  let filePaths: string[] = [];
+  if (files && files.length > 0) {
+    filePaths = files.map((f) => `${f.fieldname}: ${f.originalname}`);
+  }
 
-  if (!resolvedApplicantName && (appData.firstName || appData.lastName)) {
-    resolvedApplicantName = `${appData.firstName || ''} ${appData.lastName || ''}`.trim();
-  }
-  if (!resolvedApplicantName) {
-    resolvedApplicantName = appData.email ? appData.email.split('@')[0] : 'Unknown Applicant';
-  }
+  // Resolve Names safely
+  const ownerName = appData.owner_name || appData.ownerName || '';
+  let resolvedApplicantName = appData.applicant_name || appData.applicantName || ownerName || 'Unknown Applicant';
 
   try {
     const result = await pool.query(
       `INSERT INTO rpt_applications
-       (id, control_number, reference_number, email, mobile_number, service, filed_date, status, penalty,
-        applicant_name, pin, tax_declaration_number, property_location, assigned_officer, payment_status, documents)
+       (id, control_number, tax_declaration_number, owner_name, applicant_name, applicant_type, email, mobile_number, service, property_location, barangay, property_type, status, filed_date, notes, documents)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
        RETURNING *`,
       [
         appData.id || randomUUID(),
-        appData.controlNumber || null,
-        appData.referenceNumber || null,
-        appData.email || null,
-        appData.mobileNumber || null,
-        appData.service || null,
-        appData.filedDate || new Date().toISOString().split('T')[0],
-        appData.status || 'Pending',
-        appData.penalty || 0,
+        appData.control_number || null,
+        appData.tax_declaration_number || null,
+        ownerName,
         resolvedApplicantName,
-        appData.pin || null,
-        appData.taxDeclarationNumber || null,
-        appData.propertyLocation || null,
-        appData.assignedOfficer || null,
-        appData.paymentStatus || 'Pending',
-        filePaths,
+        appData.applicant_type || null,
+        appData.email || null,
+        appData.mobile_number || null,
+        appData.service || null,
+        appData.property_location || null,
+        appData.barangay || null,
+        appData.property_type || null,
+        appData.status || 'Submitted',
+        appData.filed_date || new Date().toISOString().split('T')[0],
+        appData.notes || null,
+        JSON.stringify(filePaths), // Save files as JSON array
       ]
     );
 
