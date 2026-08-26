@@ -19,12 +19,12 @@ export async function createRptApplication(req: Request, res: Response): Promise
   const appData = req.body as Record<string, string>;
   const files = (req as Request & { files?: Express.Multer.File[] }).files;
 
-  // 1. Map uploaded files into structured objects containing name and url properties to match the business tax structure
+  // 1. Map uploaded files directly into Base64 strings to match business tax structure
   let fileObjects: Array<{ name: string; url: string }> = [];
   if (files && files.length > 0) {
-    fileObjects = files.map((f) => ({
+    fileObjects = files.map((f: any) => ({
       name: f.originalname || f.filename,
-      url: `/uploads/${f.filename}`
+      url: f.buffer ? `data:${f.mimetype};base64,${f.buffer.toString('base64')}` : `/uploads/${f.filename}`
     }));
   }
 
