@@ -76,6 +76,7 @@ export default function UsersView({
         setNewFullname("");
         setNewUsername("");
         setNewPassword("");
+        setNewRole("treasury-staff"); // Reset role to default
         setIsAddModalOpen(false);
         fetchUsers(); // Refresh list
       } else {
@@ -112,7 +113,6 @@ export default function UsersView({
   const getRoleBadgeStyle = (role: string) => {
     switch (role.toLowerCase()) {
       case "admin":
-      case "municipal-treasurer":
         return "bg-rose-50 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-500/30";
       case "auditor":
         return "bg-amber-50 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-500/30";
@@ -292,7 +292,6 @@ export default function UsersView({
                   <option value="treasury-staff">Treasury Staff</option>
                   <option value="auditor">Auditor</option>
                   <option value="admin">Admin</option>
-                  <option value="municipal-treasurer">Municipal Treasurer</option>
                 </select>
               </div>
 
