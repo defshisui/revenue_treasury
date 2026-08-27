@@ -19,7 +19,7 @@ export interface BusinessAssessmentRecord {
   trackingNumber?: string;
   businessName?: string;
   businessOwner?: string;
-  grossSales?: number;
+  grossSales?: number | string;
   status?: string;
   applicationDate?: string;
   dateFiled?: string;
@@ -130,11 +130,12 @@ export default function TreasuryDashboardView({
         } catch { }
       }
 
+      // Fetch Live Business Assessments from Postgres
       try {
         const resBiz = await fetch(`${API_BASE_URL}/business-assessments`);
         if (resBiz.ok) {
           const data = await resBiz.json();
-          // Extract using "assessments" to exactly match business.controller.ts
+          // Safely extract the data using the "assessments" wrapper from the controller
           dbBizAssessments = Array.isArray(data) ? data : (data.assessments || []);
         }
       } catch (error) {
@@ -261,33 +262,31 @@ export default function TreasuryDashboardView({
   const safeBizAssessments = Array.isArray(bizAssessments) ? bizAssessments : [];
 
   const bizTrend = months.map((m, index) => {
-    // 1. Existing Transaction Feed Revenue
+    // 1. Transactions Feed Revenue
     const txAmount = activeTxFeed
       .filter(t => t?.paymentType === 'BUSINESS' && t?.date?.startsWith(m))
       .reduce((sum, t) => sum + Number(t?.amount || 0), 0);
 
-    // 2. Assessed Revenue from the Business DB
+    // 2. Assessed DB Revenue
+    const monthNumStr = String(index + 1).padStart(2, '0'); // formats to "01", "02", etc.
+
     const assessmentAmount = safeBizAssessments
       .filter(b => {
         const status = (b?.status || "").toUpperCase();
         if (status !== "APPROVED") return false;
 
-        const dateStr = b?.applicationDate || b?.dateFiled || "";
+        const dateStr = String(b?.applicationDate || b?.dateFiled || "");
         if (!dateStr) return false;
 
-        // Convert the string to a bulletproof Javascript Date object
-        const dateObj = new Date(dateStr);
-        if (isNaN(dateObj.getTime())) return false; // Ignore unreadable dates
-
-        // Match the year and the month dynamically
-        return dateObj.getFullYear().toString() === fiscalPeriod && dateObj.getMonth() === index;
+        // Strict Match: Verify Year AND Month exist in the string (safeguard against ISO or DD/MM/YYYY)
+        return dateStr.includes(fiscalPeriod) && (dateStr.includes(`-${monthNumStr}-`) || dateStr.includes(`/${monthNumStr}/`) || dateStr.startsWith(`${fiscalPeriod}-${monthNumStr}`));
       })
       .reduce((sum, b) => {
-        // Remove currency symbols, spaces, or commas
+        // Bulletproof number parsing: strips out commas, text, and currency symbols
         const rawSalesString = String(b?.grossSales || "0").replace(/[^0-9.-]+/g, "");
         const rawSales = Number(rawSalesString) || 0;
 
-        const estimatedTax = rawSales * 0.02; // 2% calculation
+        const estimatedTax = rawSales * 0.02; // Computes 2% tax
         return sum + estimatedTax;
       }, 0);
 
