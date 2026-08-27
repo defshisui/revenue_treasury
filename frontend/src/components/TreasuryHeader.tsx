@@ -313,7 +313,7 @@ export default function TreasuryHeader({
                   sessionStorage.removeItem('currentUser');
                   sessionStorage.removeItem('user');
                   notify("You have been logged out.");
-                  navigate("/login");
+                  navigate("/");
                 }}
                 className="w-full text-left px-4 py-2.5 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
               >
