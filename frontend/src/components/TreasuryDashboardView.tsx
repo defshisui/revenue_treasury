@@ -484,67 +484,95 @@ export default function TreasuryDashboardView({
       )}
 
       {/* ROW 2: SPECIFIC REVENUE MODULE GRAPHS */}
-      <div className={`grid grid-cols-1 ${activeTab === 'ALL' ? 'lg:grid-cols-2' : 'lg:grid-cols-1'} gap-6 mb-6`}>
+      {/* 
+        Modified to use 3 columns when ALL is selected so graphs fit side-by-side,
+        and allowed Market Stalls to be visible in ALL view. 
+      */}
+      <div className={`grid grid-cols-1 ${activeTab === 'ALL' ? 'lg:grid-cols-3' : 'lg:grid-cols-1'} gap-6 mb-6`}>
         {(activeTab === "ALL" || activeTab === "RPT") && (
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+          <div
+            onClick={() => setActiveTab('RPT')}
+            className="group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between cursor-pointer hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-md transition-all transform hover:-translate-y-1"
+          >
             <div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-white m-0 mb-4">Real Property Tax (RPT) Revenue Trends</h3>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-base font-bold text-slate-900 dark:text-white m-0 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                  Real Property Tax (RPT) Revenue
+                </h3>
+                <svg className="w-4 h-4 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+              </div>
               <div className="h-44 flex items-end justify-between gap-1 pt-6 px-2 border-b border-slate-200 dark:border-slate-800">
                 {rptTrend.map((item, index) => {
                   const maxAmt = Math.max(...rptTrend.map(s => s.amount), 1);
                   const heightPct = Math.round((item.amount / maxAmt) * 100) || 0;
                   return (
                     <div key={index} className="flex-1 flex flex-col items-center h-full justify-end" title={`${item.month}: ₱${item.amount.toLocaleString()}`}>
-                      <div style={{ height: `${Math.max(heightPct, 4)}%` }} className="w-full bg-blue-600 rounded-t-sm transition-all hover:bg-blue-500" />
+                      <div style={{ height: `${Math.max(heightPct, 4)}%` }} className="w-full bg-blue-600 rounded-t-sm transition-all group-hover:bg-blue-500" />
                       <span className="text-[9px] text-slate-500 mt-2">{item.month}</span>
                     </div>
                   );
                 })}
               </div>
             </div>
-            <p className="text-[11px] text-slate-400 text-center mt-4 m-0">Monthly collection distribution for Real Property properties</p>
+            <p className="text-[11px] text-slate-400 text-center mt-4 m-0">Click to view Real Property records</p>
           </div>
         )}
 
         {(activeTab === "ALL" || activeTab === "BUSINESS") && (
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+          <div
+            onClick={() => setActiveTab('BUSINESS')}
+            className="group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between cursor-pointer hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-md transition-all transform hover:-translate-y-1"
+          >
             <div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-white m-0 mb-4">Business Tax Assessment Revenue Trends</h3>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-base font-bold text-slate-900 dark:text-white m-0 group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors">
+                  Business Tax Revenue
+                </h3>
+                <svg className="w-4 h-4 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+              </div>
               <div className="h-44 flex items-end justify-between gap-1 pt-6 px-2 border-b border-slate-200 dark:border-slate-800">
                 {bizTrend.map((item, index) => {
                   const maxAmt = Math.max(...bizTrend.map(s => s.amount), 1);
                   const heightPct = Math.round((item.amount / maxAmt) * 100) || 0;
                   return (
                     <div key={index} className="flex-1 flex flex-col items-center h-full justify-end" title={`${item.month}: ₱${item.amount.toLocaleString()}`}>
-                      <div style={{ height: `${Math.max(heightPct, 4)}%` }} className="w-full bg-blue-400 rounded-t-sm transition-all hover:bg-blue-300" />
+                      <div style={{ height: `${Math.max(heightPct, 4)}%` }} className="w-full bg-blue-400 rounded-t-sm transition-all group-hover:bg-blue-300" />
                       <span className="text-[9px] text-slate-500 mt-2">{item.month}</span>
                     </div>
                   );
                 })}
               </div>
             </div>
-            <p className="text-[11px] text-slate-400 text-center mt-4 m-0">Monthly collection distribution for Corporate & Vendor Taxes</p>
+            <p className="text-[11px] text-slate-400 text-center mt-4 m-0">Click to view Corporate Tax ledgers</p>
           </div>
         )}
 
-        {activeTab === "MARKET" && (
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+        {(activeTab === "ALL" || activeTab === "MARKET") && (
+          <div
+            onClick={() => setActiveTab('MARKET')}
+            className="group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between cursor-pointer hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-md transition-all transform hover:-translate-y-1"
+          >
             <div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-white m-0 mb-4">Market Stalls Revenue Trends</h3>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-base font-bold text-slate-900 dark:text-white m-0 group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors">
+                  Market Stalls Revenue
+                </h3>
+                <svg className="w-4 h-4 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+              </div>
               <div className="h-44 flex items-end justify-between gap-1 pt-6 px-2 border-b border-slate-200 dark:border-slate-800">
                 {marketTrend.map((item, index) => {
                   const maxAmt = Math.max(...marketTrend.map(s => s.amount), 1);
                   const heightPct = Math.round((item.amount / maxAmt) * 100) || 0;
                   return (
                     <div key={index} className="flex-1 flex flex-col items-center h-full justify-end" title={`${item.month}: ₱${item.amount.toLocaleString()}`}>
-                      <div style={{ height: `${Math.max(heightPct, 4)}%` }} className="w-full bg-blue-500 rounded-t-sm transition-all hover:bg-blue-400" />
+                      <div style={{ height: `${Math.max(heightPct, 4)}%` }} className="w-full bg-blue-500 rounded-t-sm transition-all group-hover:bg-blue-400" />
                       <span className="text-[9px] text-slate-500 mt-2">{item.month}</span>
                     </div>
                   );
                 })}
               </div>
             </div>
-            <p className="text-[11px] text-slate-400 text-center mt-4 m-0">Monthly collection distribution for City-Owned Market Leases</p>
+            <p className="text-[11px] text-slate-400 text-center mt-4 m-0">Click to view Market Lease data</p>
           </div>
         )}
       </div>
@@ -592,7 +620,7 @@ export default function TreasuryDashboardView({
 
       {/* RPT ASSESSMENTS LEDGER (Only shows if RPT tab is selected) */}
       {activeTab === "RPT" && (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm mb-6">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm mb-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
           <div className="flex justify-between items-center mb-4">
             <div>
               <h3 className="text-base font-bold text-slate-900 dark:text-white m-0">Live Postgres RPT Applications</h3>
@@ -630,8 +658,8 @@ export default function TreasuryDashboardView({
                         <td className="py-3 px-4 text-slate-600 dark:text-slate-300 font-mono">{pin}</td>
                         <td className="py-3 px-4 text-center">
                           <span className={`py-0.5 px-2.5 rounded-full text-[11px] font-semibold border ${(app.status || "").includes("Approved") || (app.status || "").includes("Issued")
-                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                              : "bg-blue-50 text-blue-700 border-blue-200"
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                            : "bg-blue-50 text-blue-700 border-blue-200"
                             }`}>
                             {app.status || 'Under Evaluation'}
                           </span>
@@ -646,9 +674,9 @@ export default function TreasuryDashboardView({
         </div>
       )}
 
-      {/* MARKET STALLS OVERVIEW (Only shows if ALL or MARKET tab is selected) */}
-      {(activeTab === "ALL" || activeTab === "MARKET") && (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm mb-6">
+      {/* MARKET STALLS OVERVIEW (Only shows if MARKET tab is selected) */}
+      {activeTab === "MARKET" && (
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm mb-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
           <div className="flex justify-between items-center mb-4">
             <div>
               <h3 className="text-base font-bold text-slate-900 dark:text-white m-0">Market Stalls & Lease Overview</h3>
@@ -697,7 +725,7 @@ export default function TreasuryDashboardView({
 
       {/* BUSINESS TAX ASSESSMENTS LEDGER (Only shows if BUSINESS tab is selected) */}
       {activeTab === "BUSINESS" && (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm mb-6">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm mb-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
           <div className="flex justify-between items-center mb-4">
             <div>
               <h3 className="text-base font-bold text-slate-900 dark:text-white m-0">Live Postgres Business Assessments</h3>
