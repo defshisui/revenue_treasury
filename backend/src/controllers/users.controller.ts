@@ -12,7 +12,8 @@ export async function getUsers(_req: Request, res: Response): Promise<void> {
       fullname: row.name || 'System User',
       username: row.email,
       role: row.role || 'admin',
-      status: 'Active',
+      // Dynamically map the status from the database
+      status: row.status || 'Active',
     }));
     res.json(formatted);
   } catch (err) {
@@ -39,11 +40,12 @@ export async function createUser(req: Request, res: Response): Promise<void> {
     // Hash password before storing
     const hashedPassword = await bcrypt.hash(password.trim(), 12);
 
+    // Ensure status defaults to Active upon creation
     const result = await pool.query(
-      `INSERT INTO users (name, email, password, role, created_at)
-       VALUES ($1, $2, $3, $4, NOW())
-       RETURNING id, name, email, role`,
-      [fullname.trim(), username.trim(), hashedPassword, role || 'treasury-staff']
+      `INSERT INTO users (name, email, password, role, status, created_at)
+       VALUES ($1, $2, $3, $4, $5, NOW())
+       RETURNING id, name, email, role, status`,
+      [fullname.trim(), username.trim(), hashedPassword, role || 'treasury-staff', 'Active']
     );
     const newUser = result.rows[0];
 
@@ -62,7 +64,7 @@ export async function createUser(req: Request, res: Response): Promise<void> {
         fullname: newUser.name,
         username: newUser.email,
         role: newUser.role,
-        status: 'Active',
+        status: newUser.status,
       },
     });
   } catch (err) {
@@ -71,7 +73,61 @@ export async function createUser(req: Request, res: Response): Promise<void> {
   }
 }
 
-// NEW: Delete User Function
+// NEW: Update User Status (Archive/Restore)
+export async function updateUserStatus(req: Request, res: Response): Promise<void> {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  // Validate the incoming status
+  if (!status || !['Active', 'ARCHIVED'].includes(status)) {
+    res.status(400).json({ message: 'Invalid status. Must be Active or ARCHIVED.' });
+    return;
+  }
+
+  try {
+    // 1. Fetch user to ensure they exist
+    const userRes = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
+    if (userRes.rows.length === 0) {
+      res.status(404).json({ message: 'User not found.' });
+      return;
+    }
+
+    const targetUser = userRes.rows[0];
+
+    // 2. Update the status in the database
+    await pool.query(
+      'UPDATE users SET status = $1 WHERE id = $2',
+      [status, id]
+    );
+
+    // 3. Log the status change
+    const clientIP = (req?.headers['x-forwarded-for'] as string) || req?.socket?.remoteAddress || 'Unknown';
+    const clientAgent = req?.headers['user-agent'] || 'Unknown';
+    const actionType = status === 'ARCHIVED' ? 'USER_ARCHIVED' : 'USER_RESTORED';
+    const severity = status === 'ARCHIVED' ? 'CRITICAL' : 'WARNING';
+
+    await pool.query(
+      `INSERT INTO audit_logs (audit_id, user_email, user_role, module, action, severity, ip_address, user_agent, previous_data, new_data)
+       VALUES ($1, 'system-admin@lgu.gov.ph', 'admin', 'User Management', $2, $3, $4, $5, $6, $7)`,
+      [
+        `AUD-${actionType}`,
+        actionType,
+        severity,
+        clientIP,
+        clientAgent,
+        `Previous Status: ${targetUser.status || 'Active'}`,
+        `New Status: ${status}`
+      ]
+    );
+
+    res.status(200).json({ message: `User status successfully updated to ${status}.` });
+  } catch (err) {
+    console.error('Error updating user status:', err);
+    res.status(500).json({ message: 'Failed to update user status in database.' });
+  }
+}
+
+// Delete User Function
 export async function deleteUser(req: Request, res: Response): Promise<void> {
   const { id } = req.params;
 
