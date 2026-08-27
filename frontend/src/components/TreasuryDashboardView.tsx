@@ -134,7 +134,7 @@ export default function TreasuryDashboardView({
         const resBiz = await fetch(`${API_BASE_URL}/business-assessments`);
         if (resBiz.ok) {
           const data = await resBiz.json();
-          // Extract using "assessments" to match your backend wrapper
+          // Extract using "assessments" to exactly match business.controller.ts
           dbBizAssessments = Array.isArray(data) ? data : (data.assessments || []);
         }
       } catch (error) {
@@ -261,25 +261,33 @@ export default function TreasuryDashboardView({
   const safeBizAssessments = Array.isArray(bizAssessments) ? bizAssessments : [];
 
   const bizTrend = months.map((m, index) => {
-    // 1. Transaction Feed Revenue
+    // 1. Existing Transaction Feed Revenue
     const txAmount = activeTxFeed
       .filter(t => t?.paymentType === 'BUSINESS' && t?.date?.startsWith(m))
       .reduce((sum, t) => sum + Number(t?.amount || 0), 0);
 
-    // 2. Assessed Revenue from the Business Portal DB
-    const monthNumStr = (index + 1).toString().padStart(2, '0');
-
+    // 2. Assessed Revenue from the Business DB
     const assessmentAmount = safeBizAssessments
       .filter(b => {
         const status = (b?.status || "").toUpperCase();
-        const dateString = b?.applicationDate || b?.dateFiled || "";
+        if (status !== "APPROVED") return false;
 
-        // Match both standard slash format and dash format for dates
-        return status === "APPROVED" && (dateString.includes(`/${monthNumStr}/`) || dateString.includes(`-${monthNumStr}-`));
+        const dateStr = b?.applicationDate || b?.dateFiled || "";
+        if (!dateStr) return false;
+
+        // Convert the string to a bulletproof Javascript Date object
+        const dateObj = new Date(dateStr);
+        if (isNaN(dateObj.getTime())) return false; // Ignore unreadable dates
+
+        // Match the year and the month dynamically
+        return dateObj.getFullYear().toString() === fiscalPeriod && dateObj.getMonth() === index;
       })
       .reduce((sum, b) => {
-        const rawSales = Number(b?.grossSales) || 0;
-        const estimatedTax = rawSales * 0.02; // 2% computation
+        // Remove currency symbols, spaces, or commas
+        const rawSalesString = String(b?.grossSales || "0").replace(/[^0-9.-]+/g, "");
+        const rawSales = Number(rawSalesString) || 0;
+
+        const estimatedTax = rawSales * 0.02; // 2% calculation
         return sum + estimatedTax;
       }, 0);
 
