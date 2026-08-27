@@ -1,6 +1,7 @@
 // src/components/TreasuryDashboardView.tsx
 
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom"; // Added for navigation shortcuts
 import type { TransactionRecord } from "../types/treasury";
 import { API_BASE_URL } from "../config/api";
 
@@ -25,7 +26,6 @@ export interface BusinessAssessmentRecord {
   dateFiled?: string;
 }
 
-// Added interface to map RPT records
 export interface RPTAssessmentRecord {
   id?: string;
   referenceNumber?: string;
@@ -83,16 +83,18 @@ export default function TreasuryDashboardView({
   transactions: initialTransactions = [],
   marketStalls: initialStalls = [],
   isCollapsed,
+  onNavigate,
   fetchTransactions,
   fetchStalls
 }: TreasuryDashboardViewProps) {
+  const navigate = useNavigate(); // Initialize navigation
   const [fiscalPeriod, setFiscalPeriod] = useState("2026");
   const [activeTab, setActiveTab] = useState<"ALL" | "RPT" | "BUSINESS" | "MARKET">("ALL");
 
   const [stalls, setStalls] = useState<StallRecord[]>(initialStalls);
   const [txs, setTxs] = useState<TransactionRecord[]>(initialTransactions);
   const [bizAssessments, setBizAssessments] = useState<BusinessAssessmentRecord[]>([]);
-  const [rptAssessments, setRptAssessments] = useState<RPTAssessmentRecord[]>([]); // New state for RPT
+  const [rptAssessments, setRptAssessments] = useState<RPTAssessmentRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [showAllModal, setShowAllModal] = useState(false);
 
@@ -143,7 +145,6 @@ export default function TreasuryDashboardView({
       }
 
       try {
-        // Fetching the RPT Applications
         const resRpt = await fetch(`${API_BASE_URL}/citizen-rpt-applications`);
         if (resRpt.ok) {
           const data = await resRpt.json();
@@ -171,6 +172,17 @@ export default function TreasuryDashboardView({
     window.addEventListener("db_treasury_updated", handleDbUpdate);
     return () => window.removeEventListener("db_treasury_updated", handleDbUpdate);
   }, [fetchTransactions, fetchStalls]);
+
+  // Helper function to handle module navigation
+  const handleShortcutNavigation = (routePath: string, viewName: string) => {
+    if (onNavigate) {
+      // If parent handles routing via state
+      onNavigate(viewName);
+    } else {
+      // Standard React Router navigation
+      navigate(routePath);
+    }
+  };
 
   const matchesFiscalPeriod = (dateStr?: string) => {
     if (!dateStr) return true;
@@ -483,15 +495,13 @@ export default function TreasuryDashboardView({
         </div>
       )}
 
-      {/* ROW 2: SPECIFIC REVENUE MODULE GRAPHS */}
-      {/* 
-        Modified to use 3 columns when ALL is selected so graphs fit side-by-side,
-        and allowed Market Stalls to be visible in ALL view. 
-      */}
+      {/* ROW 2: SPECIFIC REVENUE MODULE GRAPHS AS CLICKABLE SHORTCUTS */}
       <div className={`grid grid-cols-1 ${activeTab === 'ALL' ? 'lg:grid-cols-3' : 'lg:grid-cols-1'} gap-6 mb-6`}>
+
+        {/* RPT Shortcut Card */}
         {(activeTab === "ALL" || activeTab === "RPT") && (
           <div
-            onClick={() => setActiveTab('RPT')}
+            onClick={() => handleShortcutNavigation('/real-property-tax', 'rpt')}
             className="group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between cursor-pointer hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-md transition-all transform hover:-translate-y-1"
           >
             <div>
@@ -514,13 +524,14 @@ export default function TreasuryDashboardView({
                 })}
               </div>
             </div>
-            <p className="text-[11px] text-slate-400 text-center mt-4 m-0">Click to view Real Property records</p>
+            <p className="text-[11px] font-semibold text-blue-500 text-center mt-4 m-0 opacity-0 group-hover:opacity-100 transition-opacity">Go to Real Property Tax Admin Dashboard →</p>
           </div>
         )}
 
+        {/* Business Tax Shortcut Card */}
         {(activeTab === "ALL" || activeTab === "BUSINESS") && (
           <div
-            onClick={() => setActiveTab('BUSINESS')}
+            onClick={() => handleShortcutNavigation('/business-tax', 'business-tax')}
             className="group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between cursor-pointer hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-md transition-all transform hover:-translate-y-1"
           >
             <div>
@@ -543,13 +554,14 @@ export default function TreasuryDashboardView({
                 })}
               </div>
             </div>
-            <p className="text-[11px] text-slate-400 text-center mt-4 m-0">Click to view Corporate Tax ledgers</p>
+            <p className="text-[11px] font-semibold text-blue-500 text-center mt-4 m-0 opacity-0 group-hover:opacity-100 transition-opacity">Go to Business Tax Admin Dashboard →</p>
           </div>
         )}
 
+        {/* Market Stalls Shortcut Card */}
         {(activeTab === "ALL" || activeTab === "MARKET") && (
           <div
-            onClick={() => setActiveTab('MARKET')}
+            onClick={() => handleShortcutNavigation('/market-stalls', 'market-stalls')}
             className="group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between cursor-pointer hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-md transition-all transform hover:-translate-y-1"
           >
             <div>
@@ -572,7 +584,7 @@ export default function TreasuryDashboardView({
                 })}
               </div>
             </div>
-            <p className="text-[11px] text-slate-400 text-center mt-4 m-0">Click to view Market Lease data</p>
+            <p className="text-[11px] font-semibold text-blue-500 text-center mt-4 m-0 opacity-0 group-hover:opacity-100 transition-opacity">Go to Market Stalls Admin Dashboard →</p>
           </div>
         )}
       </div>
