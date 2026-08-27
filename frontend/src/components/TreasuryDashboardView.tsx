@@ -16,11 +16,12 @@ export interface StallRecord {
 }
 
 export interface BusinessAssessmentRecord {
-  trackingNo?: string;
+  trackingNumber?: string;
   businessName?: string;
-  owner?: string;
+  businessOwner?: string;
   grossSales?: number;
   status?: string;
+  applicationDate?: string;
   dateFiled?: string;
 }
 
@@ -133,14 +134,11 @@ export default function TreasuryDashboardView({
         const resBiz = await fetch(`${API_BASE_URL}/business-assessments`);
         if (resBiz.ok) {
           const data = await resBiz.json();
-          dbBizAssessments = Array.isArray(data) ? data : (data.data || []);
-        } else {
-          throw new Error("API not ready");
+          // Extract using "assessments" to match your backend wrapper
+          dbBizAssessments = Array.isArray(data) ? data : (data.assessments || []);
         }
-      } catch {
-        dbBizAssessments = [
-          { trackingNo: "MP-2026-638788", businessName: "Leon", owner: "leonkennedy", grossSales: 10000, status: "APPROVED", dateFiled: "27/08/2026" }
-        ];
+      } catch (error) {
+        console.error("Failed to fetch business assessments:", error);
       }
 
       setTxs(Array.isArray(dbTransactions) ? dbTransactions : []);
@@ -263,15 +261,25 @@ export default function TreasuryDashboardView({
   const safeBizAssessments = Array.isArray(bizAssessments) ? bizAssessments : [];
 
   const bizTrend = months.map((m, index) => {
+    // 1. Transaction Feed Revenue
     const txAmount = activeTxFeed
       .filter(t => t?.paymentType === 'BUSINESS' && t?.date?.startsWith(m))
       .reduce((sum, t) => sum + Number(t?.amount || 0), 0);
 
+    // 2. Assessed Revenue from the Business Portal DB
     const monthNumStr = (index + 1).toString().padStart(2, '0');
+
     const assessmentAmount = safeBizAssessments
-      .filter(b => b?.status === "APPROVED" && b?.dateFiled?.includes(`/${monthNumStr}/`))
+      .filter(b => {
+        const status = (b?.status || "").toUpperCase();
+        const dateString = b?.applicationDate || b?.dateFiled || "";
+
+        // Match both standard slash format and dash format for dates
+        return status === "APPROVED" && (dateString.includes(`/${monthNumStr}/`) || dateString.includes(`-${monthNumStr}-`));
+      })
       .reduce((sum, b) => {
-        const estimatedTax = (Number(b?.grossSales) || 0) * 0.02;
+        const rawSales = Number(b?.grossSales) || 0;
+        const estimatedTax = rawSales * 0.02; // 2% computation
         return sum + estimatedTax;
       }, 0);
 
