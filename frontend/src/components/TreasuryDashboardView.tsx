@@ -47,7 +47,6 @@ export interface TreasuryDashboardViewProps {
   onNavigate?: (view: string) => void;
   fetchTransactions?: () => Promise<TransactionRecord[]>;
   fetchStalls?: () => Promise<StallRecord[]>;
-  fetchMetrics?: () => Promise<TreasuryMetrics>;
 }
 
 const PAYMENT_OPTION_COLORS: Record<string, string> = {
@@ -70,8 +69,7 @@ export default function TreasuryDashboardView({
   isCollapsed,
   onNavigate,
   fetchTransactions,
-  fetchStalls,
-  fetchMetrics
+  fetchStalls
 }: TreasuryDashboardViewProps) {
   const [fiscalPeriod, setFiscalPeriod] = useState("2026");
   const [stalls, setStalls] = useState<StallRecord[]>(initialStalls);
@@ -98,9 +96,9 @@ export default function TreasuryDashboardView({
       setLoading(true);
       let dbTransactions: TransactionRecord[] = [];
       let dbStalls: StallRecord[] = [];
-      let dbMetrics: TreasuryMetrics | undefined = undefined;
       let dbBizAssessments: BusinessAssessmentRecord[] = [];
 
+      // 1. Fetch Transactions
       if (fetchTransactions) {
         dbTransactions = (await fetchTransactions()) || [];
       } else {
@@ -111,6 +109,7 @@ export default function TreasuryDashboardView({
         }
       }
 
+      // 2. Fetch Market Stalls
       if (fetchStalls) {
         dbStalls = (await fetchStalls()) || [];
       } else {
@@ -121,30 +120,21 @@ export default function TreasuryDashboardView({
         }
       }
 
-      if (fetchMetrics) {
-        dbMetrics = (await fetchMetrics()) || undefined;
-      } else {
-        try {
-          const res = await fetch(`${API_BASE_URL}/treasury-metrics`);
-          if (res.ok) dbMetrics = await res.json();
-        } catch { }
-      }
-
-      // Fetch Live Business Assessments from Postgres
+      // 3. Fetch Business Assessments (Doing exactly what Market does)
       try {
         const resBiz = await fetch(`${API_BASE_URL}/business-assessments`);
         if (resBiz.ok) {
           const data = await resBiz.json();
-          // Safely extract the data using the "assessments" wrapper from the controller
-          dbBizAssessments = Array.isArray(data) ? data : (data.assessments || []);
+          dbBizAssessments = Array.isArray(data) ? data : (data.assessments || data.data || []);
         }
       } catch (error) {
         console.error("Failed to fetch business assessments:", error);
       }
 
+      // NOTE: Removed treasury-metrics fetch entirely to fix the 404 error you saw!
+
       setTxs(Array.isArray(dbTransactions) ? dbTransactions : []);
       setStalls(Array.isArray(dbStalls) ? dbStalls : []);
-      if (dbMetrics) setMetrics(dbMetrics);
       setBizAssessments(Array.isArray(dbBizAssessments) ? dbBizAssessments : []);
 
     } catch (error) {
@@ -159,7 +149,7 @@ export default function TreasuryDashboardView({
     const handleDbUpdate = () => loadPostgresData();
     window.addEventListener("db_treasury_updated", handleDbUpdate);
     return () => window.removeEventListener("db_treasury_updated", handleDbUpdate);
-  }, [fetchTransactions, fetchStalls, fetchMetrics]);
+  }, [fetchTransactions, fetchStalls]);
 
   const matchesFiscalPeriod = (dateStr?: string) => {
     if (!dateStr) return true;
@@ -262,32 +252,23 @@ export default function TreasuryDashboardView({
   const safeBizAssessments = Array.isArray(bizAssessments) ? bizAssessments : [];
 
   const bizTrend = months.map((m, index) => {
-    // 1. Transactions Feed Revenue
+    // 1. Transaction Feed Revenue
     const txAmount = activeTxFeed
       .filter(t => t?.paymentType === 'BUSINESS' && t?.date?.startsWith(m))
       .reduce((sum, t) => sum + Number(t?.amount || 0), 0);
 
-    // 2. Assessed DB Revenue
-    const monthNumStr = String(index + 1).padStart(2, '0'); // formats to "01", "02", etc.
-
+    // 2. Assessed Revenue from the Business DB
+    const monthNumStr = String(index + 1).padStart(2, '0');
     const assessmentAmount = safeBizAssessments
       .filter(b => {
-        const status = (b?.status || "").toUpperCase();
-        if (status !== "APPROVED") return false;
-
         const dateStr = String(b?.applicationDate || b?.dateFiled || "");
-        if (!dateStr) return false;
-
-        // Strict Match: Verify Year AND Month exist in the string (safeguard against ISO or DD/MM/YYYY)
+        // Simplified parsing: just check if year and month exist in the string
         return dateStr.includes(fiscalPeriod) && (dateStr.includes(`-${monthNumStr}-`) || dateStr.includes(`/${monthNumStr}/`) || dateStr.startsWith(`${fiscalPeriod}-${monthNumStr}`));
       })
       .reduce((sum, b) => {
-        // Bulletproof number parsing: strips out commas, text, and currency symbols
-        const rawSalesString = String(b?.grossSales || "0").replace(/[^0-9.-]+/g, "");
-        const rawSales = Number(rawSalesString) || 0;
-
-        const estimatedTax = rawSales * 0.02; // Computes 2% tax
-        return sum + estimatedTax;
+        // Strip commas and calculate 2%
+        const rawSales = Number(String(b?.grossSales || "0").replace(/[^0-9.-]+/g, "")) || 0;
+        return sum + (rawSales * 0.02);
       }, 0);
 
     return { month: m, amount: txAmount + assessmentAmount };
