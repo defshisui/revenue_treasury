@@ -9,7 +9,7 @@ interface LeaseRecord {
   marketName: string;
   section: string;
   stallNumber: string;
-  leaseStatus: "Active" | "Termination Requested" | "For Termination" | "Terminated" | "Inactive";
+  leaseStatus: "Active" | "Termination Requested" | "For Termination" | "Terminated" | "Inactive" | "Archived";
   amountDue: number;
   helperApprovalStatus: string;
   advancePaymentStatus: string;
@@ -31,6 +31,10 @@ export default function CityOwnedMarketAdmin({
   onDeleteRecord,
 }: Props) {
   const [leases, setLeases] = useState<LeaseRecord[]>(initialRecords);
+
+  // Tab State
+  const [activeTab, setActiveTab] = useState<"Active" | "Archived">("Active");
+
   const [searchTermLeaseId, setSearchTermLeaseId] = useState("");
   const [searchFirstName, setSearchFirstName] = useState("");
   const [searchLastName, setSearchLastName] = useState("");
@@ -53,7 +57,8 @@ export default function CityOwnedMarketAdmin({
   const fetchAdminLeases = async () => {
     try {
       const storedLeases = await getLeases();
-      setLeases(storedLeases);
+      // Bypass strict type checking from the external service on load if needed
+      setLeases(storedLeases as any[]);
     } catch (err) {
       console.error("Error fetching local leases:", err);
     }
@@ -61,7 +66,7 @@ export default function CityOwnedMarketAdmin({
 
   useEffect(() => {
     let isMounted = true;
-    
+
     const loadInitialData = async () => {
       if (initialRecords && initialRecords.length > 0) {
         if (isMounted) setLeases(initialRecords);
@@ -69,7 +74,7 @@ export default function CityOwnedMarketAdmin({
       }
       try {
         const storedLeases = await getLeases();
-        if (isMounted) setLeases(storedLeases);
+        if (isMounted) setLeases(storedLeases as any[]);
       } catch (err) {
         console.error("Error fetching local leases:", err);
       }
@@ -83,13 +88,15 @@ export default function CityOwnedMarketAdmin({
   }, [initialRecords]);
 
   const metrics = useMemo(() => {
-    const total = leases.length;
+    // Exclude archived records from the dashboard metrics
+    const activeRecords = leases.filter((l) => l.leaseStatus !== "Archived");
+    const total = activeRecords.length;
     let active = 0;
     let pendingPayment = 0;
     let totalRevenueDue = 0;
 
     for (let i = 0; i < total; i++) {
-      const l = leases[i];
+      const l = activeRecords[i];
       if (l.leaseStatus === "Active") active++;
       if (l.paymentStatus === "Pending Payment" || l.paymentStatus === "For Payment Verification") pendingPayment++;
       totalRevenueDue += l.amountDue || 0;
@@ -104,18 +111,24 @@ export default function CityOwnedMarketAdmin({
     const lowerLastName = searchLastName.toLowerCase();
 
     return leases.filter((item) => {
-      if (!showInactive && item.leaseStatus === "Inactive") return false;
+      const isArchived = item.leaseStatus === "Archived";
+
+      // Filter by Tab
+      if (activeTab === "Active" && isArchived) return false;
+      if (activeTab === "Archived" && !isArchived) return false;
+
+      if (!showInactive && item.leaseStatus === "Inactive" && activeTab === "Active") return false;
       if (selectedMarket !== "All" && item.marketName !== selectedMarket) return false;
       if (selectedLeaseStatus !== "All" && item.leaseStatus !== selectedLeaseStatus) return false;
       if (selectedPaymentStatus !== "All" && item.paymentStatus !== selectedPaymentStatus) return false;
-      
+
       if (lowerLeaseId && !item.leaseId.toLowerCase().includes(lowerLeaseId)) return false;
       if (lowerFirstName && !item.firstName.toLowerCase().includes(lowerFirstName)) return false;
       if (lowerLastName && !item.lastName.toLowerCase().includes(lowerLastName)) return false;
 
       return true;
     });
-  }, [leases, searchTermLeaseId, searchFirstName, searchLastName, selectedMarket, selectedLeaseStatus, selectedPaymentStatus, showInactive]);
+  }, [leases, searchTermLeaseId, searchFirstName, searchLastName, selectedMarket, selectedLeaseStatus, selectedPaymentStatus, showInactive, activeTab]);
 
   const handleOpenEdit = (record: LeaseRecord) => {
     setSelectedRecord(record);
@@ -173,7 +186,8 @@ export default function CityOwnedMarketAdmin({
         }
       }
 
-      await updateLease(recordToSave);
+      // Bypass strict type checking from the external service
+      await updateLease(recordToSave as any);
 
       const updated = leases.map((item) => {
         if (item.leaseId === recordToSave.leaseId) {
@@ -183,7 +197,7 @@ export default function CityOwnedMarketAdmin({
       });
 
       setLeases(updated);
-      
+
       if (onUpdateRecord) {
         onUpdateRecord(recordToSave);
       }
@@ -196,8 +210,41 @@ export default function CityOwnedMarketAdmin({
     }
   };
 
-  const handleDelete = async (leaseId: string) => {
-    if (window.confirm(`Are you sure you want to delete lease record ${leaseId}?`)) {
+  // Archive (Soft Delete)
+  const handleSoftDelete = async (record: LeaseRecord) => {
+    if (window.confirm(`Are you sure you want to move lease record ${record.leaseId} to the Archiver?`)) {
+      try {
+        const updatedRecord = { ...record, leaseStatus: "Archived" as const };
+        // Bypass strict type checking from the external service
+        await updateLease(updatedRecord as any);
+        setLeases(prevLeases => prevLeases.map((l) => l.leaseId === record.leaseId ? updatedRecord : l));
+        if (onUpdateRecord) onUpdateRecord(updatedRecord);
+      } catch (err) {
+        console.error("Failed to archive lease:", err);
+        alert("Error archiving lease record.");
+      }
+    }
+  };
+
+  // Restore from Archive
+  const handleRestore = async (record: LeaseRecord) => {
+    if (window.confirm(`Are you sure you want to restore lease record ${record.leaseId}?`)) {
+      try {
+        const updatedRecord = { ...record, leaseStatus: "Inactive" as const };
+        // Bypass strict type checking from the external service
+        await updateLease(updatedRecord as any);
+        setLeases(prevLeases => prevLeases.map((l) => l.leaseId === record.leaseId ? updatedRecord : l));
+        if (onUpdateRecord) onUpdateRecord(updatedRecord);
+      } catch (err) {
+        console.error("Failed to restore lease:", err);
+        alert("Error restoring lease record.");
+      }
+    }
+  };
+
+  // Hard Delete (Final)
+  const handleFinalDelete = async (leaseId: string) => {
+    if (window.confirm(`WARNING: Are you sure you want to PERMANENTLY delete lease record ${leaseId}?`)) {
       try {
         await deleteLease(leaseId);
       } catch (err) {
@@ -205,7 +252,7 @@ export default function CityOwnedMarketAdmin({
       }
 
       setLeases(prevLeases => prevLeases.filter((l) => l.leaseId !== leaseId));
-      
+
       if (onDeleteRecord) {
         onDeleteRecord(leaseId);
       }
@@ -213,13 +260,15 @@ export default function CityOwnedMarketAdmin({
   };
 
   const handleExportCSV = () => {
+    // Only exports the currently filtered active list
+    const exportList = activeTab === "Active" ? leases.filter((l) => l.leaseStatus !== "Archived") : filteredLeases;
     const headers = [
-      "Lease ID", "First Name", "Last Name", "Market Name", "Section", 
-      "Stall Number", "Lease Status", "Amount Due", "Helper Approval Status", 
+      "Lease ID", "First Name", "Last Name", "Market Name", "Section",
+      "Stall Number", "Lease Status", "Amount Due", "Helper Approval Status",
       "Advance Payment Status", "Payment Status", "Payment Method"
     ];
-    
-    const rows = filteredLeases.map((l) => [
+
+    const rows = exportList.map((l) => [
       `"${l.leaseId}"`,
       `"${l.firstName}"`,
       `"${l.lastName}"`,
@@ -254,6 +303,8 @@ export default function CityOwnedMarketAdmin({
       case "Terminated":
       case "Inactive":
         return "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/50 dark:text-rose-400 dark:border-rose-800";
+      case "Archived":
+        return "bg-slate-200 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700";
       default:
         return "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700";
     }
@@ -313,7 +364,7 @@ export default function CityOwnedMarketAdmin({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs">
           <div className="flex justify-between items-start">
             <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Total Lease Records</p>
@@ -359,10 +410,33 @@ export default function CityOwnedMarketAdmin({
         </div>
       </div>
 
+      {/* Tabs Navigation */}
+      <div className="flex space-x-1 bg-slate-200/50 dark:bg-slate-800/50 p-1.5 rounded-xl w-fit mb-6">
+        <button
+          onClick={() => setActiveTab("Active")}
+          className={`px-5 py-2.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${activeTab === "Active"
+              ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
+              : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+            }`}
+        >
+          <i className="fa-solid fa-list-check mr-1.5"></i> Active Leases
+        </button>
+        <button
+          onClick={() => setActiveTab("Archived")}
+          className={`px-5 py-2.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${activeTab === "Archived"
+              ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
+              : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+            }`}
+        >
+          <i className="fa-solid fa-box-archive mr-1.5"></i> Archiver
+        </button>
+      </div>
+
       <section className="bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-xs space-y-5">
         <div className="flex justify-between items-center">
           <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <i className="fa-solid fa-list-check text-blue-600 text-sm"></i> Admin Market Lease Control Panel
+            <i className={`fa-solid ${activeTab === "Active" ? "fa-list-check text-blue-600" : "fa-box-archive text-slate-500"} text-sm`}></i>
+            {activeTab === "Active" ? "Admin Market Lease Control Panel" : "Archived Leases"}
           </h3>
           <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700">
             Due Date: 08/20/2026
@@ -486,7 +560,7 @@ export default function CityOwnedMarketAdmin({
                 <th className="p-4">Helper Approval Status</th>
                 <th className="p-4">Advance Payment Status</th>
                 <th className="p-4 text-center">Payment Status</th>
-                <th className="p-4 text-center">Review</th>
+                <th className="p-4 text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-slate-700 dark:text-slate-300">
@@ -495,9 +569,11 @@ export default function CityOwnedMarketAdmin({
                   <td colSpan={13} className="text-center py-16 text-slate-400 italic">
                     <div className="flex flex-col items-center justify-center space-y-2">
                       <div className="p-4 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 mb-1">
-                        <i className="fa-solid fa-folder-open text-xl"></i>
+                        <i className={`fa-solid ${activeTab === "Active" ? "fa-folder-open" : "fa-box-archive"} text-xl`}></i>
                       </div>
-                      <p className="text-xs font-medium text-slate-600 dark:text-slate-300">No Lease records found</p>
+                      <p className="text-xs font-medium text-slate-600 dark:text-slate-300">
+                        {activeTab === "Active" ? "No Lease records found" : "No archived leases found"}
+                      </p>
                       <p className="text-[11px] text-slate-400">Applications submitted from the citizen portal will appear here.</p>
                     </div>
                   </td>
@@ -511,7 +587,7 @@ export default function CityOwnedMarketAdmin({
                     <td className="p-4">{item.marketName}</td>
                     <td className="p-4">{item.section}</td>
                     <td className="p-4 font-mono font-bold">{item.stallNumber}</td>
-                    
+
                     <td className="p-4 text-center">
                       <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold border ${getLeaseStatusBadge(item.leaseStatus)}`}>
                         {item.leaseStatus}
@@ -522,7 +598,7 @@ export default function CityOwnedMarketAdmin({
                     <td className="p-4 font-medium text-slate-700 dark:text-slate-300">{item.paymentMethod || "Cash / Direct"}</td>
                     <td className="p-4">{item.helperApprovalStatus}</td>
                     <td className="p-4">{item.advancePaymentStatus}</td>
-                    
+
                     <td className="p-4 text-center">
                       <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold border ${getPaymentStatusBadge(item.paymentStatus)}`}>
                         {item.paymentStatus}
@@ -531,18 +607,37 @@ export default function CityOwnedMarketAdmin({
 
                     <td className="p-4 text-center">
                       <div className="flex items-center justify-center gap-2">
-                        <button
-                          onClick={() => handleOpenEdit(item)}
-                          className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-3.5 py-1.5 rounded-xl transition-all cursor-pointer shadow-xs flex items-center gap-1.5"
-                        >
-                          Review
-                        </button>
-                        <button
-                          onClick={() => handleDelete(item.leaseId)}
-                          className="bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-500 font-medium px-2.5 py-1.5 rounded-xl transition-all cursor-pointer border border-slate-200"
-                        >
-                          Delete
-                        </button>
+                        {activeTab === "Active" ? (
+                          <>
+                            <button
+                              onClick={() => handleOpenEdit(item)}
+                              className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-3.5 py-1.5 rounded-xl transition-all cursor-pointer shadow-xs flex items-center gap-1.5"
+                            >
+                              Review
+                            </button>
+                            <button
+                              onClick={() => handleSoftDelete(item)}
+                              className="bg-slate-100 hover:bg-slate-200 hover:text-slate-800 text-slate-500 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200 font-medium px-2.5 py-1.5 rounded-xl transition-all cursor-pointer border border-slate-200"
+                            >
+                              Archive
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => handleRestore(item)}
+                              className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 font-medium px-3.5 py-1.5 rounded-xl transition-all cursor-pointer border border-emerald-200 dark:border-emerald-900 flex items-center gap-1.5"
+                            >
+                              Restore
+                            </button>
+                            <button
+                              onClick={() => handleFinalDelete(item.leaseId)}
+                              className="bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 font-medium px-3.5 py-1.5 rounded-xl transition-all cursor-pointer border border-rose-200 dark:border-rose-900 flex items-center gap-1.5"
+                            >
+                              Delete (Final)
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -592,7 +687,7 @@ export default function CityOwnedMarketAdmin({
                 </h3>
                 <p className="text-xs font-mono text-blue-600 dark:text-blue-400 mt-0.5">ID: {selectedRecord.leaseId}</p>
               </div>
-              <button 
+              <button
                 onClick={() => setIsModalOpen(false)}
                 className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-sm font-bold cursor-pointer"
               >
@@ -664,8 +759,8 @@ export default function CityOwnedMarketAdmin({
                     value={selectedRecord.paymentStatus}
                     onChange={(e) => {
                       const newPaymentStatus = e.target.value as any;
-                      setSelectedRecord({ 
-                        ...selectedRecord, 
+                      setSelectedRecord({
+                        ...selectedRecord,
                         paymentStatus: newPaymentStatus,
                         leaseStatus: newPaymentStatus === "Paid" ? "Active" : selectedRecord.leaseStatus,
                         helperApprovalStatus: newPaymentStatus === "Paid" ? "Approved" : selectedRecord.helperApprovalStatus,
@@ -730,7 +825,7 @@ export default function CityOwnedMarketAdmin({
                   <h4 className="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider flex items-center gap-2">
                     <span>₱</span> Gateway Transaction Verification
                   </h4>
-                  
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-700">
                     <div>
                       <span className="text-slate-400 block mb-0.5">Gateway Ref ID:</span>
@@ -806,11 +901,10 @@ export default function CityOwnedMarketAdmin({
                     <div className="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-indigo-100 dark:border-indigo-900 space-y-2 text-xs">
                       <div className="flex items-center justify-between">
                         <span className="font-medium text-slate-600 dark:text-slate-400">Assessed Risk Level:</span>
-                        <span className={`px-2.5 py-0.5 rounded-full font-bold text-[10px] uppercase ${
-                          fraudAnalysisResult.riskLevel === "High" ? "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300" :
-                          fraudAnalysisResult.riskLevel === "Medium" ? "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300" :
-                          "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
-                        }`}>
+                        <span className={`px-2.5 py-0.5 rounded-full font-bold text-[10px] uppercase ${fraudAnalysisResult.riskLevel === "High" ? "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300" :
+                            fraudAnalysisResult.riskLevel === "Medium" ? "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300" :
+                              "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
+                          }`}>
                           {fraudAnalysisResult.riskLevel} Risk ({fraudAnalysisResult.riskScore}/100)
                         </span>
                       </div>
