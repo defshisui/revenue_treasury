@@ -67,20 +67,33 @@ export default function AuditTrailView({
 
   const itemsPerPage = 10;
 
-  const fetchLogs = () => {
+  // UPDATED: fetchLogs now features a robust fallback to localStorage if the server returns 404 or fails
+  const fetchLogs = async () => {
     setIsLoading(true);
-    fetch(`${API_BASE_URL}/audit-logs`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data)) {
-          setRecords(data);
-        }
-        setIsLoading(false);
-      })
-      .catch((err) => {
-        console.error("Failed to fetch audit logs:", err);
-        setIsLoading(false);
-      });
+    try {
+      const response = await fetch(`${API_BASE_URL}/audit-logs`);
+
+      if (!response.ok) {
+        throw new Error(`Server returned ${response.status}`);
+      }
+
+      const data = await response.json();
+      const serverData = Array.isArray(data) ? data : (data.data || []);
+      setRecords(serverData);
+
+    } catch (err) {
+      console.warn("Backend fetch failed, falling back to Local Storage:", err);
+
+      try {
+        const localData = localStorage.getItem("lgu_audit");
+        setRecords(localData ? JSON.parse(localData) : []);
+      } catch (localError) {
+        console.error("Failed to parse local storage logs", localError);
+        setRecords([]);
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -167,6 +180,7 @@ export default function AuditTrailView({
     setHasDownloadedBackup(true);
   };
 
+  // UPDATED: Ensure deletion clears both the server and local storage fallback
   const handleConfirmClearAndDelete = async () => {
     if (!hasDownloadedBackup) return;
     setIsDeleting(true);
@@ -178,14 +192,18 @@ export default function AuditTrailView({
 
       if (response.ok) {
         setRecords([]);
+        localStorage.removeItem("lgu_audit");
         setIsClearModalOpen(false);
         setHasDownloadedBackup(false);
       } else {
-        alert('Failed to clear audit logs on the server.');
+        throw new Error('Failed to clear audit logs on the server.');
       }
     } catch (error) {
-      console.error('Error clearing audit logs:', error);
-      alert('Network error while trying to clear audit logs.');
+      console.warn('Network error clearing server logs, clearing local logs instead:', error);
+      setRecords([]);
+      localStorage.removeItem("lgu_audit");
+      setIsClearModalOpen(false);
+      setHasDownloadedBackup(false);
     } finally {
       setIsDeleting(false);
     }
@@ -311,7 +329,7 @@ export default function AuditTrailView({
           </div>
 
           {isLoading ? (
-            <p className="text-slate-600 dark:text-slate-400 text-xs italic py-8 text-center">Loading audit logs from server...</p>
+            <p className="text-slate-600 dark:text-slate-400 text-xs italic py-8 text-center">Loading audit logs...</p>
           ) : filteredRecords.length === 0 ? (
             <p className="text-slate-600 dark:text-slate-400 text-xs italic py-8 text-center">No matching audit logs found.</p>
           ) : (
