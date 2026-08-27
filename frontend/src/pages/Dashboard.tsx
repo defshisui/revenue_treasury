@@ -3,10 +3,13 @@ import { useLockout } from "../hooks/useLockout";
 import { useLogin } from "../hooks/useLogin";
 import { useRegister } from "../hooks/useRegister";
 
+// This import ensures Vite correctly links to your dist/assets/logo-system-BmYEKQTP.png file during the build
+import systemLogo from "../assets/logo-system.png";
+
 export default function Login() {
   const [isRegistering, setIsRegistering] = useState(false);
   const { timeLeft, setTimeLeft, isLockedOut, formatTime } = useLockout();
-  
+
   const {
     email, setEmail, password, setPassword, showPassword, setShowPassword,
     rememberMe, setRememberMe, errorMessage, isErrorState, handleLogin
@@ -26,14 +29,22 @@ export default function Login() {
   return (
     <main className="min-h-screen w-full grid grid-cols-1 lg:grid-cols-2 bg-[#F4F6F8]">
       <section className="flex flex-col justify-between p-8 sm:p-10 lg:p-12 bg-[#09101d] text-white relative overflow-hidden min-h-[450px] lg:min-h-screen">
-        <div className="absolute inset-0 m-auto size-[480px] bg-[url('src/assets/logo-system.png')] bg-contain bg-center bg-no-repeat opacity-15 pointer-events-none z-0" aria-hidden="true" />
+        {/* Fixed Logo Location using React Import */}
+        <div
+          className="absolute inset-0 m-auto size-[480px] bg-contain bg-center bg-no-repeat opacity-15 pointer-events-none z-0"
+          style={{ backgroundImage: `url(${systemLogo})` }}
+          aria-hidden="true"
+        />
+
         <div className="z-10">
           <h2 className="text-lg sm:text-xl font-bold tracking-tight text-white">Revenue Collection & Treasury Services</h2>
           <p className="text-sm text-slate-400 font-medium mt-1">Republic of the Philippines • Local Government Unit</p>
         </div>
         <div className="max-w-md mx-auto text-center z-10 my-auto py-10">
           <h1 className="text-3xl sm:text-4xl xl:text-[44px] font-extrabold leading-[1.15] text-white tracking-tight">Revenue Collection & Treasury Services</h1>
-          <p className="mt-5 text-sm sm:text-base text-slate-300 leading-relaxed max-w-sm mx-auto font-normal">A centralized digital platform for managing real property tax collection, business tax and regulatory fees, market stall rentals and billing</p>
+          <p className="mt-5 text-sm sm:text-base text-slate-300 leading-relaxed max-w-sm mx-auto font-normal">
+            A centralized digital platform for managing real property tax collection, business tax and regulatory fees, market stall rentals and billing
+          </p>
         </div>
         <div className="flex items-center justify-between text-xs text-slate-400 font-semibold tracking-wider uppercase z-10">
           <span>OFFICIAL LGU PORTAL</span>
@@ -226,9 +237,9 @@ export default function Login() {
                 <div className="space-y-1.5">
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">Mobile Number (PH) * (Max 11 digits)</label>
                   <input type="text" required maxLength={11} placeholder="09123456789" value={mobileNumber} onChange={e => {
-                      const val = e.target.value.replace(/\D/g, "");
-                      if (val.length <= 11) setMobileNumber(val);
-                    }} className="w-full bg-[#EBF2FE] rounded-2xl px-4 py-3.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600 font-semibold tracking-wider" />
+                    const val = e.target.value.replace(/\D/g, "");
+                    if (val.length <= 11) setMobileNumber(val);
+                  }} className="w-full bg-[#EBF2FE] rounded-2xl px-4 py-3.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600 font-semibold tracking-wider" />
                 </div>
 
                 <div className="flex gap-3 pt-4">
