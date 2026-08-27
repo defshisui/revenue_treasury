@@ -11,19 +11,17 @@ export interface AuditRecord {
   module: string;
   action: string;
   severity: "INFO" | "WARNING" | "CRITICAL";
-  ipAddress: string;
-  userAgent: string;
   previousData?: string;
   newData?: string;
   timestamp: string;
 }
 
-// Helper to format timestamps to Manila time (PHT)
-const formatManilaTime = (dateString: string) => {
+// Helper to format timestamps to GMT+8
+const formatGMT8Time = (dateString: string) => {
   try {
     const d = new Date(dateString);
     if (isNaN(d.getTime())) return dateString;
-    return d.toLocaleString("en-US", {
+    const formattedDate = d.toLocaleString("en-US", {
       timeZone: "Asia/Manila",
       year: "numeric",
       month: "short",
@@ -33,13 +31,14 @@ const formatManilaTime = (dateString: string) => {
       second: "2-digit",
       hour12: true
     });
+    return `${formattedDate} GMT+8`;
   } catch {
     return dateString;
   }
 };
 
-// Helper to get today's date in YYYY-MM-DD for Manila time
-const getManilaDateString = () => {
+// Helper to get today's date in YYYY-MM-DD for GMT+8
+const getGMT8DateString = () => {
   return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Manila" });
 };
 
@@ -92,8 +91,7 @@ export default function AuditTrailView({
     const matchesSearch =
       record.auditId.toLowerCase().includes(searchQuery.toLowerCase()) ||
       record.user.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      record.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      record.ipAddress.toLowerCase().includes(searchQuery.toLowerCase());
+      record.action.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesModule = selectedModule === "ALL" || record.module === selectedModule;
     const matchesSeverity = selectedSeverity === "ALL" || record.severity === selectedSeverity;
@@ -130,7 +128,7 @@ export default function AuditTrailView({
   );
 
   const exportToCSV = () => {
-    const headers = ["Audit ID", "User", "Role", "Module", "Action", "Severity", "IP Address", "Previous Data", "New Data", "Timestamp"];
+    const headers = ["Audit ID", "User", "Role", "Module", "Action", "Severity", "Previous Data", "New Data", "Timestamp"];
     const rows = filteredRecords.map(r => [
       r.auditId,
       r.user,
@@ -138,35 +136,31 @@ export default function AuditTrailView({
       r.module,
       r.action,
       r.severity,
-      r.ipAddress,
       `"${(r.previousData || "").replace(/"/g, '""')}"`,
       `"${(r.newData || "").replace(/"/g, '""')}"`,
-      `"${formatManilaTime(r.timestamp)}"` // Ensures CSV timestamps are strictly Manila time
+      `"${formatGMT8Time(r.timestamp)}"`
     ]);
 
     const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    // Uses the helper to append the correct Manila date to the file name
-    link.setAttribute("download", `LGU_Audit_Trail_${getManilaDateString()}.csv`);
+    link.setAttribute("download", `LGU_Audit_Trail_${getGMT8DateString()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
   const handleDownloadBackupJSON = () => {
-    // Converts all dates to Manila time before saving the JSON
     const backupData = records.map(record => ({
       ...record,
-      timestamp: formatManilaTime(record.timestamp)
+      timestamp: formatGMT8Time(record.timestamp)
     }));
 
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute("href", dataStr);
-    // Uses the helper to append the correct Manila date to the file name
-    downloadAnchor.setAttribute("download", `LGU_Audit_Backup_${getManilaDateString()}.json`);
+    downloadAnchor.setAttribute("download", `LGU_Audit_Backup_${getGMT8DateString()}.json`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
@@ -222,7 +216,7 @@ export default function AuditTrailView({
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm gap-4">
           <div>
             <h2 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">System Audit Trail</h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Immutable record of system activities, IP tracking, and risk monitoring</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Immutable record of system activities and risk monitoring</p>
           </div>
           <div className="flex items-center gap-2.5 flex-wrap">
             <button
@@ -248,7 +242,7 @@ export default function AuditTrailView({
           <div>
             <input
               type="text"
-              placeholder="Search ID, user, IP..."
+              placeholder="Search ID, user, action..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
@@ -330,7 +324,6 @@ export default function AuditTrailView({
                       <th className="p-4 text-slate-900 dark:text-white font-bold">User & Role</th>
                       <th className="p-4 text-slate-900 dark:text-white font-bold">Module / Action</th>
                       <th className="p-4 text-slate-900 dark:text-white font-bold">Severity</th>
-                      <th className="p-4 text-slate-900 dark:text-white font-bold">IP Address</th>
                       <th className="p-4 text-slate-900 dark:text-white font-bold">Timestamp</th>
                     </tr>
                   </thead>
@@ -354,10 +347,8 @@ export default function AuditTrailView({
                             {record.severity}
                           </span>
                         </td>
-                        <td className="p-4 text-xs font-mono text-slate-700 dark:text-slate-300">{record.ipAddress}</td>
-                        {/* Display Timestamp formatted to Manila Time */}
                         <td className="p-4 text-xs font-mono text-slate-700 dark:text-slate-300 whitespace-nowrap">
-                          {formatManilaTime(record.timestamp)}
+                          {formatGMT8Time(record.timestamp)}
                         </td>
                       </tr>
                     ))}
@@ -469,11 +460,9 @@ export default function AuditTrailView({
               <p><strong className="text-slate-900 dark:text-white">User:</strong> <span className="text-slate-900 dark:text-slate-100">{selectedRecord.user} ({selectedRecord.role})</span></p>
               <p><strong className="text-slate-900 dark:text-white">Module / Action:</strong> <span className="text-slate-900 dark:text-slate-100">{selectedRecord.module} / {selectedRecord.action}</span></p>
               <p><strong className="text-slate-900 dark:text-white">Severity Level:</strong> <span className="font-bold text-slate-900 dark:text-slate-100">{selectedRecord.severity}</span></p>
-              <p><strong className="text-slate-900 dark:text-white">Origin IP:</strong> <span className="font-mono text-slate-900 dark:text-slate-100">{selectedRecord.ipAddress}</span></p>
-              <p><strong className="text-slate-900 dark:text-white">User Agent:</strong> <span className="font-mono text-[10px] text-slate-600 dark:text-slate-400">{selectedRecord.userAgent}</span></p>
 
-              {/* Display Timestamp formatted to Manila Time inside the modal */}
-              <p><strong className="text-slate-900 dark:text-white">Timestamp:</strong> <span className="text-slate-900 dark:text-slate-100">{formatManilaTime(selectedRecord.timestamp)}</span></p>
+              {/* Display Timestamp formatted to GMT+8 inside the modal */}
+              <p><strong className="text-slate-900 dark:text-white">Timestamp:</strong> <span className="text-slate-900 dark:text-slate-100">{formatGMT8Time(selectedRecord.timestamp)}</span></p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                 <div className="bg-slate-50 dark:bg-slate-800/80 p-3 rounded-xl border border-slate-200 dark:border-slate-700 space-y-1">
