@@ -70,3 +70,38 @@ export async function createUser(req: Request, res: Response): Promise<void> {
     res.status(500).json({ message: 'Failed to create user in database.' });
   }
 }
+
+// NEW: Delete User Function
+export async function deleteUser(req: Request, res: Response): Promise<void> {
+  const { id } = req.params;
+
+  try {
+    // 1. Fetch the user first so we can log who was deleted
+    const userRes = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
+
+    if (userRes.rows.length === 0) {
+      res.status(404).json({ message: 'User not found.' });
+      return;
+    }
+
+    const deletedUser = userRes.rows[0];
+
+    // 2. Delete the user from the database
+    await pool.query('DELETE FROM users WHERE id = $1', [id]);
+
+    // 3. Log the deletion to the audit trail
+    const clientIP = (req?.headers['x-forwarded-for'] as string) || req?.socket?.remoteAddress || 'Unknown';
+    const clientAgent = req?.headers['user-agent'] || 'Unknown';
+
+    await pool.query(
+      `INSERT INTO audit_logs (audit_id, user_email, user_role, module, action, severity, ip_address, user_agent, previous_data, new_data)
+       VALUES ('AUD-USER-DEL', 'system-admin@lgu.gov.ph', 'admin', 'User Management', 'USER_DELETED', 'CRITICAL', $1, $2, $3, NULL)`,
+      [clientIP, clientAgent, `Deleted user account for ${deletedUser.email} (Role: ${deletedUser.role})`]
+    );
+
+    res.status(200).json({ message: 'User successfully deleted.' });
+  } catch (err) {
+    console.error('Error deleting user:', err);
+    res.status(500).json({ message: 'Failed to delete user from database.' });
+  }
+}
