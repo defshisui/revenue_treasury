@@ -344,7 +344,7 @@ export default function TreasuryHeader({
                   sessionStorage.removeItem('currentUser');
                   sessionStorage.removeItem('user');
                   notify("You have been logged out.");
-                  navigate("/login", { replace: true });
+                  navigate("/", { replace: true });
                 }}
                 className="w-full text-left px-4 py-2.5 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
               >
@@ -355,7 +355,7 @@ export default function TreasuryHeader({
         </div>
       </div>
 
-      {/* VIEW ALL NOTIFICATIONS MODAL */}
+
       {isViewAllModalOpen && (
         <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-2xl max-h-[85vh] shadow-2xl flex flex-col overflow-hidden">
