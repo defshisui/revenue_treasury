@@ -1,7 +1,6 @@
 // src/components/TreasuryDashboardView.tsx
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom"; // Added for navigation shortcuts
 import type { TransactionRecord } from "../types/treasury";
 import { API_BASE_URL } from "../config/api";
 
@@ -87,7 +86,6 @@ export default function TreasuryDashboardView({
   fetchTransactions,
   fetchStalls
 }: TreasuryDashboardViewProps) {
-  const navigate = useNavigate(); // Initialize navigation
   const [fiscalPeriod, setFiscalPeriod] = useState("2026");
   const [activeTab, setActiveTab] = useState<"ALL" | "RPT" | "BUSINESS" | "MARKET">("ALL");
 
@@ -173,14 +171,10 @@ export default function TreasuryDashboardView({
     return () => window.removeEventListener("db_treasury_updated", handleDbUpdate);
   }, [fetchTransactions, fetchStalls]);
 
-  // Helper function to handle module navigation
-  const handleShortcutNavigation = (routePath: string, viewName: string) => {
+  // Helper function to handle module navigation based on your sidebar IDs
+  const handleShortcutNavigation = (viewName: string) => {
     if (onNavigate) {
-      // If parent handles routing via state
       onNavigate(viewName);
-    } else {
-      // Standard React Router navigation
-      navigate(routePath);
     }
   };
 
@@ -501,7 +495,7 @@ export default function TreasuryDashboardView({
         {/* RPT Shortcut Card */}
         {(activeTab === "ALL" || activeTab === "RPT") && (
           <div
-            onClick={() => handleShortcutNavigation('/real-property-tax', 'rpt')}
+            onClick={() => handleShortcutNavigation('rpt')}
             className="group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between cursor-pointer hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-md transition-all transform hover:-translate-y-1"
           >
             <div>
@@ -531,7 +525,7 @@ export default function TreasuryDashboardView({
         {/* Business Tax Shortcut Card */}
         {(activeTab === "ALL" || activeTab === "BUSINESS") && (
           <div
-            onClick={() => handleShortcutNavigation('/business-tax', 'business-tax')}
+            onClick={() => handleShortcutNavigation('business')}
             className="group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between cursor-pointer hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-md transition-all transform hover:-translate-y-1"
           >
             <div>
@@ -561,7 +555,7 @@ export default function TreasuryDashboardView({
         {/* Market Stalls Shortcut Card */}
         {(activeTab === "ALL" || activeTab === "MARKET") && (
           <div
-            onClick={() => handleShortcutNavigation('/market-stalls', 'market-stalls')}
+            onClick={() => handleShortcutNavigation('market')}
             className="group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between cursor-pointer hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-md transition-all transform hover:-translate-y-1"
           >
             <div>
