@@ -1,5 +1,5 @@
 // src/components/HawkerAssociation.tsx
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import type { HawkerAssociationRecord, HawkerAssociationStatus } from "../types/treasury";
 import { API_BASE_URL } from '../config/api';
 
@@ -23,7 +23,13 @@ interface LguExtensionMeta {
   auditTrail: { timestamp: string; admin: string; action: string }[];
 }
 
-type ExtendedHawkerRecord = HawkerAssociationRecord & { lguMeta: LguExtensionMeta };
+// Extend status to include Archive state to prevent TypeScript errors
+type ExtendedHawkerStatus = HawkerAssociationStatus | "Archived" | "Suspended";
+
+type ExtendedHawkerRecord = Omit<HawkerAssociationRecord, 'status'> & {
+  status: ExtendedHawkerStatus;
+  lguMeta: LguExtensionMeta;
+};
 
 interface Props {
   records?: HawkerAssociationRecord[];
@@ -46,6 +52,7 @@ const MARKET_ZONES = [
 // Enrich data with LGU specific metadata
 const enrichWithLguMeta = (item: any): ExtendedHawkerRecord => ({
   ...item,
+  status: item.status || "New",
   lguMeta: item.lguMeta || {
     marketZone: MARKET_ZONES[Math.floor(Math.random() * MARKET_ZONES.length)],
     assignedStallCount: Math.floor(10 + Math.random() * 40),
@@ -99,6 +106,9 @@ export default function HawkerAssociation({
     initialRecords.map(enrichWithLguMeta)
   );
 
+  // Tab State
+  const [mainTab, setMainTab] = useState<"Active" | "Archived">("Active");
+
   const [selectedStatus, setSelectedStatus] = useState<string>("All");
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [activeTab, setActiveTab] = useState<"details" | "documents" | "compliance" | "audit">("details");
@@ -107,7 +117,7 @@ export default function HawkerAssociation({
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<ExtendedHawkerRecord | null>(null);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
-  const [reviewStatus, setReviewStatus] = useState<HawkerAssociationStatus>("Approved");
+  const [reviewStatus, setReviewStatus] = useState<ExtendedHawkerStatus>("Approved");
   const [reviewRemarks, setReviewRemarks] = useState("");
   const [inspectionNote, setInspectionNote] = useState("");
 
@@ -186,22 +196,32 @@ export default function HawkerAssociation({
     }
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     fetchApplications();
   }, []);
 
   const metrics = useMemo(() => {
-    const total = associations.length;
-    const pending = associations.filter((a) => a.status === "New" || a.status === "Under Review").length;
-    const approved = associations.filter((a) => a.status === "Approved").length;
-    const rejected = associations.filter((a) => a.status === "Rejected").length;
-    const totalStalls = associations.reduce((acc, curr) => acc + (curr.lguMeta?.assignedStallCount || 0), 0);
+    // Exclude archived records from the dashboard metrics
+    const activeAssoc = associations.filter(a => a.status !== "Archived");
 
-    return { total, pending, approved, rejected, totalStalls };
+    const total = activeAssoc.length;
+    const pending = activeAssoc.filter((a) => a.status === "New" || a.status === "Under Review").length;
+    const approved = activeAssoc.filter((a) => a.status === "Approved").length;
+    const rejected = activeAssoc.filter((a) => a.status === "Rejected" || a.status === "Suspended").length;
+    const totalStalls = activeAssoc.reduce((acc, curr) => acc + (curr.lguMeta?.assignedStallCount || 0), 0);
+    const paidFeesCount = activeAssoc.filter(a => a.lguMeta?.feesPaid).length;
+
+    return { total, pending, approved, rejected, totalStalls, paidFeesCount };
   }, [associations]);
 
   const filteredAssociations = useMemo(() => {
     return associations.filter((item) => {
+      const isArchived = item.status === "Archived";
+
+      // Filter by main Tab
+      if (mainTab === "Active" && isArchived) return false;
+      if (mainTab === "Archived" && !isArchived) return false;
+
       const matchesStatus = selectedStatus === "All" || item.status === selectedStatus;
       const searchLower = searchTerm.toLowerCase();
       const matchesSearch =
@@ -213,7 +233,7 @@ export default function HawkerAssociation({
 
       return matchesStatus && matchesSearch;
     });
-  }, [associations, selectedStatus, searchTerm]);
+  }, [associations, selectedStatus, searchTerm, mainTab]);
 
   // Create Walk-in Record
   const handleCreateAssociation = async (e: React.FormEvent) => {
@@ -284,34 +304,29 @@ export default function HawkerAssociation({
     });
   };
 
-  // Update Status & Audit Trail
-  const handleUpdateStatus = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedRecord) return;
+  // Helper function to handle status updates & archiving
+  const executeStatusChange = async (targetId: string, newStatus: ExtendedHawkerStatus, actionMessage: string) => {
+    let itemToUpdate: ExtendedHawkerRecord | null = null;
 
     const auditEntry = {
       timestamp: new Date().toISOString().slice(0, 10),
       admin: "Market Admin Officer",
-      action: `Status changed to ${reviewStatus}. Remarks: ${reviewRemarks || "None"}`,
+      action: actionMessage,
     };
 
-    let itemToUpdate: ExtendedHawkerRecord | null = null;
-
     const updated = associations.map((item) => {
-      if (item.id === selectedRecord.id) {
+      if (item.id === targetId) {
         const updatedItem: ExtendedHawkerRecord = {
           ...item,
-          status: reviewStatus,
-          remarks: reviewRemarks,
+          status: newStatus,
           lguMeta: {
             ...item.lguMeta,
-            feesPaid: reviewStatus === "Approved" ? true : item.lguMeta.feesPaid,
-            orNumber: reviewStatus === "Approved" && !item.lguMeta.orNumber ? `OR-${Math.floor(100000 + Math.random() * 900000)}` : item.lguMeta.orNumber,
+            feesPaid: newStatus === "Approved" ? true : item.lguMeta.feesPaid,
+            orNumber: newStatus === "Approved" && !item.lguMeta.orNumber ? `OR-${Math.floor(100000 + Math.random() * 900000)}` : item.lguMeta.orNumber,
             auditTrail: [auditEntry, ...item.lguMeta.auditTrail],
           },
         };
         itemToUpdate = updatedItem;
-        if (onUpdateRecord) onUpdateRecord(updatedItem);
         return updatedItem;
       }
       return item;
@@ -321,8 +336,9 @@ export default function HawkerAssociation({
     localStorage.setItem("hawker_applications", JSON.stringify(updated));
 
     if (itemToUpdate) {
+      if (onUpdateRecord) onUpdateRecord(itemToUpdate as any);
       try {
-        await fetch(`${API_BASE_URL}/api/hawkers/${selectedRecord.id}`, {
+        await fetch(`${API_BASE_URL}/api/hawkers/${targetId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(itemToUpdate),
@@ -331,10 +347,36 @@ export default function HawkerAssociation({
         console.warn("Backend update failed, saved locally.");
       }
     }
+  };
+
+  // Update Status & Audit Trail from Modal
+  const handleUpdateStatus = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedRecord) return;
+
+    await executeStatusChange(
+      selectedRecord.id,
+      reviewStatus,
+      `Status changed to ${reviewStatus}. Remarks: ${reviewRemarks || "None"}`
+    );
 
     setIsReviewModalOpen(false);
     setSelectedRecord(null);
     setReviewRemarks("");
+  };
+
+  // Archive (Soft Delete)
+  const handleArchive = async (id: string, name: string) => {
+    if (window.confirm(`Are you sure you want to move Hawker Association "${name}" to the Archiver?`)) {
+      await executeStatusChange(id, "Archived", "Record moved to system archiver.");
+    }
+  };
+
+  // Restore from Archive
+  const handleRestore = async (id: string, name: string) => {
+    if (window.confirm(`Are you sure you want to restore Hawker Association "${name}"?`)) {
+      await executeStatusChange(id, "Under Review", "Record restored from archiver (Set to Under Review).");
+    }
   };
 
   // Add Inspector Violation Notice
@@ -386,7 +428,7 @@ export default function HawkerAssociation({
 
   // FULL DATABASE DELETE (Matches Market Stall Setup)
   const handleDelete = async (id: string) => {
-    if (window.confirm(`Are you sure you want to completely delete Hawker Association record ${id}?`)) {
+    if (window.confirm(`WARNING: Are you sure you want to PERMANENTLY delete Hawker Association record ${id}?`)) {
       try {
         // Send DELETE request directly to your DB
         const response = await fetch(`${API_BASE_URL}/api/hawkers/${id}`, {
@@ -421,8 +463,10 @@ export default function HawkerAssociation({
   };
 
   const handleExportCSV = () => {
+    const exportList = mainTab === "Active" ? associations.filter(a => a.status !== "Archived") : filteredAssociations;
     const headers = ["Association No", "Association Name", "Market Zone", "Stalls", "Chairperson", "Contact", "OR Number", "Violations", "Status"];
-    const rows = associations.map((a) => [
+
+    const rows = exportList.map((a) => [
       `"${a.associationNumber}"`,
       `"${a.associationName}"`,
       `"${a.lguMeta?.marketZone || "N/A"}"`,
@@ -442,6 +486,16 @@ export default function HawkerAssociation({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const getStatusBadge = (status: ExtendedHawkerStatus) => {
+    switch (status) {
+      case "Approved": return "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-800";
+      case "New": return "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/50 dark:text-blue-400 dark:border-blue-800";
+      case "Under Review": return "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-800";
+      case "Archived": return "bg-slate-200 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700";
+      default: return "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/50 dark:text-rose-400 dark:border-rose-800";
+    }
   };
 
   return (
@@ -491,7 +545,7 @@ export default function HawkerAssociation({
       </div>
 
       {/* EXECUTIVE LGU METRICS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
         <div className="bg-white dark:bg-slate-900/85 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs">
           <p className="text-xs text-slate-500 font-medium">Total Registered Guilds</p>
           <h4 className="text-2xl font-bold text-slate-900 dark:text-white mt-3">{metrics.total}</h4>
@@ -515,17 +569,40 @@ export default function HawkerAssociation({
         <div className="bg-white dark:bg-slate-900/85 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs sm:col-span-2 lg:col-span-1">
           <p className="text-xs text-slate-500 font-medium">Treasury Fee Collection</p>
           <h4 className="text-2xl font-bold text-indigo-600 dark:text-indigo-400 mt-3">
-            {metrics.total > 0 ? `${((associations.filter(a => a.lguMeta?.feesPaid).length / metrics.total) * 100).toFixed(0)}%` : "0%"}
+            {metrics.total > 0 ? `${((metrics.paidFeesCount / metrics.total) * 100).toFixed(0)}%` : "0%"}
           </h4>
           <p className="text-[10px] text-slate-400 mt-1">Annual dues paid</p>
         </div>
+      </div>
+
+      {/* Tabs Navigation */}
+      <div className="flex space-x-1 bg-slate-200/50 dark:bg-slate-800/50 p-1.5 rounded-xl w-fit mb-6">
+        <button
+          onClick={() => setMainTab("Active")}
+          className={`px-5 py-2.5 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-2 ${mainTab === "Active"
+              ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
+              : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+            }`}
+        >
+          <i className="fa-solid fa-users"></i> Active Guilds
+        </button>
+        <button
+          onClick={() => setMainTab("Archived")}
+          className={`px-5 py-2.5 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-2 ${mainTab === "Archived"
+              ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
+              : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+            }`}
+        >
+          <i className="fa-solid fa-box-archive"></i> Archiver
+        </button>
       </div>
 
       {/* DIRECTORY TABLE */}
       <section className="bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-xs space-y-5">
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
           <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <i className="fa-solid fa-map-location-dot text-blue-600 text-sm"></i> Market Zones & Association Masterlist
+            <i className={`fa-solid ${mainTab === "Active" ? "fa-map-location-dot text-blue-600" : "fa-box-archive text-slate-500"} text-sm`}></i>
+            {mainTab === "Active" ? "Market Zones & Association Masterlist" : "Archived Hawker Records"}
           </h3>
 
           <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
@@ -552,6 +629,8 @@ export default function HawkerAssociation({
               <option value="Under Review">Under Review</option>
               <option value="Approved">Approved / Active</option>
               <option value="Rejected">Rejected</option>
+              <option value="Suspended">Suspended</option>
+              <option value="Archived">Archived</option>
             </select>
           </div>
         </div>
@@ -575,9 +654,11 @@ export default function HawkerAssociation({
                   <td colSpan={7} className="text-center py-16 text-slate-400 italic">
                     <div className="flex flex-col items-center justify-center space-y-2">
                       <div className="p-4 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 mb-1">
-                        <i className="fa-solid fa-folder-open text-xl"></i>
+                        <i className={`fa-solid ${mainTab === "Active" ? "fa-folder-open" : "fa-box-archive"} text-xl`}></i>
                       </div>
-                      <p className="text-xs font-medium text-slate-600 dark:text-slate-300">No matching association records found</p>
+                      <p className="text-xs font-medium text-slate-600 dark:text-slate-300">
+                        {mainTab === "Active" ? "No matching association records found" : "No archived records found"}
+                      </p>
                     </div>
                   </td>
                 </tr>
@@ -620,33 +701,48 @@ export default function HawkerAssociation({
                       </span>
                     </td>
                     <td className="p-4 text-center">
-                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold border ${item.status === "Approved" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
-                        item.status === "New" ? "bg-blue-50 text-blue-700 border-blue-200" :
-                          item.status === "Under Review" ? "bg-amber-50 text-amber-700 border-amber-200" :
-                            "bg-rose-50 text-rose-700 border-rose-200"
-                        }`}>
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold border ${getStatusBadge(item.status)}`}>
                         {item.status}
                       </span>
                     </td>
                     <td className="p-4 text-center">
                       <div className="flex items-center justify-center gap-2">
-                        <button
-                          onClick={() => {
-                            setSelectedRecord(item);
-                            setReviewStatus(item.status === "New" ? "Approved" : item.status);
-                            setActiveTab("details");
-                            setIsReviewModalOpen(true);
-                          }}
-                          className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-3.5 py-1.5 rounded-xl cursor-pointer shadow-xs flex items-center gap-1"
-                        >
-                          <i className="fa-solid fa-folder-tree text-[10px]"></i> Vault & Review
-                        </button>
-                        <button
-                          onClick={() => handleDelete(item.id)}
-                          className="bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-500 dark:bg-slate-800 dark:text-slate-400 font-medium px-3 py-1.5 rounded-xl cursor-pointer border border-slate-200 dark:border-slate-700"
-                        >
-                          Delete
-                        </button>
+                        {mainTab === "Active" ? (
+                          <>
+                            <button
+                              onClick={() => {
+                                setSelectedRecord(item);
+                                setReviewStatus(item.status === "New" ? "Approved" : item.status);
+                                setActiveTab("details");
+                                setIsReviewModalOpen(true);
+                              }}
+                              className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-3.5 py-1.5 rounded-xl cursor-pointer shadow-xs flex items-center gap-1"
+                            >
+                              <i className="fa-solid fa-folder-tree text-[10px]"></i> Vault & Review
+                            </button>
+                            <button
+                              onClick={() => handleArchive(item.id, item.associationName)}
+                              className="bg-slate-100 hover:bg-slate-200 hover:text-slate-800 text-slate-500 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200 font-medium px-2.5 py-1.5 rounded-xl transition-all cursor-pointer border border-slate-200"
+                            >
+                              Archive
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => handleRestore(item.id, item.associationName)}
+                              className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 font-medium px-3.5 py-1.5 rounded-xl transition-all cursor-pointer border border-emerald-200 dark:border-emerald-900 flex items-center gap-1.5"
+                            >
+                              Restore
+                            </button>
+                            <button
+                              onClick={() => handleDelete(item.id)}
+                              className="bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 font-medium px-3.5 py-1.5 rounded-xl transition-all cursor-pointer border border-rose-200 dark:border-rose-900 flex items-center gap-1.5"
+                            >
+                              Delete (Final)
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -717,13 +813,14 @@ export default function HawkerAssociation({
                   <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Accreditation Decision</label>
                   <select
                     value={reviewStatus}
-                    onChange={(e) => setReviewStatus(e.target.value as HawkerAssociationStatus)}
+                    onChange={(e) => setReviewStatus(e.target.value as ExtendedHawkerStatus)}
                     className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 text-slate-900 dark:text-white cursor-pointer"
                   >
                     <option value="Under Review">Under Review</option>
                     <option value="Approved">Approve & Issue Permit</option>
                     <option value="Rejected">Reject / Return Application</option>
                     <option value="Suspended">Suspend Accreditation</option>
+                    <option value="Archived">Archived</option>
                   </select>
                 </div>
 
@@ -1010,8 +1107,8 @@ export default function HawkerAssociation({
               src={previewImage}
               alt="Document Fullscreen Preview"
               className={`transition-all duration-300 ease-in-out ${isZoomed
-                  ? "scale-150 cursor-zoom-out"
-                  : "scale-100 object-contain max-h-full max-w-full cursor-zoom-in"
+                ? "scale-150 cursor-zoom-out"
+                : "scale-100 object-contain max-h-full max-w-full cursor-zoom-in"
                 }`}
               onClick={(e) => {
                 e.stopPropagation(); // Prevents the background click from closing it
