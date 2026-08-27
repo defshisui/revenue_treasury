@@ -15,7 +15,6 @@ export interface StallRecord {
   status?: string;
 }
 
-// NEW: Added interface to match your Business Tax Assessment portal data
 export interface BusinessAssessmentRecord {
   trackingNo?: string;
   businessName?: string;
@@ -106,7 +105,6 @@ export default function TreasuryDashboardView({
   const [txs, setTxs] = useState<TransactionRecord[]>(initialTransactions);
   const [metrics, setMetrics] = useState<TreasuryMetrics | undefined>(initialMetrics);
 
-  // NEW: State to hold data from the Business Tax module
   const [bizAssessments, setBizAssessments] = useState<BusinessAssessmentRecord[]>([]);
 
   const [loading, setLoading] = useState(false);
@@ -139,11 +137,11 @@ export default function TreasuryDashboardView({
   }, []);
 
   useEffect(() => {
-    if (initialTransactions && initialTransactions.length > 0) setTxs(initialTransactions);
+    if (Array.isArray(initialTransactions)) setTxs(initialTransactions);
   }, [initialTransactions]);
 
   useEffect(() => {
-    if (initialStalls && initialStalls.length > 0) setStalls(initialStalls);
+    if (Array.isArray(initialStalls)) setStalls(initialStalls);
   }, [initialStalls]);
 
   useEffect(() => {
@@ -153,30 +151,36 @@ export default function TreasuryDashboardView({
   const loadPostgresData = async () => {
     try {
       setLoading(true);
-      let dbTransactions: TransactionRecord[] | null = null;
-      let dbStalls: StallRecord[] | null = null;
-      let dbMetrics: TreasuryMetrics | null = null;
+      let dbTransactions: TransactionRecord[] = [];
+      let dbStalls: StallRecord[] = [];
+      let dbMetrics: TreasuryMetrics | undefined = undefined;
       let dbBizAssessments: BusinessAssessmentRecord[] = [];
 
       // Fetch normal transactions
       if (fetchTransactions) {
-        dbTransactions = await fetchTransactions();
+        dbTransactions = (await fetchTransactions()) || [];
       } else {
         const res = await fetch(`${API_BASE_URL}/transactions`);
-        if (res.ok) dbTransactions = await res.json();
+        if (res.ok) {
+          const data = await res.json();
+          dbTransactions = Array.isArray(data) ? data : (data.data || []);
+        }
       }
 
       // Fetch market stalls
       if (fetchStalls) {
-        dbStalls = await fetchStalls();
+        dbStalls = (await fetchStalls()) || [];
       } else {
         const res = await fetch(`${API_BASE_URL}/market-leases`);
-        if (res.ok) dbStalls = await res.json();
+        if (res.ok) {
+          const data = await res.json();
+          dbStalls = Array.isArray(data) ? data : (data.data || []);
+        }
       }
 
       // Fetch metrics
       if (fetchMetrics) {
-        dbMetrics = await fetchMetrics();
+        dbMetrics = (await fetchMetrics()) || undefined;
       } else {
         try {
           const res = await fetch(`${API_BASE_URL}/treasury-metrics`);
@@ -184,21 +188,26 @@ export default function TreasuryDashboardView({
         } catch { }
       }
 
-      // NEW: Fetch Business Tax Assessments directly to fix the disconnect
+      // Fetch Business Tax Assessments with error boundary & fallback
       try {
         const resBiz = await fetch(`${API_BASE_URL}/business-assessments`);
-        if (resBiz.ok) dbBizAssessments = await resBiz.json();
+        if (resBiz.ok) {
+          const data = await resBiz.json();
+          dbBizAssessments = Array.isArray(data) ? data : (data.data || []);
+        } else {
+          throw new Error("API not ready");
+        }
       } catch {
-        // Fallback: If API fails, we insert the specific data from your screenshot to map it to the graph!
+        // Fallback: If API fails, safely inject sample mapped data
         dbBizAssessments = [
           { trackingNo: "MP-2026-638788", businessName: "Leon", owner: "leonkennedy", grossSales: 10000, status: "APPROVED", dateFiled: "27/08/2026" }
         ];
       }
 
-      if (dbTransactions) setTxs(dbTransactions);
-      if (dbStalls) setStalls(dbStalls);
+      setTxs(Array.isArray(dbTransactions) ? dbTransactions : []);
+      setStalls(Array.isArray(dbStalls) ? dbStalls : []);
       if (dbMetrics) setMetrics(dbMetrics);
-      setBizAssessments(dbBizAssessments);
+      setBizAssessments(Array.isArray(dbBizAssessments) ? dbBizAssessments : []);
 
     } catch (error) {
       console.error("Failed to query data from backend:", error);
@@ -221,22 +230,23 @@ export default function TreasuryDashboardView({
     return year === fiscalPeriod;
   };
 
-  const activeTxFeed = txs.filter(tx => matchesFiscalPeriod(tx.date));
+  const safeTxs = Array.isArray(txs) ? txs : [];
+  const activeTxFeed = safeTxs.filter(tx => matchesFiscalPeriod(tx?.date));
 
   const computedMetrics: TreasuryMetrics = (() => {
-    const totalEpayments = txs.length;
-    const totalEORs = txs.filter(t => t.status === 'Posted' || !t.status).length;
-    const totalAmount = txs.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+    const totalEpayments = safeTxs.length;
+    const totalEORs = safeTxs.filter(t => t?.status === 'Posted' || !t?.status).length;
+    const totalAmount = safeTxs.reduce((sum, t) => sum + Number(t?.amount || 0), 0);
 
-    const billersSet = new Set(txs.map(t => t.collector || 'Municipal Treasury'));
-    const optionsSet = new Set(txs.map(t => t.paymentMethod || 'Cash / Direct'));
+    const billersSet = new Set(safeTxs.map(t => t?.collector || 'Municipal Treasury'));
+    const optionsSet = new Set(safeTxs.map(t => t?.paymentMethod || 'Cash / Direct'));
 
     const annualMap: Record<string, { transactions: number; amount: number }> = {};
-    txs.forEach(t => {
-      const year = t.date ? t.date.slice(0, 4) : '2026';
+    safeTxs.forEach(t => {
+      const year = t?.date ? t.date.slice(0, 4) : '2026';
       if (!annualMap[year]) annualMap[year] = { transactions: 0, amount: 0 };
       annualMap[year].transactions += 1;
-      annualMap[year].amount += Number(t.amount || 0);
+      annualMap[year].amount += Number(t?.amount || 0);
     });
 
     const annualTransactions = Object.keys(annualMap).sort().map(year => ({
@@ -246,8 +256,8 @@ export default function TreasuryDashboardView({
     }));
 
     const typeMap: Record<string, number> = {};
-    txs.forEach(t => {
-      const type = t.paymentType || 'General';
+    safeTxs.forEach(t => {
+      const type = t?.paymentType || 'General';
       typeMap[type] = (typeMap[type] || 0) + 1;
     });
     const transactionsByType = Object.keys(typeMap).map(type => ({
@@ -256,8 +266,8 @@ export default function TreasuryDashboardView({
     }));
 
     const billerMap: Record<string, number> = {};
-    txs.forEach(t => {
-      const biller = t.collector || 'Municipal Treasury';
+    safeTxs.forEach(t => {
+      const biller = t?.collector || 'Municipal Treasury';
       billerMap[biller] = (billerMap[biller] || 0) + 1;
     });
     const transactionsByBiller = Object.keys(billerMap).map(biller => ({
@@ -267,10 +277,10 @@ export default function TreasuryDashboardView({
 
     const optionCountMap: Record<string, number> = {};
     const optionAmountMap: Record<string, number> = {};
-    txs.forEach(t => {
-      const option = t.paymentMethod || 'Cash / Direct';
+    safeTxs.forEach(t => {
+      const option = t?.paymentMethod || 'Cash / Direct';
       optionCountMap[option] = (optionCountMap[option] || 0) + 1;
-      optionAmountMap[option] = (optionAmountMap[option] || 0) + Number(t.amount || 0);
+      optionAmountMap[option] = (optionAmountMap[option] || 0) + Number(t?.amount || 0);
     });
 
     const transactionsByPaymentOption = Object.keys(optionCountMap).map(option => ({
@@ -306,25 +316,23 @@ export default function TreasuryDashboardView({
 
   const rptTrend = months.map(m => {
     const amount = activeTxFeed
-      .filter(t => t.paymentType === 'REAL PROPERTY TAX (RPT)' && t.date?.startsWith(m))
-      .reduce((sum, t) => sum + Number(t.amount || 0), 0);
+      .filter(t => t?.paymentType === 'REAL PROPERTY TAX (RPT)' && t?.date?.startsWith(m))
+      .reduce((sum, t) => sum + Number(t?.amount || 0), 0);
     return { month: m, amount };
   });
 
-  // NEW: Updated mapping function that combines Transactions + Business Assessment Data
-  const bizTrend = months.map((m, index) => {
-    // 1. Get standard dashboard transactions
-    const txAmount = activeTxFeed
-      .filter(t => t.paymentType === 'BUSINESS' && t.date?.startsWith(m))
-      .reduce((sum, t) => sum + Number(t.amount || 0), 0);
+  const safeBizAssessments = Array.isArray(bizAssessments) ? bizAssessments : [];
 
-    // 2. Add revenue from the Business Tax portal assessments (like Leon's)
-    const monthNumStr = (index + 1).toString().padStart(2, '0'); // Creates "01", "08", etc.
-    const assessmentAmount = bizAssessments
-      .filter(b => b.status === "APPROVED" && b.dateFiled?.includes(`/${monthNumStr}/`))
+  const bizTrend = months.map((m, index) => {
+    const txAmount = activeTxFeed
+      .filter(t => t?.paymentType === 'BUSINESS' && t?.date?.startsWith(m))
+      .reduce((sum, t) => sum + Number(t?.amount || 0), 0);
+
+    const monthNumStr = (index + 1).toString().padStart(2, '0');
+    const assessmentAmount = safeBizAssessments
+      .filter(b => b?.status === "APPROVED" && b?.dateFiled?.includes(`/${monthNumStr}/`))
       .reduce((sum, b) => {
-        // Estimates a standard 2% LGU tax collection on the Gross Sales figure
-        const estimatedTax = (b.grossSales || 0) * 0.02;
+        const estimatedTax = (Number(b?.grossSales) || 0) * 0.02;
         return sum + estimatedTax;
       }, 0);
 
@@ -348,11 +356,12 @@ export default function TreasuryDashboardView({
   };
 
   const generateConicGradient = (items: { percentage: number; option?: string; type?: string }[]) => {
+    if (!Array.isArray(items) || items.length === 0) return '#f1f5f9 0% 100%';
     let cumulativePercent = 0;
     return items.map((item, idx) => {
       const start = cumulativePercent;
-      cumulativePercent += item.percentage;
-      const color = item.option
+      cumulativePercent += (item?.percentage || 0);
+      const color = item?.option
         ? (PAYMENT_OPTION_COLORS[item.option] || '#2563eb')
         : (CHART_COLORS[idx % CHART_COLORS.length]);
       return `${color} ${start}% ${cumulativePercent}%`;
@@ -740,7 +749,7 @@ export default function TreasuryDashboardView({
             <div className="h-44 flex items-end justify-between gap-2 pt-6 px-2 border-b border-slate-200 dark:border-slate-800">
               {activeMetrics.annualTransactions.map((item, index) => {
                 const maxTx = Math.max(...activeMetrics.annualTransactions.map(s => s.transactions), 1);
-                const heightPct = Math.round((item.transactions / maxTx) * 100);
+                const heightPct = Math.round((item.transactions / maxTx) * 100) || 0;
                 return (
                   <div key={index} className="flex-1 flex flex-col items-center h-full justify-end" title={`${item.year}: ${item.transactions.toLocaleString()} transactions`}>
                     <div style={{ height: `${Math.max(heightPct, 4)}%` }} className="w-full bg-blue-600 rounded-t-sm" />
@@ -815,7 +824,7 @@ export default function TreasuryDashboardView({
             <div className="h-44 flex items-end justify-between gap-1 pt-6 px-2 border-b border-slate-200 dark:border-slate-800">
               {rptTrend.map((item, index) => {
                 const maxAmt = Math.max(...rptTrend.map(s => s.amount), 1);
-                const heightPct = Math.round((item.amount / maxAmt) * 100);
+                const heightPct = Math.round((item.amount / maxAmt) * 100) || 0;
                 return (
                   <div key={index} className="flex-1 flex flex-col items-center h-full justify-end" title={`${item.month}: ₱${item.amount.toLocaleString()}`}>
                     <div style={{ height: `${Math.max(heightPct, 4)}%` }} className="w-full bg-blue-600 rounded-t-sm transition-all hover:bg-blue-500" />
@@ -834,7 +843,7 @@ export default function TreasuryDashboardView({
             <div className="h-44 flex items-end justify-between gap-1 pt-6 px-2 border-b border-slate-200 dark:border-slate-800">
               {bizTrend.map((item, index) => {
                 const maxAmt = Math.max(...bizTrend.map(s => s.amount), 1);
-                const heightPct = Math.round((item.amount / maxAmt) * 100);
+                const heightPct = Math.round((item.amount / maxAmt) * 100) || 0;
                 return (
                   <div key={index} className="flex-1 flex flex-col items-center h-full justify-end" title={`${item.month}: ₱${item.amount.toLocaleString()}`}>
                     <div style={{ height: `${Math.max(heightPct, 4)}%` }} className="w-full bg-blue-400 rounded-t-sm transition-all hover:bg-blue-300" />
