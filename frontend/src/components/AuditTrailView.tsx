@@ -1,3 +1,5 @@
+// src/components/AuditTrailView.tsx
+
 import { useState, useEffect } from "react";
 import { API_BASE_URL } from "../config/api";
 
@@ -16,24 +18,49 @@ export interface AuditRecord {
   timestamp: string;
 }
 
-export default function AuditTrailView({ 
-  records: initialRecords = [], 
-  isCollapsed = false 
-}: { 
-  records?: AuditRecord[]; 
-  isCollapsed?: boolean 
-}) { 
+// Helper to format timestamps to Manila time (PHT)
+const formatManilaTime = (dateString: string) => {
+  try {
+    const d = new Date(dateString);
+    if (isNaN(d.getTime())) return dateString;
+    return d.toLocaleString("en-US", {
+      timeZone: "Asia/Manila",
+      year: "numeric",
+      month: "short",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true
+    });
+  } catch {
+    return dateString;
+  }
+};
+
+// Helper to get today's date in YYYY-MM-DD for Manila time
+const getManilaDateString = () => {
+  return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Manila" });
+};
+
+export default function AuditTrailView({
+  records: initialRecords = [],
+  isCollapsed = false
+}: {
+  records?: AuditRecord[];
+  isCollapsed?: boolean
+}) {
   const [records, setRecords] = useState<AuditRecord[]>(initialRecords);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedModule, setSelectedModule] = useState("ALL");
   const [selectedSeverity, setSelectedSeverity] = useState("ALL");
-  const [actionCategory, setActionCategory] = useState("ALL"); // Quick filter for auth actions
+  const [actionCategory, setActionCategory] = useState("ALL");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedRecord, setSelectedRecord] = useState<AuditRecord | null>(null);
-  
+
   // Clear / Delete Modal State
   const [isClearModalOpen, setIsClearModalOpen] = useState(false);
   const [hasDownloadedBackup, setHasDownloadedBackup] = useState(false);
@@ -62,16 +89,16 @@ export default function AuditTrailView({
   }, [API_BASE_URL]);
 
   const filteredRecords = records.filter((record) => {
-    const matchesSearch = 
+    const matchesSearch =
       record.auditId.toLowerCase().includes(searchQuery.toLowerCase()) ||
       record.user.toLowerCase().includes(searchQuery.toLowerCase()) ||
       record.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
       record.ipAddress.toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     const matchesModule = selectedModule === "ALL" || record.module === selectedModule;
     const matchesSeverity = selectedSeverity === "ALL" || record.severity === selectedSeverity;
 
-    // Action Category Filter Logic (Detects Logouts, Account Creations, Password Changes)
+    // Action Category Filter Logic
     let matchesActionCategory = true;
     const act = record.action.toLowerCase();
     if (actionCategory === "LOGOUT") {
@@ -114,24 +141,32 @@ export default function AuditTrailView({
       r.ipAddress,
       `"${(r.previousData || "").replace(/"/g, '""')}"`,
       `"${(r.newData || "").replace(/"/g, '""')}"`,
-      r.timestamp
+      `"${formatManilaTime(r.timestamp)}"` // Ensures CSV timestamps are strictly Manila time
     ]);
 
     const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `LGU_Audit_Trail_${new Date().toISOString().split('T')[0]}.csv`);
+    // Uses the helper to append the correct Manila date to the file name
+    link.setAttribute("download", `LGU_Audit_Trail_${getManilaDateString()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
   const handleDownloadBackupJSON = () => {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(records, null, 2));
+    // Converts all dates to Manila time before saving the JSON
+    const backupData = records.map(record => ({
+      ...record,
+      timestamp: formatManilaTime(record.timestamp)
+    }));
+
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", `LGU_Audit_Backup_${new Date().toISOString().split('T')[0]}.json`);
+    // Uses the helper to append the correct Manila date to the file name
+    downloadAnchor.setAttribute("download", `LGU_Audit_Backup_${getManilaDateString()}.json`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
@@ -176,7 +211,7 @@ export default function AuditTrailView({
   const uniqueModules = ["ALL", ...Array.from(new Set(records.map(r => r.module)))];
 
   return (
-    <main 
+    <main
       className={`
         min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-sans p-4 sm:p-8 transition-all duration-300
         ${isCollapsed ? "ml-20" : "ml-64"}
@@ -211,7 +246,7 @@ export default function AuditTrailView({
         {/* Filters and Search Bar */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-sm">
           <div>
-            <input 
+            <input
               type="text"
               placeholder="Search ID, user, IP..."
               value={searchQuery}
@@ -255,7 +290,7 @@ export default function AuditTrailView({
             </select>
           </div>
           <div>
-            <input 
+            <input
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
@@ -263,7 +298,7 @@ export default function AuditTrailView({
             />
           </div>
           <div>
-            <input 
+            <input
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
@@ -280,7 +315,7 @@ export default function AuditTrailView({
               Showing {paginatedRecords.length} of {filteredRecords.length} entries
             </span>
           </div>
-          
+
           {isLoading ? (
             <p className="text-slate-600 dark:text-slate-400 text-xs italic py-8 text-center">Loading audit logs from server...</p>
           ) : filteredRecords.length === 0 ? (
@@ -301,8 +336,8 @@ export default function AuditTrailView({
                   </thead>
                   <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                     {paginatedRecords.map(record => (
-                      <tr 
-                        key={record.id} 
+                      <tr
+                        key={record.id}
                         onClick={() => setSelectedRecord(record)}
                         className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
                       >
@@ -320,7 +355,10 @@ export default function AuditTrailView({
                           </span>
                         </td>
                         <td className="p-4 text-xs font-mono text-slate-700 dark:text-slate-300">{record.ipAddress}</td>
-                        <td className="p-4 text-xs font-mono text-slate-700 dark:text-slate-300 whitespace-nowrap">{record.timestamp}</td>
+                        {/* Display Timestamp formatted to Manila Time */}
+                        <td className="p-4 text-xs font-mono text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                          {formatManilaTime(record.timestamp)}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -360,7 +398,7 @@ export default function AuditTrailView({
               <h3 className="font-black text-rose-700 dark:text-rose-400 text-base flex items-center gap-2.5">
                 Secure Log Deletion Warning
               </h3>
-              <button 
+              <button
                 onClick={() => setIsClearModalOpen(false)}
                 className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 font-bold cursor-pointer"
               >
@@ -419,7 +457,7 @@ export default function AuditTrailView({
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 w-full max-w-xl shadow-2xl space-y-4">
             <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-3">
               <h4 className="font-bold text-slate-900 dark:text-white text-base">Audit Entry Details</h4>
-              <button 
+              <button
                 onClick={() => setSelectedRecord(null)}
                 className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 font-bold cursor-pointer"
               >
@@ -433,8 +471,10 @@ export default function AuditTrailView({
               <p><strong className="text-slate-900 dark:text-white">Severity Level:</strong> <span className="font-bold text-slate-900 dark:text-slate-100">{selectedRecord.severity}</span></p>
               <p><strong className="text-slate-900 dark:text-white">Origin IP:</strong> <span className="font-mono text-slate-900 dark:text-slate-100">{selectedRecord.ipAddress}</span></p>
               <p><strong className="text-slate-900 dark:text-white">User Agent:</strong> <span className="font-mono text-[10px] text-slate-600 dark:text-slate-400">{selectedRecord.userAgent}</span></p>
-              <p><strong className="text-slate-900 dark:text-white">Timestamp:</strong> <span className="text-slate-900 dark:text-slate-100">{selectedRecord.timestamp}</span></p>
-              
+
+              {/* Display Timestamp formatted to Manila Time inside the modal */}
+              <p><strong className="text-slate-900 dark:text-white">Timestamp:</strong> <span className="text-slate-900 dark:text-slate-100">{formatManilaTime(selectedRecord.timestamp)}</span></p>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                 <div className="bg-slate-50 dark:bg-slate-800/80 p-3 rounded-xl border border-slate-200 dark:border-slate-700 space-y-1">
                   <span className="font-bold text-slate-900 dark:text-white uppercase text-[10px]">Previous State</span>
