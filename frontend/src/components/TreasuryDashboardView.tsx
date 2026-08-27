@@ -40,11 +40,9 @@ export interface TreasuryMetrics {
 }
 
 export interface TreasuryDashboardViewProps {
-  metrics?: TreasuryMetrics;
   transactions?: TransactionRecord[];
   marketStalls?: StallRecord[];
   isCollapsed: boolean;
-  onNavigate?: (view: string) => void;
   fetchTransactions?: () => Promise<TransactionRecord[]>;
   fetchStalls?: () => Promise<StallRecord[]>;
 }
@@ -63,22 +61,17 @@ const PAYMENT_OPTION_COLORS: Record<string, string> = {
 const CHART_COLORS = ["#2563eb", "#60a5fa", "#93c5fd", "#bfdbfe", "#1e3a8a"];
 
 export default function TreasuryDashboardView({
-  metrics: initialMetrics,
   transactions: initialTransactions = [],
   marketStalls: initialStalls = [],
   isCollapsed,
-  onNavigate,
   fetchTransactions,
   fetchStalls
 }: TreasuryDashboardViewProps) {
   const [fiscalPeriod, setFiscalPeriod] = useState("2026");
-
-  // NEW: State to control the active filter tab
   const [activeTab, setActiveTab] = useState<"ALL" | "RPT" | "BUSINESS" | "MARKET">("ALL");
 
   const [stalls, setStalls] = useState<StallRecord[]>(initialStalls);
   const [txs, setTxs] = useState<TransactionRecord[]>(initialTransactions);
-  const [metrics, setMetrics] = useState<TreasuryMetrics | undefined>(initialMetrics);
   const [bizAssessments, setBizAssessments] = useState<BusinessAssessmentRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [showAllModal, setShowAllModal] = useState(false);
@@ -91,10 +84,6 @@ export default function TreasuryDashboardView({
     if (Array.isArray(initialStalls)) setStalls(initialStalls);
   }, [initialStalls]);
 
-  useEffect(() => {
-    if (initialMetrics) setMetrics(initialMetrics);
-  }, [initialMetrics]);
-
   const loadPostgresData = async () => {
     try {
       setLoading(true);
@@ -102,7 +91,6 @@ export default function TreasuryDashboardView({
       let dbStalls: StallRecord[] = [];
       let dbBizAssessments: BusinessAssessmentRecord[] = [];
 
-      // 1. Fetch Transactions
       if (fetchTransactions) {
         dbTransactions = (await fetchTransactions()) || [];
       } else {
@@ -113,7 +101,6 @@ export default function TreasuryDashboardView({
         }
       }
 
-      // 2. Fetch Market Stalls
       if (fetchStalls) {
         dbStalls = (await fetchStalls()) || [];
       } else {
@@ -124,7 +111,6 @@ export default function TreasuryDashboardView({
         }
       }
 
-      // 3. Fetch Business Assessments
       try {
         const resBiz = await fetch(`${API_BASE_URL}/business-assessments`);
         if (resBiz.ok) {
@@ -162,7 +148,6 @@ export default function TreasuryDashboardView({
 
   const safeTxs = Array.isArray(txs) ? txs : [];
 
-  // FILTER LOGIC: Filters the raw transactions based on which tab you clicked
   const filteredTxsByTab = safeTxs.filter(tx => {
     if (activeTab === "ALL") return true;
     const type = (tx?.paymentType || "").toUpperCase();
@@ -172,11 +157,9 @@ export default function TreasuryDashboardView({
     return true;
   });
 
-  // Apply the year filter on top of the tab filter
   const activeTxFeed = filteredTxsByTab.filter(tx => matchesFiscalPeriod(tx?.date));
 
-  // Calculates ALL metrics (Donuts, Top Banners) based ONLY on the filtered tab
-  const computedMetrics: TreasuryMetrics = (() => {
+  const activeMetrics: TreasuryMetrics = (() => {
     const totalEpayments = filteredTxsByTab.length;
     const totalEORs = filteredTxsByTab.filter(t => t?.status === 'Posted' || !t?.status).length;
     const totalAmount = filteredTxsByTab.reduce((sum, t) => sum + Number(t?.amount || 0), 0);
@@ -252,8 +235,6 @@ export default function TreasuryDashboardView({
       amountByPaymentOption
     };
   })();
-
-  const activeMetrics = computedMetrics; // Always use computed so it reacts to tabs instantly
 
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -335,7 +316,6 @@ export default function TreasuryDashboardView({
         </div>
 
         <div className="flex items-center flex-wrap gap-3">
-          {/* THE NEW FILTER TABS */}
           <div className="flex items-center gap-2 border-r border-slate-200 dark:border-slate-800 pr-3">
             <button
               onClick={() => setActiveTab('ALL')}
@@ -390,7 +370,7 @@ export default function TreasuryDashboardView({
         </div>
       </div>
 
-      {/* TOP FIVE METRICS BANNER (Instantly reflects the selected tab) */}
+      {/* TOP FIVE METRICS BANNER */}
       <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-4 mb-6">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm flex items-center gap-4">
           <div className="p-3 bg-slate-50 dark:bg-slate-800 text-blue-600 dark:text-blue-400 rounded-xl flex items-center justify-center border border-slate-100 dark:border-slate-700">
@@ -500,7 +480,7 @@ export default function TreasuryDashboardView({
         </div>
       </div>
 
-      {/* ROW 2: SPECIFIC REVENUE MODULE GRAPHS (Dynamic based on Tab) */}
+      {/* ROW 2: SPECIFIC REVENUE MODULE GRAPHS */}
       <div className={`grid grid-cols-1 ${activeTab === 'ALL' ? 'lg:grid-cols-2' : 'lg:grid-cols-1'} gap-6 mb-6`}>
         {(activeTab === "ALL" || activeTab === "RPT") && (
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
