@@ -72,6 +72,10 @@ export default function TreasuryDashboardView({
   fetchStalls
 }: TreasuryDashboardViewProps) {
   const [fiscalPeriod, setFiscalPeriod] = useState("2026");
+
+  // NEW: State to control the active filter tab
+  const [activeTab, setActiveTab] = useState<"ALL" | "RPT" | "BUSINESS" | "MARKET">("ALL");
+
   const [stalls, setStalls] = useState<StallRecord[]>(initialStalls);
   const [txs, setTxs] = useState<TransactionRecord[]>(initialTransactions);
   const [metrics, setMetrics] = useState<TreasuryMetrics | undefined>(initialMetrics);
@@ -120,7 +124,7 @@ export default function TreasuryDashboardView({
         }
       }
 
-      // 3. Fetch Business Assessments (Doing exactly what Market does)
+      // 3. Fetch Business Assessments
       try {
         const resBiz = await fetch(`${API_BASE_URL}/business-assessments`);
         if (resBiz.ok) {
@@ -130,8 +134,6 @@ export default function TreasuryDashboardView({
       } catch (error) {
         console.error("Failed to fetch business assessments:", error);
       }
-
-      // NOTE: Removed treasury-metrics fetch entirely to fix the 404 error you saw!
 
       setTxs(Array.isArray(dbTransactions) ? dbTransactions : []);
       setStalls(Array.isArray(dbStalls) ? dbStalls : []);
@@ -159,18 +161,31 @@ export default function TreasuryDashboardView({
   };
 
   const safeTxs = Array.isArray(txs) ? txs : [];
-  const activeTxFeed = safeTxs.filter(tx => matchesFiscalPeriod(tx?.date));
 
+  // FILTER LOGIC: Filters the raw transactions based on which tab you clicked
+  const filteredTxsByTab = safeTxs.filter(tx => {
+    if (activeTab === "ALL") return true;
+    const type = (tx?.paymentType || "").toUpperCase();
+    if (activeTab === "RPT") return type.includes("REAL PROPERTY") || type === "RPT";
+    if (activeTab === "BUSINESS") return type.includes("BUSINESS");
+    if (activeTab === "MARKET") return type.includes("MARKET");
+    return true;
+  });
+
+  // Apply the year filter on top of the tab filter
+  const activeTxFeed = filteredTxsByTab.filter(tx => matchesFiscalPeriod(tx?.date));
+
+  // Calculates ALL metrics (Donuts, Top Banners) based ONLY on the filtered tab
   const computedMetrics: TreasuryMetrics = (() => {
-    const totalEpayments = safeTxs.length;
-    const totalEORs = safeTxs.filter(t => t?.status === 'Posted' || !t?.status).length;
-    const totalAmount = safeTxs.reduce((sum, t) => sum + Number(t?.amount || 0), 0);
+    const totalEpayments = filteredTxsByTab.length;
+    const totalEORs = filteredTxsByTab.filter(t => t?.status === 'Posted' || !t?.status).length;
+    const totalAmount = filteredTxsByTab.reduce((sum, t) => sum + Number(t?.amount || 0), 0);
 
-    const billersSet = new Set(safeTxs.map(t => t?.collector || 'Municipal Treasury'));
-    const optionsSet = new Set(safeTxs.map(t => t?.paymentMethod || 'Cash / Direct'));
+    const billersSet = new Set(filteredTxsByTab.map(t => t?.collector || 'Municipal Treasury'));
+    const optionsSet = new Set(filteredTxsByTab.map(t => t?.paymentMethod || 'Cash / Direct'));
 
     const annualMap: Record<string, { transactions: number; amount: number }> = {};
-    safeTxs.forEach(t => {
+    filteredTxsByTab.forEach(t => {
       const year = t?.date ? t.date.slice(0, 4) : '2026';
       if (!annualMap[year]) annualMap[year] = { transactions: 0, amount: 0 };
       annualMap[year].transactions += 1;
@@ -184,7 +199,7 @@ export default function TreasuryDashboardView({
     }));
 
     const typeMap: Record<string, number> = {};
-    safeTxs.forEach(t => {
+    filteredTxsByTab.forEach(t => {
       const type = t?.paymentType || 'General';
       typeMap[type] = (typeMap[type] || 0) + 1;
     });
@@ -194,7 +209,7 @@ export default function TreasuryDashboardView({
     }));
 
     const billerMap: Record<string, number> = {};
-    safeTxs.forEach(t => {
+    filteredTxsByTab.forEach(t => {
       const biller = t?.collector || 'Municipal Treasury';
       billerMap[biller] = (billerMap[biller] || 0) + 1;
     });
@@ -205,7 +220,7 @@ export default function TreasuryDashboardView({
 
     const optionCountMap: Record<string, number> = {};
     const optionAmountMap: Record<string, number> = {};
-    safeTxs.forEach(t => {
+    filteredTxsByTab.forEach(t => {
       const option = t?.paymentMethod || 'Cash / Direct';
       optionCountMap[option] = (optionCountMap[option] || 0) + 1;
       optionAmountMap[option] = (optionAmountMap[option] || 0) + Number(t?.amount || 0);
@@ -238,7 +253,7 @@ export default function TreasuryDashboardView({
     };
   })();
 
-  const activeMetrics = metrics && metrics.totalEpayments > 0 ? metrics : computedMetrics;
+  const activeMetrics = computedMetrics; // Always use computed so it reacts to tabs instantly
 
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -252,26 +267,32 @@ export default function TreasuryDashboardView({
   const safeBizAssessments = Array.isArray(bizAssessments) ? bizAssessments : [];
 
   const bizTrend = months.map((m, index) => {
-    // 1. Transaction Feed Revenue
     const txAmount = activeTxFeed
       .filter(t => t?.paymentType === 'BUSINESS' && t?.date?.startsWith(m))
       .reduce((sum, t) => sum + Number(t?.amount || 0), 0);
 
-    // 2. Assessed Revenue from the Business DB
     const monthNumStr = String(index + 1).padStart(2, '0');
     const assessmentAmount = safeBizAssessments
       .filter(b => {
+        const status = (b?.status || "").toUpperCase();
+        if (status !== "APPROVED") return false;
         const dateStr = String(b?.applicationDate || b?.dateFiled || "");
-        // Simplified parsing: just check if year and month exist in the string
+        if (!dateStr) return false;
         return dateStr.includes(fiscalPeriod) && (dateStr.includes(`-${monthNumStr}-`) || dateStr.includes(`/${monthNumStr}/`) || dateStr.startsWith(`${fiscalPeriod}-${monthNumStr}`));
       })
       .reduce((sum, b) => {
-        // Strip commas and calculate 2%
         const rawSales = Number(String(b?.grossSales || "0").replace(/[^0-9.-]+/g, "")) || 0;
         return sum + (rawSales * 0.02);
       }, 0);
 
     return { month: m, amount: txAmount + assessmentAmount };
+  });
+
+  const marketTrend = months.map(m => {
+    const amount = activeTxFeed
+      .filter(t => (t?.paymentType || "").toUpperCase().includes("MARKET") && t?.date?.startsWith(m))
+      .reduce((sum, t) => sum + Number(t?.amount || 0), 0);
+    return { month: m, amount };
   });
 
   const generateConicGradient = (items: { percentage: number; option?: string; type?: string }[]) => {
@@ -287,14 +308,6 @@ export default function TreasuryDashboardView({
     }).join(', ');
   };
 
-  const handleModuleNavigation = (viewName: string) => {
-    if (onNavigate) {
-      onNavigate(viewName);
-    } else {
-      console.warn("onNavigate callback was not provided by the parent component.");
-    }
-  };
-
   return (
     <div
       style={{
@@ -303,7 +316,7 @@ export default function TreasuryDashboardView({
       }}
       className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 p-6 pt-24 transition-all duration-300 box-border"
     >
-      {/* HEADER & YEAR SELECTOR & MODULE LINKS */}
+      {/* HEADER & YEAR SELECTOR & FILTER TABS */}
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center bg-white dark:bg-slate-900 p-6 rounded-2xl mb-6 flex-wrap gap-4 border border-slate-200 dark:border-slate-800 shadow-sm">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -322,34 +335,39 @@ export default function TreasuryDashboardView({
         </div>
 
         <div className="flex items-center flex-wrap gap-3">
+          {/* THE NEW FILTER TABS */}
           <div className="flex items-center gap-2 border-r border-slate-200 dark:border-slate-800 pr-3">
             <button
-              onClick={() => handleModuleNavigation('rpt')}
-              className="px-4 py-2 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800 text-xs font-bold cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+              onClick={() => setActiveTab('ALL')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold cursor-pointer transition-colors border ${activeTab === 'ALL' ? 'bg-blue-600 text-white border-blue-700' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
+            >
+              All Modules
+            </button>
+            <button
+              onClick={() => setActiveTab('RPT')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold cursor-pointer transition-colors border ${activeTab === 'RPT' ? 'bg-blue-600 text-white border-blue-700' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
             >
               RPT Portal
             </button>
             <button
-              onClick={() => handleModuleNavigation('business_tax')}
-              className="px-4 py-2 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800 text-xs font-bold cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+              onClick={() => setActiveTab('BUSINESS')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold cursor-pointer transition-colors border ${activeTab === 'BUSINESS' ? 'bg-blue-600 text-white border-blue-700' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
             >
               Business Tax Hub
             </button>
+            <button
+              onClick={() => setActiveTab('MARKET')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold cursor-pointer transition-colors border ${activeTab === 'MARKET' ? 'bg-blue-600 text-white border-blue-700' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
+            >
+              Market Stalls
+            </button>
           </div>
 
-          {onNavigate && (
-            <button
-              onClick={() => handleModuleNavigation('home')}
-              className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-xs font-semibold cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-            >
-              Back Home
-            </button>
-          )}
           <button
             onClick={loadPostgresData}
-            className="px-4 py-2 rounded-xl bg-blue-600 text-white border border-blue-700 text-xs font-semibold cursor-pointer hover:bg-blue-700 shadow-sm transition-colors"
+            className="px-4 py-2 rounded-xl bg-slate-800 text-white border border-slate-700 text-xs font-semibold cursor-pointer hover:bg-slate-700 shadow-sm transition-colors"
           >
-            Refresh Data
+            Refresh
           </button>
           <div className="flex items-center gap-2 ml-1">
             <label htmlFor="fiscalPeriodSelect" className="text-[13px] font-medium text-slate-700 dark:text-slate-300">
@@ -372,7 +390,7 @@ export default function TreasuryDashboardView({
         </div>
       </div>
 
-      {/* TOP FIVE METRICS BANNER */}
+      {/* TOP FIVE METRICS BANNER (Instantly reflects the selected tab) */}
       <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-4 mb-6">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm flex items-center gap-4">
           <div className="p-3 bg-slate-50 dark:bg-slate-800 text-blue-600 dark:text-blue-400 rounded-xl flex items-center justify-center border border-slate-100 dark:border-slate-700">
@@ -482,45 +500,70 @@ export default function TreasuryDashboardView({
         </div>
       </div>
 
-      {/* ROW 2: SPECIFIC REVENUE MODULE GRAPHS */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
-          <div>
-            <h3 className="text-base font-bold text-slate-900 dark:text-white m-0 mb-4">Real Property Tax (RPT) Revenue Trends</h3>
-            <div className="h-44 flex items-end justify-between gap-1 pt-6 px-2 border-b border-slate-200 dark:border-slate-800">
-              {rptTrend.map((item, index) => {
-                const maxAmt = Math.max(...rptTrend.map(s => s.amount), 1);
-                const heightPct = Math.round((item.amount / maxAmt) * 100) || 0;
-                return (
-                  <div key={index} className="flex-1 flex flex-col items-center h-full justify-end" title={`${item.month}: ₱${item.amount.toLocaleString()}`}>
-                    <div style={{ height: `${Math.max(heightPct, 4)}%` }} className="w-full bg-blue-600 rounded-t-sm transition-all hover:bg-blue-500" />
-                    <span className="text-[9px] text-slate-500 mt-2">{item.month}</span>
-                  </div>
-                );
-              })}
+      {/* ROW 2: SPECIFIC REVENUE MODULE GRAPHS (Dynamic based on Tab) */}
+      <div className={`grid grid-cols-1 ${activeTab === 'ALL' ? 'lg:grid-cols-2' : 'lg:grid-cols-1'} gap-6 mb-6`}>
+        {(activeTab === "ALL" || activeTab === "RPT") && (
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+            <div>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white m-0 mb-4">Real Property Tax (RPT) Revenue Trends</h3>
+              <div className="h-44 flex items-end justify-between gap-1 pt-6 px-2 border-b border-slate-200 dark:border-slate-800">
+                {rptTrend.map((item, index) => {
+                  const maxAmt = Math.max(...rptTrend.map(s => s.amount), 1);
+                  const heightPct = Math.round((item.amount / maxAmt) * 100) || 0;
+                  return (
+                    <div key={index} className="flex-1 flex flex-col items-center h-full justify-end" title={`${item.month}: ₱${item.amount.toLocaleString()}`}>
+                      <div style={{ height: `${Math.max(heightPct, 4)}%` }} className="w-full bg-blue-600 rounded-t-sm transition-all hover:bg-blue-500" />
+                      <span className="text-[9px] text-slate-500 mt-2">{item.month}</span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
+            <p className="text-[11px] text-slate-400 text-center mt-4 m-0">Monthly collection distribution for Real Property properties</p>
           </div>
-          <p className="text-[11px] text-slate-400 text-center mt-4 m-0">Monthly collection distribution for Real Property properties</p>
-        </div>
+        )}
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
-          <div>
-            <h3 className="text-base font-bold text-slate-900 dark:text-white m-0 mb-4">Business Tax Assessment Revenue Trends</h3>
-            <div className="h-44 flex items-end justify-between gap-1 pt-6 px-2 border-b border-slate-200 dark:border-slate-800">
-              {bizTrend.map((item, index) => {
-                const maxAmt = Math.max(...bizTrend.map(s => s.amount), 1);
-                const heightPct = Math.round((item.amount / maxAmt) * 100) || 0;
-                return (
-                  <div key={index} className="flex-1 flex flex-col items-center h-full justify-end" title={`${item.month}: ₱${item.amount.toLocaleString()}`}>
-                    <div style={{ height: `${Math.max(heightPct, 4)}%` }} className="w-full bg-blue-400 rounded-t-sm transition-all hover:bg-blue-300" />
-                    <span className="text-[9px] text-slate-500 mt-2">{item.month}</span>
-                  </div>
-                );
-              })}
+        {(activeTab === "ALL" || activeTab === "BUSINESS") && (
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+            <div>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white m-0 mb-4">Business Tax Assessment Revenue Trends</h3>
+              <div className="h-44 flex items-end justify-between gap-1 pt-6 px-2 border-b border-slate-200 dark:border-slate-800">
+                {bizTrend.map((item, index) => {
+                  const maxAmt = Math.max(...bizTrend.map(s => s.amount), 1);
+                  const heightPct = Math.round((item.amount / maxAmt) * 100) || 0;
+                  return (
+                    <div key={index} className="flex-1 flex flex-col items-center h-full justify-end" title={`${item.month}: ₱${item.amount.toLocaleString()}`}>
+                      <div style={{ height: `${Math.max(heightPct, 4)}%` }} className="w-full bg-blue-400 rounded-t-sm transition-all hover:bg-blue-300" />
+                      <span className="text-[9px] text-slate-500 mt-2">{item.month}</span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
+            <p className="text-[11px] text-slate-400 text-center mt-4 m-0">Monthly collection distribution for Corporate & Vendor Taxes</p>
           </div>
-          <p className="text-[11px] text-slate-400 text-center mt-4 m-0">Monthly collection distribution for Corporate & Vendor Taxes</p>
-        </div>
+        )}
+
+        {activeTab === "MARKET" && (
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+            <div>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white m-0 mb-4">Market Stalls Revenue Trends</h3>
+              <div className="h-44 flex items-end justify-between gap-1 pt-6 px-2 border-b border-slate-200 dark:border-slate-800">
+                {marketTrend.map((item, index) => {
+                  const maxAmt = Math.max(...marketTrend.map(s => s.amount), 1);
+                  const heightPct = Math.round((item.amount / maxAmt) * 100) || 0;
+                  return (
+                    <div key={index} className="flex-1 flex flex-col items-center h-full justify-end" title={`${item.month}: ₱${item.amount.toLocaleString()}`}>
+                      <div style={{ height: `${Math.max(heightPct, 4)}%` }} className="w-full bg-blue-500 rounded-t-sm transition-all hover:bg-blue-400" />
+                      <span className="text-[9px] text-slate-500 mt-2">{item.month}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            <p className="text-[11px] text-slate-400 text-center mt-4 m-0">Monthly collection distribution for City-Owned Market Leases</p>
+          </div>
+        )}
       </div>
 
       {/* ROW 3: PAYMENT OPTION DONUT CHARTS */}
@@ -580,60 +623,64 @@ export default function TreasuryDashboardView({
         </div>
       </div>
 
-      {/* MARKET STALLS & LEASE OVERVIEW */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm mb-6">
-        <div className="flex justify-between items-center mb-4">
-          <div>
-            <h3 className="text-base font-bold text-slate-900 dark:text-white m-0">Market Stalls & Lease Overview</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 m-0 mt-0.5">Active market stall records fetched from PostgreSQL ({stalls.length} total entries)</p>
+      {/* MARKET STALLS OVERVIEW (Only shows if ALL or MARKET tab is selected) */}
+      {(activeTab === "ALL" || activeTab === "MARKET") && (
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm mb-6">
+          <div className="flex justify-between items-center mb-4">
+            <div>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white m-0">Market Stalls & Lease Overview</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 m-0 mt-0.5">Active market stall records fetched from PostgreSQL ({stalls.length} total entries)</p>
+            </div>
+            <span className="text-xs font-semibold px-2.5 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl">
+              {stalls.length} Stalls Registered
+            </span>
           </div>
-          <span className="text-xs font-semibold px-2.5 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl">
-            {stalls.length} Stalls Registered
-          </span>
-        </div>
 
-        {stalls.length === 0 ? (
-          <p className="text-slate-400 dark:text-slate-500 text-[13px] italic text-center p-6 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl m-0">
-            No market stall records available.
-          </p>
-        ) : (
-          <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
-            <table className="w-full text-left text-[13px] border-collapse">
-              <thead className="bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-800">
-                <tr>
-                  <th className="py-3 px-4">Stall Number / ID</th>
-                  <th className="py-3 px-4">Vendor / Lessee</th>
-                  <th className="py-3 px-4">Section / Market</th>
-                  <th className="py-3 px-4 text-right">Monthly Rental</th>
-                  <th className="py-3 px-4 text-center">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
-                {stalls.slice(0, 5).map((stall, idx) => (
-                  <tr key={stall.id || idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                    <td className="py-3 px-4 font-mono font-semibold text-blue-600 dark:text-blue-400">{stall.stallNumber || stall.id}</td>
-                    <td className="py-3 px-4 font-semibold text-slate-900 dark:text-white">{stall.lesseeName || stall.vendorName || 'Unassigned'}</td>
-                    <td className="py-3 px-4 text-slate-600 dark:text-slate-300">{stall.section || 'General Market'}</td>
-                    <td className="py-3 px-4 text-right font-semibold text-slate-900 dark:text-white">
-                      ₱{Number(stall.monthlyRent || stall.amount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
-                    </td>
-                    <td className="py-3 px-4 text-center">
-                      <span className="py-0.5 px-2.5 rounded-full text-[11px] font-semibold bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
-                        {stall.status || 'Active'}
-                      </span>
-                    </td>
+          {stalls.length === 0 ? (
+            <p className="text-slate-400 dark:text-slate-500 text-[13px] italic text-center p-6 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl m-0">
+              No market stall records available.
+            </p>
+          ) : (
+            <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
+              <table className="w-full text-left text-[13px] border-collapse">
+                <thead className="bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-800">
+                  <tr>
+                    <th className="py-3 px-4">Stall Number / ID</th>
+                    <th className="py-3 px-4">Vendor / Lessee</th>
+                    <th className="py-3 px-4">Section / Market</th>
+                    <th className="py-3 px-4 text-right">Monthly Rental</th>
+                    <th className="py-3 px-4 text-center">Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                  {stalls.slice(0, 5).map((stall, idx) => (
+                    <tr key={stall.id || idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                      <td className="py-3 px-4 font-mono font-semibold text-blue-600 dark:text-blue-400">{stall.stallNumber || stall.id}</td>
+                      <td className="py-3 px-4 font-semibold text-slate-900 dark:text-white">{stall.lesseeName || stall.vendorName || 'Unassigned'}</td>
+                      <td className="py-3 px-4 text-slate-600 dark:text-slate-300">{stall.section || 'General Market'}</td>
+                      <td className="py-3 px-4 text-right font-semibold text-slate-900 dark:text-white">
+                        ₱{Number(stall.monthlyRent || stall.amount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <span className="py-0.5 px-2.5 rounded-full text-[11px] font-semibold bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
+                          {stall.status || 'Active'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* POSTGRESQL LIVE TRANSACTION FEED TABLE */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-base font-bold text-slate-900 dark:text-white m-0">Live Postgres Transaction Ledger ({fiscalPeriod})</h3>
+          <h3 className="text-base font-bold text-slate-900 dark:text-white m-0">
+            Live Postgres Transaction Ledger ({activeTab === "ALL" ? "All Modules" : activeTab})
+          </h3>
           {activeTxFeed.length > 0 && (
             <button
               onClick={() => setShowAllModal(true)}
