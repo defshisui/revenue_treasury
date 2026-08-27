@@ -48,12 +48,18 @@ export function useLogin(
 
       if (response.ok) {
         if (data.user) {
+          // Save the full user object and the specific role for RBAC
           localStorage.setItem("currentUser", JSON.stringify(data.user));
+          localStorage.setItem("user_role", data.user.role || "");
         }
+
         const userRole = data.user?.role?.toLowerCase() || "";
-        if (userRole === "admin") {
+
+        // Route staff, auditors, and admins to the internal dashboard
+        if (["admin", "treasury-staff", "auditor"].includes(userRole)) {
           navigate("/legacy-treasury");
         } else {
+          // Normal citizens go to the citizen portal
           navigate("/citizen-portal");
         }
       } else {
