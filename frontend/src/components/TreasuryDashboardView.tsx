@@ -1,6 +1,6 @@
 // src/components/TreasuryDashboardView.tsx
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import type { TransactionRecord } from "../types/treasury";
 import { API_BASE_URL } from "../config/api";
 
@@ -49,34 +49,6 @@ export interface TreasuryDashboardViewProps {
   fetchMetrics?: () => Promise<TreasuryMetrics>;
 }
 
-const ALL_TRANSACTION_DATES = [
-  "Aug 2026", "Jul 2026", "Jun 2026", "May 2026", "Apr 2026", "Mar 2026",
-  "Feb 2026", "Jan 2026", "Dec 2025", "Nov 2025", "Oct 2025", "Sep 2025"
-];
-
-const ALL_PAYMENT_TYPES = [
-  "MISCELLANEOUS",
-  "REAL PROPERTY TAX (RPT)",
-  "BUSINESS"
-];
-
-const ALL_BILLERS = [
-  "City Owned Market"
-];
-
-const ALL_PAYMENT_OPTIONS = [
-  "Bayad Center",
-  "GCash",
-  "Landbank Online",
-  "Manual Payment for Landbank of the Philippines",
-  "Maya (E-Wallet)",
-  "Maya (QR)",
-  "Online Banking via Paygate",
-  "Visa/Mastercard via Paymaya"
-];
-
-const ALL_EOR_OPTIONS = ["EOR", "NON-EOR"];
-
 const PAYMENT_OPTION_COLORS: Record<string, string> = {
   "GCash": "#1d4ed8",
   "Visa/Mastercard via Paymaya": "#2563eb",
@@ -104,37 +76,9 @@ export default function TreasuryDashboardView({
   const [stalls, setStalls] = useState<StallRecord[]>(initialStalls);
   const [txs, setTxs] = useState<TransactionRecord[]>(initialTransactions);
   const [metrics, setMetrics] = useState<TreasuryMetrics | undefined>(initialMetrics);
-
   const [bizAssessments, setBizAssessments] = useState<BusinessAssessmentRecord[]>([]);
-
   const [loading, setLoading] = useState(false);
   const [showAllModal, setShowAllModal] = useState(false);
-
-  // Filter Dropdown States
-  const [selectedDates, setSelectedDates] = useState<string[]>(ALL_TRANSACTION_DATES);
-  const [selectedTypes, setSelectedTypes] = useState<string[]>(ALL_PAYMENT_TYPES);
-  const [selectedBillers, setSelectedBillers] = useState<string[]>(ALL_BILLERS);
-  const [selectedOptions, setSelectedOptions] = useState<string[]>(ALL_PAYMENT_OPTIONS);
-  const [selectedEor, setSelectedEor] = useState<string[]>(ALL_EOR_OPTIONS);
-
-  const [dateSearch, setDateSearch] = useState("");
-  const [typeSearch, setTypeSearch] = useState("");
-  const [billerSearch, setBillerSearch] = useState("");
-  const [optionSearch, setOptionSearch] = useState("");
-  const [eorSearch, setEorSearch] = useState("");
-
-  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setOpenDropdown(null);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   useEffect(() => {
     if (Array.isArray(initialTransactions)) setTxs(initialTransactions);
@@ -156,7 +100,6 @@ export default function TreasuryDashboardView({
       let dbMetrics: TreasuryMetrics | undefined = undefined;
       let dbBizAssessments: BusinessAssessmentRecord[] = [];
 
-      // Fetch normal transactions
       if (fetchTransactions) {
         dbTransactions = (await fetchTransactions()) || [];
       } else {
@@ -167,7 +110,6 @@ export default function TreasuryDashboardView({
         }
       }
 
-      // Fetch market stalls
       if (fetchStalls) {
         dbStalls = (await fetchStalls()) || [];
       } else {
@@ -178,7 +120,6 @@ export default function TreasuryDashboardView({
         }
       }
 
-      // Fetch metrics
       if (fetchMetrics) {
         dbMetrics = (await fetchMetrics()) || undefined;
       } else {
@@ -188,7 +129,6 @@ export default function TreasuryDashboardView({
         } catch { }
       }
 
-      // Fetch Business Tax Assessments with error boundary & fallback
       try {
         const resBiz = await fetch(`${API_BASE_URL}/business-assessments`);
         if (resBiz.ok) {
@@ -198,7 +138,6 @@ export default function TreasuryDashboardView({
           throw new Error("API not ready");
         }
       } catch {
-        // Fallback: If API fails, safely inject sample mapped data
         dbBizAssessments = [
           { trackingNo: "MP-2026-638788", businessName: "Leon", owner: "leonkennedy", grossSales: 10000, status: "APPROVED", dateFiled: "27/08/2026" }
         ];
@@ -339,22 +278,6 @@ export default function TreasuryDashboardView({
     return { month: m, amount: txAmount + assessmentAmount };
   });
 
-  const toggleSelectAll = (allList: string[], currentSelected: string[], setter: (val: string[]) => void) => {
-    if (currentSelected.length === allList.length) {
-      setter([]);
-    } else {
-      setter([...allList]);
-    }
-  };
-
-  const toggleItem = (item: string, currentSelected: string[], setter: (val: string[]) => void) => {
-    if (currentSelected.includes(item)) {
-      setter(currentSelected.filter(i => i !== item));
-    } else {
-      setter([...currentSelected, item]);
-    }
-  };
-
   const generateConicGradient = (items: { percentage: number; option?: string; type?: string }[]) => {
     if (!Array.isArray(items) || items.length === 0) return '#f1f5f9 0% 100%';
     let cumulativePercent = 0;
@@ -368,6 +291,14 @@ export default function TreasuryDashboardView({
     }).join(', ');
   };
 
+  const handleModuleNavigation = (viewName: string) => {
+    if (onNavigate) {
+      onNavigate(viewName);
+    } else {
+      console.warn("onNavigate callback was not provided by the parent component.");
+    }
+  };
+
   return (
     <div
       style={{
@@ -375,7 +306,6 @@ export default function TreasuryDashboardView({
         width: isCollapsed ? "calc(100% - 80px)" : "calc(100% - 256px)",
       }}
       className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 p-6 pt-24 transition-all duration-300 box-border"
-      ref={dropdownRef}
     >
       {/* HEADER & YEAR SELECTOR & MODULE LINKS */}
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center bg-white dark:bg-slate-900 p-6 rounded-2xl mb-6 flex-wrap gap-4 border border-slate-200 dark:border-slate-800 shadow-sm">
@@ -398,13 +328,13 @@ export default function TreasuryDashboardView({
         <div className="flex items-center flex-wrap gap-3">
           <div className="flex items-center gap-2 border-r border-slate-200 dark:border-slate-800 pr-3">
             <button
-              onClick={() => onNavigate && onNavigate('rpt')}
+              onClick={() => handleModuleNavigation('rpt')}
               className="px-4 py-2 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800 text-xs font-bold cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
             >
               RPT Portal
             </button>
             <button
-              onClick={() => onNavigate && onNavigate('business_tax')}
+              onClick={() => handleModuleNavigation('business_tax')}
               className="px-4 py-2 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800 text-xs font-bold cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
             >
               Business Tax Hub
@@ -413,7 +343,7 @@ export default function TreasuryDashboardView({
 
           {onNavigate && (
             <button
-              onClick={() => onNavigate('home')}
+              onClick={() => handleModuleNavigation('home')}
               className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-xs font-semibold cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
             >
               Back Home
@@ -478,266 +408,6 @@ export default function TreasuryDashboardView({
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm flex flex-col justify-center">
           <p className="text-[11px] font-bold tracking-wider text-slate-500 dark:text-slate-400 mb-1.5 mt-0 uppercase">PAYMENT OPTIONS</p>
           <p className="text-xl font-bold text-slate-900 dark:text-white m-0">{activeMetrics.paymentOptions}</p>
-        </div>
-      </div>
-
-      {/* FILTER TOOLBAR SECTION */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 mb-6 shadow-sm flex items-center justify-center flex-wrap gap-3">
-        <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mr-2">Filter by:</span>
-
-        {/* Date Filter */}
-        <div className="relative">
-          <button
-            onClick={() => setOpenDropdown(openDropdown === 'date' ? null : 'date')}
-            className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 flex items-center justify-between gap-4 cursor-pointer hover:border-blue-500 transition-all min-w-[160px]"
-          >
-            <span className="truncate">Transaction Date ({selectedDates.length})</span>
-            <svg className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${openDropdown === 'date' ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
-          {openDropdown === 'date' && (
-            <div className="absolute left-0 mt-2 w-72 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-lg z-30 p-3.5">
-              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2 mb-2.5">
-                <label className="flex items-center gap-2.5 text-xs font-semibold cursor-pointer text-slate-800 dark:text-slate-200">
-                  <input
-                    type="checkbox"
-                    checked={selectedDates.length === ALL_TRANSACTION_DATES.length}
-                    onChange={() => toggleSelectAll(ALL_TRANSACTION_DATES, selectedDates, setSelectedDates)}
-                    className="rounded-md w-4 h-4 accent-blue-600 cursor-pointer"
-                  />
-                  <span>Select All Dates</span>
-                </label>
-                <span className="text-[11px] text-slate-400 font-medium">{selectedDates.length}/{ALL_TRANSACTION_DATES.length}</span>
-              </div>
-              <div className="relative mb-2.5">
-                <input
-                  type="text"
-                  placeholder="Search dates..."
-                  value={dateSearch}
-                  onChange={(e) => setDateSearch(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs outline-none focus:border-blue-500 text-slate-700 dark:text-slate-200"
-                />
-              </div>
-              <div className="max-h-52 overflow-y-auto flex flex-col gap-1 pr-1">
-                {ALL_TRANSACTION_DATES.filter(d => d.toLowerCase().includes(dateSearch.toLowerCase())).map((date) => (
-                  <label key={date} className="flex items-center gap-2.5 text-xs py-1.5 px-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl cursor-pointer transition-colors">
-                    <input
-                      type="checkbox"
-                      checked={selectedDates.includes(date)}
-                      onChange={() => toggleItem(date, selectedDates, setSelectedDates)}
-                      className="rounded-md w-4 h-4 accent-blue-600 cursor-pointer"
-                    />
-                    <span className="text-slate-700 dark:text-slate-300 font-medium">{date}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Payment Type Filter */}
-        <div className="relative">
-          <button
-            onClick={() => setOpenDropdown(openDropdown === 'type' ? null : 'type')}
-            className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 flex items-center justify-between gap-4 cursor-pointer hover:border-blue-500 transition-all min-w-[160px]"
-          >
-            <span className="truncate">Payment Type ({selectedTypes.length})</span>
-            <svg className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${openDropdown === 'type' ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
-          {openDropdown === 'type' && (
-            <div className="absolute left-0 mt-2 w-72 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-lg z-30 p-3.5">
-              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2 mb-2.5">
-                <label className="flex items-center gap-2.5 text-xs font-semibold cursor-pointer text-slate-800 dark:text-slate-200">
-                  <input
-                    type="checkbox"
-                    checked={selectedTypes.length === ALL_PAYMENT_TYPES.length}
-                    onChange={() => toggleSelectAll(ALL_PAYMENT_TYPES, selectedTypes, setSelectedTypes)}
-                    className="rounded-md w-4 h-4 accent-blue-600 cursor-pointer"
-                  />
-                  <span>Select All Types</span>
-                </label>
-                <span className="text-[11px] text-slate-400 font-medium">{selectedTypes.length}/{ALL_PAYMENT_TYPES.length}</span>
-              </div>
-              <div className="relative mb-2.5">
-                <input
-                  type="text"
-                  placeholder="Search types..."
-                  value={typeSearch}
-                  onChange={(e) => setTypeSearch(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs outline-none focus:border-blue-500 text-slate-700 dark:text-slate-200"
-                />
-              </div>
-              <div className="max-h-52 overflow-y-auto flex flex-col gap-1 pr-1">
-                {ALL_PAYMENT_TYPES.filter(t => t.toLowerCase().includes(typeSearch.toLowerCase())).map((type) => (
-                  <label key={type} className="flex items-center gap-2.5 text-xs py-1.5 px-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl cursor-pointer transition-colors">
-                    <input
-                      type="checkbox"
-                      checked={selectedTypes.includes(type)}
-                      onChange={() => toggleItem(type, selectedTypes, setSelectedTypes)}
-                      className="rounded-md w-4 h-4 accent-blue-600 cursor-pointer"
-                    />
-                    <span className="text-slate-700 dark:text-slate-300 font-medium">{type}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Biller Filter */}
-        <div className="relative">
-          <button
-            onClick={() => setOpenDropdown(openDropdown === 'biller' ? null : 'biller')}
-            className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 flex items-center justify-between gap-4 cursor-pointer hover:border-blue-500 transition-all min-w-[160px]"
-          >
-            <span className="truncate">Biller ({selectedBillers.length})</span>
-            <svg className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${openDropdown === 'biller' ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
-          {openDropdown === 'biller' && (
-            <div className="absolute left-0 mt-2 w-80 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-lg z-30 p-3.5">
-              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2 mb-2.5">
-                <label className="flex items-center gap-2.5 text-xs font-semibold cursor-pointer text-slate-800 dark:text-slate-200">
-                  <input
-                    type="checkbox"
-                    checked={selectedBillers.length === ALL_BILLERS.length}
-                    onChange={() => toggleSelectAll(ALL_BILLERS, selectedBillers, setSelectedBillers)}
-                    className="rounded-md w-4 h-4 accent-blue-600 cursor-pointer"
-                  />
-                  <span>Select All Billers</span>
-                </label>
-                <span className="text-[11px] text-slate-400 font-medium">{selectedBillers.length}/{ALL_BILLERS.length}</span>
-              </div>
-              <div className="relative mb-2.5">
-                <input
-                  type="text"
-                  placeholder="Search billers..."
-                  value={billerSearch}
-                  onChange={(e) => setBillerSearch(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs outline-none focus:border-blue-500 text-slate-700 dark:text-slate-200"
-                />
-              </div>
-              <div className="max-h-52 overflow-y-auto flex flex-col gap-1 pr-1">
-                {ALL_BILLERS.filter(b => b.toLowerCase().includes(billerSearch.toLowerCase())).map((biller) => (
-                  <label key={biller} className="flex items-center gap-2.5 text-xs py-1.5 px-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl cursor-pointer transition-colors">
-                    <input
-                      type="checkbox"
-                      checked={selectedBillers.includes(biller)}
-                      onChange={() => toggleItem(biller, selectedBillers, setSelectedBillers)}
-                      className="rounded-md w-4 h-4 accent-blue-600 cursor-pointer"
-                    />
-                    <span className="text-slate-700 dark:text-slate-300 font-medium truncate" title={biller}>{biller}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Payment Option Filter */}
-        <div className="relative">
-          <button
-            onClick={() => setOpenDropdown(openDropdown === 'option' ? null : 'option')}
-            className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 flex items-center justify-between gap-4 cursor-pointer hover:border-blue-500 transition-all min-w-[160px]"
-          >
-            <span className="truncate">Payment Option ({selectedOptions.length})</span>
-            <svg className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${openDropdown === 'option' ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
-          {openDropdown === 'option' && (
-            <div className="absolute left-0 mt-2 w-72 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-lg z-30 p-3.5">
-              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2 mb-2.5">
-                <label className="flex items-center gap-2.5 text-xs font-semibold cursor-pointer text-slate-800 dark:text-slate-200">
-                  <input
-                    type="checkbox"
-                    checked={selectedOptions.length === ALL_PAYMENT_OPTIONS.length}
-                    onChange={() => toggleSelectAll(ALL_PAYMENT_OPTIONS, selectedOptions, setSelectedOptions)}
-                    className="rounded-md w-4 h-4 accent-blue-600 cursor-pointer"
-                  />
-                  <span>Select All Options</span>
-                </label>
-                <span className="text-[11px] text-slate-400 font-medium">{selectedOptions.length}/{ALL_PAYMENT_OPTIONS.length}</span>
-              </div>
-              <div className="relative mb-2.5">
-                <input
-                  type="text"
-                  placeholder="Search options..."
-                  value={optionSearch}
-                  onChange={(e) => setOptionSearch(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs outline-none focus:border-blue-500 text-slate-700 dark:text-slate-200"
-                />
-              </div>
-              <div className="max-h-52 overflow-y-auto flex flex-col gap-1 pr-1">
-                {ALL_PAYMENT_OPTIONS.filter(o => o.toLowerCase().includes(optionSearch.toLowerCase())).map((opt) => (
-                  <label key={opt} className="flex items-center gap-2.5 text-xs py-1.5 px-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl cursor-pointer transition-colors">
-                    <input
-                      type="checkbox"
-                      checked={selectedOptions.includes(opt)}
-                      onChange={() => toggleItem(opt, selectedOptions, setSelectedOptions)}
-                      className="rounded-md w-4 h-4 accent-blue-600 cursor-pointer"
-                    />
-                    <span className="text-slate-700 dark:text-slate-300 font-medium">{opt}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* eOR Filter */}
-        <div className="relative">
-          <button
-            onClick={() => setOpenDropdown(openDropdown === 'eor' ? null : 'eor')}
-            className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 flex items-center justify-between gap-4 cursor-pointer hover:border-blue-500 transition-all min-w-[140px]"
-          >
-            <span className="truncate">With eOR ({selectedEor.length})</span>
-            <svg className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${openDropdown === 'eor' ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
-          {openDropdown === 'eor' && (
-            <div className="absolute left-0 mt-2 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-lg z-30 p-3.5">
-              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2 mb-2.5">
-                <label className="flex items-center gap-2.5 text-xs font-semibold cursor-pointer text-slate-800 dark:text-slate-200">
-                  <input
-                    type="checkbox"
-                    checked={selectedEor.length === ALL_EOR_OPTIONS.length}
-                    onChange={() => toggleSelectAll(ALL_EOR_OPTIONS, selectedEor, setSelectedEor)}
-                    className="rounded-md w-4 h-4 accent-blue-600 cursor-pointer"
-                  />
-                  <span>Select All</span>
-                </label>
-                <span className="text-[11px] text-slate-400 font-medium">{selectedEor.length}/{ALL_EOR_OPTIONS.length}</span>
-              </div>
-              <div className="relative mb-2.5">
-                <input
-                  type="text"
-                  placeholder="Search options..."
-                  value={eorSearch}
-                  onChange={(e) => setEorSearch(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs outline-none focus:border-blue-500 text-slate-700 dark:text-slate-200"
-                />
-              </div>
-              <div className="max-h-52 overflow-y-auto flex flex-col gap-1 pr-1">
-                {ALL_EOR_OPTIONS.filter(e => e.toLowerCase().includes(eorSearch.toLowerCase())).map((item) => (
-                  <label key={item} className="flex items-center gap-2.5 text-xs py-1.5 px-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl cursor-pointer transition-colors">
-                    <input
-                      type="checkbox"
-                      checked={selectedEor.includes(item)}
-                      onChange={() => toggleItem(item, selectedEor, setSelectedEor)}
-                      className="rounded-md w-4 h-4 accent-blue-600 cursor-pointer"
-                    />
-                    <span className="text-slate-700 dark:text-slate-300 font-medium">{item}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
