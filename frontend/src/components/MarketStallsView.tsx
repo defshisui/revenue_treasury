@@ -47,8 +47,8 @@ export default function MarketStallsView({
   const normalizedInitialStalls: StallRecord[] = useMemo(() => {
     return rawRecords.map((item: any) => {
       const isTerminatedOrInactive = item.leaseStatus === "Terminated" || item.leaseStatus === "Inactive";
-      const isOccupied = !isTerminatedOrInactive && (item.leaseStatus === "Active" || item.leaseStatus === "Termination Requested" || item.status === "Occupied");
-      
+      const isOccupied = !isTerminatedOrInactive && item.leaseStatus !== "Archived" && (item.leaseStatus === "Active" || item.leaseStatus === "Termination Requested" || item.status === "Occupied");
+
       const isPaid = item.paymentStatus === "Paid";
       const currentBalance = isPaid ? 0 : (item.currentBalance ?? item.amountDue ?? 0);
       const overdueStatus = isPaid ? false : (item.paymentStatus === "Pending Payment" || item.overdueStatus || currentBalance > 0);
@@ -75,6 +75,7 @@ export default function MarketStallsView({
   }, [rawRecords]);
 
   const [stalls, setStalls] = useState<StallRecord[]>(normalizedInitialStalls);
+  const [activeTab, setActiveTab] = useState<"Active" | "Archived">("Active");
   const [selectedBranch, setSelectedBranch] = useState<string>("All");
   const [selectedStatus, setSelectedStatus] = useState<string>("All");
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -108,26 +109,34 @@ export default function MarketStallsView({
   }, [normalizedInitialStalls]);
 
   const metrics = useMemo(() => {
-    const totalStalls = stalls.length;
-    const occupied = stalls.filter((s) => s.status === "Occupied" || s.assignedVendorId).length;
-    const vacant = stalls.filter((s) => s.status === "Vacant").length;
-    const delinquent = stalls.filter((s) => (s.overdueStatus || s.currentBalance > 0) && s.status !== "Paid").length;
-    const totalCollectible = stalls.reduce((acc, curr) => acc + (curr.currentBalance || 0), 0);
+    // Only calculate metrics for non-archived stalls
+    const activeStallsList = stalls.filter(s => (s as any).leaseStatus !== "Archived");
+    const totalStalls = activeStallsList.length;
+    const occupied = activeStallsList.filter((s) => s.status === "Occupied" || s.assignedVendorId).length;
+    const vacant = activeStallsList.filter((s) => s.status === "Vacant").length;
+    const delinquent = activeStallsList.filter((s) => (s.overdueStatus || s.currentBalance > 0) && s.status !== "Paid").length;
+    const totalCollectible = activeStallsList.reduce((acc, curr) => acc + (curr.currentBalance || 0), 0);
     const occupancyRate = totalStalls > 0 ? ((occupied / totalStalls) * 100).toFixed(1) : "0.0";
 
     return { totalStalls, occupied, vacant, delinquent, totalCollectible, occupancyRate };
   }, [stalls]);
 
   const availableBillingStalls = useMemo(() => {
-    return stalls.filter((s) => s.status === "Occupied" && s.assignedVendorId);
+    return stalls.filter((s) => (s as any).leaseStatus !== "Archived" && s.status === "Occupied" && s.assignedVendorId);
   }, [stalls]);
 
   const availableSurchargeStalls = useMemo(() => {
-    return stalls.filter((s) => s.currentBalance > 0);
+    return stalls.filter((s) => (s as any).leaseStatus !== "Archived" && s.currentBalance > 0);
   }, [stalls]);
 
   const filteredStalls = useMemo(() => {
     return stalls.filter((stall) => {
+      const isArchived = (stall as any).leaseStatus === "Archived";
+
+      // Filter by Tab
+      if (activeTab === "Active" && isArchived) return false;
+      if (activeTab === "Archived" && !isArchived) return false;
+
       const matchesBranch = selectedBranch === "All" || stall.marketBranch === selectedBranch;
       const isDelinquent = (stall.overdueStatus || stall.currentBalance > 0) && stall.currentBalance > 0 && stall.status !== "Paid";
       const matchesStatus =
@@ -143,7 +152,7 @@ export default function MarketStallsView({
 
       return matchesBranch && matchesStatus && matchesSearch;
     });
-  }, [stalls, selectedBranch, selectedStatus, searchTerm]);
+  }, [stalls, selectedBranch, selectedStatus, searchTerm, activeTab]);
 
   const handleOpenBillingModal = () => {
     const eligibleIds = availableBillingStalls.map((s) => s.id);
@@ -186,7 +195,7 @@ export default function MarketStallsView({
       }
       return stall;
     });
-    
+
     const resolvedStalls = await Promise.all(updated);
     setStalls(resolvedStalls);
     setIsBillingModalOpen(false);
@@ -377,7 +386,7 @@ export default function MarketStallsView({
   const handleWaivePenalty = async (stall: StallRecord) => {
     if (confirm(`Waive penalties for ${stall.stallNumber}?`)) {
       const newBal = Math.max(0, stall.currentBalance - (stall.accumulatedPenalty || 0));
-      
+
       await updateLease({
         leaseId: (stall as any).leaseId || stall.id,
         firstName: stall.vendorName?.split(" ")[0] || "",
@@ -409,18 +418,74 @@ export default function MarketStallsView({
     }
   };
 
-  const handleDeleteStallLocal = async (id: string, stall: StallRecord) => {
-    if (confirm("Are you sure you want to remove this physical stall record?")) {
+  // Archive (Soft Delete)
+  const handleSoftDeleteStall = async (id: string, stall: StallRecord) => {
+    if (confirm("Are you sure you want to move this stall to the Archiver?")) {
       const leaseId = (stall as any).leaseId || id;
-      await deleteLease(leaseId);
-      setStalls(stalls.filter((s) => s.id !== id));
-      if (onDeleteRecord) onDeleteRecord(id);
+      try {
+        await updateLease({
+          leaseId: leaseId,
+          firstName: stall.vendorName?.split(" ")[0] || "",
+          lastName: stall.vendorName?.split(" ").slice(1).join(" ") || "",
+          marketName: stall.marketBranch,
+          section: stall.marketSection,
+          stallNumber: stall.stallNumber,
+          leaseStatus: "Archived" as any, // FIXED: Type assertion to bypass strict type checking
+          amountDue: stall.currentBalance,
+          helperApprovalStatus: "Terminated",
+          advancePaymentStatus: "N/A",
+          paymentStatus: stall.currentBalance === 0 ? "Paid" : "Pending Payment",
+        });
+        setStalls(stalls.map(s => s.id === id ? { ...s, leaseStatus: "Archived" as any } : s));
+      } catch (err) {
+        console.error("Failed to archive stall:", err);
+      }
+    }
+  };
+
+  // Restore from Archive
+  const handleRestoreStall = async (id: string, stall: StallRecord) => {
+    if (confirm(`Are you sure you want to restore Stall ${stall.stallNumber} to active records?`)) {
+      const leaseId = (stall as any).leaseId || id;
+      try {
+        await updateLease({
+          leaseId: leaseId,
+          firstName: stall.vendorName?.split(" ")[0] || "",
+          lastName: stall.vendorName?.split(" ").slice(1).join(" ") || "",
+          marketName: stall.marketBranch,
+          section: stall.marketSection,
+          stallNumber: stall.stallNumber,
+          leaseStatus: "Inactive", // Sets back to an active record state (Vacant)
+          amountDue: stall.currentBalance,
+          helperApprovalStatus: "Pending",
+          advancePaymentStatus: "N/A",
+          paymentStatus: stall.currentBalance === 0 ? "Paid" : "Pending Payment",
+        });
+        setStalls(stalls.map(s => s.id === id ? { ...s, leaseStatus: "Inactive" as any, status: "Vacant" as StallStatus } : s));
+      } catch (err) {
+        console.error("Failed to restore stall:", err);
+      }
+    }
+  };
+
+  // Hard Delete (Final)
+  const handleFinalDeleteStall = async (id: string, stall: StallRecord) => {
+    if (confirm("WARNING: Are you sure you want to PERMANENTLY delete this stall? This action will remove it from the database and cannot be undone.")) {
+      const leaseId = (stall as any).leaseId || id;
+      try {
+        await deleteLease(leaseId);
+        setStalls(stalls.filter((s) => s.id !== id));
+        if (onDeleteRecord) onDeleteRecord(id);
+      } catch (err) {
+        console.error("Failed to delete stall permanently:", err);
+      }
     }
   };
 
   const handleExportCSV = () => {
+    const activeStallsList = stalls.filter(s => (s as any).leaseStatus !== "Archived");
     const headers = ["Stall No", "Branch", "Section", "Status", "Vendor Name", "Base Rate", "Balance Due", "Penalty"];
-    const rows = stalls.map((s) => [
+    const rows = activeStallsList.map((s) => [
       `"${s.stallNumber}"`,
       `"${s.marketBranch}"`,
       `"${s.marketSection}"`,
@@ -493,7 +558,7 @@ export default function MarketStallsView({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
         <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs">
           <div className="flex justify-between items-start">
             <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Total Registered Stalls</p>
@@ -554,10 +619,33 @@ export default function MarketStallsView({
         </div>
       </div>
 
+      {/* Tabs Navigation */}
+      <div className="flex space-x-1 bg-slate-200/50 dark:bg-slate-800/50 p-1.5 rounded-xl w-fit mb-6">
+        <button
+          onClick={() => setActiveTab("Active")}
+          className={`px-5 py-2.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${activeTab === "Active"
+              ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
+              : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+            }`}
+        >
+          <i className="fa-solid fa-list-check mr-1.5"></i> Active Stalls
+        </button>
+        <button
+          onClick={() => setActiveTab("Archived")}
+          className={`px-5 py-2.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${activeTab === "Archived"
+              ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
+              : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+            }`}
+        >
+          <i className="fa-solid fa-box-archive mr-1.5"></i> Archiver
+        </button>
+      </div>
+
       <section className="bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-xs space-y-5">
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
           <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <i className="fa-solid fa-building-columns text-blue-600 text-sm"></i> Master Market Stall Directory
+            <i className={`fa-solid ${activeTab === "Active" ? "fa-building-columns text-blue-600" : "fa-box-archive text-slate-500"} text-sm`}></i>
+            {activeTab === "Active" ? "Master Market Stall Directory" : "Archived Stalls Database"}
           </h3>
 
           <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
@@ -624,9 +712,11 @@ export default function MarketStallsView({
                   <td colSpan={7} className="text-center py-16 text-slate-400 italic">
                     <div className="flex flex-col items-center justify-center space-y-2">
                       <div className="p-4 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 mb-1">
-                        <i className="fa-solid fa-folder-open text-xl"></i>
+                        <i className={`fa-solid ${activeTab === "Active" ? "fa-folder-open" : "fa-box-archive"} text-xl`}></i>
                       </div>
-                      <p className="text-xs font-medium text-slate-600 dark:text-slate-300">No stall records found</p>
+                      <p className="text-xs font-medium text-slate-600 dark:text-slate-300">
+                        {activeTab === "Active" ? "No active stall records found" : "No archived stalls found"}
+                      </p>
                       <p className="text-[11px] text-slate-400">Try checking your search keyword or filters.</p>
                     </div>
                   </td>
@@ -676,63 +766,83 @@ export default function MarketStallsView({
 
                     <td className="p-4 text-center">
                       <span
-                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold border ${
-                          (stall.overdueStatus || stall.status === "Delinquent") && stall.currentBalance > 0 && stall.status !== "Paid"
-                            ? "bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-900"
-                            : stall.status === "Occupied"
-                            ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900"
-                            : stall.status === "Paid"
-                            ? "bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-900"
-                            : "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-900"
-                        }`}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold border ${activeTab === "Archived"
+                            ? "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-700"
+                            : (stall.overdueStatus || stall.status === "Delinquent") && stall.currentBalance > 0 && stall.status !== "Paid"
+                              ? "bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-900"
+                              : stall.status === "Occupied"
+                                ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900"
+                                : stall.status === "Paid"
+                                  ? "bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-900"
+                                  : "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-900"
+                          }`}
                       >
-                        <span className={`h-1.5 w-1.5 rounded-full ${
-                          (stall.overdueStatus || stall.status === "Delinquent") && stall.currentBalance > 0 && stall.status !== "Paid" ? "bg-rose-500" :
-                          stall.status === "Occupied" ? "bg-emerald-500" : stall.status === "Paid" ? "bg-indigo-500" : "bg-amber-500"
-                        }`}></span>
-                        {(stall.overdueStatus || stall.status === "Delinquent") && stall.currentBalance > 0 && stall.status !== "Paid" ? "Delinquent" : stall.status}
+                        <span className={`h-1.5 w-1.5 rounded-full ${activeTab === "Archived" ? "bg-slate-500" :
+                            (stall.overdueStatus || stall.status === "Delinquent") && stall.currentBalance > 0 && stall.status !== "Paid" ? "bg-rose-500" :
+                              stall.status === "Occupied" ? "bg-emerald-500" : stall.status === "Paid" ? "bg-indigo-500" : "bg-amber-500"
+                          }`}></span>
+                        {activeTab === "Archived" ? "Archived" : (stall.overdueStatus || stall.status === "Delinquent") && stall.currentBalance > 0 && stall.status !== "Paid" ? "Delinquent" : stall.status}
                       </span>
                     </td>
 
                     <td className="p-4 text-center">
                       <div className="flex items-center justify-center gap-2">
-                        {!stall.assignedVendorId ? (
-                          <button
-                            onClick={() => {
-                              setSelectedStall(stall);
-                              setIsAssignLeaseOpen(true);
-                            }}
-                            className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-3.5 py-1.5 rounded-xl transition-all cursor-pointer shadow-xs flex items-center gap-1.5"
-                          >
-                            <i className="fa-solid fa-file-contract text-[10px]"></i> Assign Lease
-                          </button>
+                        {activeTab === "Active" ? (
+                          <>
+                            {!stall.assignedVendorId ? (
+                              <button
+                                onClick={() => {
+                                  setSelectedStall(stall);
+                                  setIsAssignLeaseOpen(true);
+                                }}
+                                className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-3.5 py-1.5 rounded-xl transition-all cursor-pointer shadow-xs flex items-center gap-1.5"
+                              >
+                                <i className="fa-solid fa-file-contract text-[10px]"></i> Assign
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleTerminateLease(stall)}
+                                className="bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 font-medium px-3.5 py-1.5 rounded-xl transition-all cursor-pointer border border-rose-200 dark:border-rose-900 flex items-center gap-1.5"
+                              >
+                                <i className="fa-solid fa-ban text-[10px]"></i> Terminate
+                              </button>
+                            )}
+
+                            {(stall.accumulatedPenalty || 0) > 0 && (
+                              <button
+                                onClick={() => handleWaivePenalty(stall)}
+                                className="bg-amber-50 hover:bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 font-medium px-3 py-1.5 rounded-xl transition-all cursor-pointer border border-amber-200 dark:border-amber-900 flex items-center gap-1"
+                                title="Waive Penalty"
+                              >
+                                <i className="fa-solid fa-percent text-[10px]"></i> Waive
+                              </button>
+                            )}
+
+                            <button
+                              onClick={() => handleSoftDeleteStall(stall.id, stall)}
+                              className="bg-slate-100 hover:bg-slate-200 hover:text-slate-800 text-slate-500 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-200 font-medium px-3 py-1.5 rounded-xl transition-all cursor-pointer border border-slate-200/80 dark:border-slate-700 flex items-center gap-1.5"
+                              title="Archive Stall"
+                            >
+                              <i className="fa-solid fa-box-archive text-[11px]"></i>
+                              <span>Archive</span>
+                            </button>
+                          </>
                         ) : (
-                          <button
-                            onClick={() => handleTerminateLease(stall)}
-                            className="bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 font-medium px-3.5 py-1.5 rounded-xl transition-all cursor-pointer border border-rose-200 dark:border-rose-900 flex items-center gap-1.5"
-                          >
-                            <i className="fa-solid fa-ban text-[10px]"></i> Terminate
-                          </button>
+                          <>
+                            <button
+                              onClick={() => handleRestoreStall(stall.id, stall)}
+                              className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 font-medium px-3.5 py-1.5 rounded-xl transition-all cursor-pointer border border-emerald-200 dark:border-emerald-900 flex items-center gap-1.5"
+                            >
+                              <i className="fa-solid fa-rotate-left text-[10px]"></i> Restore
+                            </button>
+                            <button
+                              onClick={() => handleFinalDeleteStall(stall.id, stall)}
+                              className="bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 font-medium px-3.5 py-1.5 rounded-xl transition-all cursor-pointer border border-rose-200 dark:border-rose-900 flex items-center gap-1.5"
+                            >
+                              <i className="fa-solid fa-trash-can text-[10px]"></i> Delete (Final)
+                            </button>
+                          </>
                         )}
-
-                        {(stall.accumulatedPenalty || 0) > 0 && (
-                          <button
-                            onClick={() => handleWaivePenalty(stall)}
-                            className="bg-amber-50 hover:bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 font-medium px-3 py-1.5 rounded-xl transition-all cursor-pointer border border-amber-200 dark:border-amber-900 flex items-center gap-1"
-                            title="Waive Penalty"
-                          >
-                            <i className="fa-solid fa-percent text-[10px]"></i> Waive
-                          </button>
-                        )}
-
-                        <button
-                          onClick={() => handleDeleteStallLocal(stall.id, stall)}
-                          className="bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-500 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-rose-950/40 dark:hover:text-rose-400 font-medium px-3 py-1.5 rounded-xl transition-all cursor-pointer border border-slate-200/80 dark:border-slate-700 flex items-center gap-1.5"
-                          title="Delete Stall"
-                        >
-                          <i className="fa-solid fa-trash-can text-[11px]"></i>
-                          <span>Delete</span>
-                        </button>
                       </div>
                     </td>
                   </tr>
