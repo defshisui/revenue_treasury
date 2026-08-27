@@ -509,6 +509,7 @@ export default function CityOwnedMarketAdmin({
               <option value="For Termination">For Termination</option>
               <option value="Terminated">Terminated</option>
               <option value="Inactive">Inactive</option>
+              <option value="Archived">Archived</option>
             </select>
           </div>
 
@@ -624,6 +625,12 @@ export default function CityOwnedMarketAdmin({
                           </>
                         ) : (
                           <>
+                            <button
+                              onClick={() => handleOpenEdit(item)}
+                              className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-3.5 py-1.5 rounded-xl transition-all cursor-pointer shadow-xs flex items-center gap-1.5"
+                            >
+                              Review
+                            </button>
                             <button
                               onClick={() => handleRestore(item)}
                               className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 font-medium px-3.5 py-1.5 rounded-xl transition-all cursor-pointer border border-emerald-200 dark:border-emerald-900 flex items-center gap-1.5"
@@ -750,6 +757,7 @@ export default function CityOwnedMarketAdmin({
                     <option value="For Termination">For Termination</option>
                     <option value="Terminated">Terminated</option>
                     <option value="Inactive">Inactive</option>
+                    <option value="Archived">Archived</option>
                   </select>
                 </div>
 
