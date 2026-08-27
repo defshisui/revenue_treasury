@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLockout } from "../hooks/useLockout";
 import { useLogin } from "../hooks/useLogin";
 import { useRegister } from "../hooks/useRegister";
@@ -25,6 +25,26 @@ export default function Login() {
     regSuccess, isWorkerNotice, setIsWorkerNotice,
     handleNextStep, handlePrevStep, handleFinalRegisterSubmit, handleWorkerClick
   } = useRegister(() => setIsRegistering(false));
+
+  // ==========================================
+  // PREVENT BACK BUTTON AFTER LOGOUT FIX
+  // ==========================================
+  useEffect(() => {
+    // Push a state into the history stack so there's a "forward" state
+    window.history.pushState(null, "", window.location.href);
+
+    // When the user clicks "Back", intercept the popstate event and immediately push them back to the login page
+    const handleBackButton = () => {
+      window.history.pushState(null, "", window.location.href);
+    };
+
+    window.addEventListener("popstate", handleBackButton);
+
+    // Cleanup listener when the component unmounts (e.g., after successful login)
+    return () => {
+      window.removeEventListener("popstate", handleBackButton);
+    };
+  }, []);
 
   return (
     <main className="min-h-screen w-full grid grid-cols-1 lg:grid-cols-2 bg-[#F4F6F8]">
