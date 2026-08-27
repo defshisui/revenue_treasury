@@ -1,24 +1,38 @@
+// src/hooks/usePermissions.ts
 import { useCallback } from "react";
-import type { Role } from "../types/treasury";
 
-export function usePermissions(activeRole: Role) {
-  const canCreate = useCallback((module: string) => {
-    if (activeRole === "Administrator" || activeRole === "Municipal Treasurer") return true;
-    if (activeRole === "Auditor") return false;
-    if (activeRole === "Property Assessment Officer" && module === "RPT") return true;
-    if (activeRole === "Business Permit Officer" && module === "Business") return true;
-    if (activeRole === "Revenue Collector" && module === "Payments") return true;
-    if (activeRole === "Data Encoder") return true;
+export function usePermissions(activeRole: string) {
+  // Normalize the role to lowercase to ensure it matches the database perfectly
+  const normalizedRole = (activeRole || "").toLowerCase();
+
+  // Prefix with underscore to fix the "value is never read" warning
+  const canCreate = useCallback((_module?: string) => {
+    // Admins and staff can create/process records; Auditors cannot.
+    if (normalizedRole === "admin") return true;
+    if (normalizedRole === "treasury-staff") return true;
+    if (normalizedRole === "auditor") return false;
     return false;
-  }, [activeRole]);
+  }, [normalizedRole]);
 
   const canApprove = useCallback(() => {
-    return ["Administrator", "Municipal Treasurer", "Assistant Treasurer"].includes(activeRole);
-  }, [activeRole]);
+    // Admins and staff can approve applications
+    return ["admin", "treasury-staff"].includes(normalizedRole);
+  }, [normalizedRole]);
 
   const canDelete = useCallback(() => {
-    return ["Administrator", "Municipal Treasurer"].includes(activeRole);
-  }, [activeRole]);
+    // Strictly ONLY admins can delete records (like deleting users or applications)
+    return ["admin"].includes(normalizedRole);
+  }, [normalizedRole]);
 
-  return { canCreate, canApprove, canDelete };
+  const canViewAudit = useCallback(() => {
+    // Admins and Auditors can view the system audit trail
+    return ["admin", "auditor"].includes(normalizedRole);
+  }, [normalizedRole]);
+
+  const canManageUsers = useCallback(() => {
+    // Strictly ONLY admins can access the User Management tab
+    return ["admin"].includes(normalizedRole);
+  }, [normalizedRole]);
+
+  return { canCreate, canApprove, canDelete, canViewAudit, canManageUsers };
 }
