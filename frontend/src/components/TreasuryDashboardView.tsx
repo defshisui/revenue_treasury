@@ -40,11 +40,14 @@ export interface TreasuryMetrics {
 }
 
 export interface TreasuryDashboardViewProps {
+  metrics?: TreasuryMetrics; // Restored for parent compatibility
   transactions?: TransactionRecord[];
   marketStalls?: StallRecord[];
   isCollapsed: boolean;
+  onNavigate?: (view: string) => void; // Restored for parent compatibility
   fetchTransactions?: () => Promise<TransactionRecord[]>;
   fetchStalls?: () => Promise<StallRecord[]>;
+  fetchMetrics?: () => Promise<TreasuryMetrics>; // Restored for parent compatibility
 }
 
 const PAYMENT_OPTION_COLORS: Record<string, string> = {
