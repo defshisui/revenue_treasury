@@ -28,6 +28,7 @@ export default function TreasuryHeader({
 }: TreasuryHeaderProps) {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isNotifMenuOpen, setIsNotifMenuOpen] = useState(false);
+  const [isViewAllModalOpen, setIsViewAllModalOpen] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
   // Keep track of read notification IDs so they don't reset when polling fetches fresh data
@@ -176,10 +177,9 @@ export default function TreasuryHeader({
   };
 
   const handleViewAll = () => {
-    markAllAsRead(); // Mark all as read to remove the red dot
-    setIsNotifMenuOpen(false); // Close the dropdown
-    // If you have a dedicated notifications page, you could add:
-    // navigate('/notifications');
+    markAllAsRead();
+    setIsNotifMenuOpen(false);
+    setIsViewAllModalOpen(true); // Open the full-screen modal
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;
@@ -344,7 +344,7 @@ export default function TreasuryHeader({
                   sessionStorage.removeItem('currentUser');
                   sessionStorage.removeItem('user');
                   notify("You have been logged out.");
-                  navigate("/", { replace: true });
+                  navigate("/login", { replace: true });
                 }}
                 className="w-full text-left px-4 py-2.5 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
               >
@@ -354,6 +354,63 @@ export default function TreasuryHeader({
           )}
         </div>
       </div>
+
+      {/* VIEW ALL NOTIFICATIONS MODAL */}
+      {isViewAllModalOpen && (
+        <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-2xl max-h-[85vh] shadow-2xl flex flex-col overflow-hidden">
+
+            <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
+              <h3 className="font-bold text-slate-900 dark:text-white text-base flex items-center gap-2">
+                <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+                {activeRole.toLowerCase() === 'admin' ? 'All Security & Access Alerts' : 'All System Notifications'}
+              </h3>
+              <button
+                onClick={() => setIsViewAllModalOpen(false)}
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 font-bold text-lg cursor-pointer transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-5 bg-slate-50/50 dark:bg-slate-950/50">
+              {notifications.length === 0 ? (
+                <p className="text-center text-slate-500 dark:text-slate-400 text-sm py-12 italic">
+                  No notifications available in your history.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {notifications.map((notif) => (
+                    <div
+                      key={notif.id}
+                      className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col gap-1.5"
+                    >
+                      <p className="text-sm text-slate-900 dark:text-slate-100 font-medium leading-relaxed">
+                        {notif.message}
+                      </p>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono flex items-center gap-1.5">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        {notif.time}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex justify-end">
+              <button
+                onClick={() => setIsViewAllModalOpen(false)}
+                className="px-5 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold rounded-xl cursor-pointer transition-colors"
+              >
+                Close Window
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 }
