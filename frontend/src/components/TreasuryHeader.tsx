@@ -30,6 +30,9 @@ export default function TreasuryHeader({
   const [isNotifMenuOpen, setIsNotifMenuOpen] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
+  // Keep track of read notification IDs so they don't reset when polling fetches fresh data
+  const readIdsRef = useRef<Set<string>>(new Set());
+
   // Updated state to include avatar
   const [adminUser, setAdminUser] = useState<{ fullname: string; firstName: string; initials: string; avatar: string | null; } | null>(null);
 
@@ -112,7 +115,8 @@ export default function TreasuryHeader({
             id: log.id,
             message: log.details || log.action,
             time: log.timestamp || "Recently",
-            read: false
+            // Check if this ID was previously marked as read
+            read: readIdsRef.current.has(log.id)
           })));
         } else {
           throw new Error("Failed to fetch logs");
@@ -133,13 +137,16 @@ export default function TreasuryHeader({
           return activeRole.toLowerCase() === 'admin' ? isAccountRelated : !isAccountRelated;
         });
 
-        setNotifications(filtered.map(log => ({ ...log, read: false })));
+        setNotifications(filtered.map(log => ({
+          ...log,
+          read: readIdsRef.current.has(log.id) // Ensure mock data respects the read status too
+        })));
       }
     };
 
     fetchNotifications();
 
-    // Poll every 60 seconds (optional)
+    // Poll every 60 seconds
     const intervalId = setInterval(fetchNotifications, 60000);
     return () => clearInterval(intervalId);
   }, [activeRole]);
@@ -159,7 +166,20 @@ export default function TreasuryHeader({
   }, []);
 
   const markAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    setNotifications(prev => {
+      const updated = prev.map(n => {
+        readIdsRef.current.add(n.id); // Save the ID to the reference set
+        return { ...n, read: true };
+      });
+      return updated;
+    });
+  };
+
+  const handleViewAll = () => {
+    markAllAsRead(); // Mark all as read to remove the red dot
+    setIsNotifMenuOpen(false); // Close the dropdown
+    // If you have a dedicated notifications page, you could add:
+    // navigate('/notifications');
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;
@@ -215,7 +235,7 @@ export default function TreasuryHeader({
           </button>
 
           {isNotifMenuOpen && (
-            <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 py-2 z-50 overflow-hidden flex flex-col max-h-96">
+            <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 py-2 z-50 overflow-hidden flex flex-col max-h-[28rem]">
               <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
                 <span className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
                   {activeRole.toLowerCase() === 'admin' ? 'Security Alerts' : 'System Notifications'}
@@ -253,6 +273,18 @@ export default function TreasuryHeader({
                   </div>
                 )}
               </div>
+
+              {/* View All Button */}
+              {notifications.length > 0 && (
+                <div className="border-t border-slate-100 dark:border-slate-800 p-2 bg-white dark:bg-slate-900">
+                  <button
+                    onClick={handleViewAll}
+                    className="w-full text-center text-xs font-semibold text-blue-600 dark:text-blue-400 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg cursor-pointer transition-colors"
+                  >
+                    View All Notifications
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -307,13 +339,12 @@ export default function TreasuryHeader({
               <button
                 onClick={() => {
                   setIsProfileMenuOpen(false);
-                  // Using your existing logout logic here
                   localStorage.removeItem('currentUser');
                   localStorage.removeItem('user');
                   sessionStorage.removeItem('currentUser');
                   sessionStorage.removeItem('user');
                   notify("You have been logged out.");
-                  navigate("/");
+                  navigate("/", { replace: true });
                 }}
                 className="w-full text-left px-4 py-2.5 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
               >
