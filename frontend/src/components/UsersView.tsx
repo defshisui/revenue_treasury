@@ -1,14 +1,16 @@
+// src/components/UsersView.tsx
+
 import { useState, useEffect } from "react";
 import type { UserRecord } from "../types/treasury";
 import { API_BASE_URL } from "../config/api";
 
-export default function UsersView({ 
-  records: initialRecords = [], 
-  isCollapsed = false 
-}: { 
-  records?: UserRecord[]; 
-  isCollapsed?: boolean 
-}) { 
+export default function UsersView({
+  records: initialRecords = [],
+  isCollapsed = false
+}: {
+  records?: UserRecord[];
+  isCollapsed?: boolean
+}) {
   const [records, setRecords] = useState<UserRecord[]>(initialRecords);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -44,10 +46,10 @@ export default function UsersView({
   }, [API_BASE_URL]);
 
   const filteredRecords = records.filter((record) => {
-    const matchesSearch = 
+    const matchesSearch =
       record.fullname.toLowerCase().includes(searchQuery.toLowerCase()) ||
       record.username.toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     const matchesRole = selectedRole === "ALL" || record.role === selectedRole;
 
     return matchesSearch && matchesRole;
@@ -87,6 +89,26 @@ export default function UsersView({
     }
   };
 
+  const handleDeleteUser = async (id: string) => {
+    if (!window.confirm("Are you sure you want to permanently delete this user account?")) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/users/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        // Remove the deleted user from the local state
+        setRecords(prevRecords => prevRecords.filter(record => record.id !== id));
+      } else {
+        alert("Failed to delete user account on the server.");
+      }
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      alert("Network error while trying to delete user.");
+    }
+  };
+
   const getRoleBadgeStyle = (role: string) => {
     switch (role.toLowerCase()) {
       case "admin":
@@ -102,7 +124,7 @@ export default function UsersView({
   const uniqueRoles = ["ALL", ...Array.from(new Set(records.map(r => r.role)))];
 
   return (
-    <main 
+    <main
       className={`
         min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-sans p-4 sm:p-8 transition-all duration-300
         ${isCollapsed ? "ml-20" : "ml-64"}
@@ -131,7 +153,7 @@ export default function UsersView({
         {/* Filters and Search Bar */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-sm">
           <div className="sm:col-span-2">
-            <input 
+            <input
               type="text"
               placeholder="Search by full name or username/email..."
               value={searchQuery}
@@ -174,6 +196,7 @@ export default function UsersView({
                     <th className="p-4 text-slate-900 dark:text-white font-bold">Username / Email</th>
                     <th className="p-4 text-slate-900 dark:text-white font-bold">Assigned Role</th>
                     <th className="p-4 text-slate-900 dark:text-white font-bold">Status</th>
+                    <th className="p-4 text-slate-900 dark:text-white font-bold text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
@@ -191,6 +214,14 @@ export default function UsersView({
                           {record.status || "Active"}
                         </span>
                       </td>
+                      <td className="p-4 text-right">
+                        <button
+                          onClick={() => handleDeleteUser(record.id)}
+                          className="text-xs bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 text-rose-700 dark:text-rose-400 font-semibold px-3 py-1.5 rounded-lg border border-rose-200 dark:border-rose-500/30 transition-colors cursor-pointer"
+                        >
+                          Delete
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -206,7 +237,7 @@ export default function UsersView({
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 w-full max-w-md shadow-2xl space-y-5">
             <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-3">
               <h3 className="font-bold text-slate-900 dark:text-white text-base">Add New Treasury Personnel</h3>
-              <button 
+              <button
                 onClick={() => setIsAddModalOpen(false)}
                 className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 font-bold cursor-pointer"
               >
@@ -217,7 +248,7 @@ export default function UsersView({
             <form onSubmit={handleCreateUser} className="space-y-4">
               <div className="space-y-1">
                 <label className="text-[11px] uppercase tracking-wider font-bold text-slate-700 dark:text-slate-300">Full Name</label>
-                <input 
+                <input
                   type="text"
                   required
                   placeholder="e.g. Juan Dela Cruz"
@@ -229,7 +260,7 @@ export default function UsersView({
 
               <div className="space-y-1">
                 <label className="text-[11px] uppercase tracking-wider font-bold text-slate-700 dark:text-slate-300">Email / Username</label>
-                <input 
+                <input
                   type="email"
                   required
                   placeholder="e.g. juan.delacruz@lgu.gov.ph"
@@ -241,7 +272,7 @@ export default function UsersView({
 
               <div className="space-y-1">
                 <label className="text-[11px] uppercase tracking-wider font-bold text-slate-700 dark:text-slate-300">Initial Password</label>
-                <input 
+                <input
                   type="password"
                   required
                   placeholder="••••••••"
