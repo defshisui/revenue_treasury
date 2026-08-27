@@ -11,7 +11,11 @@ import {
 } from '../services/realpropertytaxService';
 import { API_BASE_URL } from '../config/api';
 
-interface ExtendedApplicationRecord extends Omit<RPTApplicationRecord, 'documents'> {
+// Extend status type to support Archiver
+type ExtendedStatusType = StatusType | 'Archived';
+
+interface ExtendedApplicationRecord extends Omit<RPTApplicationRecord, 'documents' | 'status'> {
+  status: ExtendedStatusType;
   referenceNumber: string;
   applicantEmail: string;
   applicantPhone: string;
@@ -83,7 +87,10 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('ALL');
 
   const [selectedAppIds, setSelectedAppIds] = useState<string[]>([]);
+
+  // Tab States
   const [mainViewTab, setMainViewTab] = useState<'queue' | 'citizenAudit'>('queue');
+  const [queueTab, setQueueTab] = useState<'Active' | 'Archived'>('Active');
   const [detailTab, setDetailTab] = useState<'overview' | 'audit' | 'notifications'>('overview');
 
   // Document Preview Lightbox State
@@ -200,7 +207,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
 
   const stats: AdminStats = useMemo(() => {
     return {
-      totalApplications: applications.length,
+      totalApplications: applications.filter(a => a.status !== 'Archived').length,
       pendingReview: applications.filter(
         (a) => a.status === 'Under Evaluation'
       ).length,
@@ -224,6 +231,11 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
 
   const filteredApplications = useMemo(() => {
     return applications.filter((app) => {
+      // Filter by Active/Archived queue tab
+      const isArchived = app.status === 'Archived';
+      if (queueTab === 'Active' && isArchived) return false;
+      if (queueTab === 'Archived' && !isArchived) return false;
+
       const matchesSearch =
         app.referenceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
         app.applicantName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -237,7 +249,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
 
       return matchesSearch && matchesCategory && matchesStatus;
     });
-  }, [applications, searchTerm, selectedCategory, selectedStatusFilter]);
+  }, [applications, searchTerm, selectedCategory, selectedStatusFilter, queueTab]);
 
   const persistChanges = async (updatedList: ExtendedApplicationRecord[]) => {
     setApplications(updatedList);
@@ -247,7 +259,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         try {
           const servicePayload: RPTApplicationRecord = {
             id: target.id,
-            status: target.status,
+            status: target.status as StatusType,
             applicantName: target.applicantName,
             documents: target.documents.map(d => ({ name: d.name, url: d.url || '' })),
             controlNumber: target.referenceNumber,
@@ -267,9 +279,37 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     }
   };
 
+  const handleArchiveApplication = (appId: string) => {
+    const targetApp = applications.find(a => a.id === appId);
+    if (!targetApp) return;
+
+    if (window.confirm(`Are you sure you want to move application ${targetApp.referenceNumber} to the Archiver?`)) {
+      const updatedList = applications.map(app =>
+        app.id === appId ? { ...app, status: 'Archived' as ExtendedStatusType } : app
+      );
+      persistChanges(updatedList);
+      triggerToast(`Application ${targetApp.referenceNumber} archived.`, 'warning');
+    }
+  };
+
+  const handleRestoreApplication = (appId: string) => {
+    const targetApp = applications.find(a => a.id === appId);
+    if (!targetApp) return;
+
+    if (window.confirm(`Restore application ${targetApp.referenceNumber} to Active Queue?`)) {
+      const updatedList = applications.map(app =>
+        app.id === appId ? { ...app, status: 'Under Evaluation' as ExtendedStatusType } : app
+      );
+      persistChanges(updatedList);
+      triggerToast(`Application ${targetApp.referenceNumber} restored.`, 'success');
+    }
+  };
+
   const handleDeleteApplication = async (appId: string) => {
     const targetApp = applications.find(a => a.id === appId);
     if (!targetApp) return;
+
+    if (!window.confirm(`WARNING: Permanently delete application ${targetApp.referenceNumber}?`)) return;
 
     try {
       const response = await fetch(`${API_BASE_URL}/citizen-rpt-applications/${appId}`, {
@@ -289,7 +329,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         setSelectedAppId('');
       }
 
-      triggerToast(`Application ${targetApp.referenceNumber} has been deleted successfully.`, 'warning');
+      triggerToast(`Application ${targetApp.referenceNumber} deleted successfully.`, 'error');
     } catch (err) {
       console.error("Delete error:", err);
       triggerToast("Failed to delete application from the server database.", "error");
@@ -352,7 +392,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     }
   };
 
-  const handleUpdateStatus = (newStatus: StatusType) => {
+  const handleUpdateStatus = (newStatus: ExtendedStatusType) => {
     if (!currentApp) return;
 
     const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 16);
@@ -438,7 +478,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
 
     const releasedApp: ExtendedApplicationRecord = {
       ...currentApp,
-      status: 'Digital Certificate Issued' as StatusType,
+      status: 'Digital Certificate Issued',
       digitalRelease: {
         releaseMethod: 'Digital' as const,
         releasedAt: timestamp,
@@ -548,7 +588,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
             >
-              Active Queue ({applications.length})
+              Active Queue ({applications.filter(a => a.status !== 'Archived').length})
             </button>
             <button
               onClick={() => setMainViewTab('citizenAudit')}
@@ -582,11 +622,34 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         </div>
       </div>
 
-      {/* ACTIVE QUEUE VIEW */}
+      {/* ACTIVE QUEUE & ARCHIVER VIEW */}
       {mainViewTab === 'queue' && (
         <div className="flex-1 flex flex-col lg:flex-row overflow-hidden gap-6 h-[calc(100vh-22rem)] min-h-0 w-full">
           <div className="w-full lg:w-[420px] xl:w-[460px] flex-shrink-0 flex flex-col gap-4 min-h-0 h-1/2 lg:h-full">
             <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col gap-3">
+
+              {/* Inner Archiver Tabs styled like the preview button but with slate tones */}
+              <div className="flex gap-2 mb-1">
+                <button
+                  onClick={() => setQueueTab('Active')}
+                  className={`px-4 py-2 text-xs font-semibold rounded-lg border transition-colors cursor-pointer ${queueTab === 'Active'
+                      ? 'bg-slate-100 dark:bg-slate-800/80 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-600 shadow-sm'
+                      : 'bg-transparent text-slate-500 border-transparent hover:bg-slate-50 dark:hover:bg-slate-900'
+                    }`}
+                >
+                  Active Processing
+                </button>
+                <button
+                  onClick={() => setQueueTab('Archived')}
+                  className={`px-4 py-2 text-xs font-semibold rounded-lg border transition-colors cursor-pointer ${queueTab === 'Archived'
+                      ? 'bg-slate-100 dark:bg-slate-800/80 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-600 shadow-sm'
+                      : 'bg-transparent text-slate-500 border-transparent hover:bg-slate-50 dark:hover:bg-slate-900'
+                    }`}
+                >
+                  System Archiver
+                </button>
+              </div>
+
               <input
                 type="text"
                 placeholder="Search Ref No, Applicant, PIN..."
@@ -614,6 +677,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                   <option value="Under Evaluation">Under Evaluation</option>
                   <option value="Field Inspection Scheduled">Field Inspection Scheduled</option>
                   <option value="Approved & Ready for Release">Approved & Ready for Release</option>
+                  {queueTab === 'Archived' && <option value="Archived">Archived</option>}
                 </select>
               </div>
             </div>
@@ -627,7 +691,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                     onChange={toggleSelectAll}
                     className="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
                   />
-                  <span>Queue Masterlist ({filteredApplications.length})</span>
+                  <span>{queueTab === 'Active' ? 'Queue Masterlist' : 'Archived Records'} ({filteredApplications.length})</span>
                 </div>
               </div>
 
@@ -664,19 +728,24 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                               {app.referenceNumber}
                             </span>
                             <div className="flex items-center gap-1.5 flex-shrink-0">
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${app.status === 'Archived'
+                                  ? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-700'
+                                  : 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800'
+                                }`}>
                                 {app.status}
                               </span>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteApplication(app.id);
-                                }}
-                                title="Delete Application"
-                                className="text-slate-400 hover:text-rose-600 p-1 rounded transition-colors cursor-pointer"
-                              >
-                                ✕
-                              </button>
+                              {queueTab === 'Archived' && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteApplication(app.id);
+                                  }}
+                                  title="Delete Application Permanently"
+                                  className="text-slate-400 hover:text-rose-600 p-1 rounded transition-colors cursor-pointer"
+                                >
+                                  ✕
+                                </button>
+                              )}
                             </div>
                           </div>
                           <div className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
@@ -712,22 +781,41 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => handleDeleteApplication(currentApp.id)}
-                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 hover:bg-rose-100 border border-rose-200 dark:border-rose-800 cursor-pointer"
-                    >
-                      Delete Application
-                    </button>
-                    <select
-                      value={currentApp.status}
-                      onChange={(e) => handleUpdateStatus(e.target.value as StatusType)}
-                      className="text-xs font-semibold px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-950 text-slate-800 dark:text-white cursor-pointer"
-                    >
-                      <option value="Under Evaluation">Under Evaluation</option>
-                      <option value="Field Inspection Scheduled">Field Inspection Scheduled</option>
-                      <option value="Approved & Ready for Release">Approved & Ready for Release</option>
-                      <option value="Digital Certificate Issued">Digital Certificate Issued</option>
-                    </select>
+                    {queueTab === 'Active' ? (
+                      <>
+                        <button
+                          onClick={() => handleArchiveApplication(currentApp.id)}
+                          className="px-3.5 py-2.5 text-xs bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 rounded-xl font-semibold cursor-pointer shadow-sm hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors"
+                        >
+                          Archive Application
+                        </button>
+                        <select
+                          value={currentApp.status}
+                          onChange={(e) => handleUpdateStatus(e.target.value as ExtendedStatusType)}
+                          className="text-xs font-semibold px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-950 text-slate-800 dark:text-white cursor-pointer"
+                        >
+                          <option value="Under Evaluation">Under Evaluation</option>
+                          <option value="Field Inspection Scheduled">Field Inspection Scheduled</option>
+                          <option value="Approved & Ready for Release">Approved & Ready for Release</option>
+                          <option value="Digital Certificate Issued">Digital Certificate Issued</option>
+                        </select>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => handleRestoreApplication(currentApp.id)}
+                          className="px-3.5 py-2.5 text-xs bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60 rounded-xl font-semibold cursor-pointer shadow-sm hover:bg-emerald-100 dark:hover:bg-emerald-900 transition-colors"
+                        >
+                          Restore Record
+                        </button>
+                        <button
+                          onClick={() => handleDeleteApplication(currentApp.id)}
+                          className="px-3.5 py-2.5 text-xs bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800/60 rounded-xl font-semibold cursor-pointer shadow-sm hover:bg-rose-100 dark:hover:bg-rose-900 transition-colors"
+                        >
+                          Delete (Final)
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -774,18 +862,22 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                                   >
                                     Preview
                                   </button>
-                                  <button
-                                    onClick={() => handleDocumentStatusChange(doc.id, 'Verified')}
-                                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold cursor-pointer transition-colors"
-                                  >
-                                    Verify
-                                  </button>
-                                  <button
-                                    onClick={() => handleDocumentStatusChange(doc.id, 'Rejected')}
-                                    className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-semibold cursor-pointer shadow-xs transition-colors"
-                                  >
-                                    Reject
-                                  </button>
+                                  {queueTab === 'Active' && (
+                                    <>
+                                      <button
+                                        onClick={() => handleDocumentStatusChange(doc.id, 'Verified')}
+                                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold cursor-pointer transition-colors"
+                                      >
+                                        Verify
+                                      </button>
+                                      <button
+                                        onClick={() => handleDocumentStatusChange(doc.id, 'Rejected')}
+                                        className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-semibold cursor-pointer shadow-xs transition-colors"
+                                      >
+                                        Reject
+                                      </button>
+                                    </>
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -793,14 +885,16 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                         </div>
                       </section>
 
-                      <section className="pt-4 border-t border-slate-200 dark:border-slate-800">
-                        <button
-                          onClick={handleDigitalRelease}
-                          className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs cursor-pointer shadow-md"
-                        >
-                          Approve, Release & Move to Audit Trail
-                        </button>
-                      </section>
+                      {queueTab === 'Active' && (
+                        <section className="pt-4 border-t border-slate-200 dark:border-slate-800">
+                          <button
+                            onClick={handleDigitalRelease}
+                            className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs cursor-pointer shadow-md"
+                          >
+                            Approve, Release & Move to Audit Trail
+                          </button>
+                        </section>
+                      )}
                     </>
                   )}
 
