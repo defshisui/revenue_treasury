@@ -2,6 +2,7 @@
 import { useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import type { Subsystem } from "../types/treasury";
+import { usePermissions } from "../hooks/usePermissions";
 
 // Import the logo directly from the assets folder
 import logo from "../assets/logo-system.png";
@@ -11,9 +12,10 @@ interface TreasurySidebarProps {
   isCollapsed: boolean;
   setIsCollapsed: Dispatch<SetStateAction<boolean>>;
   setActiveTab: Dispatch<SetStateAction<Subsystem>>;
-  canCreate: (module: string) => boolean;
-  canApprove: () => boolean;
-  canDelete: () => boolean;
+  // Keeping these in the interface to prevent breaking parent components passing them
+  canCreate?: (module: string) => boolean;
+  canApprove?: () => boolean;
+  canDelete?: () => boolean;
 }
 
 interface NavItem {
@@ -21,21 +23,17 @@ interface NavItem {
   label: string;
   icon: string;
   hasDropdown?: boolean;
+  isGovernance?: boolean;
 }
 
 const navigationItems: NavItem[] = [
   { id: "dashboard", label: "Treasury Dashboard", icon: "▦" },
   { id: "rpt", label: "Real Property Tax Management", icon: "▥" },
   { id: "business", label: "Business Tax & Permit Management", icon: "▣" },
-  {
-    id: "market",
-    label: "Market Stall Management",
-    icon: "▤",
-    hasDropdown: true,
-  },
-  { id: "users", label: "User & Access Control", icon: "♙" },
-  { id: "audit", label: "Audit Trail Management", icon: "▤" },
-  { id: "reports", label: "Financial Reports", icon: "◔" },
+  { id: "market", label: "Market Stall Management", icon: "▤", hasDropdown: true },
+  { id: "users", label: "User & Access Control", icon: "♙", isGovernance: true },
+  { id: "audit", label: "Audit Trail Management", icon: "▤", isGovernance: true },
+  { id: "reports", label: "Financial Reports", icon: "◔", isGovernance: true },
 ];
 
 export default function TreasurySidebar({
@@ -45,6 +43,19 @@ export default function TreasurySidebar({
   setActiveTab,
 }: TreasurySidebarProps) {
   const [isMarketOpen, setIsMarketOpen] = useState(true);
+
+  // 1. Get the current user's role from local storage
+  const userRole = localStorage.getItem("user_role") || "treasury-staff";
+
+  // 2. Pass it to your updated permissions hook
+  const { canManageUsers, canViewAudit } = usePermissions(userRole);
+
+  // 3. Filter the navigation items dynamically based on the role's permissions
+  const visibleItems = navigationItems.filter(item => {
+    if (item.id === "users") return canManageUsers();
+    if (item.id === "audit") return canViewAudit();
+    return true; // All other tabs remain visible
+  });
 
   const handleTabClick = (item: NavItem) => {
     setActiveTab(item.id);
@@ -103,12 +114,15 @@ export default function TreasurySidebar({
           <p className="text-xs font-semibold uppercase text-slate-400 tracking-wider px-3 mb-2">MODULES</p>
         )}
 
-        {navigationItems.map((item, index) => {
+        {visibleItems.map((item, index) => {
           const isMarketGroup = item.id === "market";
+
+          // Dynamically find where the "Governance" section should start
+          const firstGovernanceIndex = visibleItems.findIndex(i => i.isGovernance);
 
           return (
             <div key={item.id}>
-              {index === 4 && !isCollapsed && (
+              {index === firstGovernanceIndex && !isCollapsed && (
                 <p className="text-xs font-semibold uppercase text-slate-400 tracking-wider px-3 mt-6 mb-2">
                   Governance
                 </p>
@@ -119,8 +133,8 @@ export default function TreasurySidebar({
                 onClick={() => handleTabClick(item)}
                 title={item.label}
                 className={`w-full min-w-0 flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 cursor-pointer ${activeTab === item.id || (isMarketGroup && ["market-city", "hawker"].includes(activeTab))
-                    ? "bg-[#1d4ed8] text-white shadow-sm font-bold"
-                    : "hover:bg-[#1c2541] text-gray-300 hover:text-white"
+                  ? "bg-[#1d4ed8] text-white shadow-sm font-bold"
+                  : "hover:bg-[#1c2541] text-gray-300 hover:text-white"
                   }`}
               >
                 <div className="flex items-center gap-3 min-w-0">
@@ -157,8 +171,8 @@ export default function TreasurySidebar({
                   <button
                     onClick={() => setActiveTab("market-city")}
                     className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors flex items-center justify-between cursor-pointer ${activeTab === "market-city"
-                        ? "bg-[#1d4ed8] text-white font-bold"
-                        : "text-slate-400 hover:text-white hover:bg-[#1c2541]"
+                      ? "bg-[#1d4ed8] text-white font-bold"
+                      : "text-slate-400 hover:text-white hover:bg-[#1c2541]"
                       }`}
                   >
                     <span className="truncate">City-Owned Market</span>
@@ -166,8 +180,8 @@ export default function TreasurySidebar({
                   <button
                     onClick={() => setActiveTab("hawker")}
                     className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors flex items-center justify-between cursor-pointer ${activeTab === "hawker"
-                        ? "bg-[#1d4ed8] text-white font-bold"
-                        : "text-slate-400 hover:text-white hover:bg-[#1c2541]"
+                      ? "bg-[#1d4ed8] text-white font-bold"
+                      : "text-slate-400 hover:text-white hover:bg-[#1c2541]"
                       }`}
                   >
                     <span className="truncate">Hawker Association</span>
