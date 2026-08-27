@@ -544,7 +544,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         marginLeft: isCollapsed ? '80px' : '256px',
         width: isCollapsed ? 'calc(100% - 80px)' : 'calc(100% - 256px)'
       }}
-      className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 p-4 sm:p-6 pt-24 transition-all duration-300 box-border flex flex-col font-sans relative selection:bg-blue-600 selection:text-white"
+      // THIS IS THE FIX: Changed pt-24 to pt-32 to push the layout down properly
+      className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 p-4 sm:p-6 pt-32 transition-all duration-300 box-border flex flex-col font-sans relative selection:bg-blue-600 selection:text-white"
     >
       {toastMessage && (
         <div className="fixed top-20 right-6 z-50 animate-in fade-in slide-in-from-top-4 duration-300">
@@ -633,8 +634,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                 <button
                   onClick={() => setQueueTab('Active')}
                   className={`px-4 py-2 text-xs font-semibold rounded-lg border transition-colors cursor-pointer ${queueTab === 'Active'
-                      ? 'bg-slate-100 dark:bg-slate-800/80 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-600 shadow-sm'
-                      : 'bg-transparent text-slate-500 border-transparent hover:bg-slate-50 dark:hover:bg-slate-900'
+                    ? 'bg-slate-100 dark:bg-slate-800/80 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-600 shadow-sm'
+                    : 'bg-transparent text-slate-500 border-transparent hover:bg-slate-50 dark:hover:bg-slate-900'
                     }`}
                 >
                   Active Processing
@@ -642,8 +643,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                 <button
                   onClick={() => setQueueTab('Archived')}
                   className={`px-4 py-2 text-xs font-semibold rounded-lg border transition-colors cursor-pointer ${queueTab === 'Archived'
-                      ? 'bg-slate-100 dark:bg-slate-800/80 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-600 shadow-sm'
-                      : 'bg-transparent text-slate-500 border-transparent hover:bg-slate-50 dark:hover:bg-slate-900'
+                    ? 'bg-slate-100 dark:bg-slate-800/80 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-600 shadow-sm'
+                    : 'bg-transparent text-slate-500 border-transparent hover:bg-slate-50 dark:hover:bg-slate-900'
                     }`}
                 >
                   System Archiver
@@ -729,8 +730,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                             </span>
                             <div className="flex items-center gap-1.5 flex-shrink-0">
                               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${app.status === 'Archived'
-                                  ? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-700'
-                                  : 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800'
+                                ? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-700'
+                                : 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800'
                                 }`}>
                                 {app.status}
                               </span>
