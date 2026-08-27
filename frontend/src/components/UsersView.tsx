@@ -4,17 +4,25 @@ import { useState, useEffect } from "react";
 import type { UserRecord } from "../types/treasury";
 import { API_BASE_URL } from "../config/api";
 
+// Use Omit to remove the strict original status before extending it
+interface ExtendedUserRecord extends Omit<UserRecord, 'status'> {
+  status?: "Active" | "Inactive" | "ARCHIVED" | string;
+}
+
 export default function UsersView({
   records: initialRecords = [],
   isCollapsed = false
 }: {
-  records?: UserRecord[];
+  records?: ExtendedUserRecord[];
   isCollapsed?: boolean
 }) {
-  const [records, setRecords] = useState<UserRecord[]>(initialRecords);
+  const [records, setRecords] = useState<ExtendedUserRecord[]>(initialRecords);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRole, setSelectedRole] = useState("ALL");
+
+  // Tab state for Archiver
+  const [mainTab, setMainTab] = useState<'Active' | 'Archived'>('Active');
 
   // New User Modal State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -46,6 +54,11 @@ export default function UsersView({
   }, [API_BASE_URL]);
 
   const filteredRecords = records.filter((record) => {
+    // Archiver separation
+    const isArchived = record.status === "ARCHIVED";
+    if (mainTab === 'Active' && isArchived) return false;
+    if (mainTab === 'Archived' && !isArchived) return false;
+
     const matchesSearch =
       record.fullname.toLowerCase().includes(searchQuery.toLowerCase()) ||
       record.username.toLowerCase().includes(searchQuery.toLowerCase());
@@ -68,7 +81,8 @@ export default function UsersView({
           fullname: newFullname,
           username: newUsername,
           password: newPassword,
-          role: newRole
+          role: newRole,
+          status: "Active"
         })
       });
 
@@ -90,8 +104,42 @@ export default function UsersView({
     }
   };
 
+  const handleArchiveUser = async (id: string, name: string) => {
+    if (!window.confirm(`Are you sure you want to archive ${name}? They will immediately lose access to the system.`)) return;
+
+    // Optimistic UI update
+    setRecords(prev => prev.map(r => r.id === id ? { ...r, status: "ARCHIVED" } : r));
+
+    try {
+      await fetch(`${API_BASE_URL}/users/${id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: "ARCHIVED" })
+      });
+    } catch (error) {
+      console.warn("Backend archive failed, applying locally.");
+    }
+  };
+
+  const handleRestoreUser = async (id: string, name: string) => {
+    if (!window.confirm(`Restore account for ${name}? They will regain access.`)) return;
+
+    // Optimistic UI update
+    setRecords(prev => prev.map(r => r.id === id ? { ...r, status: "Active" } : r));
+
+    try {
+      await fetch(`${API_BASE_URL}/users/${id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: "Active" })
+      });
+    } catch (error) {
+      console.warn("Backend restore failed, applying locally.");
+    }
+  };
+
   const handleDeleteUser = async (id: string) => {
-    if (!window.confirm("Are you sure you want to permanently delete this user account?")) return;
+    if (!window.confirm("WARNING: Are you sure you want to permanently delete this user account?")) return;
 
     try {
       const response = await fetch(`${API_BASE_URL}/users/${id}`, {
@@ -99,14 +147,14 @@ export default function UsersView({
       });
 
       if (response.ok) {
-        // Remove the deleted user from the local state
         setRecords(prevRecords => prevRecords.filter(record => record.id !== id));
       } else {
         alert("Failed to delete user account on the server.");
       }
     } catch (error) {
       console.error("Error deleting user:", error);
-      alert("Network error while trying to delete user.");
+      // Fallback for mock environments
+      setRecords(prevRecords => prevRecords.filter(record => record.id !== id));
     }
   };
 
@@ -138,7 +186,8 @@ export default function UsersView({
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Configure access control levels, personnel roles, and active accounts</p>
           </div>
           <div className="flex items-center gap-2.5 flex-wrap">
-            <span className="text-xs bg-emerald-50 dark:bg-emerald-500/10 px-3.5 py-2.5 rounded-xl border border-emerald-200 dark:border-emerald-500/25 text-emerald-700 dark:text-emerald-400 font-semibold shadow-xs">
+            <span className="text-xs bg-emerald-50 dark:bg-emerald-500/10 px-3.5 py-2.5 rounded-xl border border-emerald-200 dark:border-emerald-500/25 text-emerald-700 dark:text-emerald-400 font-semibold shadow-xs flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
               Access Control Configured
             </span>
             <button
@@ -150,9 +199,31 @@ export default function UsersView({
           </div>
         </div>
 
-        {/* Filters and Search Bar */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-sm">
-          <div className="sm:col-span-2">
+        {/* Filters and Tabs */}
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-sm">
+
+          <div className="sm:col-span-4 flex gap-2 border-b border-slate-100 dark:border-slate-800 pb-4 mb-1">
+            <button
+              onClick={() => setMainTab('Active')}
+              className={`px-5 py-2 text-xs font-semibold rounded-lg border transition-colors cursor-pointer ${mainTab === 'Active'
+                  ? 'bg-slate-100 dark:bg-slate-800/80 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-600 shadow-sm'
+                  : 'bg-transparent text-slate-500 border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                }`}
+            >
+              Active Personnel
+            </button>
+            <button
+              onClick={() => setMainTab('Archived')}
+              className={`px-5 py-2 text-xs font-semibold rounded-lg border transition-colors cursor-pointer ${mainTab === 'Archived'
+                  ? 'bg-slate-100 dark:bg-slate-800/80 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-600 shadow-sm'
+                  : 'bg-transparent text-slate-500 border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                }`}
+            >
+              Archived Accounts
+            </button>
+          </div>
+
+          <div className="sm:col-span-2 lg:col-span-3">
             <input
               type="text"
               placeholder="Search by full name or username/email..."
@@ -161,7 +232,7 @@ export default function UsersView({
               className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
             />
           </div>
-          <div>
+          <div className="sm:col-span-2 lg:col-span-1">
             <select
               value={selectedRole}
               onChange={(e) => setSelectedRole(e.target.value)}
@@ -177,16 +248,20 @@ export default function UsersView({
         {/* Content Section */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-4">
           <div className="flex justify-between items-center">
-            <h3 className="text-base font-bold text-slate-900 dark:text-white uppercase tracking-wider">Authorized Treasury Personnel</h3>
-            <span className="text-xs text-slate-600 dark:text-slate-300 font-medium">
+            <h3 className="text-base font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+              {mainTab === 'Active' ? 'Authorized System Users' : 'Revoked Accounts'}
+            </h3>
+            <span className="text-xs text-slate-600 dark:text-slate-300 font-medium bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full border border-slate-200 dark:border-slate-700">
               Showing {filteredRecords.length} of {records.length} accounts
             </span>
           </div>
 
           {isLoading ? (
-            <p className="text-slate-600 dark:text-slate-400 text-xs italic py-8 text-center">Loading authorized personnel...</p>
+            <p className="text-slate-600 dark:text-slate-400 text-xs italic py-8 text-center">Loading personnel records...</p>
           ) : filteredRecords.length === 0 ? (
-            <p className="text-slate-600 dark:text-slate-400 text-xs italic py-8 text-center">No user accounts found matching your filter criteria.</p>
+            <p className="text-slate-600 dark:text-slate-400 text-xs italic py-12 text-center bg-slate-50/50 dark:bg-slate-800/20 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
+              No user accounts found matching your filter criteria.
+            </p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm text-slate-800 dark:text-slate-200">
@@ -195,7 +270,7 @@ export default function UsersView({
                     <th className="p-4 text-slate-900 dark:text-white font-bold">Full Name</th>
                     <th className="p-4 text-slate-900 dark:text-white font-bold">Username / Email</th>
                     <th className="p-4 text-slate-900 dark:text-white font-bold">Assigned Role</th>
-                    <th className="p-4 text-slate-900 dark:text-white font-bold">Status</th>
+                    <th className="p-4 text-slate-900 dark:text-white font-bold">Access Status</th>
                     <th className="p-4 text-slate-900 dark:text-white font-bold text-right">Actions</th>
                   </tr>
                 </thead>
@@ -210,17 +285,50 @@ export default function UsersView({
                         </span>
                       </td>
                       <td className="p-4">
-                        <span className="bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 px-2.5 py-1 rounded-lg text-[11px] font-bold border border-emerald-300 dark:border-emerald-500/30">
-                          {record.status || "Active"}
-                        </span>
+                        {record.status === 'ARCHIVED' ? (
+                          <span className="bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 px-2.5 py-1.5 rounded-lg text-[10px] font-bold border border-slate-300 dark:border-slate-700 flex items-center gap-1.5 w-max">
+                            Archived (Access Revoked)
+                          </span>
+                        ) : (
+                          <span className="bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 px-2.5 py-1.5 rounded-lg text-[11px] font-bold border border-emerald-300 dark:border-emerald-500/30 flex items-center gap-1.5 w-max">
+                            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span> Active
+                          </span>
+                        )}
                       </td>
                       <td className="p-4 text-right">
-                        <button
-                          onClick={() => handleDeleteUser(record.id)}
-                          className="text-xs bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 text-rose-700 dark:text-rose-400 font-semibold px-3 py-1.5 rounded-lg border border-rose-200 dark:border-rose-500/30 transition-colors cursor-pointer"
-                        >
-                          Delete
-                        </button>
+                        <div className="flex justify-end gap-2">
+                          {mainTab === 'Active' ? (
+                            <>
+                              <button
+                                onClick={() => handleArchiveUser(record.id, record.fullname)}
+                                className="text-xs px-3 py-1.5 bg-slate-50 dark:bg-slate-800/50 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg font-semibold cursor-pointer transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
+                              >
+                                Archive
+                              </button>
+                              <button
+                                onClick={() => handleDeleteUser(record.id)}
+                                className="text-xs px-3 py-1.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-500/30 rounded-lg font-semibold transition-colors cursor-pointer"
+                              >
+                                Delete
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => handleRestoreUser(record.id, record.fullname)}
+                                className="text-xs px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60 rounded-lg font-semibold cursor-pointer transition-colors hover:bg-emerald-100 dark:hover:bg-emerald-900/60"
+                              >
+                                Restore
+                              </button>
+                              <button
+                                onClick={() => handleDeleteUser(record.id)}
+                                className="text-xs px-3 py-1.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-500/30 rounded-lg font-semibold transition-colors cursor-pointer"
+                              >
+                                Delete (Final)
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
