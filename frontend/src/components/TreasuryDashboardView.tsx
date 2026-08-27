@@ -25,6 +25,22 @@ export interface BusinessAssessmentRecord {
   dateFiled?: string;
 }
 
+// Added interface to map RPT records
+export interface RPTAssessmentRecord {
+  id?: string;
+  referenceNumber?: string;
+  controlNumber?: string;
+  applicantName?: string;
+  ownerName?: string;
+  service?: string;
+  category?: string;
+  status?: string;
+  propertyDetails?: {
+    pin?: string;
+  };
+  pin?: string;
+}
+
 export interface TreasuryMetrics {
   totalEpayments: number;
   totalEORs: number;
@@ -76,6 +92,7 @@ export default function TreasuryDashboardView({
   const [stalls, setStalls] = useState<StallRecord[]>(initialStalls);
   const [txs, setTxs] = useState<TransactionRecord[]>(initialTransactions);
   const [bizAssessments, setBizAssessments] = useState<BusinessAssessmentRecord[]>([]);
+  const [rptAssessments, setRptAssessments] = useState<RPTAssessmentRecord[]>([]); // New state for RPT
   const [loading, setLoading] = useState(false);
   const [showAllModal, setShowAllModal] = useState(false);
 
@@ -93,6 +110,7 @@ export default function TreasuryDashboardView({
       let dbTransactions: TransactionRecord[] = [];
       let dbStalls: StallRecord[] = [];
       let dbBizAssessments: BusinessAssessmentRecord[] = [];
+      let dbRptAssessments: RPTAssessmentRecord[] = [];
 
       if (fetchTransactions) {
         dbTransactions = (await fetchTransactions()) || [];
@@ -124,9 +142,21 @@ export default function TreasuryDashboardView({
         console.error("Failed to fetch business assessments:", error);
       }
 
+      try {
+        // Fetching the RPT Applications
+        const resRpt = await fetch(`${API_BASE_URL}/citizen-rpt-applications`);
+        if (resRpt.ok) {
+          const data = await resRpt.json();
+          dbRptAssessments = Array.isArray(data) ? data : (data.applications || data.data || []);
+        }
+      } catch (error) {
+        console.error("Failed to fetch RPT applications:", error);
+      }
+
       setTxs(Array.isArray(dbTransactions) ? dbTransactions : []);
       setStalls(Array.isArray(dbStalls) ? dbStalls : []);
       setBizAssessments(Array.isArray(dbBizAssessments) ? dbBizAssessments : []);
+      setRptAssessments(Array.isArray(dbRptAssessments) ? dbRptAssessments : []);
 
     } catch (error) {
       console.error("Failed to query data from backend:", error);
@@ -155,10 +185,7 @@ export default function TreasuryDashboardView({
     if (activeTab === "ALL") return true;
     const type = (tx?.paymentType || "").toUpperCase();
     if (activeTab === "RPT") return type.includes("REAL PROPERTY") || type === "RPT";
-
-    // Broadened the filter so the Business Ledger works regardless of naming convention
     if (activeTab === "BUSINESS") return type.includes("BUSINESS") || type.includes("BPLPO") || type.includes("PERMIT");
-
     if (activeTab === "MARKET") return type.includes("MARKET");
     return true;
   });
@@ -563,6 +590,62 @@ export default function TreasuryDashboardView({
         </div>
       )}
 
+      {/* RPT ASSESSMENTS LEDGER (Only shows if RPT tab is selected) */}
+      {activeTab === "RPT" && (
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm mb-6">
+          <div className="flex justify-between items-center mb-4">
+            <div>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white m-0">Live Postgres RPT Applications</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 m-0 mt-0.5">Showing raw property tax assessment records fetched from PostgreSQL</p>
+            </div>
+          </div>
+
+          {rptAssessments.length === 0 ? (
+            <p className="text-slate-400 dark:text-slate-500 text-[13px] italic text-center p-6 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl m-0">
+              No RPT assessment records found in database.
+            </p>
+          ) : (
+            <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
+              <table className="w-full text-left text-[13px] border-collapse">
+                <thead className="bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-800">
+                  <tr>
+                    <th className="py-3 px-4">Ref / Control No.</th>
+                    <th className="py-3 px-4">Applicant Name</th>
+                    <th className="py-3 px-4">Category / Service</th>
+                    <th className="py-3 px-4">Property PIN</th>
+                    <th className="py-3 px-4 text-center">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                  {rptAssessments.map((app, idx) => {
+                    const refNo = app.controlNumber || app.referenceNumber || `REF-${app.id || idx}`;
+                    const name = app.applicantName || app.ownerName || 'Unknown';
+                    const pin = app.propertyDetails?.pin || app.pin || 'N/A';
+
+                    return (
+                      <tr key={app.id || idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                        <td className="py-3 px-4 font-mono font-semibold text-blue-600 dark:text-blue-400">{refNo}</td>
+                        <td className="py-3 px-4 font-semibold text-slate-900 dark:text-white">{name}</td>
+                        <td className="py-3 px-4 text-slate-600 dark:text-slate-300">{app.service || app.category || 'RPT Assessment'}</td>
+                        <td className="py-3 px-4 text-slate-600 dark:text-slate-300 font-mono">{pin}</td>
+                        <td className="py-3 px-4 text-center">
+                          <span className={`py-0.5 px-2.5 rounded-full text-[11px] font-semibold border ${(app.status || "").includes("Approved") || (app.status || "").includes("Issued")
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                              : "bg-blue-50 text-blue-700 border-blue-200"
+                            }`}>
+                            {app.status || 'Under Evaluation'}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* MARKET STALLS OVERVIEW (Only shows if ALL or MARKET tab is selected) */}
       {(activeTab === "ALL" || activeTab === "MARKET") && (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm mb-6">
@@ -651,8 +734,8 @@ export default function TreasuryDashboardView({
                         </td>
                         <td className="py-3 px-4 text-center">
                           <span className={`py-0.5 px-2.5 rounded-full text-[11px] font-semibold border ${(b.status || "").toUpperCase() === "APPROVED"
-                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                              : "bg-amber-50 text-amber-700 border-amber-200"
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                            : "bg-amber-50 text-amber-700 border-amber-200"
                             }`}>
                             {b.status || 'PENDING'}
                           </span>
