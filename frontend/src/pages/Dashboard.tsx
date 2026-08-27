@@ -12,7 +12,7 @@ export default function Login() {
 
   const {
     email, setEmail, password, setPassword, showPassword, setShowPassword,
-    rememberMe, setRememberMe, errorMessage, isErrorState, handleLogin
+    errorMessage, isErrorState, handleLogin
   } = useLogin(timeLeft, setTimeLeft);
 
   const {
@@ -80,18 +80,35 @@ export default function Login() {
               <p className="text-sm text-slate-500 mt-1.5">Sign in to access your treasury dashboard</p>
             </div>
 
-            {errorMessage && (
-              <div role="alert" className="mb-5 bg-rose-50 border border-rose-200 text-rose-700 p-4 rounded-2xl text-sm space-y-1">
-                <p className="font-semibold">{errorMessage}</p>
-                {isLockedOut && <p>Please try again in <span className="font-mono font-bold">{formatTime(timeLeft)}</span>.</p>}
+            {/* UPGRADED BRUTE FORCE & ERROR UI */}
+            {isLockedOut ? (
+              <div role="alert" className="mb-6 bg-red-50 border-2 border-red-500 rounded-2xl p-5 shadow-sm relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-full h-1 bg-red-600 animate-pulse"></div>
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2 font-black text-red-700 uppercase tracking-widest text-[11px]">
+                    <span className="w-2 h-2 rounded-full bg-red-600 animate-ping"></span>
+                    Security Lockout Active
+                  </div>
+                  <p className="font-bold text-red-900 text-base leading-tight">Multiple failed attempts detected.</p>
+                  <p className="text-red-700 text-xs font-medium leading-relaxed">
+                    To protect this account from brute-force attacks, further login attempts have been temporarily blocked.
+                  </p>
+                  <div className="mt-2 inline-flex items-center justify-center bg-white px-4 py-2.5 rounded-xl text-red-700 font-black border border-red-200">
+                    Timeout expires in: <span className="font-mono text-lg ml-2">{formatTime(timeLeft)}</span>
+                  </div>
+                </div>
               </div>
-            )}
+            ) : errorMessage ? (
+              <div role="alert" className="mb-5 bg-rose-50 border border-rose-200 text-rose-700 p-4 rounded-2xl text-sm font-semibold">
+                {errorMessage}
+              </div>
+            ) : null}
 
             <form onSubmit={handleLogin} className="space-y-5">
               <div className="space-y-2">
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">EMAIL ADDRESS</label>
                 <div className={`relative flex items-center bg-[#EBF2FE] rounded-2xl px-4 py-3.5 transition-all ${isErrorState ? 'ring-2 ring-rose-500' : 'focus-within:ring-2 focus-within:ring-blue-600'}`}>
-                  <input type="email" required disabled={isLockedOut} placeholder="name@email.com" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-transparent text-sm text-slate-900 placeholder-slate-400 focus:outline-none font-medium" />
+                  <input type="email" required disabled={isLockedOut} placeholder="name@email.com" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-transparent text-sm text-slate-900 placeholder-slate-400 focus:outline-none font-medium disabled:opacity-50" />
                 </div>
               </div>
 
@@ -100,21 +117,16 @@ export default function Login() {
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">PASSWORD</label>
                 </div>
                 <div className={`relative flex items-center bg-[#EBF2FE] rounded-2xl px-4 py-3.5 transition-all ${isErrorState ? 'ring-2 ring-rose-500' : 'focus-within:ring-2 focus-within:ring-blue-600'}`}>
-                  <input type={showPassword ? "text" : "password"} required disabled={isLockedOut} placeholder="••••••••••••••" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-transparent text-sm text-slate-900 placeholder-slate-400 focus:outline-none font-medium pr-10" />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 text-slate-500 hover:text-slate-800 text-xs font-bold cursor-pointer">
+                  <input type={showPassword ? "text" : "password"} required disabled={isLockedOut} placeholder="••••••••••••••" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-transparent text-sm text-slate-900 placeholder-slate-400 focus:outline-none font-medium pr-10 disabled:opacity-50" />
+                  <button type="button" disabled={isLockedOut} onClick={() => setShowPassword(!showPassword)} className="absolute right-4 text-slate-500 hover:text-slate-800 text-xs font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
                     {showPassword ? "Hide" : "Show"}
                   </button>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between text-sm">
-                <label className="flex items-center space-x-3 cursor-pointer select-none">
-                  <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 size-4" />
-                  <span className="text-slate-700 font-medium">Remember this device</span>
-                </label>
-              </div>
+              {/* REMEMBER ME REMOVED */}
 
-              <button type="submit" disabled={isLockedOut} className="w-full bg-[#2563EB] hover:bg-blue-700 text-white font-bold py-3.5 px-4 rounded-2xl text-base shadow-md transition-all duration-200 cursor-pointer mt-2">
+              <button type="submit" disabled={isLockedOut} className="w-full bg-[#2563EB] hover:bg-blue-700 text-white font-bold py-3.5 px-4 rounded-2xl text-base shadow-md transition-all duration-200 cursor-pointer mt-4 disabled:opacity-40 disabled:cursor-not-allowed">
                 Sign In
               </button>
             </form>
