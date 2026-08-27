@@ -80,23 +80,10 @@ export default function Login() {
               <p className="text-sm text-slate-500 mt-1.5">Sign in to access your treasury dashboard</p>
             </div>
 
-            {/* UPGRADED BRUTE FORCE & ERROR UI */}
             {isLockedOut ? (
-              <div role="alert" className="mb-6 bg-red-50 border-2 border-red-500 rounded-2xl p-5 shadow-sm relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-1 bg-red-600 animate-pulse"></div>
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center gap-2 font-black text-red-700 uppercase tracking-widest text-[11px]">
-                    <span className="w-2 h-2 rounded-full bg-red-600 animate-ping"></span>
-                    Security Lockout Active
-                  </div>
-                  <p className="font-bold text-red-900 text-base leading-tight">Multiple failed attempts detected.</p>
-                  <p className="text-red-700 text-xs font-medium leading-relaxed">
-                    To protect this account from brute-force attacks, further login attempts have been temporarily blocked.
-                  </p>
-                  <div className="mt-2 inline-flex items-center justify-center bg-white px-4 py-2.5 rounded-xl text-red-700 font-black border border-red-200">
-                    Timeout expires in: <span className="font-mono text-lg ml-2">{formatTime(timeLeft)}</span>
-                  </div>
-                </div>
+              <div role="alert" className="mb-5 bg-rose-50 border border-rose-200 text-rose-700 p-4 rounded-2xl text-sm space-y-1">
+                <p className="font-semibold">Multiple failed attempts detected.</p>
+                <p>Please try again in <span className="font-mono font-bold">{formatTime(timeLeft)}</span>.</p>
               </div>
             ) : errorMessage ? (
               <div role="alert" className="mb-5 bg-rose-50 border border-rose-200 text-rose-700 p-4 rounded-2xl text-sm font-semibold">
@@ -123,8 +110,6 @@ export default function Login() {
                   </button>
                 </div>
               </div>
-
-              {/* REMEMBER ME REMOVED */}
 
               <button type="submit" disabled={isLockedOut} className="w-full bg-[#2563EB] hover:bg-blue-700 text-white font-bold py-3.5 px-4 rounded-2xl text-base shadow-md transition-all duration-200 cursor-pointer mt-4 disabled:opacity-40 disabled:cursor-not-allowed">
                 Sign In
