@@ -40,14 +40,14 @@ export interface TreasuryMetrics {
 }
 
 export interface TreasuryDashboardViewProps {
-  metrics?: TreasuryMetrics; // Restored for parent compatibility
+  metrics?: TreasuryMetrics;
   transactions?: TransactionRecord[];
   marketStalls?: StallRecord[];
   isCollapsed: boolean;
-  onNavigate?: (view: string) => void; // Restored for parent compatibility
+  onNavigate?: (view: string) => void;
   fetchTransactions?: () => Promise<TransactionRecord[]>;
   fetchStalls?: () => Promise<StallRecord[]>;
-  fetchMetrics?: () => Promise<TreasuryMetrics>; // Restored for parent compatibility
+  fetchMetrics?: () => Promise<TreasuryMetrics>;
 }
 
 const PAYMENT_OPTION_COLORS: Record<string, string> = {
@@ -346,11 +346,12 @@ export default function TreasuryDashboardView({
             </button>
           </div>
 
+          {/* Reverted exactly to the original solid blue button */}
           <button
             onClick={loadPostgresData}
-            className="px-4 py-2 rounded-xl bg-slate-800 text-white border border-slate-700 text-xs font-semibold cursor-pointer hover:bg-slate-700 shadow-sm transition-colors"
+            className="px-4 py-2 rounded-xl bg-blue-600 text-white border border-blue-700 text-xs font-semibold cursor-pointer hover:bg-blue-700 shadow-sm transition-colors"
           >
-            Refresh
+            Refresh Data
           </button>
           <div className="flex items-center gap-2 ml-1">
             <label htmlFor="fiscalPeriodSelect" className="text-[13px] font-medium text-slate-700 dark:text-slate-300">
