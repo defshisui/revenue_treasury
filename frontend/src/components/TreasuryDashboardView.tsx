@@ -60,6 +60,8 @@ export interface TreasuryDashboardViewProps {
   marketStalls?: StallRecord[];
   isCollapsed: boolean;
   onNavigate?: (view: string) => void;
+  // ADDED: Accept setActiveTab directly so it mimics the Sidebar
+  setActiveTab?: (tab: any) => void;
   fetchTransactions?: () => Promise<TransactionRecord[]>;
   fetchStalls?: () => Promise<StallRecord[]>;
   fetchMetrics?: () => Promise<TreasuryMetrics>;
@@ -83,11 +85,12 @@ export default function TreasuryDashboardView({
   marketStalls: initialStalls = [],
   isCollapsed,
   onNavigate,
+  setActiveTab, // Destructure here
   fetchTransactions,
   fetchStalls
 }: TreasuryDashboardViewProps) {
   const [fiscalPeriod, setFiscalPeriod] = useState("2026");
-  const [activeTab, setActiveTab] = useState<"ALL" | "RPT" | "BUSINESS" | "MARKET">("ALL");
+  const [activeLocalTab, setActiveLocalTab] = useState<"ALL" | "RPT" | "BUSINESS" | "MARKET">("ALL");
 
   const [stalls, setStalls] = useState<StallRecord[]>(initialStalls);
   const [txs, setTxs] = useState<TransactionRecord[]>(initialTransactions);
@@ -171,10 +174,14 @@ export default function TreasuryDashboardView({
     return () => window.removeEventListener("db_treasury_updated", handleDbUpdate);
   }, [fetchTransactions, fetchStalls]);
 
-  // Helper function to handle module navigation based on your sidebar IDs
+  // FIX: This function now actively changes the main app's state!
   const handleShortcutNavigation = (viewName: string) => {
-    if (onNavigate) {
-      onNavigate(viewName);
+    if (setActiveTab) {
+      setActiveTab(viewName); // Triggers state change in parent
+    } else if (onNavigate) {
+      onNavigate(viewName); // Fallback
+    } else {
+      console.warn("Dashboard tried to navigate, but setActiveTab was not passed to it!");
     }
   };
 
@@ -188,11 +195,11 @@ export default function TreasuryDashboardView({
   const safeTxs = Array.isArray(txs) ? txs : [];
 
   const filteredTxsByTab = safeTxs.filter(tx => {
-    if (activeTab === "ALL") return true;
+    if (activeLocalTab === "ALL") return true;
     const type = (tx?.paymentType || "").toUpperCase();
-    if (activeTab === "RPT") return type.includes("REAL PROPERTY") || type === "RPT";
-    if (activeTab === "BUSINESS") return type.includes("BUSINESS") || type.includes("BPLPO") || type.includes("PERMIT");
-    if (activeTab === "MARKET") return type.includes("MARKET");
+    if (activeLocalTab === "RPT") return type.includes("REAL PROPERTY") || type === "RPT";
+    if (activeLocalTab === "BUSINESS") return type.includes("BUSINESS") || type.includes("BPLPO") || type.includes("PERMIT");
+    if (activeLocalTab === "MARKET") return type.includes("MARKET");
     return true;
   });
 
@@ -355,26 +362,26 @@ export default function TreasuryDashboardView({
         <div className="flex items-center flex-wrap gap-3">
           <div className="flex items-center gap-2 border-r border-slate-200 dark:border-slate-800 pr-3">
             <button
-              onClick={() => setActiveTab('ALL')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold cursor-pointer transition-colors border ${activeTab === 'ALL' ? 'bg-blue-600 text-white border-blue-700' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
+              onClick={() => setActiveLocalTab('ALL')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold cursor-pointer transition-colors border ${activeLocalTab === 'ALL' ? 'bg-blue-600 text-white border-blue-700' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
             >
               All Modules
             </button>
             <button
-              onClick={() => setActiveTab('RPT')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold cursor-pointer transition-colors border ${activeTab === 'RPT' ? 'bg-blue-600 text-white border-blue-700' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
+              onClick={() => setActiveLocalTab('RPT')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold cursor-pointer transition-colors border ${activeLocalTab === 'RPT' ? 'bg-blue-600 text-white border-blue-700' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
             >
               RPT Portal
             </button>
             <button
-              onClick={() => setActiveTab('BUSINESS')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold cursor-pointer transition-colors border ${activeTab === 'BUSINESS' ? 'bg-blue-600 text-white border-blue-700' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
+              onClick={() => setActiveLocalTab('BUSINESS')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold cursor-pointer transition-colors border ${activeLocalTab === 'BUSINESS' ? 'bg-blue-600 text-white border-blue-700' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
             >
               Business Tax Hub
             </button>
             <button
-              onClick={() => setActiveTab('MARKET')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold cursor-pointer transition-colors border ${activeTab === 'MARKET' ? 'bg-blue-600 text-white border-blue-700' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
+              onClick={() => setActiveLocalTab('MARKET')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold cursor-pointer transition-colors border ${activeLocalTab === 'MARKET' ? 'bg-blue-600 text-white border-blue-700' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
             >
               Market Stalls
             </button>
@@ -407,8 +414,8 @@ export default function TreasuryDashboardView({
         </div>
       </div>
 
-      {/* TOP FIVE METRICS BANNER (Only displays when ALL is selected) */}
-      {activeTab === "ALL" && (
+      {/* TOP FIVE METRICS BANNER */}
+      {activeLocalTab === "ALL" && (
         <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-4 mb-6">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm flex items-center gap-4">
             <div className="p-3 bg-slate-50 dark:bg-slate-800 text-blue-600 dark:text-blue-400 rounded-xl flex items-center justify-center border border-slate-100 dark:border-slate-700">
@@ -434,8 +441,8 @@ export default function TreasuryDashboardView({
         </div>
       )}
 
-      {/* ROW 1: CORE METRIC CHARTS (Only displays when ALL is selected) */}
-      {activeTab === "ALL" && (
+      {/* ROW 1: CORE METRIC CHARTS */}
+      {activeLocalTab === "ALL" && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
             <div>
@@ -490,10 +497,10 @@ export default function TreasuryDashboardView({
       )}
 
       {/* ROW 2: SPECIFIC REVENUE MODULE GRAPHS AS CLICKABLE SHORTCUTS */}
-      <div className={`grid grid-cols-1 ${activeTab === 'ALL' ? 'lg:grid-cols-3' : 'lg:grid-cols-1'} gap-6 mb-6`}>
+      <div className={`grid grid-cols-1 ${activeLocalTab === 'ALL' ? 'lg:grid-cols-3' : 'lg:grid-cols-1'} gap-6 mb-6`}>
 
         {/* RPT Shortcut Card */}
-        {(activeTab === "ALL" || activeTab === "RPT") && (
+        {(activeLocalTab === "ALL" || activeLocalTab === "RPT") && (
           <div
             onClick={() => handleShortcutNavigation('rpt')}
             className="group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between cursor-pointer hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-md transition-all transform hover:-translate-y-1"
@@ -523,7 +530,7 @@ export default function TreasuryDashboardView({
         )}
 
         {/* Business Tax Shortcut Card */}
-        {(activeTab === "ALL" || activeTab === "BUSINESS") && (
+        {(activeLocalTab === "ALL" || activeLocalTab === "BUSINESS") && (
           <div
             onClick={() => handleShortcutNavigation('business')}
             className="group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between cursor-pointer hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-md transition-all transform hover:-translate-y-1"
@@ -553,7 +560,7 @@ export default function TreasuryDashboardView({
         )}
 
         {/* Market Stalls Shortcut Card */}
-        {(activeTab === "ALL" || activeTab === "MARKET") && (
+        {(activeLocalTab === "ALL" || activeLocalTab === "MARKET") && (
           <div
             onClick={() => handleShortcutNavigation('market')}
             className="group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between cursor-pointer hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-md transition-all transform hover:-translate-y-1"
@@ -583,8 +590,8 @@ export default function TreasuryDashboardView({
         )}
       </div>
 
-      {/* ROW 3: PAYMENT OPTION DONUT CHARTS (Only displays when ALL is selected) */}
-      {activeTab === "ALL" && (
+      {/* ROW 3: PAYMENT OPTION DONUT CHARTS */}
+      {activeLocalTab === "ALL" && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
             <div>
@@ -624,8 +631,8 @@ export default function TreasuryDashboardView({
         </div>
       )}
 
-      {/* RPT ASSESSMENTS LEDGER (Only shows if RPT tab is selected) */}
-      {activeTab === "RPT" && (
+      {/* RPT ASSESSMENTS LEDGER */}
+      {activeLocalTab === "RPT" && (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm mb-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
           <div className="flex justify-between items-center mb-4">
             <div>
@@ -680,8 +687,8 @@ export default function TreasuryDashboardView({
         </div>
       )}
 
-      {/* MARKET STALLS OVERVIEW (Only shows if MARKET tab is selected) */}
-      {activeTab === "MARKET" && (
+      {/* MARKET STALLS OVERVIEW */}
+      {activeLocalTab === "MARKET" && (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm mb-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
           <div className="flex justify-between items-center mb-4">
             <div>
@@ -729,8 +736,8 @@ export default function TreasuryDashboardView({
         </div>
       )}
 
-      {/* BUSINESS TAX ASSESSMENTS LEDGER (Only shows if BUSINESS tab is selected) */}
-      {activeTab === "BUSINESS" && (
+      {/* BUSINESS TAX ASSESSMENTS LEDGER */}
+      {activeLocalTab === "BUSINESS" && (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm mb-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
           <div className="flex justify-between items-center mb-4">
             <div>
@@ -788,7 +795,7 @@ export default function TreasuryDashboardView({
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-base font-bold text-slate-900 dark:text-white m-0">
-            Live Postgres Transaction Ledger ({activeTab === "ALL" ? "All Modules" : activeTab})
+            Live Postgres Transaction Ledger ({activeLocalTab === "ALL" ? "All Modules" : activeLocalTab})
           </h3>
           {activeTxFeed.length > 0 && (
             <button
