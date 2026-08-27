@@ -141,15 +141,15 @@ export default function LegacyTreasuryApp() {
 
   const handleCreateOrUpdateRPT = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    const finalReceiptNo = 
+
+    const finalReceiptNo =
       rptForm.paymentMethod === "Cash" && !rptForm.receiptNo
         ? `OR-${Math.floor(100000 + Math.random() * 900000)}`
         : rptForm.receiptNo;
-    
+
     if (editingId) {
       if (!canCreate("RPT")) { return; }
-      
+
       const calc = calculateRPT(config, Number(rptForm.marketValue), Number(rptForm.assessLvl), true, false);
 
       setRptRecords(prev => prev.map(item => {
@@ -184,7 +184,7 @@ export default function LegacyTreasuryApp() {
       }));
 
       logAudit("Real Property Tax Management", "Update", undefined, `Updated RPT for ${rptForm.ownerName}`);
-      
+
       setEditingId(null);
       setRptForm({
         ownerName: "", ownerAddress: "", contact: "", pin: "", tdNo: "", barangay: "",
@@ -194,7 +194,7 @@ export default function LegacyTreasuryApp() {
 
     } else {
       if (!canCreate("RPT")) { return; }
-      
+
       const calc = calculateRPT(config, Number(rptForm.marketValue), Number(rptForm.assessLvl), true, false);
 
       const newRec = {
@@ -236,7 +236,7 @@ export default function LegacyTreasuryApp() {
 
       setRptRecords([newRec, ...rptRecords]);
       logAudit("Real Property Tax Management", "Create", undefined, `Created RPT for ${newRec.ownerName}`);
-      
+
       setRptForm({
         ownerName: "", ownerAddress: "", contact: "", pin: "", tdNo: "", barangay: "",
         type: "Residential", landArea: 0, buildingArea: 0, marketValue: 0, assessLvl: 0,
@@ -268,10 +268,10 @@ export default function LegacyTreasuryApp() {
 
   const handleDeleteRPT = (id: string) => {
     if (!canDelete()) { return; }
-    
+
     setRptRecords(prev => prev.filter(item => item.id !== id));
     logAudit("Real Property Tax Management", "Delete", `ID: ${id}`, undefined);
-    
+
     if (editingId === id) {
       setEditingId(null);
     }
@@ -293,7 +293,7 @@ export default function LegacyTreasuryApp() {
       if (item.status === "Assessment Created") nextStatus = "Reviewed";
       else if (item.status === "Reviewed" && canApprove()) nextStatus = "Approved";
       else if (item.status === "Approved") nextStatus = "Billed";
-      
+
       logAudit("Real Property Tax Management", "Status Change", `Status: ${item.status}`, `Status: ${nextStatus}`);
       return { ...item, status: nextStatus };
     }));
@@ -426,7 +426,7 @@ export default function LegacyTreasuryApp() {
     const rptTotal = rptRecords.reduce((sum, r) => sum + (r.amountPaid > 0 ? r.amountPaid : r.totalAssessment), 0);
     const bizTotal = businessRecords.reduce((sum, b) => sum + (b.amountPaid > 0 ? b.amountPaid : b.totalDue), 0);
     const marketTotal = stalls.reduce((sum, s) => sum + (((s.rentalRate ?? 0) - (s.currentBalance ?? 0) === 0) ? (s.rentalRate ?? 0) : 0), 0);
-    
+
     const combinedCollection = todayCollection + rptTotal;
 
     const delinquentCount = rptRecords.filter(r => r.delinquentStatus).length + stalls.filter(s => s.overdueStatus).length;
@@ -458,23 +458,23 @@ export default function LegacyTreasuryApp() {
 
   return (
     <div className="legacy-treasury-shell h-screen overflow-hidden bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 flex flex-col font-sans">
-      <TreasuryHeader 
-        activeRole={activeRole} 
+      <TreasuryHeader
+        activeRole={activeRole}
         setActiveRole={setActiveRole}
         notify={notify}
         isCollapsed={isSidebarCollapsed}
-        setIsCollapsed={setIsSidebarCollapsed} 
+        setIsCollapsed={setIsSidebarCollapsed}
       />
 
       {notification && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 animate-in fade-in duration-100">
           <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 max-w-sm w-full mx-4 shadow-2xl border border-slate-100 dark:border-gray-700 flex flex-col items-center text-center animate-in zoom-in-95 duration-200">
             <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/40 rounded-full flex items-center justify-center mb-4">
-              <svg 
-                className="w-9 h-9 text-emerald-600 dark:text-emerald-400" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="3" 
+              <svg
+                className="w-9 h-9 text-emerald-600 dark:text-emerald-400"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="3"
                 viewBox="0 0 24 24"
               >
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -501,23 +501,24 @@ export default function LegacyTreasuryApp() {
       )}
 
       <div className="flex flex-1 min-h-0 overflow-hidden">
-        <TreasurySidebar 
-          activeTab={activeTab} 
-          isCollapsed={isSidebarCollapsed} 
-          setIsCollapsed={setIsSidebarCollapsed} 
-          setActiveTab={setActiveTab} 
-          canCreate={canCreate} 
-          canApprove={canApprove} 
-          canDelete={canDelete} 
+        <TreasurySidebar
+          activeTab={activeTab}
+          isCollapsed={isSidebarCollapsed}
+          setIsCollapsed={setIsSidebarCollapsed}
+          setActiveTab={setActiveTab}
+          canCreate={canCreate}
+          canApprove={canApprove}
+          canDelete={canDelete}
         />
 
         <main className="flex-1 overflow-y-auto p-8 bg-slate-50 dark:bg-slate-900">
           {activeTab === "dashboard" && (
-            <TreasuryDashboardView 
-              metrics={metrics} 
-              transactions={transactions} 
-              marketStalls={stalls} 
-              isCollapsed={isSidebarCollapsed} 
+            <TreasuryDashboardView
+              metrics={metrics}
+              transactions={transactions}
+              marketStalls={stalls}
+              isCollapsed={isSidebarCollapsed}
+              setActiveTab={setActiveTab}
             />
           )}
 
@@ -543,13 +544,13 @@ export default function LegacyTreasuryApp() {
           )}
 
           {activeTab === "business" && (
-            <BusinessTaxView 
+            <BusinessTaxView
               {...({
-                records: businessRecords, 
-                form: bizForm, 
-                setForm: setBizForm, 
-                onSubmit: handleCreateOrUpdateBusiness, 
-                onAdvance: advanceBusinessStatus, 
+                records: businessRecords,
+                form: bizForm,
+                setForm: setBizForm,
+                onSubmit: handleCreateOrUpdateBusiness,
+                onAdvance: advanceBusinessStatus,
                 previewTotalDue: previewBusinessDue,
                 searchQuery: businessSearchQuery,
                 setSearchQuery: setBusinessSearchQuery,
@@ -562,11 +563,11 @@ export default function LegacyTreasuryApp() {
           )}
 
           {activeTab === "market" && <MarketStallsView records={stalls} isCollapsed={isSidebarCollapsed} />}
-          
+
           {activeTab === "market-city" && (
             <CityOwnedMarketAdmin {...({ isCollapsed: isSidebarCollapsed } as any)} />
           )}
-          
+
           {activeTab === "market-private" && (
             <PrivateOwnedMarketAdmin {...({ isCollapsed: isSidebarCollapsed } as any)} />
           )}
@@ -574,12 +575,12 @@ export default function LegacyTreasuryApp() {
           {activeTab === "users" && <UsersView records={users} isCollapsed={isSidebarCollapsed} />}
           {activeTab === "audit" && <AuditTrailView records={auditLogs as unknown as ComponentAuditRecord[]} isCollapsed={isSidebarCollapsed} />}
           {activeTab === "reports" && (
-            <ReportsView 
+            <ReportsView
               {...({
-                metrics, 
-                transactionCount: transactions.length, 
-                rptRecords, 
-                onExport: () => notify("Report compiled successfully."), 
+                metrics,
+                transactionCount: transactions.length,
+                rptRecords,
+                onExport: () => notify("Report compiled successfully."),
                 isCollapsed: isSidebarCollapsed
               } as any)}
             />
