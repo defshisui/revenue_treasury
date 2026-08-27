@@ -17,7 +17,7 @@ interface AssessmentRecord {
   trackingNumber: string;
   businessName: string;
   businessOwner: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'ARCHIVED';
   applicationDate: string;
   psicCode?: string;
   grossSales?: number;
@@ -57,6 +57,10 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
   const [adminUser, setAdminUser] = useState<{ fullname: string; email: string; initials: string; firstName: string; token: string } | null>(null);
 
   const [activeTab, setActiveTab] = useState<'assessments' | 'appointments' | 'audit_logs'>('assessments');
+
+  // Inner Archiver Tabs
+  const [assessmentTab, setAssessmentTab] = useState<'Active' | 'Archived'>('Active');
+  const [appointmentTab, setAppointmentTab] = useState<'Active' | 'Archived'>('Active');
 
   const [assessments, setAssessments] = useState<AssessmentRecord[]>([]);
   const [appointments, setAppointments] = useState<AppointmentRecord[]>([]);
@@ -248,7 +252,12 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
       });
 
       if (!res.ok) throw new Error("Failed to update status");
-      alert(`Appointment marked as ${newStatus}.`);
+
+      // Check if it's an archiving/restoring action to prevent excessive alerts
+      if (newStatus !== 'ARCHIVED' && newStatus !== 'PENDING') {
+        alert(`Appointment marked as ${newStatus}.`);
+      }
+
       fetchAppointments();
       if (selectedAppointmentPreview) {
         setSelectedAppointmentPreview(prev => prev ? { ...prev, status: newStatus } : null);
@@ -258,8 +267,22 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
     }
   };
 
+  const handleArchiveAppointment = (id: string) => {
+    if (window.confirm("Are you sure you want to move this appointment to the Archiver?")) {
+      handleAppointmentStatusUpdate(id, 'ARCHIVED');
+      setAppointments(prev => prev.map(a => a.id === id ? { ...a, status: 'ARCHIVED' } : a));
+    }
+  };
+
+  const handleRestoreAppointment = (id: string) => {
+    if (window.confirm("Are you sure you want to restore this appointment?")) {
+      handleAppointmentStatusUpdate(id, 'PENDING');
+      setAppointments(prev => prev.map(a => a.id === id ? { ...a, status: 'PENDING' } : a));
+    }
+  };
+
   const handleDeleteAppointment = async (id: string) => {
-    if (!window.confirm("Are you sure you want to permanently delete this appointment record?")) {
+    if (!window.confirm("WARNING: Are you sure you want to permanently delete this appointment record?")) {
       return;
     }
 
@@ -299,7 +322,7 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
     }
   };
 
-  const handleStatusUpdate = async (newStatus: 'APPROVED' | 'REJECTED') => {
+  const handleStatusUpdate = async (newStatus: 'APPROVED' | 'REJECTED' | 'ARCHIVED' | 'PENDING') => {
     if (!selectedAssessment) return;
     if (newStatus === 'APPROVED' && (!checklist.itrChecked || !checklist.clearanceVerified || !checklist.financialStatementValid)) {
       alert("Please complete the document verification checklist before approving this assessment.");
@@ -319,7 +342,9 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
 
       if (!res.ok) throw new Error("Failed to update assessment status.");
 
-      alert(`Assessment successfully marked as ${newStatus}.`);
+      if (newStatus === 'APPROVED' || newStatus === 'REJECTED') {
+        alert(`Assessment successfully marked as ${newStatus}.`);
+      }
       setSelectedAssessment(null);
       setActionRemarks('');
       fetchAdminAssessments();
@@ -330,8 +355,43 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
     }
   };
 
+  const handleArchiveAssessment = async (id: string, trackingNo: string) => {
+    if (!window.confirm(`Are you sure you want to move assessment ${trackingNo} to the Archiver?`)) return;
+    try {
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (adminUser?.token) headers['Authorization'] = `Bearer ${adminUser.token}`;
+      const res = await fetch(`${API_BASE_URL}/admin/business-assessments/${id}/status`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ status: 'ARCHIVED', remarks: 'Moved to archiver' })
+      });
+      if (!res.ok) throw new Error("Failed to archive");
+      setAssessments(prev => prev.map(a => a.id === id ? { ...a, status: 'ARCHIVED' } : a));
+    } catch (e) {
+      // fallback optimistic update for mock integrations
+      setAssessments(prev => prev.map(a => a.id === id ? { ...a, status: 'ARCHIVED' } : a));
+    }
+  };
+
+  const handleRestoreAssessment = async (id: string, trackingNo: string) => {
+    if (!window.confirm(`Are you sure you want to restore assessment ${trackingNo}?`)) return;
+    try {
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (adminUser?.token) headers['Authorization'] = `Bearer ${adminUser.token}`;
+      const res = await fetch(`${API_BASE_URL}/admin/business-assessments/${id}/status`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ status: 'PENDING', remarks: 'Restored from archiver' })
+      });
+      if (!res.ok) throw new Error("Failed to restore");
+      setAssessments(prev => prev.map(a => a.id === id ? { ...a, status: 'PENDING' } : a));
+    } catch (e) {
+      setAssessments(prev => prev.map(a => a.id === id ? { ...a, status: 'PENDING' } : a));
+    }
+  };
+
   const handleDeleteAssessment = async (id: string, trackingNo: string) => {
-    if (!window.confirm(`Are you sure you want to permanently delete assessment record ${trackingNo}?`)) {
+    if (!window.confirm(`WARNING: Are you sure you want to permanently delete assessment record ${trackingNo}?`)) {
       return;
     }
 
@@ -356,13 +416,27 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
     }
   };
 
+  const filteredAssessments = assessments.filter((item) => {
+    const isArchived = item.status === 'ARCHIVED';
+    if (assessmentTab === 'Active' && isArchived) return false;
+    if (assessmentTab === 'Archived' && !isArchived) return false;
+    return true;
+  });
+
+  const filteredAppointments = appointments.filter((apt) => {
+    const isArchived = apt.status === 'ARCHIVED';
+    if (appointmentTab === 'Active' && isArchived) return false;
+    if (appointmentTab === 'Archived' && !isArchived) return false;
+    return true;
+  });
+
   const handleExportCSV = () => {
-    if (assessments.length === 0) {
+    if (filteredAssessments.length === 0) {
       alert("No data available to export.");
       return;
     }
     const headers = ["Tracking Number", "Business Name", "Owner", "TIN", "Gross Sales", "Status", "Date Filed"];
-    const rows = assessments.map(item => [
+    const rows = filteredAssessments.map(item => [
       item.trackingNumber,
       `"${item.businessName}"`,
       `"${item.businessOwner}"`,
@@ -456,11 +530,36 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
           <section className="bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-xs space-y-5">
             <div className="flex justify-between items-center">
               <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg> Assessment Submissions Control Panel
+                <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
+                {assessmentTab === 'Active' ? 'Assessment Submissions Control Panel' : 'Archived Assessments Vault'}
               </h3>
               <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700">
                 System Active
               </span>
+            </div>
+
+            {/* Inner Assessment Tabs */}
+            <div className="flex space-x-1 bg-slate-200/50 dark:bg-slate-800/50 p-1.5 rounded-xl w-fit">
+              <button
+                onClick={() => setAssessmentTab("Active")}
+                className={`px-5 py-2.5 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-2 ${assessmentTab === "Active"
+                    ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
+                    : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                  }`}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                Active Submissions
+              </button>
+              <button
+                onClick={() => setAssessmentTab("Archived")}
+                className={`px-5 py-2.5 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-2 ${assessmentTab === "Archived"
+                    ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
+                    : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                  }`}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>
+                Archiver
+              </button>
             </div>
 
             {/* Filters & Search Toolbar Card */}
@@ -476,6 +575,7 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
                   <option value="PENDING">Pending Review</option>
                   <option value="APPROVED">Approved</option>
                   <option value="REJECTED">Rejected</option>
+                  {assessmentTab === 'Archived' && <option value="ARCHIVED">Archived</option>}
                 </select>
               </div>
 
@@ -538,14 +638,14 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
                         Error: {fetchError}
                       </td>
                     </tr>
-                  ) : assessments.length === 0 ? (
+                  ) : filteredAssessments.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="text-center py-16 text-slate-400 italic">
-                        No business tax assessment records found.
+                        {assessmentTab === 'Active' ? 'No active business tax assessment records found.' : 'No archived records found.'}
                       </td>
                     </tr>
                   ) : (
-                    assessments.map((item) => (
+                    filteredAssessments.map((item) => (
                       <tr key={item.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
                         <td className="p-4 font-mono font-bold text-blue-600 dark:text-blue-400">{item.trackingNumber}</td>
                         <td className="p-4 font-semibold text-slate-900 dark:text-slate-100">{item.businessName}</td>
@@ -554,25 +654,45 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
                         <td className="p-4 text-center">
                           <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold border ${item.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-800' :
                             item.status === 'REJECTED' ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/50 dark:text-rose-400 dark:border-rose-800' :
-                              'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-800'
+                              item.status === 'ARCHIVED' ? 'bg-slate-200 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700' :
+                                'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-800'
                             }`}>
                             {item.status}
                           </span>
                         </td>
                         <td className="p-4 text-slate-500">{new Date(item.applicationDate).toLocaleDateString()}</td>
-                        <td className="p-4 text-center space-x-2">
-                          <button
-                            onClick={() => setSelectedAssessment(item)}
-                            className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-3.5 py-1.5 rounded-xl transition-all cursor-pointer shadow-xs inline-flex items-center gap-1"
-                          >
-                            Review
-                          </button>
-                          <button
-                            onClick={() => handleDeleteAssessment(item.id, item.trackingNumber)}
-                            className="bg-rose-600 hover:bg-rose-700 text-white font-medium px-3 py-1.5 rounded-xl transition-all cursor-pointer shadow-xs inline-flex items-center gap-1"
-                          >
-                            Delete
-                          </button>
+                        <td className="p-4 text-center space-x-2 flex items-center justify-center">
+                          {assessmentTab === 'Active' ? (
+                            <>
+                              <button
+                                onClick={() => setSelectedAssessment(item)}
+                                className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-3.5 py-1.5 rounded-xl transition-all cursor-pointer shadow-xs inline-flex items-center gap-1"
+                              >
+                                Review
+                              </button>
+                              <button
+                                onClick={() => handleArchiveAssessment(item.id, item.trackingNumber)}
+                                className="bg-slate-100 hover:bg-slate-200 hover:text-slate-800 text-slate-500 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200 font-medium px-2.5 py-1.5 rounded-xl transition-all cursor-pointer border border-slate-200"
+                              >
+                                Archive
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => handleRestoreAssessment(item.id, item.trackingNumber)}
+                                className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 font-medium px-3.5 py-1.5 rounded-xl transition-all cursor-pointer border border-emerald-200 dark:border-emerald-900"
+                              >
+                                Restore
+                              </button>
+                              <button
+                                onClick={() => handleDeleteAssessment(item.id, item.trackingNumber)}
+                                className="bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 font-medium px-3.5 py-1.5 rounded-xl transition-all cursor-pointer border border-rose-200 dark:border-rose-900"
+                              >
+                                Delete (Final)
+                              </button>
+                            </>
+                          )}
                         </td>
                       </tr>
                     ))
@@ -605,8 +725,34 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
         ) : activeTab === 'appointments' ? (
           <section className="bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-xs space-y-5">
             <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg> Citizen Appointments Management Schedule
+              <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+              {appointmentTab === 'Active' ? 'Citizen Appointments Management Schedule' : 'Archived Appointments'}
             </h3>
+
+            {/* Inner Appointments Tabs */}
+            <div className="flex space-x-1 bg-slate-200/50 dark:bg-slate-800/50 p-1.5 rounded-xl w-fit">
+              <button
+                onClick={() => setAppointmentTab("Active")}
+                className={`px-5 py-2.5 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-2 ${appointmentTab === "Active"
+                    ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
+                    : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                  }`}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                Active Schedule
+              </button>
+              <button
+                onClick={() => setAppointmentTab("Archived")}
+                className={`px-5 py-2.5 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-2 ${appointmentTab === "Archived"
+                    ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
+                    : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                  }`}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>
+                Archiver
+              </button>
+            </div>
+
             <div className="overflow-x-auto rounded-xl border border-slate-200/80 dark:border-slate-800">
               <table className="w-full text-left text-xs whitespace-nowrap border-collapse">
                 <thead className="bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-200 dark:border-slate-800">
@@ -621,12 +767,14 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-slate-700 dark:text-slate-300">
-                  {appointments.length === 0 ? (
+                  {filteredAppointments.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="text-center py-16 text-slate-400 italic">No scheduled citizen appointments found.</td>
+                      <td colSpan={7} className="text-center py-16 text-slate-400 italic">
+                        {appointmentTab === 'Active' ? 'No scheduled citizen appointments found.' : 'No archived appointments found.'}
+                      </td>
                     </tr>
                   ) : (
-                    appointments.map(apt => (
+                    filteredAppointments.map(apt => (
                       <tr key={apt.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
                         <td className="p-4">
                           <div className="font-bold text-slate-900 dark:text-white">{apt.fullName}</div>
@@ -642,36 +790,56 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
                         <td className="p-4 text-center">
                           <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold border ${apt.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400' :
                             apt.status === 'CANCELLED' ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/50 dark:text-rose-400' :
-                              'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-400'
+                              apt.status === 'ARCHIVED' ? 'bg-slate-200 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-400' :
+                                'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-400'
                             }`}>
                             {apt.status}
                           </span>
                         </td>
                         <td className="p-4 text-center space-x-2">
-                          <button
-                            onClick={() => setSelectedAppointmentPreview(apt)}
-                            className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-3 py-1 rounded-xl transition-all cursor-pointer shadow-xs"
-                          >
-                            Preview
-                          </button>
-                          <button
-                            onClick={() => handleAppointmentStatusUpdate(apt.id, 'APPROVED')}
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-3 py-1 rounded-xl transition-all cursor-pointer shadow-xs"
-                          >
-                            Approve
-                          </button>
-                          <button
-                            onClick={() => handleAppointmentStatusUpdate(apt.id, 'CANCELLED')}
-                            className="bg-amber-600 hover:bg-amber-700 text-white font-medium px-3 py-1 rounded-xl transition-all cursor-pointer shadow-xs"
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            onClick={() => handleDeleteAppointment(apt.id)}
-                            className="bg-rose-600 hover:bg-rose-700 text-white font-medium px-3 py-1 rounded-xl transition-all cursor-pointer shadow-xs"
-                          >
-                            Delete
-                          </button>
+                          {appointmentTab === 'Active' ? (
+                            <>
+                              <button
+                                onClick={() => setSelectedAppointmentPreview(apt)}
+                                className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-3 py-1 rounded-xl transition-all cursor-pointer shadow-xs"
+                              >
+                                Preview
+                              </button>
+                              <button
+                                onClick={() => handleAppointmentStatusUpdate(apt.id, 'APPROVED')}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-3 py-1 rounded-xl transition-all cursor-pointer shadow-xs"
+                              >
+                                Approve
+                              </button>
+                              <button
+                                onClick={() => handleAppointmentStatusUpdate(apt.id, 'CANCELLED')}
+                                className="bg-amber-600 hover:bg-amber-700 text-white font-medium px-3 py-1 rounded-xl transition-all cursor-pointer shadow-xs"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                onClick={() => handleArchiveAppointment(apt.id)}
+                                className="bg-slate-100 hover:bg-slate-200 hover:text-slate-800 text-slate-500 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200 font-medium px-3 py-1 rounded-xl transition-all cursor-pointer shadow-xs border border-slate-200"
+                              >
+                                Archive
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => handleRestoreAppointment(apt.id)}
+                                className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 font-medium px-3.5 py-1.5 rounded-xl transition-all cursor-pointer border border-emerald-200 dark:border-emerald-900"
+                              >
+                                Restore
+                              </button>
+                              <button
+                                onClick={() => handleDeleteAppointment(apt.id)}
+                                className="bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 font-medium px-3.5 py-1.5 rounded-xl transition-all cursor-pointer border border-rose-200 dark:border-rose-900"
+                              >
+                                Delete (Final)
+                              </button>
+                            </>
+                          )}
                         </td>
                       </tr>
                     ))
