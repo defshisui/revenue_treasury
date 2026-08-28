@@ -17,6 +17,12 @@ export interface CreateCheckoutSessionParams {
   metadata?: Record<string, any>;
   paymentMethodTypes?: string[];
 }
+export interface CreateQrPaymentIntentParams {
+  amount: number;
+  description: string;
+  referenceNumber: string;
+  metadata?: Record<string, any>;
+}
 
 export interface PayMongoCheckoutResponse {
   id: string;
@@ -31,6 +37,75 @@ export class PayMongoService {
   private static getApiBaseUrl(): string {
     return 'https://api.paymongo.com/v1';
   }
+
+  public static async createQrPaymentIntent(
+  params: CreateQrPaymentIntentParams
+): Promise<{
+  id: string;
+  clientKey: string;
+  status: string;
+  amount: number;
+  raw: any;
+}> {
+  const amountInCentavos = Math.round(
+    Math.max(params.amount, 20) * 100
+  );
+
+  const payload = {
+    data: {
+      attributes: {
+        amount: amountInCentavos,
+        currency: 'PHP',
+        payment_method_allowed: ['qrph'],
+        description: params.description,
+        metadata: {
+          ...params.metadata,
+          referenceNumber: params.referenceNumber,
+          system: 'Revenue & Treasury Management',
+        },
+      },
+    },
+  };
+
+  const response = await fetch(
+    `${this.getApiBaseUrl()}/payment_intents`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: this.getAuthHeader(),
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    const errorMsg =
+      data.errors
+        ?.map((e: any) => e.detail || e.code)
+        .join(', ') ||
+      'Failed to create PayMongo Payment Intent';
+
+    console.error(
+      '❌ PayMongo Payment Intent Error:',
+      data
+    );
+
+    throw new Error(`PayMongo API Error: ${errorMsg}`);
+  }
+
+  const intent = data.data;
+
+  return {
+    id: intent.id,
+    clientKey: intent.attributes.client_key,
+    status: intent.attributes.status,
+    amount: intent.attributes.amount / 100,
+    raw: intent,
+  };
+}
 
   public static getSecretKey(): string {
     return process.env.PAYMONGO_SECRET_KEY || '';

@@ -5,6 +5,7 @@ import {
   verifySession,
   handlePayMongoWebhook,
   getPayMongoStatus,
+  createQrPaymentIntent,
 } from '../controllers/payment.controller.js';
 
 const router = Router();
@@ -15,6 +16,7 @@ router.get('/api/paymongo/status', getPayMongoStatus);
 // PayMongo Checkout Session Operations
 router.post('/api/payments/create-checkout-session', createCheckoutSession);
 router.post('/api/payments/verify-session', verifySession);
+router.post('/api/payments/create-qr-payment-intent', createQrPaymentIntent);
 
 // PayMongo Webhook Handler
 router.post('/api/paymongo/webhook', handlePayMongoWebhook);

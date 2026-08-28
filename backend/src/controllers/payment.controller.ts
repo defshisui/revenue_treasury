@@ -265,63 +265,527 @@ export async function verifySession(req: Request, res: Response): Promise<void> 
   }
 }
 
-export async function handlePayMongoWebhook(req: Request, res: Response): Promise<void> {
-  const signatureHeader = (req.headers['paymongo-signature'] as string) || '';
-  const rawBody = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+export async function handlePayMongoWebhook(
+  req: Request,
+  res: Response
+): Promise<void> {
+  const signatureHeader =
+    (req.headers['paymongo-signature'] as string) || '';
 
+  const rawBody =
+    typeof req.body === 'string'
+      ? req.body
+      : JSON.stringify(req.body);
+
+  // Verify the webhook signature when a webhook secret is configured.
   if (PayMongoService.getWebhookSecret()) {
-    const isValid = PayMongoService.verifyWebhookSignature(rawBody, signatureHeader);
+    const isValid = PayMongoService.verifyWebhookSignature(
+      rawBody,
+      signatureHeader
+    );
+
     if (!isValid) {
-      console.warn('⚠️ Rejected PayMongo webhook with invalid signature.');
-      res.status(401).json({ error: 'Invalid PayMongo webhook signature' });
+      console.warn(
+        '⚠️ Rejected PayMongo webhook with invalid signature.'
+      );
+
+      res.status(401).json({
+        error: 'Invalid PayMongo webhook signature',
+      });
+
       return;
     }
   }
 
   try {
-    const event = typeof req.body === 'object' ? req.body : JSON.parse(rawBody);
-    const eventType = event.data?.attributes?.type;
-    const eventData = event.data?.attributes?.data;
+    const event =
+      typeof req.body === 'object'
+        ? req.body
+        : JSON.parse(rawBody);
+
+    const eventAttributes = event.data?.attributes;
+    const eventType = eventAttributes?.type;
+    const eventData = eventAttributes?.data;
 
     console.log(`🔔 PayMongo Webhook received: ${eventType}`);
 
-    if (eventType === 'checkout_session.payment.paid' || eventType === 'payment.paid') {
-      const attributes = eventData?.attributes || {};
-      const metadata = attributes.metadata || {};
-      const sessionId = eventData?.id;
-      const amountCentavos = attributes.amount || attributes.payments?.[0]?.attributes?.amount || 0;
-      const amountPhp = amountCentavos / 100;
-      const paymentRef = attributes.reference_number || `REF-${sessionId?.slice(-8)}`;
-      const orNo = `OR-WH-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
+    // We only process successful payment events here.
+    if (eventType !== 'payment.paid') {
+      console.log(`ℹ️ Ignoring PayMongo event: ${eventType}`);
 
-      if (metadata.taxDeclarationNumber) {
-        await pool.query(
-          `UPDATE lgu_rpt_records
-           SET balance = 0,
-               amountPaid = totalAssessment,
-               status = 'Paid',
-               paymentStatus = 'Paid',
-               paymentMethod = 'PayMongo Webhook',
-               officialReceiptNumber = $1,
-               paymentReference = $2,
-               paymentDate = NOW()
-           WHERE taxDeclarationNumber ILIKE $3`,
-          [orNo, paymentRef, metadata.taxDeclarationNumber]
-        );
+      res.status(200).json({
+        received: true,
+        ignored: true,
+        event: eventType,
+      });
 
-        await pool.query(
-          `INSERT INTO citizen_rpt_payments
-           (tax_declaration_number, owner_name, amount, payment_method, payment_reference, official_receipt_number, paymongo_session_id, payment_date)
-           VALUES ($1, $2, $3, 'PayMongo Live Webhook', $4, $5, $6, NOW())
-           ON CONFLICT (payment_reference) DO NOTHING`,
-          [metadata.taxDeclarationNumber, metadata.customerName || 'Taxpayer', amountPhp, paymentRef, orNo, sessionId]
-        );
-      }
+      return;
     }
 
-    res.status(200).json({ received: true });
+    const paymentAttributes = eventData?.attributes || {};
+    const paymentId = eventData?.id;
+
+    // PayMongo payment.paid events contain the Payment Intent ID.
+    const paymentIntentId =
+      paymentAttributes.payment_intent_id;
+
+    const paymentStatus = paymentAttributes.status;
+
+    const amountCentavos =
+      Number(paymentAttributes.amount || 0);
+
+    const amountPhp = amountCentavos / 100;
+
+    const sourceType =
+      paymentAttributes.source?.type || 'unknown';
+
+    console.log('💰 Payment paid:', {
+      paymentId,
+      paymentIntentId,
+      paymentStatus,
+      amountPhp,
+      sourceType,
+    });
+
+    if (paymentStatus !== 'paid') {
+      res.status(200).json({
+        received: true,
+        ignored: true,
+        reason: 'Payment status is not paid',
+      });
+
+      return;
+    }
+
+    if (!paymentIntentId) {
+      console.error(
+        '❌ payment.paid event does not contain payment_intent_id.'
+      );
+
+      res.status(400).json({
+        error: 'payment_intent_id is missing from PayMongo event',
+      });
+
+      return;
+    }
+
+    // Retrieve the Payment Intent from PayMongo.
+    // This is important because the leaseId and payment type
+    // were stored in Payment Intent metadata when the payment
+    // was created.
+    const secretKey = PayMongoService.getSecretKey();
+
+    if (!secretKey) {
+      throw new Error(
+        'PAYMONGO_SECRET_KEY is not configured.'
+      );
+    }
+
+    const intentResponse = await fetch(
+      `https://api.paymongo.com/v1/payment_intents/${paymentIntentId}`,
+      {
+        method: 'GET',
+        headers: {
+          Authorization: `Basic ${Buffer.from(
+            `${secretKey}:`
+          ).toString('base64')}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    const intentData = await intentResponse.json();
+
+    if (!intentResponse.ok) {
+      console.error(
+        '❌ Failed to retrieve PayMongo Payment Intent:',
+        intentData
+      );
+
+      res.status(500).json({
+        error: 'Failed to retrieve PayMongo Payment Intent',
+      });
+
+      return;
+    }
+
+    const intentAttributes =
+      intentData.data?.attributes || {};
+
+    const intentStatus = intentAttributes.status;
+
+    const metadata =
+      intentAttributes.metadata || {};
+
+    console.log('🔎 Payment Intent metadata:', {
+      paymentIntentId,
+      intentStatus,
+      metadata,
+    });
+
+    // The Payment Intent must have succeeded before we update
+    // our database.
+    if (intentStatus !== 'succeeded') {
+      console.warn(
+        `⚠️ Payment Intent ${paymentIntentId} is not succeeded. Current status: ${intentStatus}`
+      );
+
+      res.status(200).json({
+        received: true,
+        ignored: true,
+        reason: 'Payment Intent is not succeeded',
+        status: intentStatus,
+      });
+
+      return;
+    }
+
+    const paymentReference =
+      metadata.referenceNumber ||
+      paymentAttributes.external_reference_number ||
+      `REF-${paymentIntentId.slice(-8)}`;
+
+    const officialReceiptNumber =
+      `OR-PM-${new Date().getFullYear()}-${Math.floor(
+        100000 + Math.random() * 900000
+      )}`;
+
+    const formattedPaymentMethod =
+      sourceType === 'qrph'
+        ? 'PayMongo (QR Ph)'
+        : `PayMongo (${String(sourceType).toUpperCase()})`;
+
+    // =========================================================
+    // MARKET STALL PAYMENT
+    // =========================================================
+    if (
+      metadata.type === 'MARKET_STALL' &&
+      metadata.leaseId
+    ) {
+      console.log(
+        `🏪 Processing market stall payment for lease ${metadata.leaseId}`
+      );
+
+      // Check whether the lease is already marked as paid.
+      const existingLease = await pool.query(
+        `
+        SELECT payment_status
+        FROM market_leases
+        WHERE lease_id = $1
+           OR id::text = $1
+        LIMIT 1
+        `,
+        [metadata.leaseId]
+      );
+
+      if (existingLease.rows.length === 0) {
+        console.warn(
+          `⚠️ No market lease found for leaseId ${metadata.leaseId}`
+        );
+      } else if (
+        String(existingLease.rows[0].payment_status).toLowerCase() ===
+        'paid'
+      ) {
+        console.log(
+          `ℹ️ Market lease ${metadata.leaseId} is already Paid.`
+        );
+      } else {
+        const leaseResult = await pool.query(
+          `
+          UPDATE market_leases
+          SET
+            payment_status = 'Paid',
+            advance_payment_status = 'Paid',
+            payment_method = $1
+          WHERE lease_id = $2
+             OR id::text = $2
+          RETURNING *
+          `,
+          [
+            formattedPaymentMethod,
+            metadata.leaseId,
+          ]
+        );
+
+        if (leaseResult.rows.length > 0) {
+          console.log(
+            `✅ Market lease ${metadata.leaseId} marked as PAID.`
+          );
+        }
+      }
+
+      await recordAudit(
+        req,
+        'AUD-PAYMONGO-WEBHOOK',
+        metadata.customerEmail || 'citizen@gov.ph',
+        'Citizen',
+        'ePayment Gateway',
+        'PAYMENT_WEBHOOK_SUCCESS',
+        'INFO',
+        null,
+        `Market stall payment confirmed via ${formattedPaymentMethod}. Lease ${metadata.leaseId}. Reference ${paymentReference}. Amount ₱${amountPhp.toFixed(2)}. O.R. ${officialReceiptNumber}.`
+      );
+
+      res.status(200).json({
+        received: true,
+        success: true,
+        paymentId,
+        paymentIntentId,
+        amount: amountPhp,
+        paymentMethod: formattedPaymentMethod,
+        paymentReference,
+        officialReceiptNumber,
+        leaseId: metadata.leaseId,
+      });
+
+      return;
+    }
+
+    // =========================================================
+    // RPT PAYMENT
+    // =========================================================
+    if (metadata.taxDeclarationNumber) {
+      await pool.query(
+        `
+        UPDATE lgu_rpt_records
+        SET
+          balance = 0,
+          amountPaid = totalAssessment,
+          status = 'Paid',
+          paymentStatus = 'Paid',
+          paymentMethod = $1,
+          officialReceiptNumber = $2,
+          paymentReference = $3,
+          paymentDate = NOW()
+        WHERE taxDeclarationNumber ILIKE $4
+        `,
+        [
+          formattedPaymentMethod,
+          officialReceiptNumber,
+          paymentReference,
+          metadata.taxDeclarationNumber,
+        ]
+      );
+
+      await pool.query(
+        `
+        INSERT INTO citizen_rpt_payments
+        (
+          tax_declaration_number,
+          owner_name,
+          amount,
+          payment_method,
+          payment_reference,
+          official_receipt_number,
+          paymongo_session_id,
+          payment_date
+        )
+        VALUES
+        (
+          $1,
+          $2,
+          $3,
+          $4,
+          $5,
+          $6,
+          $7,
+          NOW()
+        )
+        ON CONFLICT (payment_reference)
+        DO NOTHING
+        `,
+        [
+          metadata.taxDeclarationNumber,
+          metadata.customerName || 'Taxpayer',
+          amountPhp,
+          formattedPaymentMethod,
+          paymentReference,
+          officialReceiptNumber,
+          paymentId || paymentIntentId,
+        ]
+      );
+
+      await recordAudit(
+        req,
+        'AUD-PAYMONGO-WEBHOOK',
+        metadata.customerEmail || 'citizen@gov.ph',
+        'Citizen',
+        'ePayment Gateway',
+        'PAYMENT_WEBHOOK_SUCCESS',
+        'INFO',
+        null,
+        `RPT payment confirmed via ${formattedPaymentMethod}. TD# ${metadata.taxDeclarationNumber}. Reference ${paymentReference}. Amount ₱${amountPhp.toFixed(2)}. O.R. ${officialReceiptNumber}.`
+      );
+
+      res.status(200).json({
+        received: true,
+        success: true,
+        paymentId,
+        paymentIntentId,
+        amount: amountPhp,
+        paymentMethod: formattedPaymentMethod,
+        paymentReference,
+        officialReceiptNumber,
+        taxDeclarationNumber: metadata.taxDeclarationNumber,
+      });
+
+      return;
+    }
+
+    // =========================================================
+    // BUSINESS TAX PAYMENT
+    // =========================================================
+    if (metadata.businessTrackingNumber) {
+      await pool.query(
+        `
+        UPDATE business_assessments
+        SET
+          status = 'APPROVED',
+          remarks = $1
+        WHERE tracking_number = $2
+           OR id::text = $2
+        `,
+        [
+          `Paid via ${formattedPaymentMethod} - OR: ${officialReceiptNumber}`,
+          metadata.businessTrackingNumber,
+        ]
+      );
+
+      await recordAudit(
+        req,
+        'AUD-PAYMONGO-WEBHOOK',
+        metadata.customerEmail || 'citizen@gov.ph',
+        'Citizen',
+        'ePayment Gateway',
+        'PAYMENT_WEBHOOK_SUCCESS',
+        'INFO',
+        null,
+        `Business tax payment confirmed via ${formattedPaymentMethod}. Tracking #${metadata.businessTrackingNumber}. Reference ${paymentReference}. Amount ₱${amountPhp.toFixed(2)}. O.R. ${officialReceiptNumber}.`
+      );
+
+      res.status(200).json({
+        received: true,
+        success: true,
+        paymentId,
+        paymentIntentId,
+        amount: amountPhp,
+        paymentMethod: formattedPaymentMethod,
+        paymentReference,
+        officialReceiptNumber,
+        businessTrackingNumber:
+          metadata.businessTrackingNumber,
+      });
+
+      return;
+    }
+
+    // =========================================================
+    // PAYMENT RECEIVED BUT NO KNOWN RECORD TYPE
+    // =========================================================
+    console.warn(
+      '⚠️ PayMongo payment was successful but no recognized metadata was found.',
+      {
+        paymentId,
+        paymentIntentId,
+        metadata,
+      }
+    );
+
+    await recordAudit(
+      req,
+      'AUD-PAYMONGO-WEBHOOK',
+      metadata.customerEmail || 'citizen@gov.ph',
+      'Citizen',
+      'ePayment Gateway',
+      'PAYMENT_WEBHOOK_RECEIVED',
+      'INFO',
+      null,
+      `PayMongo payment ${paymentId || paymentIntentId} was received successfully, but no recognized record type was found. Reference ${paymentReference}. Amount ₱${amountPhp.toFixed(2)}.`
+    );
+
+    res.status(200).json({
+      received: true,
+      success: true,
+      paymentId,
+      paymentIntentId,
+      amount: amountPhp,
+      paymentReference,
+      message:
+        'Payment received, but no matching application record was found.',
+    });
   } catch (err: any) {
-    console.error('Error handling PayMongo webhook:', err);
-    res.status(500).json({ error: 'Webhook processing error' });
+    console.error(
+      '❌ Error handling PayMongo webhook:',
+      err
+    );
+
+    res.status(500).json({
+      error: 'Webhook processing error',
+      message:
+        err.message || 'Unknown webhook processing error',
+    });
+  }
+}
+
+export async function createQrPaymentIntent(
+  req: Request,
+  res: Response
+): Promise<void> {
+  const {
+    amount,
+    leaseId,
+    customerName,
+    customerEmail,
+    description,
+  } = req.body;
+
+  if (!amount || Number(amount) <= 0) {
+    res.status(400).json({
+      success: false,
+      error: 'A valid payment amount is required.',
+    });
+    return;
+  }
+
+  try {
+    const numericAmount = Number(amount);
+
+    const referenceNumber =
+      `MKT-${leaseId || Date.now()}-${Math.floor(100000 + Math.random() * 900000)}`;
+
+    const result = await PayMongoService.createQrPaymentIntent({
+      amount: numericAmount,
+      description:
+        description || 'Market Stall Rental Payment',
+      referenceNumber,
+      metadata: {
+        type: 'MARKET_STALL',
+        leaseId,
+        customerName,
+        customerEmail,
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      paymentIntentId: result.id,
+      clientKey: result.clientKey,
+      amount: result.amount,
+      status: result.status,
+      referenceNumber,
+      publicKey: PayMongoService.getPublicKey(),
+    });
+  } catch (err: any) {
+    console.error(
+      '❌ QR Ph Payment Intent error:',
+      err
+    );
+
+    res.status(500).json({
+      success: false,
+      error:
+        err.message ||
+        'Failed to create QR Ph payment.',
+    });
   }
 }

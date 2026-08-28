@@ -35,6 +35,24 @@ export interface CheckoutResult {
   environment: 'live' | 'test';
 }
 
+export interface CreateQrPaymentIntentParams {
+  amount: number;
+  leaseId?: string;
+  customerName?: string;
+  customerEmail?: string;
+  description?: string;
+}
+
+export interface QrPaymentIntentResult {
+  success: boolean;
+  paymentIntentId: string;
+  clientKey: string;
+  publicKey: string;
+  amount: number;
+  referenceNumber: string;
+  status: string;
+}
+
 export interface VerifyPaymentResult {
   success: boolean;
   paid: boolean;
