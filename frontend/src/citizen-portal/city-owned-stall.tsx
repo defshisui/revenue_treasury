@@ -3,13 +3,7 @@ import React, { useState, useEffect, useRef } from "react";
 import logoSystem from '../assets/logo-system.png';
 import { saveLease, getLeases } from "../services/marketService";
 import type { LeaseRecord } from "../services/marketService";
-import {
-    createPayMongoCheckout,
-    verifyPayMongoSession,
-    createPayMongoQrPaymentIntent,
-    createQrPhPaymentMethod,
-    attachQrPhPaymentMethod,
-} from "../services/paymongoService";
+import { createPayMongoCheckout, verifyPayMongoSession } from "../services/paymongoService";
 
 // Interfaces for Market Data
 interface MarketInfo {
@@ -150,13 +144,7 @@ export default function MarketStallApplication() {
     // Digital Payment Integration States
     const [isPaymentStep, setIsPaymentStep] = useState<boolean>(false);
     const [isProcessingPayment, setIsProcessingPayment] = useState<boolean>(false);
-    const [selectedEPayment, setSelectedEPayment] = useState<string>("GCash");
-
-    // Dynamic QR Ph payment states
-    const [qrImageUrl, setQrImageUrl] = useState<string>("");
-
-    const [qrReferenceNumber, setQrReferenceNumber] = useState<string>("");
-    const [isGeneratingQr, setIsGeneratingQr] = useState<boolean>(false);
+    const [selectedEPayment, setSelectedEPayment] = useState<string>("gcash");
 
     // Close dropdown on outside click
     useEffect(() => {
@@ -275,103 +263,7 @@ export default function MarketStallApplication() {
             console.error("PayMongo stall checkout error:", err);
             alert(`Error initiating PayMongo Checkout: ${err.message || err}`);
             setIsProcessingPayment(false);
-        }
-    };
-
-    /**
-     * Creates a Dynamic QR Ph payment through PayMongo.
-     * The backend creates the Payment Intent; the frontend then
-     * creates/attaches the QR Ph Payment Method using the public key.
-     */
-    const handlePayMongoQrPayment = async () => {
-        if (!activeStall || !selectedMarket) return;
-
-        setIsGeneratingQr(true);
-setIsProcessingPayment(true);
-setQrImageUrl("");
-setQrReferenceNumber("");
-        const feeAmount =
-            parseFloat(activeStall.fee.replace(/[^\d.]/g, "")) || 1500.00;
-
-        const generatedLeaseId =
-            `LEASE-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`;
-
-        try {
-            // Pre-save the application as pending payment.
-            // The webhook should be responsible for marking it Paid.
-            const pendingLease: LeaseRecord = {
-                leaseId: generatedLeaseId,
-                firstName: firstName.trim(),
-                lastName: lastName.trim(),
-                marketName: `${selectedMarket} City-Owned Market`,
-                section: activeStall.section + " Section",
-                stallNumber: `${activeStall.stallNum}`,
-                leaseStatus: "Active",
-                amountDue: feeAmount,
-                helperApprovalStatus: "Pending",
-                advancePaymentStatus: "Pending",
-                paymentStatus: "Pending Payment",
-                paymentMethod: "QR Ph",
-            };
-
-            await saveLease(pendingLease);
-            setLeases((prev) => [...prev, pendingLease]);
-
-            // 1. Create Payment Intent through your backend.
-            const intent = await createPayMongoQrPaymentIntent({
-                amount: feeAmount,
-                leaseId: generatedLeaseId,
-                customerName: `${firstName.trim()} ${lastName.trim()}`,
-                customerEmail: currentUser?.email || "vendor@gov.ph",
-                description:
-                    `Market Stall Rental - Stall #${activeStall.stallNum} - ${selectedMarket}`,
-            });
-
-           
-            setQrReferenceNumber(intent.referenceNumber);
-
-            // 2. Create the QR Ph Payment Method using the PUBLIC key.
-            const paymentMethodId = await createQrPhPaymentMethod(
-                intent.publicKey
-            );
-
-            // 3. Attach the QR Ph Payment Method to the Payment Intent.
-            const attachedIntent = await attachQrPhPaymentMethod(
-                intent.paymentIntentId,
-                paymentMethodId,
-                intent.clientKey,
-                intent.publicKey
-            );
-
-            // 4. PayMongo returns the QR image URL after attachment.
-            const imageUrl =
-                attachedIntent?.attributes?.next_action?.code?.image_url;
-
-            if (!imageUrl) {
-                console.error("PayMongo QR response:", attachedIntent);
-                throw new Error(
-                    "PayMongo did not return a QR code image. Check the PayMongo API response and QR Ph activation."
-                );
-            }
-
-            setQrImageUrl(imageUrl);
-
-            alert(
-                "QR Ph payment created successfully. Scan the QR code to complete your payment."
-            );
-        } catch (err: any) {
-            console.error("QR Ph payment error:", err);
-
-            alert(
-                `Unable to generate QR Ph payment.\n\n${
-                    err?.message || "Please try again."
-                }`
-            );
-
-            setQrImageUrl("");
-        } finally {
-            setIsGeneratingQr(false);
-            setIsProcessingPayment(false);
+            setIsPaymentStep(true);
         }
     };
 
@@ -431,12 +323,16 @@ setQrReferenceNumber("");
         setIsApplicationFormOpen(true);
     };
 
-    const handleFormSubmit = (e: React.FormEvent) => {
+    const handleFormSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!activeStall || !selectedMarket) return;
 
+        // Close the application form and immediately start PayMongo checkout.
+        // The user should not have to click a second payment button.
         setIsApplicationFormOpen(false);
-        setIsPaymentStep(true);
+        setIsPaymentStep(false);
+
+        await handlePayMongoStallCheckout();
     };
 
     const handleCompletePaymentAndSubmission = async () => {
@@ -1012,16 +908,7 @@ setQrReferenceNumber("");
                                 <select
                                     id="epayment-select"
                                     value={selectedEPayment}
-                                    onChange={(e) => {
-                                        const method = e.target.value;
-                                        setSelectedEPayment(method);
-
-                                        // Clear an old QR when switching payment methods.
-                                        if (method !== "QR Ph") {
-    setQrImageUrl("");
-    setQrReferenceNumber("");
-}
-                                    }}
+                                    onChange={(e) => setSelectedEPayment(e.target.value)}
                                     className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900 shadow-sm"
                                 >
                                     <option value="GCash">GCash</option>
@@ -1036,98 +923,21 @@ setQrReferenceNumber("");
                             </div>
 
                             {/* QR Ph / Payment Gateway Display Area */}
-                            <div className="border-2 border-dashed border-slate-300 rounded-xl p-4 flex flex-col items-center justify-center space-y-3 bg-slate-50 min-h-[220px]">
-                                {selectedEPayment === "QR Ph" ? (
-                                    qrImageUrl ? (
-                                        <>
-                                            <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-md">
-                                                <img
-                                                    src={qrImageUrl}
-                                                    alt="PayMongo Dynamic QR Ph"
-                                                    className="w-48 h-48 object-contain"
-                                                />
-                                            </div>
-
-                                            <div className="text-center space-y-1">
-                                                <p className="text-xs font-bold text-emerald-700">
-                                                    QR Ph Ready
-                                                </p>
-
-                                                <p className="text-[11px] text-slate-600">
-                                                    Scan this QR code using a supported
-                                                    banking or e-wallet application.
-                                                </p>
-
-                                                {qrReferenceNumber && (
-                                                    <p className="text-[10px] text-slate-500">
-                                                        Reference:{" "}
-                                                        <span className="font-bold">
-                                                            {qrReferenceNumber}
-                                                        </span>
-                                                    </p>
-                                                )}
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <div className="w-32 h-32 bg-white border border-slate-200 rounded-lg flex items-center justify-center shadow-inner">
-                                                {isGeneratingQr ? (
-                                                    <div className="text-center text-[10px] text-blue-700 font-semibold">
-                                                        Generating
-                                                        <br />
-                                                        QR Ph...
-                                                    </div>
-                                                ) : (
-                                                    <div className="text-center text-[10px] text-slate-400">
-                                                        QR Ph
-                                                        <br />
-                                                        code will appear here
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            <p className="text-[11px] font-semibold text-slate-600 text-center">
-                                                {isGeneratingQr
-                                                    ? "Connecting to PayMongo..."
-                                                    : "Click the button below to generate your QR code."}
-                                            </p>
-                                        </>
-                                    )
-                                ) : (
-                                    <div className="w-32 h-32 bg-white border border-slate-200 rounded-lg flex items-center justify-center font-mono text-[10px] text-slate-400 text-center p-2 shadow-inner">
-                                        {selectedEPayment.toLowerCase().includes("gcash") ||
-                                        selectedEPayment.toLowerCase().includes("maya")
-                                            ? "[ PayMongo Secure Checkout ]"
-                                            : "[ Secure Gateway Redirect ]"}
-                                    </div>
-                                )}
-
-                                <p className="text-[11px] font-semibold text-slate-600 text-center">
-                                    Selected Channel:{" "}
-                                    <span className="text-blue-900 uppercase font-bold">
-                                        {selectedEPayment}
-                                    </span>
-                                </p>
+                            <div className="border-2 border-dashed border-slate-300 rounded-xl p-4 flex flex-col items-center justify-center space-y-2 bg-slate-50">
+                                <div className="w-32 h-32 bg-white border border-slate-200 rounded-lg flex items-center justify-center font-mono text-[10px] text-slate-400 text-center p-2 shadow-inner">
+                                    {selectedEPayment.toLowerCase().includes('qr') || selectedEPayment.toLowerCase() === 'gcash' || selectedEPayment.toLowerCase() === 'maya' ? '[ QR Ph Standard Dynamic Code ]' : '[ Secure Gateway Redirect ]'}
+                                </div>
+                                <p className="text-[11px] font-semibold text-slate-600 text-center">Selected Channel: <span className="text-blue-900 uppercase font-bold">{selectedEPayment}</span></p>
                             </div>
 
                             <div className="space-y-2.5">
                                 <button
                                     type="button"
                                     disabled={isProcessingPayment}
-                                    onClick={
-                                        selectedEPayment === "QR Ph"
-                                            ? handlePayMongoQrPayment
-                                            : handlePayMongoStallCheckout
-                                    }
+                                    onClick={handlePayMongoStallCheckout}
                                     className="w-full py-3 bg-blue-700 hover:bg-blue-800 text-white font-bold rounded-xl shadow-md cursor-pointer transition-all text-center flex items-center justify-center gap-2"
                                 >
-                                    {isProcessingPayment
-                                        ? "Connecting to PayMongo..."
-                                        : selectedEPayment === "QR Ph"
-                                            ? qrImageUrl
-                                                ? "QR Ph Generated"
-                                                : "Generate QR Ph Payment"
-                                            : "Pay via PayMongo (Live GCash/Maya/Card)"}
+                                    {isProcessingPayment ? "Connecting to PayMongo..." : "Pay via PayMongo (Live GCash/Maya/Card)"}
                                 </button>
                                 <button
                                     type="button"
