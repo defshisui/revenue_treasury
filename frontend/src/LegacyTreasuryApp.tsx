@@ -16,6 +16,7 @@ import HawkerAssociation from "./components/HawkerAssociation";
 import CityOwnedMarketAdmin from "./components/CityOwnedMarketAdmin";
 import PrivateOwnedMarketAdmin from "./components/Private_Owned_Admin";
 import FraudMonitoringView from "./components/FraudMonitoringView";
+import SessionInactivityModal from "./components/SessionInactivityModal";
 
 import type {
   AuditRecord,
@@ -466,6 +467,8 @@ export default function LegacyTreasuryApp() {
         isCollapsed={isSidebarCollapsed}
         setIsCollapsed={setIsSidebarCollapsed}
       />
+
+      <SessionInactivityModal idleTimeoutMinutes={10} countdownSeconds={60} />
 
       {notification && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 animate-in fade-in duration-100">

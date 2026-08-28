@@ -4,6 +4,7 @@ import { useLocation, Link } from "react-router-dom";
 
 import { useProfileForm } from "../hooks/useProfileForm";
 import { usePasswordForm } from "../hooks/usePasswordForm";
+import SessionInactivityModal from "../components/SessionInactivityModal";
 
 // Fallback API URL so the app doesn't crash if the config module is missing
 const API_BASE_URL = "http://localhost:5000/api";
@@ -696,6 +697,7 @@ export default function Profile() {
           </section>
         </main>
       </div>
+      <SessionInactivityModal idleTimeoutMinutes={10} countdownSeconds={60} />
     </div>
   );
 }
