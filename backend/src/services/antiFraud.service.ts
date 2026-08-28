@@ -40,37 +40,39 @@ export class AntiFraudService {
     }
 
     try {
-      // FraudLabs Pro Fraud Prevention API (REST)
-      // Documentation: https://www.fraudlabspro.com/developer/api/screen-order
       const url = new URL('https://api.fraudlabspro.com/v2/order/screen');
       url.searchParams.append('key', apiKey);
       url.searchParams.append('format', 'json');
-      
-      if (params.ip) url.searchParams.append('ip', params.ip);
-      if (params.email) url.searchParams.append('email', params.email);
+
+      if (params.ip) url.searchParams.append('ip_address', params.ip);
+      if (params.email) url.searchParams.append('email_address', params.email);
       if (params.amount) url.searchParams.append('amount', params.amount.toString());
       if (params.username) url.searchParams.append('username', params.username);
       url.searchParams.append('currency', params.currency || 'PHP');
 
+      console.log('[AntiFraud] Calling FraudLabs Pro for:', params.email);
+
       const response = await fetch(url.toString(), {
-        method: 'POST',
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
       });
 
       const data: any = await response.json();
 
-      if (!response.ok) {
-        console.error('FraudLabs Pro API error:', data);
-        // Fall open (allow) if the API fails, so we don't block legitimate users
+      if (data?.error) {
+        console.error('FraudLabs Pro API error:', data.error);
         return {
           score: 0,
           isFraud: false,
-          reason: 'API Error',
+          reason: `API Error: ${data.error.error_message}`,
           raw: data
         };
       }
 
       const score = parseInt(data.fraudlabspro_score || '0', 10);
-      const status = data.fraudlabspro_status; // 'APPROVE', 'REVIEW', 'REJECT'
+      const status = data.fraudlabspro_status;
+
+      console.log(`[AntiFraud] Result for ${params.email}: score=${score}, status=${status}`);
 
       const isFraud = score >= threshold || status === 'REJECT';
 
