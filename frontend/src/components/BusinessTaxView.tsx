@@ -46,18 +46,12 @@ interface AppointmentRecord {
   createdAt: string;
 }
 
-interface AuditLog {
-  id: string;
-  adminName: string;
-  action: string;
-  details: string;
-  timestamp: string;
-}
+
 
 export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdminViewProps> = ({ isCollapsed = false }) => {
   const [adminUser, setAdminUser] = useState<{ fullname: string; email: string; initials: string; firstName: string; token: string } | null>(null);
 
-  const [activeTab, setActiveTab] = useState<'assessments' | 'appointments' | 'audit_logs'>('assessments');
+  const [activeTab, setActiveTab] = useState<'assessments' | 'appointments'>('assessments');
 
   // Inner Archiver Tabs
   const [assessmentTab, setAssessmentTab] = useState<'Active' | 'Archived'>('Active');
@@ -65,7 +59,7 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
 
   const [assessments, setAssessments] = useState<AssessmentRecord[]>([]);
   const [appointments, setAppointments] = useState<AppointmentRecord[]>([]);
-  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+
   const [loading, setLoading] = useState<boolean>(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
@@ -138,8 +132,6 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
     fetchAdminAssessmentsData();
     if (activeTab === 'appointments') {
       fetchAppointments();
-    } else if (activeTab === 'audit_logs') {
-      fetchAuditLogs();
     }
   }, [statusFilter, currentPage, activeTab]);
 
@@ -306,22 +298,6 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
     }
   };
 
-  const fetchAuditLogs = async () => {
-    setLoading(true);
-    try {
-      const headers: HeadersInit = { 'Content-Type': 'application/json' };
-      if (adminUser?.token) headers['Authorization'] = `Bearer ${adminUser.token}`;
-
-      const res = await fetch(`${API_BASE_URL}/admin/audit-logs`, { headers });
-      if (!res.ok) throw new Error("Failed to fetch logs");
-      const data = await res.json();
-      setAuditLogs(Array.isArray(data) ? data : (data.logs || []));
-    } catch (e) {
-      setAuditLogs([]);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleStatusUpdate = async (newStatus: 'APPROVED' | 'REJECTED' | 'ARCHIVED' | 'PENDING') => {
     if (!selectedAssessment) return;
@@ -506,15 +482,7 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
             >
               Scheduled Appointments
             </button>
-            <button
-              onClick={() => setActiveTab('audit_logs')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeTab === 'audit_logs'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:bg-slate-50'
-                }`}
-            >
-              Audit Trail & COA Compliance Logs
-            </button>
+
           </div>
 
           {activeTab === 'assessments' && (
@@ -734,7 +702,7 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
               </div>
             </div>
           </section>
-        ) : activeTab === 'appointments' ? (
+        ) : (
           <section className="bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-xs space-y-5">
             <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
@@ -853,40 +821,6 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
                             </>
                           )}
                         </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        ) : (
-          <section className="bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-xs space-y-5">
-            <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg> System Audit Trail & Administrative Activity Logs
-            </h3>
-            <div className="overflow-x-auto rounded-xl border border-slate-200/80 dark:border-slate-800">
-              <table className="w-full text-left text-xs whitespace-nowrap border-collapse">
-                <thead className="bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-200 dark:border-slate-800">
-                  <tr>
-                    <th className="p-4">TIMESTAMP</th>
-                    <th className="p-4">ADMINISTRATOR</th>
-                    <th className="p-4">ACTION TYPE</th>
-                    <th className="p-4">DETAILS</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-slate-700 dark:text-slate-300">
-                  {auditLogs.length === 0 ? (
-                    <tr>
-                      <td colSpan={4} className="text-center py-16 text-slate-400 italic">No audit logs recorded yet.</td>
-                    </tr>
-                  ) : (
-                    auditLogs.map(log => (
-                      <tr key={log.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                        <td className="p-4 font-mono text-slate-500">{log.timestamp}</td>
-                        <td className="p-4 font-bold text-slate-900 dark:text-white">{log.adminName}</td>
-                        <td className="p-4 font-semibold text-blue-600">{log.action}</td>
-                        <td className="p-4 text-slate-600 dark:text-slate-300">{log.details}</td>
                       </tr>
                     ))
                   )}
