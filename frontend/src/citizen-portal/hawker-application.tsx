@@ -284,6 +284,17 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
 
     const handleInitialSubmitClick = (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Ensure all required documents are uploaded
+        const hasSecDti = uploadedDocs.some(d => d.document_type === 'SEC_DTI_PERMIT');
+        const hasRoster = uploadedDocs.some(d => d.document_type === 'MEMBER_ROSTER');
+        const hasClearance = uploadedDocs.some(d => d.document_type === 'BARANGAY_CLEARANCE');
+
+        if (!hasSecDti || !hasRoster || !hasClearance) {
+            alert("Please upload all required documents (SEC/DTI Permit, Member Roster, and Barangay Clearance) before proceeding.");
+            return;
+        }
+
         setIsPreviewMode(true);
     };
 
@@ -691,7 +702,7 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                         {/* DOCUMENT 1: SEC / DTI PERMIT */}
                                         <div className="p-3 bg-white rounded-lg border border-slate-200 flex flex-col justify-between">
                                             <div>
-                                                <p className="font-semibold text-slate-800 mb-1">SEC / DTI Permit</p>
+                                                <p className="font-semibold text-slate-800 mb-1">SEC / DTI Permit <span className="text-red-500">*</span></p>
                                                 {!isPreviewMode && (
                                                     <input
                                                         type="file"
@@ -732,7 +743,7 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                         {/* DOCUMENT 2: MEMBER ROSTER LIST */}
                                         <div className="p-3 bg-white rounded-lg border border-slate-200 flex flex-col justify-between">
                                             <div>
-                                                <p className="font-semibold text-slate-800 mb-1">Member Roster List</p>
+                                                <p className="font-semibold text-slate-800 mb-1">Member Roster List <span className="text-red-500">*</span></p>
                                                 {!isPreviewMode && (
                                                     <input
                                                         type="file"
@@ -773,7 +784,7 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                         {/* DOCUMENT 3: BARANGAY CLEARANCE */}
                                         <div className="p-3 bg-white rounded-lg border border-slate-200 flex flex-col justify-between">
                                             <div>
-                                                <p className="font-semibold text-slate-800 mb-1">Barangay Clearance</p>
+                                                <p className="font-semibold text-slate-800 mb-1">Barangay Clearance <span className="text-red-500">*</span></p>
                                                 {!isPreviewMode && (
                                                     <input
                                                         type="file"
