@@ -1,5 +1,5 @@
 // src/components/HawkerAssociationApp.tsx
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import logoSystem from '../assets/logo-system.png';
 import { submitHawkerApplication } from '../services/hawkerservice';
 import { API_BASE_URL } from '../config/api';
@@ -45,10 +45,8 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
     const [applications, setApplications] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
-    // Logged-in user state & dropdown controls
+    // Logged-in user state
     const [loggedInUser, setLoggedInUser] = useState<any>(null);
-    const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-    const dropdownRef = useRef<HTMLDivElement>(null);
 
     // Document Uploads State
     const [uploadedDocs, setUploadedDocs] = useState<HawkerDocument[]>([]);
@@ -146,14 +144,6 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
         };
 
         checkUserSession();
-
-        const handleClickOutside = (event: MouseEvent) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-                setIsUserMenuOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
