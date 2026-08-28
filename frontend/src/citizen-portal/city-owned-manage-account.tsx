@@ -127,7 +127,7 @@ export default function MarketLeaseSearch() {
                     {/* Top Header Bar inside card with Back Button */}
                     <div className="flex justify-between items-center p-[20px_24px] border-b-2 border-[#e2e8f0]">
                         <h2 className="text-[1.1rem] font-bold text-[#1a202c] tracking-[0.5px] border-l-4 border-[#0a369d] pl-3 uppercase">
-                            Hanapin ang Market Lease
+                            Hanapin ang Unified Market Lease
                         </h2>
                         <button
                             onClick={handleBack}
@@ -267,8 +267,8 @@ export default function MarketLeaseSearch() {
                                             <td className="p-[12px_14px] text-center font-semibold">{lease.stallNumber}</td>
                                             <td className="p-[12px_14px]">
                                                 <span className={`px-2 py-1 rounded-[4px] text-[0.7rem] font-bold uppercase tracking-wider ${lease.leaseStatus === 'Active' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
-                                                        lease.leaseStatus === 'Terminated' || lease.leaseStatus === 'Inactive' ? 'bg-rose-100 text-rose-800 border border-rose-200' :
-                                                            'bg-amber-100 text-amber-800 border border-amber-200'
+                                                    lease.leaseStatus === 'Terminated' || lease.leaseStatus === 'Inactive' ? 'bg-rose-100 text-rose-800 border border-rose-200' :
+                                                        'bg-amber-100 text-amber-800 border border-amber-200'
                                                     }`}>
                                                     {lease.leaseStatus}
                                                 </span>
@@ -280,7 +280,7 @@ export default function MarketLeaseSearch() {
                                             <td className="p-[12px_14px]">{lease.advancePaymentStatus}</td>
                                             <td className="p-[12px_14px]">
                                                 <span className={`px-2 py-1 rounded-[4px] text-[0.7rem] font-bold uppercase tracking-wider ${lease.paymentStatus === 'Paid' ? 'bg-blue-100 text-blue-800 border border-blue-200' :
-                                                        'bg-amber-100 text-amber-800 border border-amber-200'
+                                                    'bg-amber-100 text-amber-800 border border-amber-200'
                                                     }`}>
                                                     {lease.paymentStatus}
                                                 </span>
