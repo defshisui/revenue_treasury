@@ -103,7 +103,7 @@ export const UnifiedHeader: FC = () => {
                         </div>
                         <div className="flex flex-col">
                             <span className="font-extrabold text-lg tracking-tight text-slate-900 dark:text-white leading-tight">
-                                Gov Serv
+                                Gov Serve
                             </span>
                             <span className="text-[10px] font-bold text-blue-700 dark:text-blue-400 tracking-wider uppercase">
                                 Unified Portal
