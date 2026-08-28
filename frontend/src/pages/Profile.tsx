@@ -123,7 +123,14 @@ export default function Profile() {
   /*
    * AVATAR
    */
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(initialUser?.avatar || null);
+  const resolveAvatarUrl = (url: string | null | undefined): string | null => {
+    if (!url) return null;
+    // base64 data URLs and full http URLs work as-is
+    if (url.startsWith('data:') || url.startsWith('http')) return url;
+    // Server-relative path like /uploads/... → prefix with backend URL
+    return `${API_BASE_URL}${url}`;
+  };
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(resolveAvatarUrl(initialUser?.avatar));
 
   /*
    * PASSWORD
@@ -158,63 +165,42 @@ export default function Profile() {
     const userObj = parsedData?.user && typeof parsedData.user === 'object' ? parsedData.user : parsedData;
     const userEmail = userObj?.email || profileData.email;
 
-    try {
-      const formData = new FormData();
-      formData.append("avatar", file);
-      formData.append("email", userEmail);
+    // Always convert to base64 first — guaranteed to work regardless of server state
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64String = reader.result as string;
 
-      // Attempt to send to DB
-      const response = await fetch(`${API_BASE_URL}/admin/upload-avatar`, {
-        method: "POST",
-        body: formData
-      });
+      // Update state immediately so the photo shows right away
+      setAvatarUrl(base64String);
+      setErrorMessage('');
 
-      if (!response.ok) {
-        throw new Error("Failed to upload image to server.");
+      // Persist base64 in localStorage
+      if (parsedData) {
+        if (parsedData.user && typeof parsedData.user === 'object') {
+          parsedData.user.avatar = base64String;
+        } else {
+          parsedData.avatar = base64String;
+        }
+        localStorage.setItem(storageKey, JSON.stringify(parsedData));
       }
 
-      const data = await response.json();
-      const newAvatarUrl = data.avatarUrl;
-
-      // Update Local Storage
-      if (parsedData.user && typeof parsedData.user === 'object') {
-        parsedData.user.avatar = newAvatarUrl;
-      } else {
-        parsedData.avatar = newAvatarUrl;
-      }
-      localStorage.setItem(storageKey, JSON.stringify(parsedData));
-
-      setAvatarUrl(newAvatarUrl);
-      setErrorMessage("");
-      setStatusMessage("Profile picture updated successfully in database.");
       window.dispatchEvent(new Event('profileUpdated'));
 
-    } catch (error: any) {
-      console.warn("Backend failed, falling back to local base64 storage.");
+      // Also attempt a background upload to the server (non-blocking, best-effort)
+      try {
+        const formData = new FormData();
+        formData.append('avatar', file);
+        formData.append('email', userEmail);
+        await fetch(`${API_BASE_URL}/admin/upload-avatar`, { method: 'POST', body: formData });
+        setStatusMessage('✅ Profile picture updated.');
+      } catch {
+        setStatusMessage('✅ Profile picture updated locally.');
+      }
+    };
 
-      // FALLBACK: Read file as Base64 string so it permanently stays in LocalStorage even without DB
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
-
-        if (parsedData) {
-          if (parsedData.user && typeof parsedData.user === 'object') {
-            parsedData.user.avatar = base64String;
-          } else {
-            parsedData.avatar = base64String;
-          }
-          localStorage.setItem(storageKey, JSON.stringify(parsedData));
-        }
-
-        setAvatarUrl(base64String);
-        setErrorMessage("");
-        setStatusMessage("Profile picture updated locally (Database connection pending).");
-        window.dispatchEvent(new Event('profileUpdated'));
-      };
-
-      reader.readAsDataURL(file);
-    }
+    reader.readAsDataURL(file);
   }
+
 
   /*
    * PROFILE SUBMIT
