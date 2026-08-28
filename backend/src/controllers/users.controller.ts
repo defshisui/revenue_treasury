@@ -39,7 +39,11 @@ export async function createUser(req: Request, res: Response): Promise<void> {
     }
 
     // --- Anti-Fraud AI Check ---
-    const clientIP = (req?.headers['x-forwarded-for'] as string) || req?.socket?.remoteAddress || 'Unknown';
+    const rawForwarded = req?.headers['x-forwarded-for'];
+    const clientIP = typeof rawForwarded === 'string'
+      ? rawForwarded.split(',')[0].trim()
+      : (Array.isArray(rawForwarded) ? rawForwarded[0].trim() : (req?.ip || req?.socket?.remoteAddress || 'Unknown'));
+
     const fraudCheck = await AntiFraudService.evaluateRisk({
       ip: clientIP !== 'Unknown' ? clientIP : undefined,
       email: username.trim(),

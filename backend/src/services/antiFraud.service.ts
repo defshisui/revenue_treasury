@@ -22,6 +22,17 @@ export class AntiFraudService {
     return parseInt(process.env.ANTI_FRAUD_SCORE_THRESHOLD || '70', 10);
   }
 
+  private static isPublicIP(ip: string): boolean {
+    if (!ip || ip === 'Unknown') return false;
+    const stripped = ip.replace(/^::ffff:/, '');
+    if (stripped === '::1' || stripped === '127.0.0.1') return false;
+    if (/^10\./.test(stripped)) return false;
+    if (/^172\.(1[6-9]|2\d|3[01])\./.test(stripped)) return false;
+    if (/^192\.168\./.test(stripped)) return false;
+    if (/^fc|^fd/.test(stripped)) return false;
+    return true;
+  }
+
   /**
    * Evaluates the risk of a given action using FraudLabs Pro API.
    * If the API key is not set, it falls back to a mock evaluation.
@@ -45,7 +56,10 @@ export class AntiFraudService {
       url.searchParams.append('format', 'json');
       url.searchParams.append('currency', params.currency || 'PHP');
 
-      if (params.ip) url.searchParams.append('ip', params.ip);
+      // FraudLabs Pro requires a valid public IP format.
+      // If client IP is local/private/loopback, use a standard public gateway IP.
+      const ipToSend = (params.ip && this.isPublicIP(params.ip)) ? params.ip.replace(/^::ffff:/, '') : '124.106.12.34';
+      url.searchParams.append('ip', ipToSend);
       if (params.email) url.searchParams.append('email', params.email);
       if (params.username) url.searchParams.append('username', params.username);
       if (params.amount) url.searchParams.append('amount', params.amount.toString());
