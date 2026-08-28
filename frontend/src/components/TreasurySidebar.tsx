@@ -33,6 +33,7 @@ const navigationItems: NavItem[] = [
   { id: "market", label: "Market Stall Management", icon: "▤", hasDropdown: true },
   { id: "users", label: "User & Access Control", icon: "♙", isGovernance: true },
   { id: "audit", label: "Audit Trail Management", icon: "▤", isGovernance: true },
+  { id: "fraud", label: "Fraud Monitoring", icon: "⛨", isGovernance: true },
   { id: "reports", label: "Financial Reports", icon: "◔", isGovernance: true },
 ];
 

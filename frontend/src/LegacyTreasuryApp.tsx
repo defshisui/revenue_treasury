@@ -15,6 +15,7 @@ import ReportsView from "./components/ReportsView";
 import HawkerAssociation from "./components/HawkerAssociation";
 import CityOwnedMarketAdmin from "./components/CityOwnedMarketAdmin";
 import PrivateOwnedMarketAdmin from "./components/Private_Owned_Admin";
+import FraudMonitoringView from "./components/FraudMonitoringView";
 
 import type {
   AuditRecord,
@@ -574,6 +575,7 @@ export default function LegacyTreasuryApp() {
 
           {activeTab === "users" && <UsersView records={users} isCollapsed={isSidebarCollapsed} />}
           {activeTab === "audit" && <AuditTrailView records={auditLogs as unknown as ComponentAuditRecord[]} isCollapsed={isSidebarCollapsed} />}
+          {activeTab === "fraud" && <FraudMonitoringView isCollapsed={isSidebarCollapsed} />}
           {activeTab === "reports" && (
             <ReportsView
               {...({

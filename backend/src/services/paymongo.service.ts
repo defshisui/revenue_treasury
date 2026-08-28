@@ -1,5 +1,6 @@
 // src/services/paymongo.service.ts
 import crypto from 'crypto';
+import { AntiFraudService } from './antiFraud.service.js';
 
 export interface PayMongoCustomerInfo {
   name?: string;
@@ -16,6 +17,7 @@ export interface CreateCheckoutSessionParams {
   cancelUrl: string;
   metadata?: Record<string, any>;
   paymentMethodTypes?: string[];
+  ipAddress?: string; // Added for fraud check
 }
 export interface CreateQrPaymentIntentParams {
   amount: number;
@@ -210,7 +212,23 @@ export class PayMongoService {
       cancelUrl,
       metadata = {},
       paymentMethodTypes = ['card', 'gcash', 'paymaya', 'grab_pay', 'dob', 'billease', 'qrph'],
+      ipAddress,
     } = params;
+
+    // --- Anti-Fraud AI Check ---
+    const fraudCheck = await AntiFraudService.evaluateRisk({
+      ip: ipAddress,
+      email: customer?.email,
+      username: customer?.name,
+      amount: amount,
+      currency: 'PHP'
+    });
+
+    if (fraudCheck.isFraud) {
+      console.warn(`[Anti-Fraud] Blocked payment attempt for ${customer?.email || 'Unknown'}. Score: ${fraudCheck.score}`);
+      throw new Error(`Payment blocked by Anti-Fraud AI (Risk Score: ${fraudCheck.score})`);
+    }
+    // ---------------------------
 
     // Convert PHP to centavos (smallest currency unit, min ₱20.00 = 2000 centavos)
     const amountInCentavos = Math.round(Math.max(amount, 20) * 100);

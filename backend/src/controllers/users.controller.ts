@@ -3,6 +3,7 @@ import type { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import pool from '../db.js';
 import type { CreateUserBody } from '../types/index.js';
+import { AntiFraudService } from '../services/antiFraud.service.js';
 
 export async function getUsers(_req: Request, res: Response): Promise<void> {
   try {
@@ -37,6 +38,28 @@ export async function createUser(req: Request, res: Response): Promise<void> {
       return;
     }
 
+    // --- Anti-Fraud AI Check ---
+    const clientIP = (req?.headers['x-forwarded-for'] as string) || req?.socket?.remoteAddress || 'Unknown';
+    const fraudCheck = await AntiFraudService.evaluateRisk({
+      ip: clientIP !== 'Unknown' ? clientIP : undefined,
+      email: username.trim(),
+      username: fullname.trim()
+    });
+
+    if (fraudCheck.isFraud) {
+      console.warn(`[Anti-Fraud] Blocked account creation attempt for ${username.trim()}. Score: ${fraudCheck.score}`);
+      // Log blocked attempt to audit
+      const clientAgent = req?.headers['user-agent'] || 'Unknown';
+      await pool.query(
+        `INSERT INTO audit_logs (audit_id, user_email, user_role, module, action, severity, ip_address, user_agent, previous_data, new_data)
+         VALUES ('AUD-FRAUD-BLOCK', $1, 'Unknown', 'User Management', 'ACCOUNT_CREATION_BLOCKED', 'CRITICAL', $2, $3, NULL, $4)`,
+        [username.trim(), clientIP, clientAgent, `Blocked by Anti-Fraud AI. Score: ${fraudCheck.score}`]
+      );
+      res.status(403).json({ message: `Account creation blocked due to high risk score (${fraudCheck.score}).` });
+      return;
+    }
+    // ---------------------------
+
     // Hash password before storing
     const hashedPassword = await bcrypt.hash(password.trim(), 12);
 
@@ -49,12 +72,11 @@ export async function createUser(req: Request, res: Response): Promise<void> {
     );
     const newUser = result.rows[0];
 
-    const clientIP = (req?.headers['x-forwarded-for'] as string) || req?.socket?.remoteAddress || 'Unknown';
     const clientAgent = req?.headers['user-agent'] || 'Unknown';
     await pool.query(
       `INSERT INTO audit_logs (audit_id, user_email, user_role, module, action, severity, ip_address, user_agent, previous_data, new_data)
        VALUES ('AUD-USER-ADD', 'system-admin@lgu.gov.ph', 'admin', 'User Management', 'USER_CREATED', 'WARNING', $1, $2, NULL, $3)`,
-      [clientIP, clientAgent, `Created user account for ${newUser.email} with role ${newUser.role}`]
+      [clientIP, clientAgent, `Created user account for ${newUser.email} with role ${newUser.role}. Risk Score: ${fraudCheck.score}`]
     );
 
     res.status(201).json({

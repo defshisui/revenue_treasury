@@ -270,6 +270,7 @@ export default function UsersView({
                     <th className="p-4 text-slate-900 dark:text-white font-bold">Full Name</th>
                     <th className="p-4 text-slate-900 dark:text-white font-bold">Username / Email</th>
                     <th className="p-4 text-slate-900 dark:text-white font-bold">Assigned Role</th>
+                    <th className="p-4 text-slate-900 dark:text-white font-bold">Fraud Risk</th>
                     <th className="p-4 text-slate-900 dark:text-white font-bold">Access Status</th>
                     <th className="p-4 text-slate-900 dark:text-white font-bold text-right">Actions</th>
                   </tr>
@@ -283,6 +284,14 @@ export default function UsersView({
                         <span className={`text-[11px] font-bold px-2.5 py-1 rounded-lg border ${getRoleBadgeStyle(record.role)}`}>
                           {record.role}
                         </span>
+                      </td>
+                      <td className="p-4">
+                        {/* Mock fraud risk for demonstration. In a real app, this would come from the database. */}
+                        {record.username.includes('fraud') || record.username.includes('risk') ? (
+                           <span className="bg-rose-100 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 px-2 py-1 rounded text-xs font-bold border border-rose-200 dark:border-rose-500/20">High Risk (85)</span>
+                        ) : (
+                           <span className="bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 px-2 py-1 rounded text-xs font-bold border border-emerald-200 dark:border-emerald-500/20">Low Risk (12)</span>
+                        )}
                       </td>
                       <td className="p-4">
                         {record.status === 'ARCHIVED' ? (
