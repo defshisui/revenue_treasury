@@ -14,11 +14,26 @@ export const SessionInactivityModal: FC<SessionInactivityModalProps> = ({
 }) => {
   const [isWarningOpen, setIsWarningOpen] = useState(false);
   const [secondsRemaining, setSecondsRemaining] = useState(countdownSeconds);
+  const [hasSession, setHasSession] = useState(false);
   const navigate = useNavigate();
 
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isWarningOpenRef = useRef(false);
+
+  // Check for an active session on mount and when storage changes
+  useEffect(() => {
+    const checkSession = () => {
+      const data = localStorage.getItem('currentUser') ||
+        localStorage.getItem('user') ||
+        sessionStorage.getItem('currentUser') ||
+        sessionStorage.getItem('user');
+      setHasSession(!!data);
+    };
+    checkSession();
+    window.addEventListener('storage', checkSession);
+    return () => window.removeEventListener('storage', checkSession);
+  }, []);
 
   useEffect(() => {
     isWarningOpenRef.current = isWarningOpen;
@@ -115,6 +130,14 @@ export const SessionInactivityModal: FC<SessionInactivityModalProps> = ({
   };
 
   useEffect(() => {
+    // Only watch activity if a logged-in session exists
+    if (!hasSession) {
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+      if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+      setIsWarningOpen(false);
+      return;
+    }
+
     const handleAdminShortcuts = (e: KeyboardEvent) => {
       if (e.key === 'F12') {
         e.preventDefault();
@@ -157,7 +180,7 @@ export const SessionInactivityModal: FC<SessionInactivityModalProps> = ({
       if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
       if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
     };
-  }, [resetIdleTimer]);
+  }, [resetIdleTimer, hasSession]);
 
   if (!isWarningOpen) return null;
 
