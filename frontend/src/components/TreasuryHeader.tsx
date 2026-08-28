@@ -33,6 +33,10 @@ export default function TreasuryHeader({
 
   // Keep track of read notification IDs so they don't reset when polling fetches fresh data
   const readIdsRef = useRef<Set<string>>(new Set());
+  // Keep track of cleared notification IDs so they stay gone after polling
+  const clearedIdsRef = useRef<Set<string>>(new Set());
+  // Flag to track if user explicitly cleared all (covers dynamic/mock IDs)
+  const isClearedAllRef = useRef<boolean>(false);
 
   // Updated state to include avatar
   const [adminUser, setAdminUser] = useState<{ fullname: string; firstName: string; initials: string; avatar: string | null; } | null>(null);
@@ -112,13 +116,17 @@ export default function TreasuryHeader({
             }
           });
 
-          setNotifications(filtered.slice(0, 10).map((log: any) => ({
+          const incoming = filtered.slice(0, 10).map((log: any) => ({
             id: log.id,
             message: log.details || log.action,
             time: log.timestamp || "Recently",
-            // Check if this ID was previously marked as read
             read: readIdsRef.current.has(log.id)
-          })));
+          }));
+          // Filter out any IDs the user has explicitly cleared
+          const visible = isClearedAllRef.current
+            ? []
+            : incoming.filter((n: AppNotification) => !clearedIdsRef.current.has(n.id));
+          setNotifications(visible);
         } else {
           throw new Error("Failed to fetch logs");
         }
@@ -138,10 +146,15 @@ export default function TreasuryHeader({
           return activeRole.toLowerCase() === 'admin' ? isAccountRelated : !isAccountRelated;
         });
 
-        setNotifications(filtered.map(log => ({
+        const incoming = filtered.map(log => ({
           ...log,
-          read: readIdsRef.current.has(log.id) // Ensure mock data respects the read status too
-        })));
+          read: readIdsRef.current.has(log.id)
+        }));
+        // Filter out any IDs the user has explicitly cleared
+        const visible = isClearedAllRef.current
+          ? []
+          : incoming.filter((n: AppNotification) => !clearedIdsRef.current.has(n.id));
+        setNotifications(visible);
       }
     };
 
@@ -177,8 +190,10 @@ export default function TreasuryHeader({
   };
 
   const clearAllNotifications = () => {
+    // Record all current IDs as cleared so polls won't bring them back
+    notifications.forEach(n => clearedIdsRef.current.add(n.id));
+    isClearedAllRef.current = true;
     setNotifications([]);
-    readIdsRef.current.clear();
   };
 
   const handleViewAll = () => {
