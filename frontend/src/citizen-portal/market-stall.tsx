@@ -36,18 +36,18 @@ export default function CitizenPortalLanding() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-100 pt-0 transition-all duration-300 box-border flex flex-col justify-between font-['Segoe_UI',Tahoma,Geneva,Verdana,sans-serif]">
-      <div>
+    <div className="w-full min-h-screen bg-slate-100 dark:bg-slate-950 font-['Segoe_UI',Tahoma,Geneva,Verdana,sans-serif] text-slate-800 dark:text-slate-100 flex flex-col antialiased relative">
 
-        {/* Unified Main Navigation Header */}
-        <UnifiedHeader />
+      {/* Unified Main Navigation Header */}
+      <UnifiedHeader />
 
-        {/* Main Content Container / Landing Page */}
-        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 mt-4">
+      {/* Main Content Wrapper - Added pt-20 to clear the fixed header */}
+      <div className="flex-1 flex flex-col justify-between w-full pt-16 md:pt-20">
+
+        <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
 
           {/* Hero Welcome Banner */}
           <div className="relative overflow-hidden bg-[#122261] rounded-3xl p-8 sm:p-12 text-white shadow-lg flex flex-col justify-center bg-[radial-gradient(#1e3a8a_1px,transparent_1px)] [background-size:16px_16px]">
-
             {/* Background Watermark Logo */}
             <div className="absolute right-[-20px] bottom-[-40px] pointer-events-none opacity-10 select-none">
               <img
@@ -72,7 +72,7 @@ export default function CitizenPortalLanding() {
           </div>
 
           {/* Quick Access Services Section */}
-          <div className="space-y-4">
+          <div className="space-y-4 relative z-0">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">Available Online Services</h2>
               <span className="text-xs font-bold text-blue-700 cursor-pointer hover:underline">View All &rarr;</span>
@@ -137,32 +137,32 @@ export default function CitizenPortalLanding() {
 
             </div>
           </div>
-
         </main>
-      </div>
 
-      {/* Footer bar */}
-      <footer className="w-full bg-blue-950 text-slate-300 text-xs py-4 px-6 border-t border-blue-900 mt-12">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-3">
-          <div className="flex items-center gap-4">
-            <span className="font-bold">FOLLOW US</span>
-            <div className="w-6 h-6 rounded-full bg-blue-900 flex items-center justify-center text-[10px] font-bold cursor-pointer">f</div>
-            <div className="w-6 h-6 rounded-full bg-blue-900 flex items-center justify-center text-[10px] font-bold cursor-pointer">x</div>
+        {/* Footer bar */}
+        <footer className="w-full bg-blue-950 text-slate-300 text-xs py-4 px-6 border-t border-blue-900 mt-auto">
+          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-3">
+            <div className="flex items-center gap-4">
+              <span className="font-bold">FOLLOW US</span>
+              <div className="w-6 h-6 rounded-full bg-blue-900 flex items-center justify-center text-[10px] font-bold cursor-pointer">f</div>
+              <div className="w-6 h-6 rounded-full bg-blue-900 flex items-center justify-center text-[10px] font-bold cursor-pointer">x</div>
+            </div>
+            <div className="flex items-center gap-6 text-[11px]">
+              <span>📞 122</span>
+              <span>✉️ helpdesk@domain.gov.ph</span>
+            </div>
+            <div className="flex items-center gap-4 text-[11px]">
+              <span className="hover:underline cursor-pointer">TERMS OF SERVICE</span>
+              <span className="hover:underline cursor-pointer">FAQS</span>
+              <span className="hover:underline cursor-pointer">PRIVACY POLICY</span>
+            </div>
           </div>
-          <div className="flex items-center gap-6 text-[11px]">
-            <span>📞 122</span>
-            <span>✉️ helpdesk@domain.gov.ph</span>
+          <div className="max-w-7xl mx-auto text-center text-[10px] text-slate-400 mt-3 pt-3 border-t border-blue-900/50">
+            © 2026 Local Government. All rights reserved.
           </div>
-          <div className="flex items-center gap-4 text-[11px]">
-            <span className="hover:underline cursor-pointer">TERMS OF SERVICE</span>
-            <span className="hover:underline cursor-pointer">FAQS</span>
-            <span className="hover:underline cursor-pointer">PRIVACY POLICY</span>
-          </div>
-        </div>
-        <div className="max-w-7xl mx-auto text-center text-[10px] text-slate-400 mt-3 pt-3 border-t border-blue-900/50">
-          © 2026 Local Government. All rights reserved.
-        </div>
-      </footer>
+        </footer>
+
+      </div>
     </div>
   );
 }
