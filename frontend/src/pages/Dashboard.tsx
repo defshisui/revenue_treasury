@@ -48,12 +48,7 @@ export default function Login() {
 
   return (
     <main className="min-h-screen w-full grid grid-cols-1 lg:grid-cols-2 bg-[#F4F6F8]">
-      {/* 
-        FIX APPLIED HERE: 
-        Added 'hidden lg:flex' to completely hide this branding section on mobile screens,
-        making the form take up the full screen. 
-      */}
-      <section className="hidden lg:flex flex-col justify-between p-8 sm:p-10 lg:p-12 bg-[#09101d] text-white relative overflow-hidden min-h-[450px] lg:min-h-screen">
+      <section className="flex flex-col justify-between p-8 sm:p-10 lg:p-12 bg-[#09101d] text-white relative overflow-hidden min-h-[450px] lg:min-h-screen">
         {/* Fixed Logo Location using React Import */}
         <div
           className="absolute inset-0 m-auto size-[480px] bg-contain bg-center bg-no-repeat opacity-15 pointer-events-none z-0"

@@ -9,6 +9,7 @@ import rptRoutes from './rpt.routes.js';
 import marketRoutes from './market.routes.js';
 import hawkerRoutes from './hawker.routes.js';
 import businessRoutes from './business.routes.js'; // 👈 1. Import business routes
+import paymentRoutes from './payment.routes.js';
 
 const router = Router();
 
@@ -20,5 +21,6 @@ router.use(rptRoutes);
 router.use(marketRoutes);
 router.use(hawkerRoutes);
 router.use(businessRoutes); // 👈 2. Mount business routes
+router.use(paymentRoutes);
 
 export default router;

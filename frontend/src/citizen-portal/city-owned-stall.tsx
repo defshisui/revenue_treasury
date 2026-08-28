@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from "react";
 import logoSystem from '../assets/logo-system.png';
 import { saveLease, getLeases } from "../services/marketService";
 import type { LeaseRecord } from "../services/marketService";
+import { createPayMongoCheckout, verifyPayMongoSession } from "../services/paymongoService";
 
 // Interfaces for Market Data
 interface MarketInfo {
@@ -191,12 +192,79 @@ export default function MarketStallApplication() {
                 setCurrentUser(checkUserSession());
                 const data = await getLeases();
                 setLeases(data);
+
+                // Check for PayMongo return callback
+                const urlParams = new URLSearchParams(window.location.search);
+                const paymentSuccess = urlParams.get("payment") === "success";
+                const sessionId = urlParams.get("session_id");
+
+                if (paymentSuccess && sessionId) {
+                    try {
+                        const verifyRes = await verifyPayMongoSession(sessionId);
+                        if (verifyRes.paid) {
+                            alert(`PayMongo Payment Verified!\nOfficial Receipt: ${verifyRes.officialReceiptNumber}\nReference: ${verifyRes.paymentReference}`);
+                            const updatedLeases = await getLeases();
+                            setLeases(updatedLeases);
+                        }
+                    } catch (verifyErr) {
+                        console.error("PayMongo return verification error:", verifyErr);
+                    } finally {
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                    }
+                }
             } catch (err) {
                 console.error("Error loading initial data:", err);
             }
         };
         fetchInitialData();
     }, []);
+
+    const handlePayMongoStallCheckout = async () => {
+        if (!activeStall || !selectedMarket) return;
+        setIsProcessingPayment(true);
+
+        const feeAmount = parseFloat(activeStall.fee.replace(/[^\d.]/g, "")) || 1500.00;
+        const generatedLeaseId = `LEASE-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`;
+
+        // Pre-save pending lease record
+        const pendingLease: LeaseRecord = {
+            leaseId: generatedLeaseId,
+            firstName: firstName.trim(),
+            lastName: lastName.trim(),
+            marketName: `${selectedMarket} City-Owned Market`,
+            section: activeStall.section + " Section",
+            stallNumber: `${activeStall.stallNum}`,
+            leaseStatus: "Active",
+            amountDue: feeAmount,
+            helperApprovalStatus: "Pending",
+            advancePaymentStatus: "Pending",
+            paymentStatus: "Pending Payment",
+            paymentMethod: "PayMongo Live"
+        };
+
+        try {
+            await saveLease(pendingLease);
+
+            const checkout = await createPayMongoCheckout({
+                type: 'MARKET_STALL',
+                amount: feeAmount,
+                leaseId: generatedLeaseId,
+                customerName: `${firstName.trim()} ${lastName.trim()}`,
+                customerEmail: currentUser?.email || 'vendor@gov.ph',
+                description: `Market Stall Lease Application (Stall #${activeStall.stallNum} - ${selectedMarket})`
+            });
+
+            if (checkout?.checkoutUrl) {
+                window.location.href = checkout.checkoutUrl;
+            } else {
+                throw new Error("No checkout URL returned from PayMongo.");
+            }
+        } catch (err: any) {
+            console.error("PayMongo stall checkout error:", err);
+            alert(`Error initiating PayMongo Checkout: ${err.message || err}`);
+            setIsProcessingPayment(false);
+        }
+    };
 
     const marketData = marketDatabase[selectedMarket];
 
@@ -857,14 +925,22 @@ export default function MarketStallApplication() {
                                 <p className="text-[11px] font-semibold text-slate-600 text-center">Selected Channel: <span className="text-blue-900 uppercase font-bold">{selectedEPayment}</span></p>
                             </div>
 
-                            <div className="space-y-2">
+                            <div className="space-y-2.5">
+                                <button
+                                    type="button"
+                                    disabled={isProcessingPayment}
+                                    onClick={handlePayMongoStallCheckout}
+                                    className="w-full py-3 bg-blue-700 hover:bg-blue-800 text-white font-bold rounded-xl shadow-md cursor-pointer transition-all text-center flex items-center justify-center gap-2"
+                                >
+                                    {isProcessingPayment ? "Connecting to PayMongo..." : "Pay via PayMongo (Live GCash/Maya/Card)"}
+                                </button>
                                 <button
                                     type="button"
                                     disabled={isProcessingPayment}
                                     onClick={handleCompletePaymentAndSubmission}
-                                    className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md cursor-pointer transition-all text-center flex items-center justify-center gap-2"
+                                    className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-all text-center cursor-pointer"
                                 >
-                                    {isProcessingPayment ? "Processing Online Payment..." : "Complete Payment & Submit Application"}
+                                    Direct / Manual Offline Settle
                                 </button>
                                 <button
                                     type="button"
@@ -872,7 +948,7 @@ export default function MarketStallApplication() {
                                         setIsPaymentStep(false);
                                         setIsApplicationFormOpen(true);
                                     }}
-                                    className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition-all text-center cursor-pointer"
+                                    className="w-full py-1.5 text-slate-500 hover:text-slate-700 text-[11px] font-medium transition-all text-center cursor-pointer"
                                 >
                                     &larr; Back to Form
                                 </button>

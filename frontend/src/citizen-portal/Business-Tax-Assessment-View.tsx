@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { API_BASE_URL } from '../config/api';
 import logoSystem from '../assets/logo-system.png';
+import { createPayMongoCheckout, verifyPayMongoSession } from '../services/paymongoService';
 
 export interface BusinessTaxAssessmentViewProps {
   isCollapsed?: boolean;
@@ -77,6 +78,60 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [totalPages, setTotalPages] = useState<number>(1);
   const pageSize = 10;
+
+  // PayMongo Payment State
+  const [isPayingBusinessTax, setIsPayingBusinessTax] = useState<boolean>(false);
+
+  // PayMongo Return URL Verification Hook
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const paymentSuccess = params.get("payment") === "success";
+    const sessionId = params.get("session_id");
+
+    if (paymentSuccess && sessionId) {
+      const activeSessionId = sessionId;
+      async function handleVerify() {
+        try {
+          const res = await verifyPayMongoSession(activeSessionId);
+          if (res.paid) {
+            alert(`Business Tax Payment Successful via PayMongo!\nOfficial Receipt: ${res.officialReceiptNumber}\nReference: ${res.paymentReference}`);
+            fetchAssessments();
+          }
+        } catch (e: any) {
+          console.error("PayMongo verification error:", e);
+        } finally {
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+      }
+      handleVerify();
+    }
+  }, []);
+
+  const handlePayMongoBusinessTaxCheckout = async (record: AssessmentRecord) => {
+    setIsPayingBusinessTax(true);
+    try {
+      const gross = Number(record.grossSales || 0);
+      const computedAmount = gross > 0 ? Math.max(gross * 0.02, 500) : 1500;
+
+      const checkout = await createPayMongoCheckout({
+        type: 'BUSINESS_TAX',
+        amount: computedAmount,
+        businessTrackingNumber: record.trackingNumber,
+        customerName: record.businessOwner || user?.fullname || 'Business Taxpayer',
+        customerEmail: user?.email || 'taxpayer@gov.ph',
+        description: `Business Tax Assessment Payment for ${record.businessName} (${record.trackingNumber})`
+      });
+
+      if (checkout?.checkoutUrl) {
+        window.location.href = checkout.checkoutUrl;
+      } else {
+        throw new Error("No checkout URL returned from PayMongo.");
+      }
+    } catch (err: any) {
+      alert(`PayMongo Checkout Error: ${err.message || err}`);
+      setIsPayingBusinessTax(false);
+    }
+  };
 
   // Verification & Sales Declaration Form States
   const [taxBillForm, setTaxBillForm] = useState({ permitNo: '', taxBillNo: '', tin: '' });
@@ -1259,11 +1314,21 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
               </div>
             </div>
 
-            <div className="flex justify-end pt-2 border-t border-slate-200 dark:border-slate-800">
+            <div className="flex justify-between items-center pt-2 border-t border-slate-200 dark:border-slate-800 gap-2">
+              {selectedAssessmentView.status !== 'REJECTED' && (
+                <button
+                  type="button"
+                  disabled={isPayingBusinessTax}
+                  onClick={() => handlePayMongoBusinessTaxCheckout(selectedAssessmentView)}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs cursor-pointer shadow-xs flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  {isPayingBusinessTax ? "Connecting to PayMongo..." : "💳 Pay via PayMongo (GCash / Maya / Card)"}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setSelectedAssessmentView(null)}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs cursor-pointer shadow-xs"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs cursor-pointer shadow-xs ml-auto"
               >
                 Close
               </button>

@@ -4,6 +4,7 @@ import type { ChangeEvent, FormEvent, ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import logoSystem from "/src/assets/logo-system.png";
 import { API_BASE_URL } from '../config/api';
+import { createPayMongoCheckout, verifyPayMongoSession } from '../services/paymongoService';
 
 type ApplicantType = "Property Owner" | "Authorized Representative" | "Corporation / Company";
 
@@ -104,8 +105,6 @@ const services = [
   "Declaration of New / Undeclared Land",
   "Cancellation of Assessment Records",
 ];
-
-const paymentMethods = ["GCash", "Maya", "Online Banking"];
 
 function toAmount(value: unknown): number {
   const amount = Number(String(value ?? 0).replace(/[^0-9.-]/g, ""));
@@ -234,6 +233,8 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
   const [selectedRPTId, setSelectedRPTId] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("GCash");
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
+  const [isPayMongoProcessing, setIsPayMongoProcessing] = useState(false);
+  const [paymongoReceipt, setPaymongoReceipt] = useState<any | null>(null);
 
   const [previewFile, setPreviewFile] = useState<{ name: string; url: string } | null>(null);
 
@@ -243,6 +244,43 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
+
+  // PayMongo Return URL Verification Hook
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const paymentParam = params.get("payment");
+    const sessionId = params.get("session_id");
+
+    if (paymentParam === "success" && sessionId) {
+      const activeSessionId = sessionId;
+      async function handleSessionVerification() {
+        setIsPayMongoProcessing(true);
+        try {
+          const res = await verifyPayMongoSession(activeSessionId);
+          if (res.paid) {
+            setPaymongoReceipt(res);
+            setNotice(`Payment completed successfully via PayMongo. Official Receipt: ${res.officialReceiptNumber}`);
+            
+            // Refresh database records
+            const rptRes = await fetch(`${API_BASE_URL}/lgu-rpt-records`);
+            if (rptRes.ok) {
+              setRptRecords(await rptRes.json());
+            }
+          } else {
+            setNotice("Payment verification is still processing with PayMongo.");
+          }
+        } catch (e: any) {
+          console.error("PayMongo verification failed:", e);
+          setNotice(`Payment verification error: ${e.message || e}`);
+        } finally {
+          setIsPayMongoProcessing(false);
+        }
+      }
+      handleSessionVerification();
+    } else if (paymentParam === "cancelled") {
+      setNotice("PayMongo payment process was cancelled.");
+    }
+  }, [location.search]);
 
   useEffect(() => {
     setUser(getStoredCitizenSession());
@@ -387,6 +425,44 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
     setPaymentMethod("GCash");
     setNotice("");
     setIsPaymentOpen(true);
+  }
+
+  async function handlePayMongoCheckout() {
+    const record = selectedRPT();
+    if (!record) {
+      setNotice("Select an RPT assessment first.");
+      return;
+    }
+
+    const amountDue = getRPTAmountDue(record);
+    if (amountDue <= 0) {
+      setNotice("This RPT record has no outstanding balance.");
+      setIsPaymentOpen(false);
+      return;
+    }
+
+    setIsPayMongoProcessing(true);
+    try {
+      const checkoutResult = await createPayMongoCheckout({
+        type: 'RPT',
+        amount: amountDue,
+        taxDeclarationNumber: record.taxDeclarationNumber,
+        rptRecordId: record.id,
+        customerName: record.ownerName || user?.fullname || "Citizen Taxpayer",
+        customerEmail: user?.email || "citizen@gov.ph",
+        description: `Real Property Tax Payment for TD# ${record.taxDeclarationNumber}`,
+      });
+
+      if (checkoutResult?.checkoutUrl) {
+        window.location.href = checkoutResult.checkoutUrl;
+      } else {
+        throw new Error("No checkout URL returned from PayMongo server.");
+      }
+    } catch (err: any) {
+      console.error("PayMongo initiate error:", err);
+      setNotice(`Failed to open PayMongo checkout: ${err.message || err}`);
+      setIsPayMongoProcessing(false);
+    }
   }
 
   async function confirmPayment() {
@@ -1000,27 +1076,124 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
       {isPaymentOpen && selectedRPT() && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-xs p-4">
           <div className="w-full max-w-md rounded-3xl bg-white dark:bg-slate-900 p-6 shadow-2xl border border-slate-200 dark:border-slate-800">
-            <div className="border-b border-slate-100 dark:border-slate-800 pb-4">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-blue-700">Real Property Tax Payment</p>
-              <h3 className="mt-1 text-xl font-extrabold text-slate-900 dark:text-white">Pay Outstanding RPT</h3>
+            <div className="border-b border-slate-100 dark:border-slate-800 pb-4 flex justify-between items-start">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-blue-700">ePayment Gateway</p>
+                <h3 className="mt-1 text-xl font-extrabold text-slate-900 dark:text-white">Pay Outstanding RPT</h3>
+              </div>
+              <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-full uppercase tracking-wider">
+                Live Gateway
+              </span>
             </div>
             <div className="mt-5 space-y-4">
               <Detail label="Tax Declaration" value={selectedRPT()?.taxDeclarationNumber || "—"} />
-              <Detail label="Owner" value={selectedRPT()?.ownerName || "—"} />
-              <div className="rounded-2xl bg-blue-50 dark:bg-blue-950/40 p-4">
-                <p className="text-[11px] font-bold uppercase tracking-wide text-blue-700">Amount Due</p>
+              <Detail label="Property Owner" value={selectedRPT()?.ownerName || "—"} />
+              <div className="rounded-2xl bg-blue-50 dark:bg-blue-950/40 p-4 border border-blue-100 dark:border-blue-900">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-blue-700">Total Assessment Balance</p>
                 <p className="mt-1 text-2xl font-black text-blue-900 dark:text-blue-300">{formatCurrency(getRPTAmountDue(selectedRPT() as CitizenRPTRecord))}</p>
               </div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                Payment Method
-                <select value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value)} className={`${inputClass} mt-2`}>
-                  {paymentMethods.map((method) => <option key={method}>{method}</option>)}
-                </select>
-              </label>
+
+              {/* PayMongo Gateway Option */}
+              <div className="space-y-3 pt-1">
+                <p className="text-xs font-bold text-slate-700 dark:text-slate-300">Supported Digital Payment Channels:</p>
+                <div className="grid grid-cols-4 gap-2 text-center text-[10px] font-semibold text-slate-600 dark:text-slate-300">
+                  <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-900 font-bold text-blue-800 dark:text-blue-300">GCash</div>
+                  <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-900 font-bold text-emerald-800 dark:text-emerald-300">Maya</div>
+                  <div className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold text-slate-800 dark:text-slate-200">Cards (Visa/MC)</div>
+                  <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-900 font-bold text-indigo-800 dark:text-indigo-300">QR Ph / Banks</div>
+                </div>
+              </div>
             </div>
-            <div className="mt-6 flex gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
-              <button type="button" onClick={() => setIsPaymentOpen(false)} className="flex-1 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 cursor-pointer">Cancel</button>
-              <button type="button" onClick={confirmPayment} className="flex-1 rounded-xl bg-blue-800 px-4 py-3 text-sm font-bold text-white hover:bg-blue-900 cursor-pointer">Confirm Payment</button>
+
+            <div className="mt-6 flex flex-col gap-2 pt-4 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                disabled={isPayMongoProcessing}
+                onClick={handlePayMongoCheckout}
+                className="w-full rounded-xl bg-blue-700 hover:bg-blue-800 text-white px-4 py-3.5 text-sm font-bold shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                {isPayMongoProcessing ? (
+                  <span>Connecting to PayMongo...</span>
+                ) : (
+                  <>
+                    <span>Proceed to PayMongo Checkout</span>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                  </>
+                )}
+              </button>
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsPaymentOpen(false)}
+                  className="flex-1 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmPayment}
+                  className="flex-1 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-600 dark:text-slate-300 px-4 py-2.5 text-xs font-semibold cursor-pointer"
+                >
+                  Direct / Cash Test
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* OFFICIAL RECEIPT SUCCESS MODAL (PAYMONGO RETURN) */}
+      {paymongoReceipt && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-slate-950/75 backdrop-blur-xs p-4">
+          <div className="w-full max-w-lg rounded-3xl bg-white dark:bg-slate-900 p-7 shadow-2xl border border-emerald-200 dark:border-emerald-900">
+            <div className="text-center space-y-2 pb-4 border-b border-slate-100 dark:border-slate-800">
+              <div className="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto text-2xl font-bold">
+                ✓
+              </div>
+              <p className="text-[11px] font-bold uppercase tracking-widest text-emerald-600">ePayment Successful</p>
+              <h3 className="text-2xl font-extrabold text-slate-900 dark:text-white">Official Tax Receipt</h3>
+              <p className="text-xs text-slate-500">Government Electronic Treasury Receipt</p>
+            </div>
+
+            <div className="mt-5 space-y-3 text-xs bg-slate-50 dark:bg-slate-950/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-800">
+              <div className="flex justify-between py-1 border-b border-slate-200 dark:border-slate-800">
+                <span className="text-slate-500 font-semibold">Official Receipt No. (O.R.):</span>
+                <span className="font-mono font-bold text-blue-600 dark:text-blue-400">{paymongoReceipt.officialReceiptNumber}</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-slate-200 dark:border-slate-800">
+                <span className="text-slate-500 font-semibold">Payment Reference:</span>
+                <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">{paymongoReceipt.paymentReference}</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-slate-200 dark:border-slate-800">
+                <span className="text-slate-500 font-semibold">Payment Channel:</span>
+                <span className="font-bold text-slate-800 dark:text-slate-200">{paymongoReceipt.paymentMethod || 'PayMongo'}</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-slate-200 dark:border-slate-800">
+                <span className="text-slate-500 font-semibold">Amount Paid:</span>
+                <span className="font-extrabold text-emerald-600 text-sm">₱{Number(paymongoReceipt.amount || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
+              </div>
+              <div className="flex justify-between py-1">
+                <span className="text-slate-500 font-semibold">Date & Time:</span>
+                <span className="text-slate-700 dark:text-slate-300">{new Date(paymongoReceipt.paymentDate || Date.now()).toLocaleString('en-PH')}</span>
+              </div>
+            </div>
+
+            <div className="mt-6 flex gap-3">
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="flex-1 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 cursor-pointer"
+              >
+                🖨️ Print Receipt
+              </button>
+              <button
+                type="button"
+                onClick={() => setPaymongoReceipt(null)}
+                className="flex-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-3 text-xs font-bold shadow-md transition-all cursor-pointer"
+              >
+                Done
+              </button>
             </div>
           </div>
         </div>

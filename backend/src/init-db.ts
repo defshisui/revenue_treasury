@@ -153,6 +153,9 @@ export async function initializeDatabase(): Promise<void> {
     await pool.query(`
       ALTER TABLE rpt_applications
       ADD COLUMN IF NOT EXISTS documents TEXT[];
+
+      ALTER TABLE citizen_rpt_payments
+      ADD COLUMN IF NOT EXISTS paymongo_session_id VARCHAR(255);
     `);
 
     // Seed default admin account with hashed password
