@@ -631,7 +631,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: RealPro
         marginLeft: isCollapsed ? "80px" : "0px",
         width: isCollapsed ? "calc(100% - 80px)" : "100%",
       }}
-      className="min-h-screen flex flex-col justify-between bg-slate-100 dark:bg-slate-950 font-sans text-slate-800 dark:text-slate-100 transition-all duration-300 box-border"
+      className="min-h-screen flex flex-col justify-between bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-100 transition-all duration-300 box-border"
     >
       <div>
         {/* Reusable Header */}
