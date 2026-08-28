@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import logoSystem from '../assets/logo-system.png';
 import { getLeases } from '../services/marketService';
 import type { LeaseRecord } from '../services/marketService';
@@ -13,12 +13,56 @@ export default function MarketLeaseSearch() {
     const [entriesCount, setEntriesCount] = useState('10');
     const [showInactive, setShowInactive] = useState(false);
 
-    // Data States
     const [allLeases, setAllLeases] = useState<LeaseRecord[]>([]);
     const [filteredLeases, setFilteredLeases] = useState<LeaseRecord[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
-    // Fetch leases on component mount
+    const [user, setUser] = useState<{ fullname: string; email: string; initials: string; firstName: string; token: string } | null>(null);
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const checkUserSession = () => {
+            const rawData = localStorage.getItem('currentUser') ||
+                localStorage.getItem('user') ||
+                sessionStorage.getItem('currentUser') ||
+                sessionStorage.getItem('user');
+
+            if (!rawData) return null;
+
+            try {
+                const parsed = JSON.parse(rawData);
+                const target = parsed.user && typeof parsed.user === 'object' ? parsed.user : parsed;
+
+                const fullName = target.fullname || target.name || target.fullName || target.firstName || target.email;
+                if (!fullName) return null;
+
+                const email = target.email || "";
+                const token = parsed.token || target.token || "";
+                const nameParts = String(fullName).trim().split(" ");
+                const firstName = nameParts[0];
+                const initials = nameParts.length > 1
+                    ? (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase()
+                    : nameParts[0].slice(0, 2).toUpperCase();
+
+                return { fullname: String(fullName), email, firstName, initials, token };
+            } catch (e) {
+                console.error("Failed to parse user session", e);
+                return null;
+            }
+        };
+
+        setUser(checkUserSession());
+
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsDropdownOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
     useEffect(() => {
         const fetchLeases = async () => {
             setIsLoading(true);
@@ -34,10 +78,9 @@ export default function MarketLeaseSearch() {
         fetchLeases();
     }, []);
 
-    // Filter logic dependent on search parameters and allLeases data
     useEffect(() => {
         handleSearch();
-    }, [allLeases, showInactive]); // Re-run if data loads or toggle changes
+    }, [allLeases, showInactive]);
 
     const handleSearch = () => {
         let result = [...allLeases];
@@ -61,7 +104,6 @@ export default function MarketLeaseSearch() {
             result = result.filter(l => l.paymentStatus === paymentStatus);
         }
 
-        // Handle inactive filter toggle - Removed 'Cancelled' to fix TS error
         if (!showInactive) {
             result = result.filter(l => l.leaseStatus !== 'Inactive' && l.leaseStatus !== 'Terminated');
         }
@@ -73,58 +115,120 @@ export default function MarketLeaseSearch() {
         window.history.back();
     };
 
+    const handleLogout = () => {
+        localStorage.removeItem('currentUser');
+        localStorage.removeItem('user');
+        sessionStorage.removeItem('currentUser');
+        sessionStorage.removeItem('user');
+        setUser(null);
+        setIsDropdownOpen(false);
+        window.location.href = '/';
+    };
+
     return (
         <div className="w-full min-h-screen bg-[#eef2f6] font-['Segoe_UI',Tahoma,Geneva,Verdana,sans-serif] text-[#1a202c] flex flex-col pb-12">
 
-            {/* =====================================================
-                HEADER
-            ====================================================== */}
-            <header className="w-full h-[81px] bg-white border-b border-[#dfe4ea] shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
-                <div className="relative max-w-[1218px] h-full mx-auto">
-                    {/* Logo & Title */}
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 flex items-center gap-[13px]">
-                        <div className="w-[60px] h-[60px] rounded-[14px] border border-[#e5e7eb] p-[3px] flex items-center justify-center bg-white shadow-[0_1px_4px_rgba(0,0,0,0.08)]">
-                            <img
-                                src={logoSystem}
-                                alt="Gov Serv Logo"
-                                className="w-full h-full object-contain"
-                            />
-                        </div>
-                        <div className="flex flex-col leading-none">
-                            <span className="text-[16px] font-extrabold text-[#0f172a] tracking-[-0.2px]">
-                                Gov Serv
-                            </span>
-                            <span className="text-[8.5px] font-bold text-[#64748b] tracking-[0.8px] uppercase mt-[6px]">
-                                UNIFIED PORTAL
-                            </span>
+            <header className="w-full bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-xs z-50">
+                <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+                    <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 cursor-pointer" onClick={() => { window.location.href = '/citizen-portal'; }}>
+                            <div className="p-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xs flex items-center justify-center">
+                                <img
+                                    src={logoSystem}
+                                    alt="System Logo"
+                                    className="h-8 w-8 object-contain"
+                                />
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="font-extrabold text-lg tracking-tight text-slate-900 dark:text-white leading-tight">
+                                    Gov Serv
+                                </span>
+                                <span className="text-[10px] font-bold text-blue-700 dark:text-blue-400 tracking-wider uppercase">
+                                    Unified Portal
+                                </span>
+                            </div>
                         </div>
                     </div>
 
-                    {/* Navigation */}
-                    <nav className="absolute left-[548px] top-1/2 -translate-y-1/2 flex items-center gap-[32px] text-[13px] font-semibold text-[#172033]">
-                        <a href="/citizen-portal" className="hover:text-[#1d4ed8] transition-colors whitespace-nowrap">HOME</a>
-                        <a href="#" className="flex items-center gap-[5px] hover:text-[#1d4ed8] transition-colors whitespace-nowrap">
-                            SERVICES <span className="text-[8px] leading-none">▼</span>
-                        </a>
-                    </nav>
+                    <div className="hidden md:flex items-center space-x-6 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                        <span className="hover:text-blue-700 cursor-pointer" onClick={() => window.location.href = '/citizen-portal'}>HOME</span>
 
-                    {/* Login / Register */}
-                    <button
-                        className="absolute right-0 top-1/2 -translate-y-1/2 w-[130px] h-[36px] flex items-center justify-center bg-[#1e3a8a] hover:bg-[#172f73] text-white text-[12px] font-semibold rounded-[12px] shadow-[0_2px_5px_rgba(0,0,0,0.12)] transition-colors whitespace-nowrap"
-                        onClick={() => window.location.href = '/citizen-portal'}
-                    >
-                        Back to Portal
-                    </button>
+                        <div className="relative group py-2">
+                            <span className="hover:text-blue-700 cursor-pointer flex items-center gap-1 select-none">
+                                SERVICES ▾
+                            </span>
+
+                            <div className="absolute left-0 top-full h-2 w-full"></div>
+
+                            <div className="absolute left-0 top-[calc(100%+8px)] w-60 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 py-2 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-1 group-hover:translate-y-0">
+                                <button
+                                    onClick={() => window.location.href = '/citizen-portal'}
+                                    className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer"
+                                >
+                                    Home
+                                </button>
+                                <button
+                                    onClick={() => window.location.href = '/market-vendor-tab'}
+                                    className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer"
+                                >
+                                    Market &amp; Vendors Hub
+                                </button>
+                                <button
+                                    onClick={() => window.location.href = '/citizen-rpt'}
+                                    className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer"
+                                >
+                                    Real Property Tax Hub
+                                </button>
+                                <button
+                                    onClick={() => window.location.href = '/business-tax-assessment'}
+                                    className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer"
+                                >
+                                    Business Tax Assessment Hub
+                                </button>
+                            </div>
+                        </div>
+
+                        <span className="hover:text-blue-700 cursor-pointer">CONTACT US</span>
+                    </div>
+
+                    <div className="flex items-center space-x-3">
+                        {user ? (
+                            <div className="relative" ref={dropdownRef}>
+                                <button
+                                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                                    className="flex items-center space-x-2.5 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-xl transition-all cursor-pointer shadow-xs group"
+                                >
+                                    <span className="text-xs font-extrabold text-slate-800 dark:text-slate-200 tracking-tight">
+                                        Hi, {user.firstName}
+                                    </span>
+                                    <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-[10px] shadow-sm tracking-wider">
+                                        {user.initials}
+                                    </div>
+                                </button>
+
+                                {isDropdownOpen && (
+                                    <div className="absolute right-0 mt-2 w-52 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 py-2 z-50">
+                                        <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-800 mb-1">
+                                            <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{user.fullname}</p>
+                                            <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{user.email}</p>
+                                        </div>
+                                        <button onClick={() => { setIsDropdownOpen(false); window.location.href = '/edit-profile'; }} className="w-full text-left px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer">Edit Profile</button>
+                                        <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer border-t border-slate-100 dark:border-slate-800 mt-1 pt-2">Log Out</button>
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <button onClick={() => window.location.href = '/'} className="bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs px-4 py-2 rounded-xl shadow transition-all cursor-pointer">
+                                Login / Register
+                            </button>
+                        )}
+                    </div>
                 </div>
             </header>
 
-            {/* =====================================================
-                MAIN CONTENT AREA
-            ====================================================== */}
             <main className="flex-grow p-[30px_40px] flex justify-center">
                 <div className="w-full max-w-[1400px] bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] overflow-hidden flex flex-col pb-5">
 
-                    {/* Top Header Bar inside card with Back Button */}
                     <div className="flex justify-between items-center p-[20px_24px] border-b-2 border-[#e2e8f0]">
                         <h2 className="text-[1.1rem] font-bold text-[#1a202c] tracking-[0.5px] border-l-4 border-[#0a369d] pl-3 uppercase">
                             Hanapin ang Market Lease
@@ -137,7 +241,6 @@ export default function MarketLeaseSearch() {
                         </button>
                     </div>
 
-                    {/* Filters */}
                     <div className="p-6 bg-white grid grid-cols-1 lg:grid-cols-3 gap-x-6 gap-y-5 items-end border-b border-[#e2e8f0]">
                         <div className="flex flex-col gap-[6px]">
                             <label htmlFor="leaseId" className="text-[0.85rem] font-semibold text-[#1a202c]">Lease ID</label>
@@ -220,7 +323,6 @@ export default function MarketLeaseSearch() {
                         </div>
                     </div>
 
-                    {/* Due Date Header */}
                     <div className="p-[16px_24px] font-bold text-[0.9rem] text-[#1a202c] flex justify-between items-center">
                         <span>Due Date: 08/20/2026</span>
                         <span className="text-[0.75rem] font-medium text-slate-500 bg-slate-100 px-3 py-1 rounded-full border border-slate-200 shadow-sm">
@@ -228,7 +330,6 @@ export default function MarketLeaseSearch() {
                         </span>
                     </div>
 
-                    {/* Table Section */}
                     <div className="w-full overflow-x-auto min-h-[280px] bg-[#f8fafc] border-t border-b border-[#cbd5e1] flex flex-col justify-start">
                         <table className="w-full border-collapse text-left whitespace-nowrap">
                             <thead>
@@ -267,8 +368,8 @@ export default function MarketLeaseSearch() {
                                             <td className="p-[12px_14px] text-center font-semibold">{lease.stallNumber}</td>
                                             <td className="p-[12px_14px]">
                                                 <span className={`px-2 py-1 rounded-[4px] text-[0.7rem] font-bold uppercase tracking-wider ${lease.leaseStatus === 'Active' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
-                                                        lease.leaseStatus === 'Terminated' || lease.leaseStatus === 'Inactive' ? 'bg-rose-100 text-rose-800 border border-rose-200' :
-                                                            'bg-amber-100 text-amber-800 border border-amber-200'
+                                                    lease.leaseStatus === 'Terminated' || lease.leaseStatus === 'Inactive' ? 'bg-rose-100 text-rose-800 border border-rose-200' :
+                                                        'bg-amber-100 text-amber-800 border border-amber-200'
                                                     }`}>
                                                     {lease.leaseStatus}
                                                 </span>
@@ -280,7 +381,7 @@ export default function MarketLeaseSearch() {
                                             <td className="p-[12px_14px]">{lease.advancePaymentStatus}</td>
                                             <td className="p-[12px_14px]">
                                                 <span className={`px-2 py-1 rounded-[4px] text-[0.7rem] font-bold uppercase tracking-wider ${lease.paymentStatus === 'Paid' ? 'bg-blue-100 text-blue-800 border border-blue-200' :
-                                                        'bg-amber-100 text-amber-800 border border-amber-200'
+                                                    'bg-amber-100 text-amber-800 border border-amber-200'
                                                     }`}>
                                                     {lease.paymentStatus}
                                                 </span>
@@ -304,7 +405,6 @@ export default function MarketLeaseSearch() {
                         </table>
                     </div>
 
-                    {/* Footer Controls / Pagination */}
                     <div className="flex flex-col gap-4 p-[20px_24px_10px_24px]">
                         <div className="flex justify-between items-center text-[0.85rem] text-[#718096]">
                             <div>
