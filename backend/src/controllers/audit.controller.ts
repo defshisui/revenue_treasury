@@ -33,6 +33,7 @@ export async function recordAudit(
 
 export async function getAuditLogs(_req: Request, res: Response): Promise<void> {
   try {
+    await pool.query('ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT FALSE');
     const result = await pool.query('SELECT * FROM audit_logs ORDER BY timestamp DESC');
     const formatted = result.rows.map((row) => ({
       id: row.id.toString(),
@@ -46,12 +47,49 @@ export async function getAuditLogs(_req: Request, res: Response): Promise<void> 
       userAgent: row.user_agent || 'N/A',
       previousData: row.previous_data || '',
       newData: row.new_data || '',
+      isArchived: row.is_archived === true,
       timestamp: new Date(row.timestamp).toLocaleString(),
     }));
     res.json(formatted);
   } catch (err) {
     console.error('Error fetching audit logs:', err);
     res.status(500).json({ message: 'Error loading audit logs' });
+  }
+}
+
+export async function toggleArchiveAuditLog(req: Request, res: Response): Promise<void> {
+  const { id } = req.params;
+  const { isArchived } = req.body;
+  try {
+    await pool.query('ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT FALSE');
+    const targetState = typeof isArchived === 'boolean' ? isArchived : true;
+    const result = await pool.query(
+      'UPDATE audit_logs SET is_archived = $1 WHERE id = $2 RETURNING *',
+      [targetState, id]
+    );
+    if (result.rowCount === 0) {
+      res.status(404).json({ message: 'Log record not found' });
+      return;
+    }
+    res.json({ success: true, message: targetState ? 'Log archived' : 'Log restored', isArchived: targetState });
+  } catch (err) {
+    console.error('Error toggling archive for audit log:', err);
+    res.status(500).json({ message: 'Failed to update archive status' });
+  }
+}
+
+export async function deleteSingleAuditLog(req: Request, res: Response): Promise<void> {
+  const { id } = req.params;
+  try {
+    const result = await pool.query('DELETE FROM audit_logs WHERE id = $1 RETURNING *', [id]);
+    if (result.rowCount === 0) {
+      res.status(404).json({ message: 'Log record not found' });
+      return;
+    }
+    res.json({ success: true, message: 'Log record permanently deleted.' });
+  } catch (err) {
+    console.error('Error deleting audit log:', err);
+    res.status(500).json({ message: 'Failed to delete audit log' });
   }
 }
 

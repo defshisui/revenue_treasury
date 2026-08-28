@@ -31,8 +31,10 @@ export async function initializeDatabase(): Promise<void> {
           user_agent TEXT,
           previous_data TEXT,
           new_data TEXT,
+          is_archived BOOLEAN DEFAULT FALSE,
           timestamp TIMESTAMP DEFAULT NOW()
       );
+      ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT FALSE;
 
       CREATE TABLE IF NOT EXISTS citizens (
           id SERIAL PRIMARY KEY,
