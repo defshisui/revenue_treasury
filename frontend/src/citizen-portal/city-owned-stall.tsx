@@ -1,4 +1,4 @@
-// src/components/MarketStallApplication.tsx
+
 import React, { useState, useEffect, useRef } from "react";
 import logoSystem from '../assets/logo-system.png';
 import { saveLease, getLeases } from "../services/marketService";
