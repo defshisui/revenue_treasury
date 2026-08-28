@@ -18,6 +18,7 @@ interface AssessmentRecord {
   businessName: string;
   businessOwner: string;
   status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'ARCHIVED';
+  paymentStatus?: 'PAID' | 'UNPAID';
   applicationDate: string;
   psicCode?: string;
   grossSales?: number;
@@ -435,13 +436,14 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
       alert("No data available to export.");
       return;
     }
-    const headers = ["Tracking Number", "Business Name", "Owner", "TIN", "Gross Sales", "Status", "Date Filed"];
+    const headers = ["Tracking Number", "Business Name", "Owner", "TIN", "Gross Sales", "Status", "Payment Status", "Date Filed"];
     const rows = filteredAssessments.map(item => [
       item.trackingNumber,
       `"${item.businessName}"`,
       `"${item.businessOwner}"`,
       item.tin || 'N/A',
       item.grossSales || 0,
+      item.paymentStatus || 'UNPAID',
       item.status,
       item.applicationDate
     ]);
@@ -621,6 +623,7 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
                     <th className="p-4">OWNER</th>
                     <th className="p-4">GROSS SALES (PHP)</th>
                     <th className="p-4 text-center">STATUS</th>
+                    <th className="p-4 text-center">PAYMENT STATUS</th>
                     <th className="p-4">DATE FILED</th>
                     <th className="p-4 text-center">ACTIONS</th>
                   </tr>
@@ -628,19 +631,19 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-slate-700 dark:text-slate-300">
                   {loading ? (
                     <tr>
-                      <td colSpan={7} className="text-center py-16 text-slate-400 italic">
+                      <td colSpan={8} className="text-center py-16 text-slate-400 italic">
                         Loading assessment declarations...
                       </td>
                     </tr>
                   ) : fetchError ? (
                     <tr>
-                      <td colSpan={7} className="text-center py-16 text-rose-500 font-medium">
+                      <td colSpan={8} className="text-center py-16 text-rose-500 font-medium">
                         Error: {fetchError}
                       </td>
                     </tr>
                   ) : filteredAssessments.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="text-center py-16 text-slate-400 italic">
+                      <td colSpan={8} className="text-center py-16 text-slate-400 italic">
                         {assessmentTab === 'Active' ? 'No active business tax assessment records found.' : 'No archived records found.'}
                       </td>
                     </tr>
@@ -660,6 +663,15 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
                             {item.status}
                           </span>
                         </td>
+                         <td className="p-4 text-center">
+                           <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold border ${
+                             item.paymentStatus === 'PAID'
+                               ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-800'
+                               : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-800'
+                           }`}>
+                             {item.paymentStatus === 'PAID' ? 'PAID' : 'UNPAID'}
+                           </span>
+                         </td>
                         <td className="p-4 text-slate-500">{new Date(item.applicationDate).toLocaleDateString()}</td>
                         <td className="p-4 text-center space-x-2 flex items-center justify-center">
                           {assessmentTab === 'Active' ? (
