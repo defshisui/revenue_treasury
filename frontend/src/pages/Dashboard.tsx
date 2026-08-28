@@ -1,14 +1,49 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useLockout } from "../hooks/useLockout";
 import { useLogin } from "../hooks/useLogin";
 import { useRegister } from "../hooks/useRegister";
+import { getEncryptedItem } from "../citizen-portal/citizenSecurity";
 
 // This import ensures Vite correctly links to your dist/assets/logo-system-BmYEKQTP.png file during the build
 import systemLogo from "../assets/logo-system.png";
 
 export default function Login() {
+  const navigate = useNavigate();
   const [isRegistering, setIsRegistering] = useState(false);
   const { timeLeft, setTimeLeft, isLockedOut, formatTime } = useLockout();
+
+  // Redirect users who already have an active session
+  useEffect(() => {
+    const encUser = getEncryptedItem('currentUser') || getEncryptedItem('user');
+    const rawData = localStorage.getItem('currentUser') ||
+      localStorage.getItem('user') ||
+      sessionStorage.getItem('currentUser') ||
+      sessionStorage.getItem('user');
+
+    let sessionUser: any = null;
+
+    if (encUser) {
+      sessionUser = encUser;
+    } else if (rawData) {
+      try {
+        sessionUser = JSON.parse(rawData);
+      } catch (e) {
+        console.error("Error parsing raw session data", e);
+      }
+    }
+
+    if (sessionUser) {
+      const targetUser = sessionUser.user && typeof sessionUser.user === 'object' ? sessionUser.user : sessionUser;
+      const userRole = (targetUser.role || '').toLowerCase();
+      
+      if (["admin", "treasury-staff", "auditor"].includes(userRole)) {
+        navigate("/legacy-treasury", { replace: true });
+      } else {
+        navigate("/citizen-portal", { replace: true });
+      }
+    }
+  }, [navigate]);
 
   const {
     email, setEmail, password, setPassword, showPassword, setShowPassword,
