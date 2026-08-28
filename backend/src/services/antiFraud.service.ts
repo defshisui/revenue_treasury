@@ -30,21 +30,12 @@ export class AntiFraudService {
     const apiKey = this.getApiKey();
     const threshold = this.getThreshold();
 
-    // Mock evaluation for local development if no API key is provided
     if (!apiKey) {
-      console.warn('⚠️ No ANTI_FRAUD_API_KEY provided. Using mock fraud evaluation.');
-      let mockScore = 0;
-      let reason = 'Safe (Mock)';
-
-      if (params.email?.includes('fraud')) {
-        mockScore = 95;
-        reason = 'High risk email pattern detected (Mock)';
-      }
-
+      console.warn('⚠️ No ANTI_FRAUD_API_KEY provided. Anti-fraud checks are bypassed.');
       return {
-        score: mockScore,
-        isFraud: mockScore >= threshold,
-        reason: mockScore >= threshold ? reason : undefined,
+        score: 0,
+        isFraud: false,
+        reason: 'API Key Missing (Bypassed)',
       };
     }
 
