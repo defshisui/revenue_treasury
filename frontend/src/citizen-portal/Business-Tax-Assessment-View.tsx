@@ -31,7 +31,14 @@ interface AssessmentRecord {
   tin?: string;
   attachments?: AttachmentFile[];
   remarks?: string;
-  computedFees?: any;
+  computedFees?: {
+    lbt?: number;
+    mayorsPermit?: number;
+    sanitaryFee?: number;
+    garbageFee?: number;
+    fireSafetyFee?: number;
+    total?: number;
+  };
 }
 
 interface AppointmentRecord {
@@ -103,14 +110,24 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
     setQrPaymentIntentId('');
     setQrError('');
 
-    const gross = Number(record.grossSales || 0);
-    const computedAmount = gross > 0 ? Math.max(gross * 0.02, 500) : 1500;
+    // Payment is available only after the administrator approves
+    // the assessment and saves the official computed assessment amount.
+    const computedAmount = Number(record.computedFees?.total || 0);
+
+    if (!Number.isFinite(computedAmount) || computedAmount <= 0) {
+      setIsProcessingPayment(false);
+      setQrError(
+        'Your assessment has not been approved for payment yet. Please wait for the Treasurer\'s Office to complete the assessment.'
+      );
+      return;
+    }
 
     try {
       // 1. Create the Payment Intent through the backend.
       const paymentIntent = await createPayMongoQrPaymentIntent({
         amount: computedAmount,
-        leaseId: record.trackingNumber,
+        type: 'BUSINESS_TAX',
+        businessTrackingNumber: record.trackingNumber,
         customerName: record.businessOwner || user?.fullname || 'Business Taxpayer',
         customerEmail: user?.email || 'taxpayer@gov.ph',
         description: `Business Tax Assessment Payment (${record.trackingNumber})`,
@@ -1359,7 +1376,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
             </div>
 
             <div className="flex justify-between items-center pt-2 border-t border-slate-200 dark:border-slate-800 gap-2">
-              {selectedAssessmentView.status !== 'REJECTED' && (
+              {selectedAssessmentView.status === 'APPROVED' && (
                 <button
                   type="button"
                   disabled={isProcessingPayment}

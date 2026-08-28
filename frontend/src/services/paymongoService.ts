@@ -41,7 +41,9 @@ export interface CheckoutResult {
 
 export interface CreateQrPaymentIntentParams {
   amount: number;
+  type?: 'MARKET_STALL' | 'BUSINESS_TAX' | 'CUSTOM';
   leaseId?: string;
+  businessTrackingNumber?: string;
   customerName?: string;
   customerEmail?: string;
   description?: string;

@@ -733,7 +733,9 @@ export async function createQrPaymentIntent(
 ): Promise<void> {
   const {
     amount,
+    type,
     leaseId,
+    businessTrackingNumber,
     customerName,
     customerEmail,
     description,
@@ -750,17 +752,28 @@ export async function createQrPaymentIntent(
   try {
     const numericAmount = Number(amount);
 
+    const paymentType = type || (businessTrackingNumber ? 'BUSINESS_TAX' : 'MARKET_STALL');
+
     const referenceNumber =
-      `MKT-${leaseId || Date.now()}-${Math.floor(100000 + Math.random() * 900000)}`;
+      paymentType === 'BUSINESS_TAX'
+        ? `BIZ-${businessTrackingNumber || Date.now()}-${Math.floor(100000 + Math.random() * 900000)}`
+        : `MKT-${leaseId || Date.now()}-${Math.floor(100000 + Math.random() * 900000)}`;
 
     const result = await PayMongoService.createQrPaymentIntent({
       amount: numericAmount,
       description:
-        description || 'Market Stall Rental Payment',
+        description ||
+        (paymentType === 'BUSINESS_TAX'
+          ? 'Business Tax Assessment Payment'
+          : 'Market Stall Rental Payment'),
       referenceNumber,
       metadata: {
-        type: 'MARKET_STALL',
-        leaseId,
+        type: paymentType,
+        leaseId: paymentType === 'MARKET_STALL' ? leaseId : undefined,
+        businessTrackingNumber:
+          paymentType === 'BUSINESS_TAX'
+            ? businessTrackingNumber
+            : undefined,
         customerName,
         customerEmail,
       },

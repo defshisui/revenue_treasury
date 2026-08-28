@@ -44,7 +44,8 @@ export async function getBusinessAssessments(req: Request, res: Response): Promi
             tin: row.tin,
             businessType: row.business_type,
             attachments: row.attachments || [],
-            remarks: row.remarks || ''
+            remarks: row.remarks || '',
+            computedFees: row.computed_fees || {}
         }));
 
         res.json({ assessments: formatted, totalPages: 1 });
