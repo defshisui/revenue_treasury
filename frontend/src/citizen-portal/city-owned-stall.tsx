@@ -3,7 +3,12 @@ import React, { useState, useEffect, useRef } from "react";
 import logoSystem from '../assets/logo-system.png';
 import { saveLease, getLeases } from "../services/marketService";
 import type { LeaseRecord } from "../services/marketService";
-import { createPayMongoCheckout, verifyPayMongoSession } from "../services/paymongoService";
+import {
+    createPayMongoQrPaymentIntent,
+    createQrPhPaymentMethod,
+    attachQrPhPaymentMethod,
+    verifyPayMongoSession,
+} from "../services/paymongoService";
 
 // Interfaces for Market Data
 interface MarketInfo {
@@ -144,7 +149,11 @@ export default function MarketStallApplication() {
     // Digital Payment Integration States
     const [isPaymentStep, setIsPaymentStep] = useState<boolean>(false);
     const [isProcessingPayment, setIsProcessingPayment] = useState<boolean>(false);
-    const [selectedEPayment, setSelectedEPayment] = useState<string>("gcash");
+    const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
+    const [qrReferenceNumber, setQrReferenceNumber] = useState<string>("");
+    const [qrPaymentIntentId, setQrPaymentIntentId] = useState<string>("");
+    const [qrLeaseId, setQrLeaseId] = useState<string>("");
+    const [qrError, setQrError] = useState<string>("");
 
     // Close dropdown on outside click
     useEffect(() => {
@@ -219,54 +228,6 @@ export default function MarketStallApplication() {
         fetchInitialData();
     }, []);
 
-    const handlePayMongoStallCheckout = async () => {
-        if (!activeStall || !selectedMarket) return;
-        setIsProcessingPayment(true);
-
-        const feeAmount = parseFloat(activeStall.fee.replace(/[^\d.]/g, "")) || 1500.00;
-        const generatedLeaseId = `LEASE-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`;
-
-        // Pre-save pending lease record
-        const pendingLease: LeaseRecord = {
-            leaseId: generatedLeaseId,
-            firstName: firstName.trim(),
-            lastName: lastName.trim(),
-            marketName: `${selectedMarket} City-Owned Market`,
-            section: activeStall.section + " Section",
-            stallNumber: `${activeStall.stallNum}`,
-            leaseStatus: "Active",
-            amountDue: feeAmount,
-            helperApprovalStatus: "Pending",
-            advancePaymentStatus: "Pending",
-            paymentStatus: "Pending Payment",
-            paymentMethod: "PayMongo Live"
-        };
-
-        try {
-            await saveLease(pendingLease);
-
-            const checkout = await createPayMongoCheckout({
-                type: 'MARKET_STALL',
-                amount: feeAmount,
-                leaseId: generatedLeaseId,
-                customerName: `${firstName.trim()} ${lastName.trim()}`,
-                customerEmail: currentUser?.email || 'vendor@gov.ph',
-                description: `Market Stall Lease Application (Stall #${activeStall.stallNum} - ${selectedMarket})`
-            });
-
-            if (checkout?.checkoutUrl) {
-                window.location.href = checkout.checkoutUrl;
-            } else {
-                throw new Error("No checkout URL returned from PayMongo.");
-            }
-        } catch (err: any) {
-            console.error("PayMongo stall checkout error:", err);
-            alert(`Error initiating PayMongo Checkout: ${err.message || err}`);
-            setIsProcessingPayment(false);
-            setIsPaymentStep(true);
-        }
-    };
-
     const marketData = marketDatabase[selectedMarket];
 
     // Helper to dynamically evaluate if a specific stall is paid/occupied based on backend lease records
@@ -323,26 +284,34 @@ export default function MarketStallApplication() {
         setIsApplicationFormOpen(true);
     };
 
-    const handleFormSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    /**
+     * Creates the PayMongo Dynamic QRPh payment immediately after
+     * the user submits the Stall Lease Application Form.
+     *
+     * This keeps the user inside our payment modal instead of requiring
+     * a second "Pay via PayMongo" click.
+     */
+    const handlePayMongoQrPayment = async () => {
         if (!activeStall || !selectedMarket) return;
 
-        // Close the application form and immediately start PayMongo checkout.
-        // The user should not have to click a second payment button.
-        setIsApplicationFormOpen(false);
-        setIsPaymentStep(false);
-
-        await handlePayMongoStallCheckout();
-    };
-
-    const handleCompletePaymentAndSubmission = async () => {
-        if (!activeStall || !selectedMarket) return;
         setIsProcessingPayment(true);
+        setQrCodeUrl("");
+        setQrReferenceNumber("");
+        setQrPaymentIntentId("");
+        setQrLeaseId("");
+        setQrError("");
 
-        const feeAmount = parseFloat(activeStall.fee.replace(/[^\d.]/g, "")) || 1500.00;
+        const feeAmount =
+            parseFloat(activeStall.fee.replace(/[^\d.]/g, "")) || 1500.00;
 
-        const newLease: LeaseRecord = {
-            leaseId: `LEASE-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`,
+        const generatedLeaseId = `LEASE-${new Date().getFullYear()}-${Math.floor(
+            100 + Math.random() * 900
+        )}`;
+
+        setQrLeaseId(generatedLeaseId);
+
+        const pendingLease: LeaseRecord = {
+            leaseId: generatedLeaseId,
             firstName: firstName.trim(),
             lastName: lastName.trim(),
             marketName: `${selectedMarket} City-Owned Market`,
@@ -351,26 +320,77 @@ export default function MarketStallApplication() {
             leaseStatus: "Active",
             amountDue: feeAmount,
             helperApprovalStatus: "Pending",
-            advancePaymentStatus: "Paid",
-            paymentStatus: "Paid",
-            paymentMethod: selectedEPayment
+            advancePaymentStatus: "Pending",
+            paymentStatus: "Pending Payment",
+            paymentMethod: "PayMongo QRPh",
         };
 
         try {
-            await saveLease(newLease);
-            setLeases((prev) => [...prev, newLease]);
-            alert(`Payment Successful via ${selectedEPayment.toUpperCase()}!\nApplication successfully submitted to Admin database.\nLease ID: ${newLease.leaseId}`);
-        } catch (err) {
-            console.error("Error saving lease record to database:", err);
-            alert("Error processing your lease application record.");
+            // Save the application first so the payment can be linked to it.
+            await saveLease(pendingLease);
+
+            // 1. Create Payment Intent through the backend.
+            const paymentIntent = await createPayMongoQrPaymentIntent({
+                amount: feeAmount,
+                leaseId: generatedLeaseId,
+                customerName: `${firstName.trim()} ${lastName.trim()}`,
+                customerEmail: currentUser?.email || "vendor@gov.ph",
+                description: `Market Stall Lease Payment (${generatedLeaseId})`,
+            });
+
+            setQrPaymentIntentId(paymentIntent.paymentIntentId);
+            setQrReferenceNumber(paymentIntent.referenceNumber);
+
+            // 2. Create a QRPh Payment Method using the public key.
+            const paymentMethodId = await createQrPhPaymentMethod(
+                paymentIntent.publicKey
+            );
+
+            // 3. Attach QRPh to the Payment Intent.
+            const attachedPayment = await attachQrPhPaymentMethod(
+                paymentIntent.paymentIntentId,
+                paymentMethodId,
+                paymentIntent.clientKey,
+                paymentIntent.publicKey
+            );
+
+            // PayMongo returns the Dynamic QR image here.
+            const imageUrl =
+                attachedPayment?.attributes?.next_action?.code?.image_url ||
+                attachedPayment?.next_action?.code?.image_url ||
+                attachedPayment?.attributes?.next_action?.qr_code?.image_url ||
+                attachedPayment?.qr_code?.image_url ||
+                "";
+
+            if (!imageUrl) {
+                console.error("PayMongo QR response:", attachedPayment);
+                throw new Error(
+                    "PayMongo did not return the QRPh code image. Please try again."
+                );
+            }
+
+            setQrCodeUrl(imageUrl);
+        } catch (err: any) {
+            console.error("PayMongo QRPh payment error:", err);
+            setQrError(
+                err?.message ||
+                    "Unable to generate the PayMongo QRPh code. Please try again."
+            );
         } finally {
             setIsProcessingPayment(false);
-            setIsPaymentStep(false);
-            setActiveStall(null);
-            setIsFloorPlanOpen(false);
-            setFirstName("");
-            setLastName("");
         }
+    };
+
+    const handleFormSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!activeStall || !selectedMarket) return;
+
+        // Close the application form and immediately open the
+        // QRPh payment screen. No second payment button is required.
+        setIsApplicationFormOpen(false);
+        setIsPaymentStep(true);
+
+        await handlePayMongoQrPayment();
     };
 
     const handleLogout = () => {
@@ -884,80 +904,137 @@ export default function MarketStallApplication() {
                 </div>
             )}
 
-            {/* Modal: Digital Payment Integration Gateway with E-Payment Options */}
+            {/* Modal: Digital Payment / PayMongo Dynamic QRPh */}
             {isPaymentStep && activeStall && (
                 <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[80] flex items-center justify-center p-4">
-                    <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative border border-slate-300 space-y-4">
+                    <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative border border-slate-300">
                         <div className="flex justify-between items-center border-b border-slate-100 pb-3">
                             <div>
-                                <h3 className="text-sm font-bold text-slate-900 uppercase">Gov Pay - Secure Checkout Gateway</h3>
-                                <p className="text-[11px] text-slate-500">Advance Rental &amp; Permit Fee</p>
+                                <h3 className="text-sm font-bold text-slate-900 uppercase">
+                                    PayMongo Secure Checkout
+                                </h3>
+                                <p className="text-[11px] text-slate-500">
+                                    Market Stall Lease Payment
+                                </p>
                             </div>
-                            <button onClick={() => setIsPaymentStep(false)} className="text-slate-500 hover:text-slate-800 font-bold text-sm cursor-pointer">✕</button>
+                            <button
+                                onClick={() => {
+                                    if (!isProcessingPayment) {
+                                        setIsPaymentStep(false);
+                                    }
+                                }}
+                                disabled={isProcessingPayment}
+                                className="text-slate-500 hover:text-slate-800 font-bold text-sm cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                                ✕
+                            </button>
                         </div>
 
-                        <div className="space-y-4 text-xs">
-                            <div className="bg-blue-50 border border-blue-200 p-3 rounded-xl text-blue-900 space-y-1">
-                                <p className="font-bold">Stall #{activeStall.stallNum} ({activeStall.section}) - {selectedMarket}</p>
-                                <p className="text-[11px]">Total Amount Due: <span className="font-black text-sm">{activeStall.fee}</span></p>
-                            </div>
+                        <div className="space-y-4 pt-4">
+                            {/* Payment details */}
+                            <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl text-slate-800">
+                                <p className="font-bold text-sm">
+                                    Stall Lease Payment ({qrLeaseId || `LEASE-${new Date().getFullYear()}-${activeStall.stallNum}`})
+                                </p>
+                                <p className="text-xs text-slate-500 mt-1">
+                                    Market Stall Lease Payment ({selectedMarket} -
+                                    Stall #{activeStall.stallNum})
+                                </p>
 
-                            {/* E-Payment Option Selector */}
-                            <div className="space-y-1.5">
-                                <label htmlFor="epayment-select" className="block font-bold text-slate-700 uppercase text-[10px]">Pumili ng E-Payment Method :</label>
-                                <select
-                                    id="epayment-select"
-                                    value={selectedEPayment}
-                                    onChange={(e) => setSelectedEPayment(e.target.value)}
-                                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900 shadow-sm"
-                                >
-                                    <option value="GCash">GCash</option>
-                                    <option value="Visa / Mastercard">Visa / Mastercard</option>
-                                    <option value="Maya">Maya</option>
-                                    <option value="Online Banking">Online Banking</option>
-                                    <option value="QR Ph">QR Ph</option>
-                                    <option value="Bayad Center">Bayad Center</option>
-                                    <option value="Cash / Direct">Cash / Direct</option>
-                                    <option value="Landbank Online">Landbank Online</option>
-                                </select>
-                            </div>
-
-                            {/* QR Ph / Payment Gateway Display Area */}
-                            <div className="border-2 border-dashed border-slate-300 rounded-xl p-4 flex flex-col items-center justify-center space-y-2 bg-slate-50">
-                                <div className="w-32 h-32 bg-white border border-slate-200 rounded-lg flex items-center justify-center font-mono text-[10px] text-slate-400 text-center p-2 shadow-inner">
-                                    {selectedEPayment.toLowerCase().includes('qr') || selectedEPayment.toLowerCase() === 'gcash' || selectedEPayment.toLowerCase() === 'maya' ? '[ QR Ph Standard Dynamic Code ]' : '[ Secure Gateway Redirect ]'}
+                                <div className="mt-4 pt-3 border-t border-blue-200 space-y-2 text-xs">
+                                    <div className="flex justify-between">
+                                        <span>Subtotal</span>
+                                        <span className="font-semibold">{activeStall.fee}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span>Fees</span>
+                                        <span>Free</span>
+                                    </div>
+                                    <div className="flex justify-between pt-2 border-t border-blue-200 text-sm">
+                                        <span className="font-bold">Total Due</span>
+                                        <span className="font-black">{activeStall.fee}</span>
+                                    </div>
                                 </div>
-                                <p className="text-[11px] font-semibold text-slate-600 text-center">Selected Channel: <span className="text-blue-900 uppercase font-bold">{selectedEPayment}</span></p>
                             </div>
 
-                            <div className="space-y-2.5">
-                                <button
-                                    type="button"
-                                    disabled={isProcessingPayment}
-                                    onClick={handlePayMongoStallCheckout}
-                                    className="w-full py-3 bg-blue-700 hover:bg-blue-800 text-white font-bold rounded-xl shadow-md cursor-pointer transition-all text-center flex items-center justify-center gap-2"
-                                >
-                                    {isProcessingPayment ? "Connecting to PayMongo..." : "Pay via PayMongo (Live GCash/Maya/Card)"}
-                                </button>
-                                <button
-                                    type="button"
-                                    disabled={isProcessingPayment}
-                                    onClick={handleCompletePaymentAndSubmission}
-                                    className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-all text-center cursor-pointer"
-                                >
-                                    Direct / Manual Offline Settle
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setIsPaymentStep(false);
-                                        setIsApplicationFormOpen(true);
-                                    }}
-                                    className="w-full py-1.5 text-slate-500 hover:text-slate-700 text-[11px] font-medium transition-all text-center cursor-pointer"
-                                >
-                                    &larr; Back to Form
-                                </button>
-                            </div>
+                            {isProcessingPayment && !qrCodeUrl && (
+                                <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 flex flex-col items-center justify-center bg-slate-50 text-center">
+                                    <div className="w-10 h-10 border-4 border-blue-200 border-t-blue-700 rounded-full animate-spin mb-4"></div>
+                                    <p className="font-bold text-slate-800 text-sm">
+                                        Generating your QRPh code...
+                                    </p>
+                                    <p className="text-[11px] text-slate-500 mt-1">
+                                        Please wait while PayMongo prepares your secure payment.
+                                    </p>
+                                </div>
+                            )}
+
+                            {!isProcessingPayment && qrError && (
+                                <div className="border border-rose-200 bg-rose-50 rounded-xl p-4 text-center">
+                                    <p className="text-xs font-bold text-rose-700">
+                                        {qrError}
+                                    </p>
+                                    <button
+                                        type="button"
+                                        onClick={handlePayMongoQrPayment}
+                                        className="mt-3 px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-lg text-xs font-bold cursor-pointer"
+                                    >
+                                        Generate QR Again
+                                    </button>
+                                </div>
+                            )}
+
+                            {qrCodeUrl && (
+                                <div className="border border-slate-200 rounded-xl p-4 bg-slate-50 flex flex-col items-center">
+                                    <p className="text-sm font-bold text-slate-900 mb-1">
+                                        Scan QRPh code to pay
+                                    </p>
+                                    <p className="text-[11px] text-slate-500 text-center mb-3">
+                                        Use GCash, Maya, or another supported QRPh banking app.
+                                    </p>
+
+                                    <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-sm">
+                                        <img
+                                            src={qrCodeUrl}
+                                            alt="PayMongo Dynamic QRPh payment code"
+                                            className="w-64 h-64 object-contain"
+                                        />
+                                    </div>
+
+                                    <div className="w-full mt-4 bg-white border border-slate-200 rounded-lg px-3 py-2 text-center">
+                                        <p className="text-[10px] uppercase font-bold text-slate-400">
+                                            Reference Number
+                                        </p>
+                                        <p className="text-xs font-black text-slate-800 break-all">
+                                            {qrReferenceNumber || "Generating..."}
+                                        </p>
+                                    </div>
+
+                                    <p className="text-[10px] text-slate-500 text-center mt-3">
+                                        Complete the payment by scanning the QR code.
+                                        Payment confirmation is handled by PayMongo.
+                                    </p>
+
+                                    {qrPaymentIntentId && (
+                                        <p className="text-[9px] text-slate-400 text-center mt-1 break-all">
+                                            Payment Intent: {qrPaymentIntentId}
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+
+                            <button
+                                type="button"
+                                disabled={isProcessingPayment}
+                                onClick={() => {
+                                    setIsPaymentStep(false);
+                                    setQrCodeUrl("");
+                                    setQrError("");
+                                }}
+                                className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-all text-center cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                Close
+                            </button>
                         </div>
                     </div>
                 </div>
