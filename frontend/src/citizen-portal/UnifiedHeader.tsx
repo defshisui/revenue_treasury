@@ -3,6 +3,7 @@ import type { FC } from 'react';
 import logoSystem from '../assets/logo-system.png';
 import { API_BASE_URL } from '../config/api';
 import { initCitizenSecurity, getEncryptedItem } from './citizenSecurity';
+import SessionInactivityModal from '../components/SessionInactivityModal';
 
 export const UnifiedHeader: FC = () => {
     const [user, setUser] = useState<{ fullname: string; email: string; initials: string; firstName: string } | null>(null);
@@ -104,6 +105,7 @@ export const UnifiedHeader: FC = () => {
     };
 
     return (
+        <>
         <header className="w-full bg-white border-b border-slate-200 shadow-xs z-50 relative">
             <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
                 <div className="flex items-center gap-3">
@@ -210,5 +212,7 @@ export const UnifiedHeader: FC = () => {
                 </div>
             </div>
         </header>
+        <SessionInactivityModal idleTimeoutMinutes={15} countdownSeconds={60} />
+    </>
     );
 };
