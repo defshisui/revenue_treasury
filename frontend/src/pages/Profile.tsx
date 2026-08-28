@@ -157,18 +157,17 @@ export default function Profile() {
     const storageKey = localStorage.getItem('currentUser') ? 'currentUser' : 'user';
     const rawData = localStorage.getItem(storageKey);
     const parsedData = rawData ? JSON.parse(rawData) : null;
-    const token = parsedData?.token || parsedData?.user?.token;
+    const userObj = parsedData?.user && typeof parsedData.user === 'object' ? parsedData.user : parsedData;
+    const userEmail = userObj?.email || profileData.email;
 
     try {
       const formData = new FormData();
       formData.append("avatar", file);
+      formData.append("email", userEmail);
 
       // Attempt to send to DB
       const response = await fetch(`${API_BASE_URL}/admin/upload-avatar`, {
         method: "POST",
-        headers: {
-          "Authorization": `Bearer ${token}`
-        },
         body: formData
       });
 
@@ -236,44 +235,47 @@ export default function Profile() {
       }
 
       const parsedData = JSON.parse(rawData);
-      const token = parsedData.token || (parsedData.user && parsedData.user.token);
+      const userObj = parsedData.user && typeof parsedData.user === 'object' ? parsedData.user : parsedData;
+      // The email currently stored in the session — used to locate the DB row
+      const currentEmail = userObj.email || profileData.email;
 
       // Attempt DB Update
-      try {
-        const response = await fetch(`${API_BASE_URL}/admin/profile`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            fullname: profileData.fullName,
-            email: profileData.email,
-            phone: profileData.phone,
-            department: profileData.department,
-            address: profileData.address
-          })
-        });
+      const response = await fetch(`${API_BASE_URL}/admin/profile`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          currentEmail,
+          fullname: profileData.fullName,
+          email: profileData.email,
+          phone: profileData.phone,
+          department: profileData.department,
+          address: profileData.address
+        })
+      });
 
-        if (!response.ok) {
-          throw new Error("DB Error");
-        }
-      } catch (e) {
-        console.warn("DB Update failed. Updating locally only.");
+      if (!response.ok) {
+        const errBody = await response.json().catch(() => ({}));
+        throw new Error(errBody.message || 'Failed to update profile on server.');
       }
 
-      // 3. Update the local storage for immediate frontend reflection
+      // Update local storage so the header/nav reflects the new name/email immediately
       if (parsedData.user && typeof parsedData.user === 'object') {
         parsedData.user.fullname = profileData.fullName;
         parsedData.user.email = profileData.email;
+        if (profileData.phone) parsedData.user.phone = profileData.phone;
+        if (profileData.department) parsedData.user.department = profileData.department;
+        if (profileData.address) parsedData.user.address = profileData.address;
       } else {
         parsedData.fullname = profileData.fullName;
         parsedData.email = profileData.email;
+        if (profileData.phone) parsedData.phone = profileData.phone;
+        if (profileData.department) parsedData.department = profileData.department;
+        if (profileData.address) parsedData.address = profileData.address;
       }
 
       localStorage.setItem(storageKey, JSON.stringify(parsedData));
       window.dispatchEvent(new Event('profileUpdated'));
-      setStatusMessage("Official LGU profile information updated successfully.");
+      setStatusMessage("✅ Profile updated successfully.");
 
     } catch (e: any) {
       console.error("Failed to update profile", e);
@@ -308,15 +310,14 @@ export default function Profile() {
       }
 
       const parsedData = JSON.parse(rawData);
-      const token = parsedData.token || (parsedData.user && parsedData.user.token);
+      const userObj = parsedData.user && typeof parsedData.user === 'object' ? parsedData.user : parsedData;
+      const userEmail = userObj.email || profileData.email;
 
       const response = await fetch(`${API_BASE_URL}/admin/change-password`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          email: userEmail,
           currentPassword: passwordData.currentPassword,
           newPassword: passwordData.newPassword
         })
@@ -328,7 +329,7 @@ export default function Profile() {
       }
 
       resetPasswordForm();
-      setStatusMessage("Account security password securely updated in database.");
+      setStatusMessage("✅ Password changed successfully.");
 
     } catch (e: any) {
       console.error("Failed to update password", e);
