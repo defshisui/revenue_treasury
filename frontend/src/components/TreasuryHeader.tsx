@@ -31,12 +31,23 @@ export default function TreasuryHeader({
   const [isViewAllModalOpen, setIsViewAllModalOpen] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
-  // Keep track of read notification IDs so they don't reset when polling fetches fresh data
-  const readIdsRef = useRef<Set<string>>(new Set());
-  // Keep track of cleared notification IDs so they stay gone after polling
-  const clearedIdsRef = useRef<Set<string>>(new Set());
-  // Flag to track if user explicitly cleared all (covers dynamic/mock IDs)
-  const isClearedAllRef = useRef<boolean>(false);
+  // --- Notification persistence helpers (survive page reloads via localStorage) ---
+  const LS_READ    = 'notif_read_ids';
+  const LS_CLEARED = 'notif_cleared_ids';
+  const LS_ALL     = 'notif_cleared_all';
+
+  const getReadIds    = () => new Set<string>(JSON.parse(localStorage.getItem(LS_READ)    || '[]'));
+  const getClearedIds = () => new Set<string>(JSON.parse(localStorage.getItem(LS_CLEARED) || '[]'));
+  const getIsClearedAll = () => localStorage.getItem(LS_ALL) === 'true';
+
+  const saveReadIds    = (s: Set<string>) => localStorage.setItem(LS_READ,    JSON.stringify([...s]));
+  const saveClearedIds = (s: Set<string>) => localStorage.setItem(LS_CLEARED, JSON.stringify([...s]));
+  const saveIsClearedAll = (v: boolean)   => localStorage.setItem(LS_ALL,     String(v));
+
+  // In-memory refs (hydrated from localStorage on mount)
+  const readIdsRef      = useRef<Set<string>>(getReadIds());
+  const clearedIdsRef   = useRef<Set<string>>(getClearedIds());
+  const isClearedAllRef = useRef<boolean>(getIsClearedAll());
 
   // Updated state to include avatar
   const [adminUser, setAdminUser] = useState<{ fullname: string; firstName: string; initials: string; avatar: string | null; } | null>(null);
@@ -182,17 +193,22 @@ export default function TreasuryHeader({
   const markAllAsRead = () => {
     setNotifications(prev => {
       const updated = prev.map(n => {
-        readIdsRef.current.add(n.id); // Save the ID to the reference set
+        readIdsRef.current.add(n.id);
         return { ...n, read: true };
       });
+      // Persist the read IDs so they survive a reload
+      saveReadIds(readIdsRef.current);
       return updated;
     });
   };
 
   const clearAllNotifications = () => {
-    // Record all current IDs as cleared so polls won't bring them back
+    // Record all current IDs as cleared and set the global flag
     notifications.forEach(n => clearedIdsRef.current.add(n.id));
     isClearedAllRef.current = true;
+    // Persist both to localStorage so the clear survives a page reload
+    saveClearedIds(clearedIdsRef.current);
+    saveIsClearedAll(true);
     setNotifications([]);
   };
 
