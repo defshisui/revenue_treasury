@@ -60,10 +60,11 @@ export async function createUser(req: Request, res: Response): Promise<void> {
     }
     // ---------------------------
 
-    // Hash password before storing
     const hashedPassword = await bcrypt.hash(password.trim(), 12);
 
-    // Ensure status defaults to Active upon creation
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'Active'`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()`);
+
     const result = await pool.query(
       `INSERT INTO users (name, email, password, role, status, created_at)
        VALUES ($1, $2, $3, $4, $5, NOW())
@@ -89,9 +90,10 @@ export async function createUser(req: Request, res: Response): Promise<void> {
         status: newUser.status,
       },
     });
-  } catch (err) {
-    console.error('Error creating user:', err);
-    res.status(500).json({ message: 'Failed to create user in database.' });
+  } catch (err: any) {
+    console.error('[createUser] Error:', err?.message || err);
+    console.error('[createUser] Stack:', err?.stack);
+    res.status(500).json({ message: err?.message || 'Failed to create user in database.' });
   }
 }
 
