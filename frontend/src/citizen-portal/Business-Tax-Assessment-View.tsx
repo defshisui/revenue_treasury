@@ -2,7 +2,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { API_BASE_URL } from '../config/api';
 import logoSystem from '../assets/logo-system.png';
-import { createPayMongoCheckout, verifyPayMongoSession } from '../services/paymongoService';
+import {
+  createPayMongoQrPaymentIntent,
+  createQrPhPaymentMethod,
+  attachQrPhPaymentMethod,
+} from '../services/paymongoService';
 
 export interface BusinessTaxAssessmentViewProps {
   isCollapsed?: boolean;
@@ -79,58 +83,98 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
   const [totalPages, setTotalPages] = useState<number>(1);
   const pageSize = 10;
 
-  // PayMongo Payment State
-  const [isPayingBusinessTax, setIsPayingBusinessTax] = useState<boolean>(false);
+  // PayMongo Dynamic QRPh Payment State
+  const [isPaymentStep, setIsPaymentStep] = useState<boolean>(false);
+  const [isProcessingPayment, setIsProcessingPayment] = useState<boolean>(false);
+  const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
+  const [qrReferenceNumber, setQrReferenceNumber] = useState<string>('');
+  const [qrPaymentIntentId, setQrPaymentIntentId] = useState<string>('');
+  const [qrError, setQrError] = useState<string>('');
+  const [paymentAssessment, setPaymentAssessment] = useState<AssessmentRecord | null>(null);
 
-  // PayMongo Return URL Verification Hook
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const paymentSuccess = params.get("payment") === "success";
-    const sessionId = params.get("session_id");
+  /**
+   * Creates the PayMongo Dynamic QRPh payment directly inside the
+   * assessment modal. The user does not leave the current page.
+   */
+  const handlePayMongoBusinessTaxQrPayment = async (record: AssessmentRecord) => {
+    setIsProcessingPayment(true);
+    setQrCodeUrl('');
+    setQrReferenceNumber('');
+    setQrPaymentIntentId('');
+    setQrError('');
 
-    if (paymentSuccess && sessionId) {
-      const activeSessionId = sessionId;
-      async function handleVerify() {
-        try {
-          const res = await verifyPayMongoSession(activeSessionId);
-          if (res.paid) {
-            alert(`Business Tax Payment Successful via PayMongo!\nOfficial Receipt: ${res.officialReceiptNumber}\nReference: ${res.paymentReference}`);
-            fetchAssessments();
-          }
-        } catch (e: any) {
-          console.error("PayMongo verification error:", e);
-        } finally {
-          window.history.replaceState({}, document.title, window.location.pathname);
-        }
-      }
-      handleVerify();
-    }
-  }, []);
+    const gross = Number(record.grossSales || 0);
+    const computedAmount = gross > 0 ? Math.max(gross * 0.02, 500) : 1500;
 
-  const handlePayMongoBusinessTaxCheckout = async (record: AssessmentRecord) => {
-    setIsPayingBusinessTax(true);
     try {
-      const gross = Number(record.grossSales || 0);
-      const computedAmount = gross > 0 ? Math.max(gross * 0.02, 500) : 1500;
-
-      const checkout = await createPayMongoCheckout({
-        type: 'BUSINESS_TAX',
+      // 1. Create the Payment Intent through the backend.
+      const paymentIntent = await createPayMongoQrPaymentIntent({
         amount: computedAmount,
-        businessTrackingNumber: record.trackingNumber,
+        leaseId: record.trackingNumber,
         customerName: record.businessOwner || user?.fullname || 'Business Taxpayer',
         customerEmail: user?.email || 'taxpayer@gov.ph',
-        description: `Business Tax Assessment Payment for ${record.businessName} (${record.trackingNumber})`
+        description: `Business Tax Assessment Payment (${record.trackingNumber})`,
       });
 
-      if (checkout?.checkoutUrl) {
-        window.location.href = checkout.checkoutUrl;
-      } else {
-        throw new Error("No checkout URL returned from PayMongo.");
+      setQrPaymentIntentId(paymentIntent.paymentIntentId);
+      setQrReferenceNumber(paymentIntent.referenceNumber);
+
+      // 2. Create the QRPh Payment Method using the public key.
+      const paymentMethodId = await createQrPhPaymentMethod(
+        paymentIntent.publicKey
+      );
+
+      // 3. Attach QRPh to the Payment Intent.
+      const attachedPayment = await attachQrPhPaymentMethod(
+        paymentIntent.paymentIntentId,
+        paymentMethodId,
+        paymentIntent.clientKey,
+        paymentIntent.publicKey
+      );
+
+      // 4. PayMongo returns the Dynamic QR image after attachment.
+      const imageUrl =
+        attachedPayment?.attributes?.next_action?.code?.image_url ||
+        attachedPayment?.next_action?.code?.image_url ||
+        attachedPayment?.attributes?.next_action?.qr_code?.image_url ||
+        attachedPayment?.qr_code?.image_url ||
+        '';
+
+      if (!imageUrl) {
+        console.error('PayMongo QR response:', attachedPayment);
+        throw new Error(
+          'PayMongo did not return the QRPh code image. Please try again.'
+        );
       }
+
+      setQrCodeUrl(imageUrl);
     } catch (err: any) {
-      alert(`PayMongo Checkout Error: ${err.message || err}`);
-      setIsPayingBusinessTax(false);
+      console.error('PayMongo Business Tax QRPh payment error:', err);
+      setQrError(
+        err?.message ||
+          'Unable to generate the PayMongo QRPh code. Please try again.'
+      );
+    } finally {
+      setIsProcessingPayment(false);
     }
+  };
+
+  const openBusinessTaxPayment = (record: AssessmentRecord) => {
+    setPaymentAssessment(record);
+    setSelectedAssessmentView(null);
+    setIsPaymentStep(true);
+    void handlePayMongoBusinessTaxQrPayment(record);
+  };
+
+  const closeBusinessTaxPayment = () => {
+    if (isProcessingPayment) return;
+
+    setIsPaymentStep(false);
+    setPaymentAssessment(null);
+    setQrCodeUrl('');
+    setQrReferenceNumber('');
+    setQrPaymentIntentId('');
+    setQrError('');
   };
 
   // Verification & Sales Declaration Form States
@@ -1318,17 +1362,161 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
               {selectedAssessmentView.status !== 'REJECTED' && (
                 <button
                   type="button"
-                  disabled={isPayingBusinessTax}
-                  onClick={() => handlePayMongoBusinessTaxCheckout(selectedAssessmentView)}
+                  disabled={isProcessingPayment}
+                  onClick={() => openBusinessTaxPayment(selectedAssessmentView)}
                   className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs cursor-pointer shadow-xs flex items-center gap-1.5 disabled:opacity-50"
                 >
-                  {isPayingBusinessTax ? "Connecting to PayMongo..." : "💳 Pay via PayMongo (GCash / Maya / Card)"}
+                  {isProcessingPayment ? "Generating QR..." : "💳 Pay via PayMongo (GCash / Maya / Card)"}
                 </button>
               )}
               <button
                 type="button"
                 onClick={() => setSelectedAssessmentView(null)}
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs cursor-pointer shadow-xs ml-auto"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* BUSINESS TAX: PayMongo Dynamic QRPh Payment Modal */}
+      {isPaymentStep && paymentAssessment && (
+        <div className="fixed inset-0 z-[60] bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 relative">
+            <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-3">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase">
+                  PayMongo Secure Checkout
+                </h3>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Business Tax Payment
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeBusinessTaxPayment}
+                disabled={isProcessingPayment}
+                className="text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 font-bold text-lg cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4 pt-4">
+              <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 p-4 rounded-xl text-slate-800 dark:text-slate-100">
+                <p className="font-bold text-sm">
+                  Business Tax Payment ({paymentAssessment.trackingNumber})
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Business Tax Assessment ({paymentAssessment.businessName})
+                </p>
+
+                <div className="mt-4 pt-3 border-t border-blue-200 dark:border-blue-900 space-y-2 text-xs">
+                  <div className="flex justify-between">
+                    <span>Subtotal</span>
+                    <span className="font-semibold">
+                      ₱{(Number(paymentAssessment.grossSales || 0) > 0
+                        ? Math.max(Number(paymentAssessment.grossSales || 0) * 0.02, 500)
+                        : 1500
+                      ).toLocaleString('en-PH', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between">
+                    <span>Fees</span>
+                    <span>Free</span>
+                  </div>
+
+                  <div className="flex justify-between pt-2 border-t border-blue-200 dark:border-blue-900 text-sm">
+                    <span className="font-bold">Total Due</span>
+                    <span className="font-black">
+                      ₱{(Number(paymentAssessment.grossSales || 0) > 0
+                        ? Math.max(Number(paymentAssessment.grossSales || 0) * 0.02, 500)
+                        : 1500
+                      ).toLocaleString('en-PH', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {isProcessingPayment && !qrCodeUrl && (
+                <div className="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-8 flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950 text-center">
+                  <div className="w-10 h-10 border-4 border-blue-200 border-t-blue-700 rounded-full animate-spin mb-4"></div>
+                  <p className="font-bold text-slate-800 dark:text-slate-100 text-sm">
+                    Generating your QRPh code...
+                  </p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                    Please wait while PayMongo prepares your secure payment.
+                  </p>
+                </div>
+              )}
+
+              {!isProcessingPayment && qrError && (
+                <div className="border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/30 rounded-xl p-4 text-center">
+                  <p className="text-xs font-bold text-rose-700 dark:text-rose-300">
+                    {qrError}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => void handlePayMongoBusinessTaxQrPayment(paymentAssessment)}
+                    className="mt-3 px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-lg text-xs font-bold cursor-pointer"
+                  >
+                    Generate QR Again
+                  </button>
+                </div>
+              )}
+
+              {qrCodeUrl && (
+                <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-4 bg-slate-50 dark:bg-slate-950 flex flex-col items-center">
+                  <p className="text-sm font-bold text-slate-900 dark:text-white mb-1">
+                    Scan QRPh code to pay
+                  </p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 text-center mb-3">
+                    Use GCash, Maya, or another supported QRPh banking app.
+                  </p>
+
+                  <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-sm">
+                    <img
+                      src={qrCodeUrl}
+                      alt="PayMongo Dynamic QRPh payment code"
+                      className="w-64 h-64 object-contain"
+                    />
+                  </div>
+
+                  <div className="w-full mt-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 text-center">
+                    <p className="text-[10px] uppercase font-bold text-slate-400">
+                      Reference Number
+                    </p>
+                    <p className="text-xs font-black text-slate-800 dark:text-slate-100 break-all">
+                      {qrReferenceNumber || 'Generating...'}
+                    </p>
+                  </div>
+
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 text-center mt-3">
+                    Complete the payment by scanning the QR code.
+                    Payment confirmation is handled by PayMongo.
+                  </p>
+
+                  {qrPaymentIntentId && (
+                    <span className="hidden">{qrPaymentIntentId}</span>
+                  )}
+                </div>
+              )}
+
+              <button
+                type="button"
+                disabled={isProcessingPayment}
+                onClick={closeBusinessTaxPayment}
+                className="w-full py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-xl transition-all text-center cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Close
               </button>
