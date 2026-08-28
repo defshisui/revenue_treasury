@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { Shield, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 interface FraudLog {
   id: string;
@@ -16,7 +15,7 @@ interface Props {
   isCollapsed: boolean;
 }
 
-export default function FraudMonitoringView({ isCollapsed }: Props) {
+export default function FraudMonitoringView(_props: Props) {
   const [logs, setLogs] = useState<FraudLog[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -80,7 +79,7 @@ export default function FraudMonitoringView({ isCollapsed }: Props) {
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <Shield className="w-7 h-7 text-indigo-600 dark:text-indigo-400" />
+            <svg className="w-7 h-7 text-indigo-600 dark:text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
             Fraud Monitoring
           </h2>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
@@ -138,12 +137,12 @@ export default function FraudMonitoringView({ isCollapsed }: Props) {
                       <td className="px-6 py-4">
                         {isBlocked ? (
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400 border border-rose-200 dark:border-rose-500/20">
-                            <ShieldAlert className="w-3.5 h-3.5" />
+                            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="M12 8v4"></path><path d="M12 16h.01"></path></svg>
                             Blocked
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20">
-                            <ShieldCheck className="w-3.5 h-3.5" />
+                            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="M9 12l2 2 4-4"></path></svg>
                             Passed
                           </span>
                         )}

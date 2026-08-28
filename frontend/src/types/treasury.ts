@@ -22,7 +22,8 @@ export type Subsystem =
   | "payments"
   | "users"
   | "audit"
-  | "reports";
+  | "reports"
+  | "fraud";
 
 export type RPTWorkflowStatus = "Assessment Created" | "Reviewed" | "Approved" | "Billed" | "Paid" | "Completed";
 export type BusinessWorkflowStatus = "Draft" | "Submitted" | "Reviewed" | "Approved" | "Paid" | "Completed";
