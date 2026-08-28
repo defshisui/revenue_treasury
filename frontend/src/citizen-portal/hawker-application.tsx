@@ -516,8 +516,9 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
             {/* MODAL POPUP (APPLICATION FORM & PREVIEW) */}
             {isModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 overflow-y-auto">
-                    <div className="bg-white border border-slate-300 rounded-lg max-w-4xl w-full p-6 md:p-8 relative shadow-2xl my-8 max-h-[90vh] overflow-y-auto">
-                        <div className="flex flex-col md:flex-row justify-between items-center border-b border-slate-200 pb-4 gap-4 sticky top-0 bg-white z-10">
+                    <div className="bg-white border border-slate-300 rounded-lg max-w-4xl w-full relative shadow-2xl my-8 max-h-[90vh] overflow-y-auto">
+
+                        <div className="flex flex-col md:flex-row justify-between items-center border-b border-slate-200 px-6 md:px-8 pt-6 md:pt-8 pb-4 gap-4 sticky top-0 bg-white z-10 rounded-t-lg">
                             <h1 className="text-slate-800 font-bold text-sm tracking-wide uppercase">
                                 {isViewOnly ? "HAWKER ASSOCIATION APPLICATION - RECORD VIEW" : (isPreviewMode ? "CLARIFICATION PREVIEW - HAWKER ASSOCIATION APPLICATION" : "HAWKER ASSOCIATION APPLICATION & LGU COMPLIANCE")}
                             </h1>
@@ -529,426 +530,428 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                             </button>
                         </div>
 
-                        <form onSubmit={handleInitialSubmitClick} className="mt-4 space-y-6">
-                            <div className="flex flex-col md:flex-row justify-between items-center border-b border-slate-200 pb-5 gap-4">
-                                <div className="w-14 h-14 flex items-center justify-center border border-slate-200 rounded-full bg-white p-2 shadow-xs">
-                                    <img src={logoSystem} alt="Logo Left" className="w-full h-full object-contain" />
+                        <div className="px-6 md:px-8 pb-6 md:pb-8">
+                            <form onSubmit={handleInitialSubmitClick} className="mt-4 space-y-6">
+                                <div className="flex flex-col md:flex-row justify-between items-center border-b border-slate-200 pb-5 gap-4">
+                                    <div className="w-14 h-14 flex items-center justify-center border border-slate-200 rounded-full bg-white p-2 shadow-xs">
+                                        <img src={logoSystem} alt="Logo Left" className="w-full h-full object-contain" />
+                                    </div>
+                                    <div className="text-center space-y-0.5">
+                                        <p className="text-[10px] uppercase tracking-wider text-slate-500 font-medium">Government Service</p>
+                                        <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800">Gov Serv</h2>
+                                        <p className="text-[10px] uppercase font-semibold text-slate-700 tracking-wide">Market Development and Administration Department</p>
+                                        <p className="text-[9px] text-slate-500">Tel No. 1122-3344 Local 1234</p>
+                                    </div>
+                                    <div className="w-14 h-14 flex items-center justify-center border border-slate-200 rounded-full bg-white p-2 shadow-xs">
+                                        <img src={logoSystem} alt="Logo Right" className="w-full h-full object-contain" />
+                                    </div>
                                 </div>
-                                <div className="text-center space-y-0.5">
-                                    <p className="text-[10px] uppercase tracking-wider text-slate-500 font-medium">Government Service</p>
-                                    <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800">Gov Serv</h2>
-                                    <p className="text-[10px] uppercase font-semibold text-slate-700 tracking-wide">Market Development and Administration Department</p>
-                                    <p className="text-[9px] text-slate-500">Tel No. 1122-3344 Local 1234</p>
-                                </div>
-                                <div className="w-14 h-14 flex items-center justify-center border border-slate-200 rounded-full bg-white p-2 shadow-xs">
-                                    <img src={logoSystem} alt="Logo Right" className="w-full h-full object-contain" />
-                                </div>
-                            </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-3 text-xs">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-slate-700">Application Type:</span>
-                                    <span className="text-emerald-700 font-semibold tracking-wide">HAWKER ASSOCIATION APPLICATION</span>
-                                </div>
-                                <div className="flex items-center justify-between">
-                                    <span className="text-slate-700">Date Submitted:</span>
-                                    <input
-                                        type="text"
-                                        value={formData.dateSubmitted}
-                                        readOnly
-                                        className="border border-slate-300 rounded px-2.5 py-1 w-56 bg-slate-100 text-slate-600 text-xs cursor-not-allowed focus:outline-none"
-                                    />
-                                </div>
-                                <div className="flex items-center justify-between">
-                                    <span className="text-slate-700">Application Status:</span>
-                                    {isViewOnly ? (
-                                        <div className="w-56 text-right md:text-left md:pl-1">
-                                            <span className={`px-3 py-1 rounded-full font-bold uppercase tracking-wider text-[10px] border ${viewedAppStatus === 'Approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                                                viewedAppStatus === 'Rejected' || viewedAppStatus === 'Suspended' ? 'bg-rose-50 text-rose-700 border-rose-200' :
-                                                    'bg-amber-50 text-amber-700 border-amber-200'
-                                                }`}>
-                                                {viewedAppStatus}
-                                            </span>
-                                        </div>
-                                    ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-3 text-xs">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-slate-700">Application Type:</span>
+                                        <span className="text-emerald-700 font-semibold tracking-wide">HAWKER ASSOCIATION APPLICATION</span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-slate-700">Date Submitted:</span>
                                         <input
                                             type="text"
-                                            value="New"
+                                            value={formData.dateSubmitted}
                                             readOnly
                                             className="border border-slate-300 rounded px-2.5 py-1 w-56 bg-slate-100 text-slate-600 text-xs cursor-not-allowed focus:outline-none"
                                         />
-                                    )}
-                                </div>
-                                <div className="flex items-center justify-between">
-                                    <span className="text-slate-700">Association Number:</span>
-                                    <input
-                                        type="text"
-                                        value={formData.associationNumber}
-                                        readOnly
-                                        className="border border-slate-300 rounded px-2.5 py-1 w-56 bg-slate-100 text-slate-600 text-xs cursor-not-allowed focus:outline-none"
-                                    />
-                                </div>
-
-                                {isViewOnly && viewedAppRemarks && (
-                                    <div className="col-span-1 md:col-span-2 mt-3 p-3 bg-blue-50/50 border border-blue-200 rounded-lg">
-                                        <h4 className="text-[11px] font-bold text-blue-800 uppercase tracking-wider mb-1">
-                                            <i className="fa-solid fa-comment-dots mr-1"></i> LGU Official Remarks / Assessment
-                                        </h4>
-                                        <p className="text-xs text-blue-900 font-medium">{viewedAppRemarks}</p>
                                     </div>
-                                )}
-                            </div>
-
-                            <div className="space-y-5 pt-1">
-
-                                {/* Group 1: Impormasyon */}
-                                <div>
-                                    <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wide mb-2.5">Impormasyon</h3>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
-                                        <div>
-                                            <label className="block font-medium text-slate-700 mb-1">Pangalan Ng Samahan <span className="text-red-500">*</span></label>
-                                            <input
-                                                type="text"
-                                                name="associationName"
-                                                value={formData.associationName}
-                                                onChange={handleInputChange}
-                                                readOnly={isPreviewMode}
-                                                required
-                                                className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block font-medium text-slate-700 mb-1">SEC Bilang</label>
-                                            <input
-                                                type="text"
-                                                name="secNumber"
-                                                value={formData.secNumber}
-                                                onChange={handleInputChange}
-                                                readOnly={isPreviewMode}
-                                                className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block font-medium text-slate-700 mb-1">Petsa ng Pagkākaloob</label>
-                                            <input
-                                                type="text"
-                                                name="dateGranted"
-                                                maxLength={10}
-                                                placeholder="MM/DD/YYYY"
-                                                value={formData.dateGranted}
-                                                onChange={handleInputChange}
-                                                readOnly={isPreviewMode}
-                                                className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block font-medium text-slate-700 mb-1">Telepono <span className="text-red-500">*</span></label>
-                                            <input
-                                                type="text"
-                                                name="telephone"
-                                                maxLength={11}
-                                                placeholder="11 digits max"
-                                                value={formData.telephone}
-                                                onChange={handleInputChange}
-                                                readOnly={isPreviewMode}
-                                                required
-                                                className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`}
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* LGU MARKET ZONING & STALL ALLOCATION EXTENSION */}
-                                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-                                    <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wide mb-2.5">LGU Market Zone & Location Allocation</h3>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                                        <div>
-                                            <label className="block font-medium text-slate-700 mb-1">Assigned Public Market Zone <span className="text-red-500">*</span></label>
-                                            <select
-                                                name="marketZone"
-                                                value={formData.marketZone}
-                                                onChange={handleInputChange}
-                                                disabled={isPreviewMode}
-                                                className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white cursor-pointer'}`}
-                                            >
-                                                {MARKET_ZONES.map((zone, idx) => (
-                                                    <option key={idx} value={zone}>{zone}</option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="block font-medium text-slate-700 mb-1">Requested Vending Stalls / Meters Count <span className="text-red-500">*</span></label>
-                                            <input
-                                                type="number"
-                                                name="assignedStallCount"
-                                                min={1}
-                                                value={formData.assignedStallCount}
-                                                onChange={handleInputChange}
-                                                readOnly={isPreviewMode}
-                                                required
-                                                className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`}
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* LGU DIGITAL VAULT ATTACHMENTS WITH PREVIEWS */}
-                                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-                                    <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wide mb-1">Digital Vault Statutory Documents</h3>
-                                    <p className="text-[11px] text-slate-500 mb-3">Upload required municipal compliance attachments (JPG, PNG images or PDF files):</p>
-
-                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-
-                                        {/* DOCUMENT 1: SEC / DTI PERMIT */}
-                                        <div className="p-3 bg-white rounded-lg border border-slate-200 flex flex-col justify-between">
-                                            <div>
-                                                <p className="font-semibold text-slate-800 mb-1">SEC / DTI Permit <span className="text-red-500">*</span></p>
-                                                {!isPreviewMode && (
-                                                    <input
-                                                        type="file"
-                                                        accept="image/jpeg, image/png, application/pdf"
-                                                        onChange={(e) => handleFileChange(e, 'SEC_DTI_PERMIT')}
-                                                        className="w-full text-[10px] text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                                                    />
-                                                )}
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-slate-700">Application Status:</span>
+                                        {isViewOnly ? (
+                                            <div className="w-56 text-right md:text-left md:pl-1">
+                                                <span className={`px-3 py-1 rounded-full font-bold uppercase tracking-wider text-[10px] border ${viewedAppStatus === 'Approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                                                    viewedAppStatus === 'Rejected' || viewedAppStatus === 'Suspended' ? 'bg-rose-50 text-rose-700 border-rose-200' :
+                                                        'bg-amber-50 text-amber-700 border-amber-200'
+                                                    }`}>
+                                                    {viewedAppStatus}
+                                                </span>
                                             </div>
-
-                                            {getDocByType('SEC_DTI_PERMIT') ? (
-                                                <div className="mt-2 pt-2 border-t border-slate-100">
-                                                    {getDocByType('SEC_DTI_PERMIT')?.mime_type.startsWith('image/') ? (
-                                                        <div className="w-full h-24 rounded overflow-hidden border border-slate-200 bg-slate-50">
-                                                            <img
-                                                                src={getDocByType('SEC_DTI_PERMIT')?.file_url}
-                                                                alt="SEC Permit Preview"
-                                                                className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
-                                                                onClick={() => openAttachment(getDocByType('SEC_DTI_PERMIT')?.file_url, getDocByType('SEC_DTI_PERMIT')?.mime_type)}
-                                                            />
-                                                        </div>
-                                                    ) : (
-                                                        <div
-                                                            className="w-full h-24 rounded border border-slate-200 bg-slate-50 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-100"
-                                                            onClick={() => openAttachment(getDocByType('SEC_DTI_PERMIT')?.file_url, getDocByType('SEC_DTI_PERMIT')?.mime_type)}
-                                                        >
-                                                            <i className="fa-solid fa-file-pdf text-rose-500 text-3xl mb-1"></i>
-                                                            <span className="text-[10px] text-blue-600 font-semibold hover:underline">View PDF</span>
-                                                        </div>
-                                                    )}
-                                                    <p className="text-[10px] text-slate-500 truncate mt-1">{getDocByType('SEC_DTI_PERMIT')?.file_name}</p>
-                                                </div>
-                                            ) : isPreviewMode && (
-                                                <p className="text-[10px] text-amber-600 italic mt-2">No SEC/DTI file attached</p>
-                                            )}
-                                        </div>
-
-                                        {/* DOCUMENT 2: MEMBER ROSTER LIST */}
-                                        <div className="p-3 bg-white rounded-lg border border-slate-200 flex flex-col justify-between">
-                                            <div>
-                                                <p className="font-semibold text-slate-800 mb-1">Member Roster List <span className="text-red-500">*</span></p>
-                                                {!isPreviewMode && (
-                                                    <input
-                                                        type="file"
-                                                        accept="image/jpeg, image/png, application/pdf"
-                                                        onChange={(e) => handleFileChange(e, 'MEMBER_ROSTER')}
-                                                        className="w-full text-[10px] text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                                                    />
-                                                )}
-                                            </div>
-
-                                            {getDocByType('MEMBER_ROSTER') ? (
-                                                <div className="mt-2 pt-2 border-t border-slate-100">
-                                                    {getDocByType('MEMBER_ROSTER')?.mime_type.startsWith('image/') ? (
-                                                        <div className="w-full h-24 rounded overflow-hidden border border-slate-200 bg-slate-50">
-                                                            <img
-                                                                src={getDocByType('MEMBER_ROSTER')?.file_url}
-                                                                alt="Roster Preview"
-                                                                className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
-                                                                onClick={() => openAttachment(getDocByType('MEMBER_ROSTER')?.file_url, getDocByType('MEMBER_ROSTER')?.mime_type)}
-                                                            />
-                                                        </div>
-                                                    ) : (
-                                                        <div
-                                                            className="w-full h-24 rounded border border-slate-200 bg-slate-50 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-100"
-                                                            onClick={() => openAttachment(getDocByType('MEMBER_ROSTER')?.file_url, getDocByType('MEMBER_ROSTER')?.mime_type)}
-                                                        >
-                                                            <i className="fa-solid fa-file-pdf text-rose-500 text-3xl mb-1"></i>
-                                                            <span className="text-[10px] text-blue-600 font-semibold hover:underline">View PDF</span>
-                                                        </div>
-                                                    )}
-                                                    <p className="text-[10px] text-slate-500 truncate mt-1">{getDocByType('MEMBER_ROSTER')?.file_name}</p>
-                                                </div>
-                                            ) : isPreviewMode && (
-                                                <p className="text-[10px] text-amber-600 italic mt-2">No Roster file attached</p>
-                                            )}
-                                        </div>
-
-                                        {/* DOCUMENT 3: BARANGAY CLEARANCE */}
-                                        <div className="p-3 bg-white rounded-lg border border-slate-200 flex flex-col justify-between">
-                                            <div>
-                                                <p className="font-semibold text-slate-800 mb-1">Barangay Clearance <span className="text-red-500">*</span></p>
-                                                {!isPreviewMode && (
-                                                    <input
-                                                        type="file"
-                                                        accept="image/jpeg, image/png, application/pdf"
-                                                        onChange={(e) => handleFileChange(e, 'BARANGAY_CLEARANCE')}
-                                                        className="w-full text-[10px] text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                                                    />
-                                                )}
-                                            </div>
-
-                                            {getDocByType('BARANGAY_CLEARANCE') ? (
-                                                <div className="mt-2 pt-2 border-t border-slate-100">
-                                                    {getDocByType('BARANGAY_CLEARANCE')?.mime_type.startsWith('image/') ? (
-                                                        <div className="w-full h-24 rounded overflow-hidden border border-slate-200 bg-slate-50">
-                                                            <img
-                                                                src={getDocByType('BARANGAY_CLEARANCE')?.file_url}
-                                                                alt="Clearance Preview"
-                                                                className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
-                                                                onClick={() => openAttachment(getDocByType('BARANGAY_CLEARANCE')?.file_url, getDocByType('BARANGAY_CLEARANCE')?.mime_type)}
-                                                            />
-                                                        </div>
-                                                    ) : (
-                                                        <div
-                                                            className="w-full h-24 rounded border border-slate-200 bg-slate-50 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-100"
-                                                            onClick={() => openAttachment(getDocByType('BARANGAY_CLEARANCE')?.file_url, getDocByType('BARANGAY_CLEARANCE')?.mime_type)}
-                                                        >
-                                                            <i className="fa-solid fa-file-pdf text-rose-500 text-3xl mb-1"></i>
-                                                            <span className="text-[10px] text-blue-600 font-semibold hover:underline">View PDF</span>
-                                                        </div>
-                                                    )}
-                                                    <p className="text-[10px] text-slate-500 truncate mt-1">{getDocByType('BARANGAY_CLEARANCE')?.file_name}</p>
-                                                </div>
-                                            ) : isPreviewMode && (
-                                                <p className="text-[10px] text-amber-600 italic mt-2">No Barangay Clearance attached</p>
-                                            )}
-                                        </div>
-
+                                        ) : (
+                                            <input
+                                                type="text"
+                                                value="New"
+                                                readOnly
+                                                className="border border-slate-300 rounded px-2.5 py-1 w-56 bg-slate-100 text-slate-600 text-xs cursor-not-allowed focus:outline-none"
+                                            />
+                                        )}
                                     </div>
-                                </div>
-
-                                {/* Group 2: Tagapangulo */}
-                                <div>
-                                    <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wide mb-2.5">Tagapangulo</h3>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
-                                        <div>
-                                            <label className="block font-medium text-slate-700 mb-1">Unang Pangalan <span className="text-red-500">*</span></label>
-                                            <input
-                                                type="text"
-                                                name="firstName"
-                                                value={formData.firstName}
-                                                onChange={handleInputChange}
-                                                readOnly={isPreviewMode}
-                                                required
-                                                className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block font-medium text-slate-700 mb-1">Gitnang Pangalan</label>
-                                            <input
-                                                type="text"
-                                                name="middleName"
-                                                value={formData.middleName}
-                                                onChange={handleInputChange}
-                                                readOnly={isPreviewMode}
-                                                className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block font-medium text-slate-700 mb-1">Apelyido <span className="text-red-500">*</span></label>
-                                            <input
-                                                type="text"
-                                                name="lastName"
-                                                value={formData.lastName}
-                                                onChange={handleInputChange}
-                                                readOnly={isPreviewMode}
-                                                required
-                                                className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block font-medium text-slate-700 mb-1">Email Address <span className="text-red-500">*</span></label>
-                                            <input
-                                                type="email"
-                                                name="email"
-                                                value={formData.email}
-                                                onChange={handleInputChange}
-                                                readOnly={isPreviewMode}
-                                                required
-                                                className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`}
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Group 3: Submitter info footer fields */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs pt-1">
-                                    <div>
-                                        <label className="block font-medium text-slate-700 mb-1">Isinumite ni: <span className="text-red-500">*</span></label>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-slate-700">Association Number:</span>
                                         <input
                                             type="text"
-                                            name="submittedBy"
-                                            value={formData.submittedBy}
-                                            onChange={handleInputChange}
-                                            readOnly={isPreviewMode}
-                                            required
-                                            className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`}
+                                            value={formData.associationNumber}
+                                            readOnly
+                                            className="border border-slate-300 rounded px-2.5 py-1 w-56 bg-slate-100 text-slate-600 text-xs cursor-not-allowed focus:outline-none"
                                         />
                                     </div>
-                                    <div>
-                                        <label className="block font-medium text-slate-700 mb-1">Email Address ng nagsumite: <span className="text-red-500">*</span></label>
-                                        <input
-                                            type="email"
-                                            name="submitterEmail"
-                                            value={formData.submitterEmail}
-                                            onChange={handleInputChange}
-                                            readOnly={isPreviewMode}
-                                            required
-                                            className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`}
-                                        />
-                                    </div>
+
+                                    {isViewOnly && viewedAppRemarks && (
+                                        <div className="col-span-1 md:col-span-2 mt-3 p-3 bg-blue-50/50 border border-blue-200 rounded-lg">
+                                            <h4 className="text-[11px] font-bold text-blue-800 uppercase tracking-wider mb-1">
+                                                <i className="fa-solid fa-comment-dots mr-1"></i> LGU Official Remarks / Assessment
+                                            </h4>
+                                            <p className="text-xs text-blue-900 font-medium">{viewedAppRemarks}</p>
+                                        </div>
+                                    )}
                                 </div>
 
-                            </div>
+                                <div className="space-y-5 pt-1">
 
-                            {/* Form Action Buttons */}
-                            <div className="flex items-center justify-center space-x-3 pt-4 border-t border-slate-100 mt-6">
-                                {isViewOnly ? (
-                                    <button
-                                        type="button"
-                                        onClick={showListView}
-                                        className="bg-white hover:bg-slate-50 text-blue-800 border border-blue-600 font-semibold text-xs py-1.5 px-8 rounded shadow-sm transition-colors cursor-pointer"
-                                    >
-                                        Close View
-                                    </button>
-                                ) : (
-                                    <>
+                                    {/* Group 1: Impormasyon */}
+                                    <div>
+                                        <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wide mb-2.5">Impormasyon</h3>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                                            <div>
+                                                <label className="block font-medium text-slate-700 mb-1">Pangalan Ng Samahan <span className="text-red-500">*</span></label>
+                                                <input
+                                                    type="text"
+                                                    name="associationName"
+                                                    value={formData.associationName}
+                                                    onChange={handleInputChange}
+                                                    readOnly={isPreviewMode}
+                                                    required
+                                                    className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block font-medium text-slate-700 mb-1">SEC Bilang</label>
+                                                <input
+                                                    type="text"
+                                                    name="secNumber"
+                                                    value={formData.secNumber}
+                                                    onChange={handleInputChange}
+                                                    readOnly={isPreviewMode}
+                                                    className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block font-medium text-slate-700 mb-1">Petsa ng Pagkākaloob</label>
+                                                <input
+                                                    type="text"
+                                                    name="dateGranted"
+                                                    maxLength={10}
+                                                    placeholder="MM/DD/YYYY"
+                                                    value={formData.dateGranted}
+                                                    onChange={handleInputChange}
+                                                    readOnly={isPreviewMode}
+                                                    className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block font-medium text-slate-700 mb-1">Telepono <span className="text-red-500">*</span></label>
+                                                <input
+                                                    type="text"
+                                                    name="telephone"
+                                                    maxLength={11}
+                                                    placeholder="11 digits max"
+                                                    value={formData.telephone}
+                                                    onChange={handleInputChange}
+                                                    readOnly={isPreviewMode}
+                                                    required
+                                                    className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* LGU MARKET ZONING & STALL ALLOCATION EXTENSION */}
+                                    <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                                        <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wide mb-2.5">LGU Market Zone & Location Allocation</h3>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                                            <div>
+                                                <label className="block font-medium text-slate-700 mb-1">Assigned Public Market Zone <span className="text-red-500">*</span></label>
+                                                <select
+                                                    name="marketZone"
+                                                    value={formData.marketZone}
+                                                    onChange={handleInputChange}
+                                                    disabled={isPreviewMode}
+                                                    className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white cursor-pointer'}`}
+                                                >
+                                                    {MARKET_ZONES.map((zone, idx) => (
+                                                        <option key={idx} value={zone}>{zone}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="block font-medium text-slate-700 mb-1">Requested Vending Stalls / Meters Count <span className="text-red-500">*</span></label>
+                                                <input
+                                                    type="number"
+                                                    name="assignedStallCount"
+                                                    min={1}
+                                                    value={formData.assignedStallCount}
+                                                    onChange={handleInputChange}
+                                                    readOnly={isPreviewMode}
+                                                    required
+                                                    className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* LGU DIGITAL VAULT ATTACHMENTS WITH PREVIEWS */}
+                                    <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                                        <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wide mb-1">Digital Vault Statutory Documents</h3>
+                                        <p className="text-[11px] text-slate-500 mb-3">Upload required municipal compliance attachments (JPG, PNG images or PDF files):</p>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+
+                                            {/* DOCUMENT 1: SEC / DTI PERMIT */}
+                                            <div className="p-3 bg-white rounded-lg border border-slate-200 flex flex-col justify-between">
+                                                <div>
+                                                    <p className="font-semibold text-slate-800 mb-1">SEC / DTI Permit <span className="text-red-500">*</span></p>
+                                                    {!isPreviewMode && (
+                                                        <input
+                                                            type="file"
+                                                            accept="image/jpeg, image/png, application/pdf"
+                                                            onChange={(e) => handleFileChange(e, 'SEC_DTI_PERMIT')}
+                                                            className="w-full text-[10px] text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                                                        />
+                                                    )}
+                                                </div>
+
+                                                {getDocByType('SEC_DTI_PERMIT') ? (
+                                                    <div className="mt-2 pt-2 border-t border-slate-100">
+                                                        {getDocByType('SEC_DTI_PERMIT')?.mime_type.startsWith('image/') ? (
+                                                            <div className="w-full h-24 rounded overflow-hidden border border-slate-200 bg-slate-50">
+                                                                <img
+                                                                    src={getDocByType('SEC_DTI_PERMIT')?.file_url}
+                                                                    alt="SEC Permit Preview"
+                                                                    className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
+                                                                    onClick={() => openAttachment(getDocByType('SEC_DTI_PERMIT')?.file_url, getDocByType('SEC_DTI_PERMIT')?.mime_type)}
+                                                                />
+                                                            </div>
+                                                        ) : (
+                                                            <div
+                                                                className="w-full h-24 rounded border border-slate-200 bg-slate-50 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-100"
+                                                                onClick={() => openAttachment(getDocByType('SEC_DTI_PERMIT')?.file_url, getDocByType('SEC_DTI_PERMIT')?.mime_type)}
+                                                            >
+                                                                <i className="fa-solid fa-file-pdf text-rose-500 text-3xl mb-1"></i>
+                                                                <span className="text-[10px] text-blue-600 font-semibold hover:underline">View PDF</span>
+                                                            </div>
+                                                        )}
+                                                        <p className="text-[10px] text-slate-500 truncate mt-1">{getDocByType('SEC_DTI_PERMIT')?.file_name}</p>
+                                                    </div>
+                                                ) : isPreviewMode && (
+                                                    <p className="text-[10px] text-amber-600 italic mt-2">No SEC/DTI file attached</p>
+                                                )}
+                                            </div>
+
+                                            {/* DOCUMENT 2: MEMBER ROSTER LIST */}
+                                            <div className="p-3 bg-white rounded-lg border border-slate-200 flex flex-col justify-between">
+                                                <div>
+                                                    <p className="font-semibold text-slate-800 mb-1">Member Roster List <span className="text-red-500">*</span></p>
+                                                    {!isPreviewMode && (
+                                                        <input
+                                                            type="file"
+                                                            accept="image/jpeg, image/png, application/pdf"
+                                                            onChange={(e) => handleFileChange(e, 'MEMBER_ROSTER')}
+                                                            className="w-full text-[10px] text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                                                        />
+                                                    )}
+                                                </div>
+
+                                                {getDocByType('MEMBER_ROSTER') ? (
+                                                    <div className="mt-2 pt-2 border-t border-slate-100">
+                                                        {getDocByType('MEMBER_ROSTER')?.mime_type.startsWith('image/') ? (
+                                                            <div className="w-full h-24 rounded overflow-hidden border border-slate-200 bg-slate-50">
+                                                                <img
+                                                                    src={getDocByType('MEMBER_ROSTER')?.file_url}
+                                                                    alt="Roster Preview"
+                                                                    className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
+                                                                    onClick={() => openAttachment(getDocByType('MEMBER_ROSTER')?.file_url, getDocByType('MEMBER_ROSTER')?.mime_type)}
+                                                                />
+                                                            </div>
+                                                        ) : (
+                                                            <div
+                                                                className="w-full h-24 rounded border border-slate-200 bg-slate-50 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-100"
+                                                                onClick={() => openAttachment(getDocByType('MEMBER_ROSTER')?.file_url, getDocByType('MEMBER_ROSTER')?.mime_type)}
+                                                            >
+                                                                <i className="fa-solid fa-file-pdf text-rose-500 text-3xl mb-1"></i>
+                                                                <span className="text-[10px] text-blue-600 font-semibold hover:underline">View PDF</span>
+                                                            </div>
+                                                        )}
+                                                        <p className="text-[10px] text-slate-500 truncate mt-1">{getDocByType('MEMBER_ROSTER')?.file_name}</p>
+                                                    </div>
+                                                ) : isPreviewMode && (
+                                                    <p className="text-[10px] text-amber-600 italic mt-2">No Roster file attached</p>
+                                                )}
+                                            </div>
+
+                                            {/* DOCUMENT 3: BARANGAY CLEARANCE */}
+                                            <div className="p-3 bg-white rounded-lg border border-slate-200 flex flex-col justify-between">
+                                                <div>
+                                                    <p className="font-semibold text-slate-800 mb-1">Barangay Clearance <span className="text-red-500">*</span></p>
+                                                    {!isPreviewMode && (
+                                                        <input
+                                                            type="file"
+                                                            accept="image/jpeg, image/png, application/pdf"
+                                                            onChange={(e) => handleFileChange(e, 'BARANGAY_CLEARANCE')}
+                                                            className="w-full text-[10px] text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                                                        />
+                                                    )}
+                                                </div>
+
+                                                {getDocByType('BARANGAY_CLEARANCE') ? (
+                                                    <div className="mt-2 pt-2 border-t border-slate-100">
+                                                        {getDocByType('BARANGAY_CLEARANCE')?.mime_type.startsWith('image/') ? (
+                                                            <div className="w-full h-24 rounded overflow-hidden border border-slate-200 bg-slate-50">
+                                                                <img
+                                                                    src={getDocByType('BARANGAY_CLEARANCE')?.file_url}
+                                                                    alt="Clearance Preview"
+                                                                    className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
+                                                                    onClick={() => openAttachment(getDocByType('BARANGAY_CLEARANCE')?.file_url, getDocByType('BARANGAY_CLEARANCE')?.mime_type)}
+                                                                />
+                                                            </div>
+                                                        ) : (
+                                                            <div
+                                                                className="w-full h-24 rounded border border-slate-200 bg-slate-50 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-100"
+                                                                onClick={() => openAttachment(getDocByType('BARANGAY_CLEARANCE')?.file_url, getDocByType('BARANGAY_CLEARANCE')?.mime_type)}
+                                                            >
+                                                                <i className="fa-solid fa-file-pdf text-rose-500 text-3xl mb-1"></i>
+                                                                <span className="text-[10px] text-blue-600 font-semibold hover:underline">View PDF</span>
+                                                            </div>
+                                                        )}
+                                                        <p className="text-[10px] text-slate-500 truncate mt-1">{getDocByType('BARANGAY_CLEARANCE')?.file_name}</p>
+                                                    </div>
+                                                ) : isPreviewMode && (
+                                                    <p className="text-[10px] text-amber-600 italic mt-2">No Barangay Clearance attached</p>
+                                                )}
+                                            </div>
+
+                                        </div>
+                                    </div>
+
+                                    {/* Group 2: Tagapangulo */}
+                                    <div>
+                                        <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wide mb-2.5">Tagapangulo</h3>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                                            <div>
+                                                <label className="block font-medium text-slate-700 mb-1">Unang Pangalan <span className="text-red-500">*</span></label>
+                                                <input
+                                                    type="text"
+                                                    name="firstName"
+                                                    value={formData.firstName}
+                                                    onChange={handleInputChange}
+                                                    readOnly={isPreviewMode}
+                                                    required
+                                                    className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block font-medium text-slate-700 mb-1">Gitnang Pangalan</label>
+                                                <input
+                                                    type="text"
+                                                    name="middleName"
+                                                    value={formData.middleName}
+                                                    onChange={handleInputChange}
+                                                    readOnly={isPreviewMode}
+                                                    className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block font-medium text-slate-700 mb-1">Apelyido <span className="text-red-500">*</span></label>
+                                                <input
+                                                    type="text"
+                                                    name="lastName"
+                                                    value={formData.lastName}
+                                                    onChange={handleInputChange}
+                                                    readOnly={isPreviewMode}
+                                                    required
+                                                    className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block font-medium text-slate-700 mb-1">Email Address <span className="text-red-500">*</span></label>
+                                                <input
+                                                    type="email"
+                                                    name="email"
+                                                    value={formData.email}
+                                                    onChange={handleInputChange}
+                                                    readOnly={isPreviewMode}
+                                                    required
+                                                    className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Group 3: Submitter info footer fields */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs pt-1">
+                                        <div>
+                                            <label className="block font-medium text-slate-700 mb-1">Isinumite ni: <span className="text-red-500">*</span></label>
+                                            <input
+                                                type="text"
+                                                name="submittedBy"
+                                                value={formData.submittedBy}
+                                                onChange={handleInputChange}
+                                                readOnly={isPreviewMode}
+                                                required
+                                                className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block font-medium text-slate-700 mb-1">Email Address ng nagsumite: <span className="text-red-500">*</span></label>
+                                            <input
+                                                type="email"
+                                                name="submitterEmail"
+                                                value={formData.submitterEmail}
+                                                onChange={handleInputChange}
+                                                readOnly={isPreviewMode}
+                                                required
+                                                className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`}
+                                            />
+                                        </div>
+                                    </div>
+
+                                </div>
+
+                                {/* Form Action Buttons */}
+                                <div className="flex items-center justify-center space-x-3 pt-4 border-t border-slate-100 mt-6">
+                                    {isViewOnly ? (
                                         <button
                                             type="button"
-                                            onClick={handleCancelClick}
-                                            className="bg-white hover:bg-slate-50 text-blue-800 border border-blue-600 font-semibold text-xs py-1.5 px-6 rounded shadow-sm transition-colors cursor-pointer"
+                                            onClick={showListView}
+                                            className="bg-white hover:bg-slate-50 text-blue-800 border border-blue-600 font-semibold text-xs py-1.5 px-8 rounded shadow-sm transition-colors cursor-pointer"
                                         >
-                                            {isPreviewMode ? "Back to Edit" : "Kanselahin"}
+                                            Close View
                                         </button>
-                                        {isPreviewMode ? (
+                                    ) : (
+                                        <>
                                             <button
                                                 type="button"
-                                                disabled={isSubmitting}
-                                                onClick={handleFinalSubmit}
-                                                className="bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs py-1.5 px-8 rounded shadow transition-colors cursor-pointer disabled:opacity-50"
+                                                onClick={handleCancelClick}
+                                                className="bg-white hover:bg-slate-50 text-blue-800 border border-blue-600 font-semibold text-xs py-1.5 px-6 rounded shadow-sm transition-colors cursor-pointer"
                                             >
-                                                {isSubmitting ? "Submitting..." : "Confirm & Submit"}
+                                                {isPreviewMode ? "Back to Edit" : "Kanselahin"}
                                             </button>
-                                        ) : (
-                                            <button
-                                                type="submit"
-                                                className="bg-blue-900 hover:bg-blue-950 text-white font-semibold text-xs py-1.5 px-8 rounded shadow transition-colors cursor-pointer"
-                                            >
-                                                Submit
-                                            </button>
-                                        )}
-                                    </>
-                                )}
-                            </div>
-                        </form>
+                                            {isPreviewMode ? (
+                                                <button
+                                                    type="button"
+                                                    disabled={isSubmitting}
+                                                    onClick={handleFinalSubmit}
+                                                    className="bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs py-1.5 px-8 rounded shadow transition-colors cursor-pointer disabled:opacity-50"
+                                                >
+                                                    {isSubmitting ? "Submitting..." : "Confirm & Submit"}
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    type="submit"
+                                                    className="bg-blue-900 hover:bg-blue-950 text-white font-semibold text-xs py-1.5 px-8 rounded shadow transition-colors cursor-pointer"
+                                                >
+                                                    Submit
+                                                </button>
+                                            )}
+                                        </>
+                                    )}
+                                </div>
+                            </form>
+                        </div>
                     </div>
                 </div>
             )}
