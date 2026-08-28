@@ -51,17 +51,17 @@ export default function ApplicationList() {
     };
 
     return (
-        <div className="w-full bg-[#f8fafc] text-[#1a202c] min-h-screen pb-12 flex flex-col">
+        <div className="w-full bg-[#f8fafc] font-['Segoe_UI',Tahoma,Geneva,Verdana,sans-serif] text-[#1a202c] min-h-screen pb-12">
 
             <UnifiedHeader />
 
             {/* Main Content Area */}
-            <main className="p-8 flex flex-col items-center flex-grow mt-6">
+            <main className="p-8 flex flex-col items-center">
                 {/* Back Button Container */}
                 <div className="w-full max-w-[1100px] mb-4">
                     <button
                         onClick={handleBack}
-                        className="flex items-center gap-2 text-xs font-semibold text-[#475569] bg-white border border-slate-200 px-4 py-2 rounded-lg hover:bg-slate-50 hover:text-[#0f2942] transition-colors shadow-sm cursor-pointer"
+                        className="flex items-center gap-2 text-xs font-semibold text-[#475569] bg-white border border-slate-200 px-4 py-2 rounded-lg hover:bg-slate-50 hover:text-[#0f2942] transition-colors shadow-xs cursor-pointer"
                     >
                         <span>&larr;</span> Back
                     </button>
