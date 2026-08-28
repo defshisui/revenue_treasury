@@ -45,6 +45,11 @@ export async function getBusinessAssessments(req: Request, res: Response): Promi
             businessType: row.business_type,
             attachments: row.attachments || [],
             remarks: row.remarks || '',
+            // PayMongo marks successful business-tax payments in the remarks.
+            // Expose that as a dedicated status for the citizen portal.
+            paymentStatus: String(row.remarks || '').toLowerCase().startsWith('paid via')
+                ? 'PAID'
+                : 'UNPAID',
             computedFees: row.computed_fees || {}
         }));
 

@@ -25,6 +25,7 @@ interface AssessmentRecord {
   businessName: string;
   businessOwner: string;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  paymentStatus: 'PAID' | 'UNPAID';
   applicationDate: string;
   psicCode?: string;
   grossSales?: number;
@@ -792,6 +793,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                       <th className="p-3">BUSINESS NAME</th>
                       <th className="p-3">BUSINESS OWNER</th>
                       <th className="p-3">APPLICATION STATUS</th>
+                      <th className="p-3">PAYMENT STATUS</th>
                       <th className="p-3">APPLICATION DATE</th>
                       <th className="p-3">ACTION</th>
                     </tr>
@@ -799,19 +801,19 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan={6} className="p-8 text-center text-slate-500 bg-slate-50 dark:bg-slate-950/50">
+                        <td colSpan={7} className="p-8 text-center text-slate-500 bg-slate-50 dark:bg-slate-950/50">
                           Loading records from server...
                         </td>
                       </tr>
                     ) : fetchError ? (
                       <tr>
-                        <td colSpan={6} className="p-8 text-center text-rose-500 bg-slate-50 dark:bg-slate-950/50">
+                        <td colSpan={7} className="p-8 text-center text-rose-500 bg-slate-50 dark:bg-slate-950/50">
                           Error: {fetchError}
                         </td>
                       </tr>
                     ) : assessments.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="p-8 text-center text-slate-400 bg-slate-50 dark:bg-slate-950/50">
+                        <td colSpan={7} className="p-8 text-center text-slate-400 bg-slate-50 dark:bg-slate-950/50">
                           No data available in table
                         </td>
                       </tr>
@@ -827,6 +829,15 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                                 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-400'
                               }`}>
                               {item.status}
+                            </span>
+                          </td>
+                          <td className="p-3">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              item.paymentStatus === 'PAID'
+                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-400'
+                                : 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-400'
+                            }`}>
+                              {item.paymentStatus}
                             </span>
                           </td>
                           <td className="p-3">{new Date(item.applicationDate).toLocaleDateString()}</td>
@@ -1373,10 +1384,22 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                   {selectedAssessmentView.remarks || 'No remarks provided yet. Your declaration is currently under review.'}
                 </div>
               </div>
+
+              <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-950 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800">
+                <span className="font-semibold text-slate-700 dark:text-slate-300">Payment Status:</span>
+                <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                  selectedAssessmentView.paymentStatus === 'PAID'
+                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-400'
+                    : 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-400'
+                }`}>
+                  {selectedAssessmentView.paymentStatus}
+                </span>
+              </div>
             </div>
 
             <div className="flex justify-between items-center pt-2 border-t border-slate-200 dark:border-slate-800 gap-2">
-              {selectedAssessmentView.status === 'APPROVED' && (
+              {selectedAssessmentView.status === 'APPROVED' &&
+                selectedAssessmentView.paymentStatus !== 'PAID' && (
                 <button
                   type="button"
                   disabled={isProcessingPayment}
@@ -1386,6 +1409,13 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                   {isProcessingPayment ? "Generating QR..." : "Proceed to Digital Payment →"}
                 </button>
               )}
+
+              {selectedAssessmentView.paymentStatus === 'PAID' && (
+                <span className="px-3 py-2 bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-400 font-bold rounded-xl text-xs">
+                  Payment PAID
+                </span>
+              )}
+
               <button
                 type="button"
                 onClick={() => setSelectedAssessmentView(null)}
