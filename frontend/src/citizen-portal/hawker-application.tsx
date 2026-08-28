@@ -1,5 +1,5 @@
 // src/components/HawkerAssociationApp.tsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import logoSystem from '../assets/logo-system.png';
 import { submitHawkerApplication } from '../services/hawkerservice';
 import { API_BASE_URL } from '../config/api';
@@ -47,6 +47,8 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
 
     // Logged-in user state & dropdown controls
     const [loggedInUser, setLoggedInUser] = useState<any>(null);
+    const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
 
     // Document Uploads State
     const [uploadedDocs, setUploadedDocs] = useState<HawkerDocument[]>([]);
@@ -144,6 +146,14 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
         };
 
         checkUserSession();
+
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsUserMenuOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -388,12 +398,12 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
     };
 
     return (
-        <div className="w-full min-h-screen bg-slate-100 font-sans text-slate-800 flex flex-col antialiased relative">
+        <div className="w-full min-h-screen bg-slate-100 font-['Segoe_UI',Tahoma,Geneva,Verdana,sans-serif] text-slate-800 flex flex-col antialiased relative">
 
             <UnifiedHeader />
 
             {/* MAIN CONTENT CONTAINER (LIST VIEW) */}
-            <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 mt-6">
+            <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
                 <div className="w-full bg-white border border-slate-300 rounded-lg p-6 md:p-10 relative shadow-md">
                     <div className="flex flex-col md:flex-row justify-between items-center border-b border-slate-200 pb-5 gap-4">
                         <h1 className="text-slate-800 font-bold text-sm tracking-wide uppercase">
