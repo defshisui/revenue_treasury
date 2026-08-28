@@ -40,15 +40,15 @@ export class AntiFraudService {
     }
 
     try {
-      const url = new URL('https://api.fraudlabspro.com/v2/order/screen');
+      const url = new URL('https://api.fraudlabspro.com/v1/order/screen');
       url.searchParams.append('key', apiKey);
       url.searchParams.append('format', 'json');
-
-      if (params.ip) url.searchParams.append('ip_address', params.ip);
-      if (params.email) url.searchParams.append('email_address', params.email);
-      if (params.amount) url.searchParams.append('amount', params.amount.toString());
-      if (params.username) url.searchParams.append('username', params.username);
       url.searchParams.append('currency', params.currency || 'PHP');
+
+      if (params.ip) url.searchParams.append('ip', params.ip);
+      if (params.email) url.searchParams.append('email', params.email);
+      if (params.username) url.searchParams.append('username', params.username);
+      if (params.amount) url.searchParams.append('amount', params.amount.toString());
 
       console.log('[AntiFraud] Calling FraudLabs Pro for:', params.email);
 
@@ -59,17 +59,12 @@ export class AntiFraudService {
 
       const data: any = await response.json();
 
-      if (data?.error) {
-        console.error('FraudLabs Pro API error:', data.error);
-        return {
-          score: 0,
-          isFraud: false,
-          reason: `API Error: ${data.error.error_message}`,
-          raw: data
-        };
+      if (data?.fraudlabspro_error_code) {
+        console.error('FraudLabs Pro error:', data.fraudlabspro_error_code, data.fraudlabspro_message);
+        return { score: 0, isFraud: false, reason: `API Error: ${data.fraudlabspro_message}`, raw: data };
       }
 
-      const score = parseInt(data.fraudlabspro_score || '0', 10);
+      const score = parseInt(String(data.fraudlabspro_score || '0'), 10);
       const status = data.fraudlabspro_status;
 
       console.log(`[AntiFraud] Result for ${params.email}: score=${score}, status=${status}`);
