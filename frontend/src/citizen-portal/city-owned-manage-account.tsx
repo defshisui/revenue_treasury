@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import logoSystem from '../assets/logo-system.png';
 import { getLeases } from '../services/marketService';
 import type { LeaseRecord } from '../services/marketService';
+import { UnifiedHeader } from './UnifiedHeader';
 
 export default function MarketLeaseSearch() {
     const [leaseId, setLeaseId] = useState('');
@@ -18,13 +18,61 @@ export default function MarketLeaseSearch() {
     const [filteredLeases, setFilteredLeases] = useState<LeaseRecord[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
-    // Fetch leases on component mount
+    // Helper to get active session user details
+    const checkUserSession = () => {
+        const rawData = localStorage.getItem('currentUser') ||
+            localStorage.getItem('user') ||
+            localStorage.getItem('citizen_user') ||
+            sessionStorage.getItem('currentUser') ||
+            sessionStorage.getItem('user');
+
+        if (!rawData) return null;
+
+        try {
+            const parsed = JSON.parse(rawData);
+            const target = parsed.user && typeof parsed.user === 'object' ? parsed.user : parsed;
+
+            const fullName = target.fullname || target.name || target.fullName || target.firstName || target.email || "User";
+            const email = target.email || "";
+            const nameParts = String(fullName).trim().split(" ");
+            const firstName = nameParts[0];
+            const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
+
+            return { fullname: String(fullName), email, firstName, lastName };
+        } catch (e) {
+            console.error("Failed to parse user session", e);
+            return null;
+        }
+    };
+
+    // Fetch leases on component mount and filter strictly to the user's own records
     useEffect(() => {
         const fetchLeases = async () => {
             setIsLoading(true);
             try {
+                const session = checkUserSession();
                 const data = await getLeases();
-                setAllLeases(data);
+
+                if (session) {
+                    // Pre-fill search inputs with user's own name
+                    setFirstName(session.firstName);
+                    setLastName(session.lastName);
+
+                    // Filter so they can ONLY see their own leases
+                    const userLeases = data.filter(l => {
+                        const sessionName = session.fullname.toLowerCase();
+                        const lFirst = l.firstName.toLowerCase();
+                        const lLast = l.lastName.toLowerCase();
+
+                        return (lFirst === session.firstName.toLowerCase() && lLast === session.lastName.toLowerCase()) ||
+                            (sessionName.includes(lFirst) && sessionName.includes(lLast));
+                    });
+
+                    setAllLeases(userLeases);
+                } else {
+                    // If not logged in, enforce security by hiding all records
+                    setAllLeases([]);
+                }
             } catch (err) {
                 console.error("Error fetching lease records:", err);
             } finally {
@@ -45,6 +93,8 @@ export default function MarketLeaseSearch() {
         if (leaseId) {
             result = result.filter(l => l.leaseId.toLowerCase().includes(leaseId.toLowerCase()));
         }
+        // First/Last name matching is handled intrinsically by the security filter above,
+        // but we retain these just in case they have minor variations in their own name records.
         if (firstName) {
             result = result.filter(l => l.firstName.toLowerCase().includes(firstName.toLowerCase()));
         }
@@ -61,7 +111,7 @@ export default function MarketLeaseSearch() {
             result = result.filter(l => l.paymentStatus === paymentStatus);
         }
 
-        // Handle inactive filter toggle - Removed 'Cancelled' to fix TS error
+        // Handle inactive filter toggle
         if (!showInactive) {
             result = result.filter(l => l.leaseStatus !== 'Inactive' && l.leaseStatus !== 'Terminated');
         }
@@ -76,58 +126,19 @@ export default function MarketLeaseSearch() {
     return (
         <div className="w-full min-h-screen bg-[#eef2f6] font-['Segoe_UI',Tahoma,Geneva,Verdana,sans-serif] text-[#1a202c] flex flex-col pb-12">
 
-            {/* =====================================================
-                HEADER
-            ====================================================== */}
-            <header className="w-full h-[81px] bg-white border-b border-[#dfe4ea] shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
-                <div className="relative max-w-[1218px] h-full mx-auto">
-                    {/* Logo & Title */}
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 flex items-center gap-[13px]">
-                        <div className="w-[60px] h-[60px] rounded-[14px] border border-[#e5e7eb] p-[3px] flex items-center justify-center bg-white shadow-[0_1px_4px_rgba(0,0,0,0.08)]">
-                            <img
-                                src={logoSystem}
-                                alt="Gov Serv Logo"
-                                className="w-full h-full object-contain"
-                            />
-                        </div>
-                        <div className="flex flex-col leading-none">
-                            <span className="text-[16px] font-extrabold text-[#0f172a] tracking-[-0.2px]">
-                                Gov Serv
-                            </span>
-                            <span className="text-[8.5px] font-bold text-[#64748b] tracking-[0.8px] uppercase mt-[6px]">
-                                UNIFIED PORTAL
-                            </span>
-                        </div>
-                    </div>
-
-                    {/* Navigation */}
-                    <nav className="absolute left-[548px] top-1/2 -translate-y-1/2 flex items-center gap-[32px] text-[13px] font-semibold text-[#172033]">
-                        <a href="/citizen-portal" className="hover:text-[#1d4ed8] transition-colors whitespace-nowrap">HOME</a>
-                        <a href="#" className="flex items-center gap-[5px] hover:text-[#1d4ed8] transition-colors whitespace-nowrap">
-                            SERVICES <span className="text-[8px] leading-none">▼</span>
-                        </a>
-                    </nav>
-
-                    {/* Login / Register */}
-                    <button
-                        className="absolute right-0 top-1/2 -translate-y-1/2 w-[130px] h-[36px] flex items-center justify-center bg-[#1e3a8a] hover:bg-[#172f73] text-white text-[12px] font-semibold rounded-[12px] shadow-[0_2px_5px_rgba(0,0,0,0.12)] transition-colors whitespace-nowrap"
-                        onClick={() => window.location.href = '/citizen-portal'}
-                    >
-                        Back to Portal
-                    </button>
-                </div>
-            </header>
+            {/* Reusable Header */}
+            <UnifiedHeader />
 
             {/* =====================================================
                 MAIN CONTENT AREA
             ====================================================== */}
-            <main className="flex-grow p-[30px_40px] flex justify-center">
+            <main className="flex-grow p-[30px_40px] flex justify-center mt-6">
                 <div className="w-full max-w-[1400px] bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] overflow-hidden flex flex-col pb-5">
 
                     {/* Top Header Bar inside card with Back Button */}
                     <div className="flex justify-between items-center p-[20px_24px] border-b-2 border-[#e2e8f0]">
                         <h2 className="text-[1.1rem] font-bold text-[#1a202c] tracking-[0.5px] border-l-4 border-[#0a369d] pl-3 uppercase">
-                            Hanapin ang Unified Market Lease
+                            My Active Market Leases
                         </h2>
                         <button
                             onClick={handleBack}
@@ -147,19 +158,20 @@ export default function MarketLeaseSearch() {
                             />
                         </div>
 
+                        {/* Name fields locked to active user account to reflect individual portal logic */}
                         <div className="flex flex-col gap-[6px]">
                             <label htmlFor="firstName" className="text-[0.85rem] font-semibold text-[#1a202c]">Unang Pangalan ng Stallholder</label>
                             <input
-                                type="text" id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)}
-                                className="w-full px-[14px] py-[10px] border border-[#cbd5e1] rounded-md text-[0.9rem] outline-none transition-all bg-white text-[#1a202c] focus:border-[#3182ce] focus:ring-[3px] focus:ring-[#3182ce]/15"
+                                type="text" id="firstName" value={firstName} readOnly disabled
+                                className="w-full px-[14px] py-[10px] border border-[#cbd5e1] rounded-md text-[0.9rem] outline-none transition-all bg-slate-100 text-slate-500 cursor-not-allowed"
                             />
                         </div>
 
                         <div className="flex flex-col gap-[6px]">
                             <label htmlFor="lastName" className="text-[0.85rem] font-semibold text-[#1a202c]">Apelyido ng Stallholder</label>
                             <input
-                                type="text" id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)}
-                                className="w-full px-[14px] py-[10px] border border-[#cbd5e1] rounded-md text-[0.9rem] outline-none transition-all bg-white text-[#1a202c] focus:border-[#3182ce] focus:ring-[3px] focus:ring-[#3182ce]/15"
+                                type="text" id="lastName" value={lastName} readOnly disabled
+                                className="w-full px-[14px] py-[10px] border border-[#cbd5e1] rounded-md text-[0.9rem] outline-none transition-all bg-slate-100 text-slate-500 cursor-not-allowed"
                             />
                         </div>
 
@@ -295,7 +307,7 @@ export default function MarketLeaseSearch() {
                                         <td colSpan={12} className="p-[16px_14px] text-[0.85rem] border-b border-[#e2e8f0] bg-white text-center">
                                             <div className="text-center p-[50px_20px] text-[#718096]">
                                                 <div className="w-[40px] h-[40px] mx-auto mb-[10px] opacity-30 bg-[#94a3b8] rounded-[6px]"></div>
-                                                <p>No Data / No matching lease records found</p>
+                                                <p>No Active Leases Found for Your Account</p>
                                             </div>
                                         </td>
                                     </tr>
