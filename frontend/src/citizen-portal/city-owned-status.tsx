@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { UnifiedHeader } from './UnifiedHeader';
 
 export default function ApplicationList() {
     const [selectedValues, setSelectedValues] = useState<string[]>([]);
@@ -51,99 +52,14 @@ export default function ApplicationList() {
 
     return (
         <div className="w-full bg-[#f8fafc] font-['Segoe_UI',Tahoma,Geneva,Verdana,sans-serif] text-[#1a202c] min-h-screen pb-12">
-            {/* 
-              HEADER
-            */}
-            <header className="w-full h-[81px] bg-white border-b border-[#dfe4ea] shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
 
-                <div className="relative max-w-[1218px] h-full mx-auto">
-
-                    {/* Logo & Title */}
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 flex items-center gap-[13px]">
-
-                        <div className="w-[60px] h-[60px] rounded-[14px] border border-[#e5e7eb] p-[3px] flex items-center justify-center bg-white shadow-[0_1px_4px_rgba(0,0,0,0.08)]">
-
-                            <img 
-                                src="/src/assets/logo-system.png" 
-                                alt="Gov Serv Logo" 
-                                className="w-full h-full object-contain" 
-                            />
-
-                        </div>
-
-                        <div className="flex flex-col leading-none">
-
-                            <span className="text-[16px] font-extrabold text-[#0f172a] tracking-[-0.2px]">
-                                Gov Serv
-                            </span>
-
-                            <span className="text-[8.5px] font-bold text-[#64748b] tracking-[0.8px] uppercase mt-[6px]">
-                                UNIFIED PORTAL
-                            </span>
-
-                        </div>
-
-                    </div>
-
-                    {/* Navigation */}
-                    <nav className="absolute left-[548px] top-1/2 -translate-y-1/2 flex items-center gap-[32px] text-[13px] font-semibold text-[#172033]">
-
-                        <a 
-                            href="#" 
-                            className="hover:text-[#1d4ed8] transition-colors whitespace-nowrap"
-                        >
-                            HOME
-                        </a>
-
-                        <a 
-                            href="#" 
-                            className="flex items-center gap-[5px] hover:text-[#1d4ed8] transition-colors whitespace-nowrap"
-                        >
-                            SERVICES
-
-                            <span className="text-[8px] leading-none">
-                                ▼
-                            </span>
-
-                        </a>
-
-                    </nav>
-
-                    {/* Login / Register */}
-                    <button 
-                        className="
-                            absolute
-                            right-0
-                            top-1/2
-                            -translate-y-1/2
-                            w-[130px]
-                            h-[36px]
-                            flex
-                            items-center
-                            justify-center
-                            bg-[#1e3a8a]
-                            hover:bg-[#172f73]
-                            text-white
-                            text-[12px]
-                            font-semibold
-                            rounded-[12px]
-                            shadow-[0_2px_5px_rgba(0,0,0,0.12)]
-                            transition-colors
-                            whitespace-nowrap
-                        "
-                    >
-                        Login / Register
-                    </button>
-
-                </div>
-
-            </header>
+            <UnifiedHeader />
 
             {/* Main Content Area */}
             <main className="p-8 flex flex-col items-center">
                 {/* Back Button Container */}
                 <div className="w-full max-w-[1100px] mb-4">
-                    <button 
+                    <button
                         onClick={handleBack}
                         className="flex items-center gap-2 text-xs font-semibold text-[#475569] bg-white border border-slate-200 px-4 py-2 rounded-lg hover:bg-slate-50 hover:text-[#0f2942] transition-colors shadow-xs cursor-pointer"
                     >
@@ -166,15 +82,15 @@ export default function ApplicationList() {
                         <div className="flex flex-col gap-2">
                             <label htmlFor="appId" className="text-[0.85rem] font-semibold text-[#1a202c]">Application ID</label>
                             <div className="flex gap-2">
-                                <input 
-                                    type="text" 
-                                    id="appId" 
+                                <input
+                                    type="text"
+                                    id="appId"
                                     value={appIdInput}
                                     onChange={(e) => setAppIdInput(e.target.value)}
-                                    placeholder="Search ID..." 
+                                    placeholder="Search ID..."
                                     className="w-full px-[14px] py-[10px] border border-[#e2e8f0] rounded-lg text-[0.9rem] outline-none focus:border-[#3182ce] focus:ring-[3px] focus:ring-[#3182ce]/15 transition-all bg-white"
                                 />
-                                <button 
+                                <button
                                     onClick={handleSearch}
                                     className="bg-[#12284c] text-white border-none px-5 rounded-lg font-semibold cursor-pointer hover:bg-[#1a365d] transition-colors whitespace-nowrap"
                                 >
@@ -186,7 +102,7 @@ export default function ApplicationList() {
                         <div className="flex flex-col gap-2">
                             <label className="text-[0.85rem] font-semibold text-[#1a202c]">Application Type</label>
                             <div className="relative" ref={dropdownRef}>
-                                <div 
+                                <div
                                     className="min-h-[44px] flex flex-wrap gap-1.5 items-center cursor-pointer px-[14px] py-[10px] border border-[#e2e8f0] rounded-lg bg-white focus-within:border-[#3182ce] focus-within:ring-[3px] focus-within:ring-[#3182ce]/15 transition-all"
                                     onClick={(e) => {
                                         e.stopPropagation();
@@ -198,9 +114,9 @@ export default function ApplicationList() {
                                     ) : (
                                         selectedValues.map((val) => (
                                             <span key={val} className="bg-[#edf2f7] text-[#1a202c] px-2 py-1 rounded-md text-[0.8rem] flex items-center gap-1.5 border border-[#e2e8f0] font-medium">
-                                                {val} 
-                                                <span 
-                                                    className="cursor-pointer font-bold text-[#718096] hover:text-[#e53e3e]" 
+                                                {val}
+                                                <span
+                                                    className="cursor-pointer font-bold text-[#718096] hover:text-[#e53e3e]"
                                                     onClick={(e) => handleRemoveTag(e, val)}
                                                 >
                                                     &times;
@@ -215,7 +131,7 @@ export default function ApplicationList() {
                                     {availableApplicationTypes.map((type) => {
                                         const isSelected = selectedValues.includes(type);
                                         return (
-                                            <div 
+                                            <div
                                                 key={type}
                                                 className={`px-[14px] py-[10px] text-[0.9rem] cursor-pointer flex justify-between items-center border-b border-[#f7fafc] hover:bg-[#edf2f7] hover:text-[#3182ce] ${isSelected ? 'bg-[#ebf8ff] text-[#3182ce]' : ''}`}
                                                 onClick={() => handleToggleSelect(type)}
@@ -287,8 +203,8 @@ export default function ApplicationList() {
                     <div className="flex justify-between items-center py-[20px] px-[30px] bg-white text-[0.85rem] text-[#718096]">
                         <div>
                             Ipakita{' '}
-                            <select 
-                                value={entriesPerPage} 
+                            <select
+                                value={entriesPerPage}
                                 onChange={(e) => setEntriesPerPage(e.target.value)}
                                 className="py-[4px] px-[8px] border border-[#e2e8f0] rounded-md outline-none text-[#1a202c] bg-white"
                             >
