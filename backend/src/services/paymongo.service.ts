@@ -226,7 +226,7 @@ export class PayMongoService {
 
     if (fraudCheck.isFraud) {
       console.warn(`[Anti-Fraud] Blocked payment attempt for ${customer?.email || 'Unknown'}. Score: ${fraudCheck.score}`);
-      throw new Error(`Payment blocked by Anti-Fraud AI (Risk Score: ${fraudCheck.score})`);
+      throw new Error(`Payment blocked by security policy. Please contact support or use another payment method.`);
     }
     // ---------------------------
 

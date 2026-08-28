@@ -59,7 +59,7 @@ export async function createUser(req: Request, res: Response): Promise<void> {
          VALUES ('AUD-FRAUD-BLOCK', $1, 'Unknown', 'User Management', 'ACCOUNT_CREATION_BLOCKED', 'CRITICAL', $2, $3, NULL, $4)`,
         [username.trim(), clientIP, clientAgent, `Blocked by Anti-Fraud AI. Score: ${fraudCheck.score}`]
       );
-      res.status(403).json({ message: `Account creation blocked due to high risk score (${fraudCheck.score}).` });
+      res.status(403).json({ message: 'Account creation blocked by security policy. Please verify your details or contact support.' });
       return;
     }
     // ---------------------------
