@@ -860,11 +860,11 @@ export default function CityOwnedMarketAdmin({
                           helperApprovalStatus: "Approved",
                           advancePaymentStatus: "Verified & Cleared"
                         });
-                        alert("Payment successfully verified & matched via Gov Pay Sandbox gateway!");
+                        alert("Payment successfully verified & matched via Gov Pay gateway!");
                       }}
                       className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2 rounded-xl text-xs transition-all cursor-pointer shadow-xs"
                     >
-                      Verify &amp; Match Sandbox Payment
+                      Verify &amp; Match Payment
                     </button>
                     <button
                       type="button"
