@@ -1,8 +1,7 @@
-
-import React, { useState, useEffect, useRef } from "react";
-import logoSystem from '../assets/logo-system.png';
+import React, { useState, useEffect } from "react";
 import { saveLease, getLeases } from "../services/marketService";
 import type { LeaseRecord } from "../services/marketService";
+import { UnifiedHeader } from './UnifiedHeader';
 import {
     createPayMongoQrPaymentIntent,
     createQrPhPaymentMethod,
@@ -132,8 +131,6 @@ export default function MarketStallApplication() {
 
     // Auth Session State matching MarketVendorsHub layout
     const [currentUser, setCurrentUser] = useState<{ fullname: string; email: string; initials: string; firstName: string } | null>(null);
-    const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
-    const dropdownRef = useRef<HTMLDivElement>(null);
 
     // Leases synced from database layer to dynamically track occupancy status
     const [leases, setLeases] = useState<LeaseRecord[]>([]);
@@ -154,17 +151,6 @@ export default function MarketStallApplication() {
     const [qrPaymentIntentId, setQrPaymentIntentId] = useState<string>("");
     const [qrLeaseId, setQrLeaseId] = useState<string>("");
     const [qrError, setQrError] = useState<string>("");
-
-    // Close dropdown on outside click
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-                setIsDropdownOpen(false);
-            }
-        };
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
 
     // Fetch leases and check active user session on initial mount
     useEffect(() => {
@@ -374,7 +360,7 @@ export default function MarketStallApplication() {
             console.error("PayMongo QRPh payment error:", err);
             setQrError(
                 err?.message ||
-                    "Unable to generate the PayMongo QRPh code. Please try again."
+                "Unable to generate the PayMongo QRPh code. Please try again."
             );
         } finally {
             setIsProcessingPayment(false);
@@ -393,140 +379,10 @@ export default function MarketStallApplication() {
         await handlePayMongoQrPayment();
     };
 
-    const handleLogout = () => {
-        localStorage.removeItem("currentUser");
-        localStorage.removeItem("user");
-        localStorage.removeItem("citizen_user");
-        sessionStorage.removeItem("currentUser");
-        sessionStorage.removeItem("user");
-        setCurrentUser(null);
-        setIsDropdownOpen(false);
-        window.location.href = "/login";
-    };
-
     return (
-        <div className="bg-slate-100 font-sans text-slate-800 min-h-screen flex flex-col antialiased">
-            {/* Main Navigation Header */}
-            <header className="w-full bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-xs sticky top-0 z-40">
-                <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
-
-                    {/* Logo & Branding */}
-                    <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-3 cursor-pointer" onClick={() => { window.location.href = '/citizen-portal'; }}>
-                            <div className="p-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xs flex items-center justify-center">
-                                <img
-                                    src={logoSystem}
-                                    alt="System Logo"
-                                    className="h-8 w-8 object-contain"
-                                />
-                            </div>
-                            <div className="flex flex-col">
-                                <span className="font-extrabold text-lg tracking-tight text-slate-900 dark:text-white leading-tight">
-                                    Gov Serv
-                                </span>
-                                <span className="text-[10px] font-bold text-blue-700 dark:text-blue-400 tracking-wider uppercase">
-                                    Unified Portal
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Desktop Navigation */}
-                    <div className="hidden md:flex items-center space-x-6 text-xs font-semibold text-slate-600 dark:text-slate-300">
-                        <span className="hover:text-blue-700 cursor-pointer" onClick={() => window.location.href = '/citizen-portal'}>HOME</span>
-
-                        {/* Services Dropdown */}
-                        <div className="relative group py-2">
-                            <span className="hover:text-blue-700 cursor-pointer flex items-center gap-1 select-none">
-                                SERVICES ▾
-                            </span>
-
-                            <div className="absolute left-0 top-full h-2 w-full"></div>
-
-                            <div className="absolute left-0 top-[calc(100%+8px)] w-60 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 py-2 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-1 group-hover:translate-y-0">
-                                <button
-                                    onClick={() => window.location.href = '/citizen-portal'}
-                                    className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer"
-                                >
-                                    Home
-                                </button>
-                                <button
-                                    onClick={() => window.location.href = '/Market-Vendor'}
-                                    className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer"
-                                >
-                                    Market &amp; Vendors Hub
-                                </button>
-                                <button
-                                    onClick={() => window.location.href = '/real-property-tax-hub'}
-                                    className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer"
-                                >
-                                    Real Property Tax Hub
-                                </button>
-                                <button
-                                    onClick={() => window.location.href = '/Bsiness-Tax-Assessment-View'}
-                                    className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer"
-                                >
-                                    Business Tax Assessment Hub
-                                </button>
-                            </div>
-                        </div>
-
-                        <span className="hover:text-blue-700 cursor-pointer">CONTACT US</span>
-                    </div>
-
-                    {/* Authentication & User Dropdown */}
-                    <div className="flex items-center space-x-3">
-                        {currentUser ? (
-                            <div className="relative" ref={dropdownRef}>
-                                <button
-                                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                                    className="flex items-center space-x-2.5 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-xl transition-all cursor-pointer shadow-xs group"
-                                >
-                                    <span className="text-xs font-extrabold text-slate-800 dark:text-slate-200 tracking-tight">
-                                        Hi, {currentUser.firstName}
-                                    </span>
-                                    <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-[10px] shadow-sm tracking-wider">
-                                        {currentUser.initials}
-                                    </div>
-                                </button>
-
-                                {isDropdownOpen && (
-                                    <div className="absolute right-0 mt-2 w-52 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 py-2 z-50">
-                                        <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-800 mb-1">
-                                            <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{currentUser.fullname}</p>
-                                            <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{currentUser.email}</p>
-                                        </div>
-
-                                        <button
-                                            onClick={() => {
-                                                setIsDropdownOpen(false);
-                                                window.location.href = '/edit-profile';
-                                            }}
-                                            className="w-full text-left px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer"
-                                        >
-                                            Edit Profile
-                                        </button>
-
-                                        <button
-                                            onClick={handleLogout}
-                                            className="w-full text-left px-4 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer border-t border-slate-100 dark:border-slate-800 mt-1 pt-2"
-                                        >
-                                            Log Out
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        ) : (
-                            <button
-                                onClick={() => window.location.href = '/login'}
-                                className="bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs px-4 py-2 rounded-xl shadow transition-all cursor-pointer"
-                            >
-                                Login / Register
-                            </button>
-                        )}
-                    </div>
-                </div>
-            </header>
+        <div className="bg-slate-100 text-slate-800 min-h-screen flex flex-col antialiased">
+            {/* Reusable Header */}
+            <UnifiedHeader />
 
             {/* Main Content Container */}
             <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
