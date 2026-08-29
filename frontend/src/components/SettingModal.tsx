@@ -1,4 +1,4 @@
-// src/components/SettingModal.tsx
+
 import { useEffect, useRef, useState } from "react";
 
 interface SettingModalProps {

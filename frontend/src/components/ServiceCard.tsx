@@ -1,13 +1,11 @@
 import { useNavigate } from "react-router-dom";
 
-
 interface Props {
   title: string;
   description: string;
   path?: string;
   tag?: boolean;
 }
-
 
 export default function ServiceCard({
   title,
@@ -17,7 +15,6 @@ export default function ServiceCard({
 }: Props) {
 
   const navigate = useNavigate();
-
 
   return (
     <div
@@ -29,11 +26,9 @@ export default function ServiceCard({
         {title}
       </h2>
 
-
       <div className="lgu-service-description">
         {description}
       </div>
-
 
       {tag && (
         <span className="lgu-service-tag">

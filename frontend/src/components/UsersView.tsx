@@ -1,10 +1,8 @@
-// src/components/UsersView.tsx
 
 import { useState, useEffect } from "react";
 import type { UserRecord } from "../types/treasury";
 import { API_BASE_URL } from "../config/api";
 
-// Use Omit to remove the strict original status before extending it
 interface ExtendedUserRecord extends Omit<UserRecord, 'status'> {
   status?: "Active" | "Inactive" | "ARCHIVED" | string;
 }
@@ -21,10 +19,8 @@ export default function UsersView({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRole, setSelectedRole] = useState("ALL");
 
-  // Tab state for Archiver
   const [mainTab, setMainTab] = useState<'Active' | 'Archived'>('Active');
 
-  // New User Modal State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newFullname, setNewFullname] = useState("");
   const [newUsername, setNewUsername] = useState("");
@@ -48,13 +44,12 @@ export default function UsersView({
       });
   };
 
-  // Automatically fetch user records from backend on mount
   useEffect(() => {
     fetchUsers();
   }, []);
 
   const filteredRecords = records.filter((record) => {
-    // Archiver separation
+
     const isArchived = record.status === "ARCHIVED";
     if (mainTab === 'Active' && isArchived) return false;
     if (mainTab === 'Archived' && !isArchived) return false;
@@ -90,9 +85,9 @@ export default function UsersView({
         setNewFullname("");
         setNewUsername("");
         setNewPassword("");
-        setNewRole("treasury-staff"); // Reset role to default
+        setNewRole("treasury-staff"); 
         setIsAddModalOpen(false);
-        fetchUsers(); // Refresh list
+        fetchUsers(); 
       } else {
         alert("Failed to create user account.");
       }
@@ -107,7 +102,6 @@ export default function UsersView({
   const handleArchiveUser = async (id: string, name: string) => {
     if (!window.confirm(`Are you sure you want to archive ${name}? They will immediately lose access to the system.`)) return;
 
-    // Optimistic UI update
     setRecords(prev => prev.map(r => r.id === id ? { ...r, status: "ARCHIVED" } : r));
 
     try {
@@ -124,7 +118,6 @@ export default function UsersView({
   const handleRestoreUser = async (id: string, name: string) => {
     if (!window.confirm(`Restore account for ${name}? They will regain access.`)) return;
 
-    // Optimistic UI update
     setRecords(prev => prev.map(r => r.id === id ? { ...r, status: "Active" } : r));
 
     try {
@@ -153,7 +146,7 @@ export default function UsersView({
       }
     } catch (error) {
       console.error("Error deleting user:", error);
-      // Fallback for mock environments
+
       setRecords(prevRecords => prevRecords.filter(record => record.id !== id));
     }
   };

@@ -1,9 +1,8 @@
-// src/components/HawkerAssociation.tsx
+
 import React, { useState, useMemo, useEffect } from "react";
 import type { HawkerAssociationRecord, HawkerAssociationStatus } from "../types/treasury";
 import { API_BASE_URL } from '../config/api';
 
-// Define the structure for the Digital Vault Documents
 export interface HawkerDocument {
   id: string;
   document_type: string;
@@ -23,7 +22,6 @@ interface LguExtensionMeta {
   auditTrail: { timestamp: string; admin: string; action: string }[];
 }
 
-// Extend status to include Archive state to prevent TypeScript errors
 type ExtendedHawkerStatus = HawkerAssociationStatus | "Archived" | "Suspended";
 
 type ExtendedHawkerRecord = Omit<HawkerAssociationRecord, 'status'> & {
@@ -49,7 +47,6 @@ const MARKET_ZONES = [
   "Welcome Rotonda Stall Area",
 ];
 
-// Enrich data with LGU specific metadata
 const enrichWithLguMeta = (item: any): ExtendedHawkerRecord => ({
   ...item,
   status: item.status || "New",
@@ -101,19 +98,17 @@ export default function HawkerAssociation({
   onUpdateRecord,
   onDeleteRecord,
 }: Props) {
-  // Main State
+
   const [associations, setAssociations] = useState<ExtendedHawkerRecord[]>(() =>
     initialRecords.map(enrichWithLguMeta)
   );
 
-  // Tab State
   const [mainTab, setMainTab] = useState<"Active" | "Archived">("Active");
 
   const [selectedStatus, setSelectedStatus] = useState<string>("All");
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [activeTab, setActiveTab] = useState<"details" | "documents" | "compliance" | "audit">("details");
 
-  // Modals & Detail Drawer States
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<ExtendedHawkerRecord | null>(null);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
@@ -121,7 +116,6 @@ export default function HawkerAssociation({
   const [reviewRemarks, setReviewRemarks] = useState("");
   const [inspectionNote, setInspectionNote] = useState("");
 
-  // Fullscreen Image Preview States
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [isZoomed, setIsZoomed] = useState(false);
 
@@ -178,7 +172,6 @@ export default function HawkerAssociation({
       console.warn("Backend API unreachable, utilizing local storage:");
     }
 
-    // Fallback to local storage
     const savedApplications = localStorage.getItem("hawker_applications");
     if (savedApplications) {
       try {
@@ -201,7 +194,7 @@ export default function HawkerAssociation({
   }, []);
 
   const metrics = useMemo(() => {
-    // Exclude archived records from the dashboard metrics
+
     const activeAssoc = associations.filter(a => a.status !== "Archived");
 
     const total = activeAssoc.length;
@@ -218,7 +211,6 @@ export default function HawkerAssociation({
     return associations.filter((item) => {
       const isArchived = item.status === "Archived";
 
-      // Filter by main Tab
       if (mainTab === "Active" && isArchived) return false;
       if (mainTab === "Archived" && !isArchived) return false;
 
@@ -235,7 +227,6 @@ export default function HawkerAssociation({
     });
   }, [associations, selectedStatus, searchTerm, mainTab]);
 
-  // Create Walk-in Record
   const handleCreateAssociation = async (e: React.FormEvent) => {
     e.preventDefault();
     const newRecord: ExtendedHawkerRecord = enrichWithLguMeta({
@@ -304,7 +295,6 @@ export default function HawkerAssociation({
     });
   };
 
-  // Helper function to handle status updates & archiving
   const executeStatusChange = async (targetId: string, newStatus: ExtendedHawkerStatus, actionMessage: string) => {
     let itemToUpdate: ExtendedHawkerRecord | null = null;
 
@@ -349,7 +339,6 @@ export default function HawkerAssociation({
     }
   };
 
-  // Update Status & Audit Trail from Modal
   const handleUpdateStatus = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedRecord) return;
@@ -365,21 +354,18 @@ export default function HawkerAssociation({
     setReviewRemarks("");
   };
 
-  // Archive (Soft Delete)
   const handleArchive = async (id: string, name: string) => {
     if (window.confirm(`Are you sure you want to move Hawker Association "${name}" to the Archiver?`)) {
       await executeStatusChange(id, "Archived", "Record moved to system archiver.");
     }
   };
 
-  // Restore from Archive
   const handleRestore = async (id: string, name: string) => {
     if (window.confirm(`Are you sure you want to restore Hawker Association "${name}"?`)) {
       await executeStatusChange(id, "Under Review", "Record restored from archiver (Set to Under Review).");
     }
   };
 
-  // Add Inspector Violation Notice
   const handleAddViolation = async () => {
     if (!selectedRecord || !inspectionNote.trim()) return;
 
@@ -426,11 +412,10 @@ export default function HawkerAssociation({
     setInspectionNote("");
   };
 
-  // FULL DATABASE DELETE (Matches Market Stall Setup)
   const handleDelete = async (id: string) => {
     if (window.confirm(`WARNING: Are you sure you want to PERMANENTLY delete Hawker Association record ${id}?`)) {
       try {
-        // Send DELETE request directly to your DB
+
         const response = await fetch(`${API_BASE_URL}/api/hawkers/${id}`, {
           method: 'DELETE',
           headers: {
@@ -445,7 +430,6 @@ export default function HawkerAssociation({
         console.warn("Backend delete failed or unavailable, removing from local UI state anyway:", err);
       }
 
-      // Optimistically remove from UI State & Storage
       setAssociations((prevLeases) => {
         const updated = prevLeases.filter((l) => l.id !== id);
         try {
@@ -1111,7 +1095,7 @@ export default function HawkerAssociation({
                 : "scale-100 object-contain max-h-full max-w-full cursor-zoom-in"
                 }`}
               onClick={(e) => {
-                e.stopPropagation(); // Prevents the background click from closing it
+                e.stopPropagation(); 
                 setIsZoomed(!isZoomed);
               }}
             />

@@ -1,4 +1,3 @@
-// src/components/MarketAdminDashboard.tsx
 
 import { useState } from "react";
 
@@ -13,7 +12,6 @@ export default function MarketAdminDashboard({
     marketSubView === "city-owned-admin" ? "city-owned" : "private"
   );
 
-  // Form filter states
   const [businessPermitNo, setBusinessPermitNo] = useState("");
   const [marketName, setMarketName] = useState("");
 
@@ -44,7 +42,7 @@ export default function MarketAdminDashboard({
       </div>
 
       {activeTab === "city-owned" ? (
-        /* MARKET OPERATOR ACCOUNT SECTION */
+
         <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6">
           <div className="relative pt-4">
             <div className="absolute top-0 left-0 w-24 h-1 bg-[#0f316e]"></div>
@@ -149,7 +147,7 @@ export default function MarketAdminDashboard({
           </div>
         </div>
       ) : (
-        /* PRIVATE MARKET / PRIVATE TALIPAPA STALLHOLDER SECTION */
+
         <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6">
           <div className="relative pt-4">
             <div className="absolute top-0 left-0 w-24 h-1 bg-[#0f316e]"></div>

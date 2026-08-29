@@ -1,4 +1,3 @@
-// src/components/MarketStallsView.tsx
 
 import React, { useState, useMemo } from "react";
 import type { StallRecord, StallStatus, MarketBranch, MarketSection } from "../types/treasury";
@@ -109,7 +108,7 @@ export default function MarketStallsView({
   }, [normalizedInitialStalls]);
 
   const metrics = useMemo(() => {
-    // Only calculate metrics for non-archived stalls
+
     const activeStallsList = stalls.filter(s => (s as any).leaseStatus !== "Archived");
     const totalStalls = activeStallsList.length;
     const occupied = activeStallsList.filter((s) => s.status === "Occupied" || s.assignedVendorId).length;
@@ -133,7 +132,6 @@ export default function MarketStallsView({
     return stalls.filter((stall) => {
       const isArchived = (stall as any).leaseStatus === "Archived";
 
-      // Filter by Tab
       if (activeTab === "Active" && isArchived) return false;
       if (activeTab === "Archived" && !isArchived) return false;
 
@@ -418,7 +416,6 @@ export default function MarketStallsView({
     }
   };
 
-  // Archive (Soft Delete)
   const handleSoftDeleteStall = async (id: string, stall: StallRecord) => {
     if (confirm("Are you sure you want to move this stall to the Archiver?")) {
       const leaseId = (stall as any).leaseId || id;
@@ -443,7 +440,6 @@ export default function MarketStallsView({
     }
   };
 
-  // Restore from Archive
   const handleRestoreStall = async (id: string, stall: StallRecord) => {
     if (confirm(`Are you sure you want to restore Stall ${stall.stallNumber} to active records?`)) {
       const leaseId = (stall as any).leaseId || id;
@@ -468,7 +464,6 @@ export default function MarketStallsView({
     }
   };
 
-  // Hard Delete (Final)
   const handleFinalDeleteStall = async (id: string, stall: StallRecord) => {
     if (confirm("WARNING: Are you sure you want to PERMANENTLY delete this stall? This action will remove it from the database and cannot be undone.")) {
       const leaseId = (stall as any).leaseId || id;

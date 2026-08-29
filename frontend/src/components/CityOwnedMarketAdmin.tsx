@@ -32,7 +32,6 @@ export default function CityOwnedMarketAdmin({
 }: Props) {
   const [leases, setLeases] = useState<LeaseRecord[]>(initialRecords);
 
-  // Tab State
   const [activeTab, setActiveTab] = useState<"Active" | "Archived">("Active");
 
   const [searchTermLeaseId, setSearchTermLeaseId] = useState("");
@@ -57,7 +56,7 @@ export default function CityOwnedMarketAdmin({
   const fetchAdminLeases = async () => {
     try {
       const storedLeases = await getLeases();
-      // Bypass strict type checking from the external service on load if needed
+
       setLeases(storedLeases as any[]);
     } catch (err) {
       console.error("Error fetching local leases:", err);
@@ -88,7 +87,7 @@ export default function CityOwnedMarketAdmin({
   }, [initialRecords]);
 
   const metrics = useMemo(() => {
-    // Exclude archived records from the dashboard metrics
+
     const activeRecords = leases.filter((l) => l.leaseStatus !== "Archived");
     const total = activeRecords.length;
     let active = 0;
@@ -113,7 +112,6 @@ export default function CityOwnedMarketAdmin({
     return leases.filter((item) => {
       const isArchived = item.leaseStatus === "Archived";
 
-      // Filter by Tab
       if (activeTab === "Active" && isArchived) return false;
       if (activeTab === "Archived" && !isArchived) return false;
 
@@ -186,7 +184,6 @@ export default function CityOwnedMarketAdmin({
         }
       }
 
-      // Bypass strict type checking from the external service
       await updateLease(recordToSave as any);
 
       const updated = leases.map((item) => {
@@ -210,12 +207,11 @@ export default function CityOwnedMarketAdmin({
     }
   };
 
-  // Archive (Soft Delete)
   const handleSoftDelete = async (record: LeaseRecord) => {
     if (window.confirm(`Are you sure you want to move lease record ${record.leaseId} to the Archiver?`)) {
       try {
         const updatedRecord = { ...record, leaseStatus: "Archived" as const };
-        // Bypass strict type checking from the external service
+
         await updateLease(updatedRecord as any);
         setLeases(prevLeases => prevLeases.map((l) => l.leaseId === record.leaseId ? updatedRecord : l));
         if (onUpdateRecord) onUpdateRecord(updatedRecord);
@@ -226,12 +222,11 @@ export default function CityOwnedMarketAdmin({
     }
   };
 
-  // Restore from Archive
   const handleRestore = async (record: LeaseRecord) => {
     if (window.confirm(`Are you sure you want to restore lease record ${record.leaseId}?`)) {
       try {
         const updatedRecord = { ...record, leaseStatus: "Inactive" as const };
-        // Bypass strict type checking from the external service
+
         await updateLease(updatedRecord as any);
         setLeases(prevLeases => prevLeases.map((l) => l.leaseId === record.leaseId ? updatedRecord : l));
         if (onUpdateRecord) onUpdateRecord(updatedRecord);
@@ -242,7 +237,6 @@ export default function CityOwnedMarketAdmin({
     }
   };
 
-  // Hard Delete (Final)
   const handleFinalDelete = async (leaseId: string) => {
     if (window.confirm(`WARNING: Are you sure you want to PERMANENTLY delete lease record ${leaseId}?`)) {
       try {
@@ -260,7 +254,7 @@ export default function CityOwnedMarketAdmin({
   };
 
   const handleExportCSV = () => {
-    // Only exports the currently filtered active list
+
     const exportList = activeTab === "Active" ? leases.filter((l) => l.leaseStatus !== "Archived") : filteredLeases;
     const headers = [
       "Lease ID", "First Name", "Last Name", "Market Name", "Section",

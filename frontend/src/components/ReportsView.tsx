@@ -1,4 +1,4 @@
-// src/components/ReportsView.tsx
+
 import { useState, useEffect } from "react";
 import type { RPTRecord } from "../types/treasury";
 import { getLeases } from "../services/marketService";
@@ -14,17 +14,15 @@ export default function ReportsView({
   const [reportPeriod, setReportPeriod] = useState("FY 2026");
   const [previewModalType, setPreviewModalType] = useState<"daily" | "delinquent" | "market" | "hawkers" | null>(null);
 
-  // Database state
   const [transactions, setTransactions] = useState<any[]>([]);
   const [marketLeases, setMarketLeases] = useState<any[]>([]);
   const [hawkerApps, setHawkerApps] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Fetch & mapping logic with zero dummy data fallbacks
   const fetchDatabaseData = async () => {
     try {
       setLoading(true);
-      
+
       const [leases, hawkers] = await Promise.all([
         getLeases(),
         getHawkerApplications()
@@ -34,7 +32,6 @@ export default function ReportsView({
       setMarketLeases(activeLeases);
       setHawkerApps(hawkers || []);
 
-      // Transformation: Only grab genuine stored numeric data fields from the database records (including amountDue)
       const derivedTransactions = activeLeases.map((lease: any, idx: number) => {
         const amountValue = Number(
           lease.amountDue ?? 
@@ -95,7 +92,7 @@ export default function ReportsView({
 
   const handleExportCSV = () => {
     const headers = ["Record Type", "Identifier", "Name / Entity", "Location / Barangay", "Balance Due / Status"];
-    
+
     const rptRows = delinquentRecords.map((rec: any) => [
       "RPT Delinquent",
       rec.propertyIndexNumber || rec.propertyId || rec.id,
@@ -115,7 +112,7 @@ export default function ReportsView({
     const rows = [...rptRows, ...marketRows];
     const csvContent = "data:text/csv;charset=utf-8," + 
       [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
-    
+
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
@@ -168,7 +165,7 @@ Generated On: ${new Date().toLocaleDateString()}
       `}
     >
       <div className="max-w-7xl mx-auto space-y-6">
-        
+
         {/* Header & Global Report Options */}
         <div className="flex flex-wrap justify-between items-center bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs gap-4">
           <div>
@@ -226,7 +223,7 @@ Generated On: ${new Date().toLocaleDateString()}
 
         {/* Reports Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          
+
           {/* Daily Collection Report Card */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
             <div>
@@ -237,7 +234,7 @@ Generated On: ${new Date().toLocaleDateString()}
                 </span>
               </div>
               <p className="text-xs mb-4 text-slate-500 dark:text-slate-400">Real-time revenue summary synced with active market lease registry.</p>
-              
+
               <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2.5 text-xs">
                 <div className="flex justify-between text-slate-700 dark:text-slate-300">
                   <span>Total Transactions Logged:</span>
@@ -271,7 +268,7 @@ Generated On: ${new Date().toLocaleDateString()}
                 </span>
               </div>
               <p className="text-xs mb-4 text-slate-500 dark:text-slate-400">Properties flagged with unpaid assessments or overdue balances.</p>
-              
+
               <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2.5 text-xs">
                 <div className="flex justify-between text-slate-700 dark:text-slate-300">
                   <span>Total Delinquent Properties:</span>
@@ -301,7 +298,7 @@ Generated On: ${new Date().toLocaleDateString()}
 
         {/* Secondary Module Summaries */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          
+
           {/* Market Stalls Summary Card */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
             <div>
@@ -312,7 +309,7 @@ Generated On: ${new Date().toLocaleDateString()}
                 </span>
               </div>
               <p className="text-xs mb-4 text-slate-500 dark:text-slate-400">Overview of public market stall leases fetched directly from database.</p>
-              
+
               <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2.5 text-xs">
                 <div className="flex justify-between text-slate-700 dark:text-slate-300">
                   <span>Total Registered Leases:</span>
@@ -348,7 +345,7 @@ Generated On: ${new Date().toLocaleDateString()}
                 </span>
               </div>
               <p className="text-xs mb-4 text-slate-500 dark:text-slate-400">Verified hawker association permits and filings.</p>
-              
+
               <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2.5 text-xs">
                 <div className="flex justify-between text-slate-700 dark:text-slate-300">
                   <span>Total Registered Associations:</span>
@@ -381,7 +378,7 @@ Generated On: ${new Date().toLocaleDateString()}
       {previewModalType && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-3xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
-            
+
             <div className="flex justify-between items-center p-6 border-b border-slate-200 dark:border-slate-800">
               <div>
                 <h3 className="text-lg font-bold text-slate-900 dark:text-white m-0">

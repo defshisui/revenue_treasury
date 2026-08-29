@@ -8,20 +8,17 @@ export default function AdminNavbar(){
                 LGU Revenue Treasury Administration
             </div>
 
-
             <div className="admin-profile">
 
                 <span>
                     Administrator
                 </span>
 
-
                 <button className="admin-logout">
                     Logout
                 </button>
 
             </div>
-
 
         </header>
 

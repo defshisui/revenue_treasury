@@ -1,4 +1,3 @@
-// src/components/AuditTrailView.tsx
 
 import { useState, useEffect } from "react";
 import { API_BASE_URL } from "../config/api";
@@ -16,7 +15,6 @@ export interface AuditRecord {
   timestamp: string;
 }
 
-// Helper to format timestamps to GMT+8
 const formatGMT8Time = (dateString: string) => {
   try {
     const d = new Date(dateString);
@@ -37,7 +35,6 @@ const formatGMT8Time = (dateString: string) => {
   }
 };
 
-// Helper to get today's date in YYYY-MM-DD for GMT+8
 const getGMT8DateString = () => {
   return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Manila" });
 };
@@ -60,14 +57,12 @@ export default function AuditTrailView({
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedRecord, setSelectedRecord] = useState<AuditRecord | null>(null);
 
-  // Clear / Delete Modal State
   const [isClearModalOpen, setIsClearModalOpen] = useState(false);
   const [hasDownloadedBackup, setHasDownloadedBackup] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const itemsPerPage = 10;
 
-  // UPDATED: fetchLogs now features a robust fallback to localStorage if the server returns 404 or fails
   const fetchLogs = async () => {
     setIsLoading(true);
     try {
@@ -109,7 +104,6 @@ export default function AuditTrailView({
     const matchesModule = selectedModule === "ALL" || record.module === selectedModule;
     const matchesSeverity = selectedSeverity === "ALL" || record.severity === selectedSeverity;
 
-    // Action Category Filter Logic
     let matchesActionCategory = true;
     const act = record.action.toLowerCase();
     if (actionCategory === "LOGOUT") {
@@ -180,7 +174,6 @@ export default function AuditTrailView({
     setHasDownloadedBackup(true);
   };
 
-  // UPDATED: Ensure deletion clears both the server and local storage fallback
   const handleConfirmClearAndDelete = async () => {
     if (!hasDownloadedBackup) return;
     setIsDeleting(true);

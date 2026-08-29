@@ -9,7 +9,6 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | null>(null);
 
-
 export function ThemeProvider({
   children,
 }: {
@@ -26,11 +25,9 @@ export function ThemeProvider({
 
   });
 
-
   useEffect(() => {
 
     const html = document.documentElement;
-
 
     if (theme === "dark") {
       html.classList.add("dark");
@@ -39,16 +36,12 @@ export function ThemeProvider({
       html.classList.remove("dark");
     }
 
-
     localStorage.setItem(
       "theme",
       theme
     );
 
-
   }, [theme]);
-
-
 
   function toggleTheme() {
 
@@ -59,8 +52,6 @@ export function ThemeProvider({
     );
 
   }
-
-
 
   return (
 
@@ -79,12 +70,9 @@ export function ThemeProvider({
 
 }
 
-
-
 export function useTheme() {
 
   const context = useContext(ThemeContext);
-
 
   if (!context) {
 
@@ -93,7 +81,6 @@ export function useTheme() {
     );
 
   }
-
 
   return context;
 

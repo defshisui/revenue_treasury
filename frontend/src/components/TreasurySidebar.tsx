@@ -1,10 +1,9 @@
-// src/components/TreasurySidebar.tsx
+
 import { useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import type { Subsystem } from "../types/treasury";
 import { usePermissions } from "../hooks/usePermissions";
 
-// Import the logo directly from the assets folder
 import logo from "../assets/logo-system.png";
 
 interface TreasurySidebarProps {
@@ -12,7 +11,7 @@ interface TreasurySidebarProps {
   isCollapsed: boolean;
   setIsCollapsed: Dispatch<SetStateAction<boolean>>;
   setActiveTab: Dispatch<SetStateAction<Subsystem>>;
-  // Keeping these in the interface to prevent breaking parent components passing them
+
   canCreate?: (module: string) => boolean;
   canApprove?: () => boolean;
   canDelete?: () => boolean;
@@ -45,17 +44,14 @@ export default function TreasurySidebar({
 }: TreasurySidebarProps) {
   const [isMarketOpen, setIsMarketOpen] = useState(true);
 
-  // 1. Get the current user's role from local storage
   const userRole = localStorage.getItem("user_role") || "treasury-staff";
 
-  // 2. Pass it to your updated permissions hook
   const { canManageUsers, canViewAudit } = usePermissions(userRole);
 
-  // 3. Filter the navigation items dynamically based on the role's permissions
   const visibleItems = navigationItems.filter(item => {
     if (item.id === "users") return canManageUsers();
     if (item.id === "audit") return canViewAudit();
-    return true; // All other tabs remain visible
+    return true; 
   });
 
   const handleTabClick = (item: NavItem) => {
@@ -118,7 +114,6 @@ export default function TreasurySidebar({
         {visibleItems.map((item, index) => {
           const isMarketGroup = item.id === "market";
 
-          // Dynamically find where the "Governance" section should start
           const firstGovernanceIndex = visibleItems.findIndex(i => i.isGovernance);
 
           return (

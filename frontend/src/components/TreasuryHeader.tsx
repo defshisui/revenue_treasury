@@ -1,4 +1,4 @@
-// src/components/TreasuryHeader.tsx
+
 import { useState, useRef, useEffect, type Dispatch, type SetStateAction } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -31,7 +31,6 @@ export default function TreasuryHeader({
   const [isViewAllModalOpen, setIsViewAllModalOpen] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
-  // --- Notification persistence helpers (survive page reloads via localStorage) ---
   const LS_READ    = 'notif_read_ids';
   const LS_CLEARED = 'notif_cleared_ids';
   const LS_ALL     = 'notif_cleared_all';
@@ -44,12 +43,10 @@ export default function TreasuryHeader({
   const saveClearedIds = (s: Set<string>) => localStorage.setItem(LS_CLEARED, JSON.stringify([...s]));
   const saveIsClearedAll = (v: boolean)   => localStorage.setItem(LS_ALL,     String(v));
 
-  // In-memory refs (hydrated from localStorage on mount)
   const readIdsRef      = useRef<Set<string>>(getReadIds());
   const clearedIdsRef   = useRef<Set<string>>(getClearedIds());
   const isClearedAllRef = useRef<boolean>(getIsClearedAll());
 
-  // Updated state to include avatar
   const [adminUser, setAdminUser] = useState<{ fullname: string; firstName: string; initials: string; avatar: string | null; } | null>(null);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -58,7 +55,6 @@ export default function TreasuryHeader({
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
 
-  // Fetch logged-in user details from local/session storage and listen for updates
   useEffect(() => {
     const checkAdminSession = () => {
       const rawData = localStorage.getItem('currentUser') ||
@@ -78,7 +74,6 @@ export default function TreasuryHeader({
         const fullName = target.fullname || target.name || target.fullName || target.firstName || target.email;
         if (!fullName) return;
 
-        // Retrieve avatar from storage
         const avatar = target.avatar || target.profile_picture || null;
 
         const nameParts = String(fullName).trim().split(" ");
@@ -94,21 +89,17 @@ export default function TreasuryHeader({
       }
     };
 
-    // Initial check on mount
     checkAdminSession();
 
-    // Listen for cross-tab storage changes and same-tab custom updates
     window.addEventListener('storage', checkAdminSession);
     window.addEventListener('profileUpdated', checkAdminSession);
 
-    // Cleanup listeners on unmount
     return () => {
       window.removeEventListener('storage', checkAdminSession);
       window.removeEventListener('profileUpdated', checkAdminSession);
     };
   }, []);
 
-  // Fetch and filter Notifications based on Role
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
@@ -119,7 +110,7 @@ export default function TreasuryHeader({
 
           const filtered = logs.filter((log: any) => {
             const isAccountRelated = log.module === 'User Management' || log.action?.includes('USER_') || log.action?.includes('LOGIN');
-            // Admin gets account-related notifications. Audit/Treasury gets everything else.
+
             if (activeRole.toLowerCase() === 'admin') {
               return isAccountRelated;
             } else {
@@ -133,7 +124,7 @@ export default function TreasuryHeader({
             time: log.timestamp || "Recently",
             read: readIdsRef.current.has(log.id)
           }));
-          // Filter out any IDs the user has explicitly cleared
+
           const visible = isClearedAllRef.current
             ? []
             : incoming.filter((n: AppNotification) => !clearedIdsRef.current.has(n.id));
@@ -142,7 +133,7 @@ export default function TreasuryHeader({
           throw new Error("Failed to fetch logs");
         }
       } catch (e) {
-        // Mock Fallback Data if backend is unavailable
+
         const mockLogs = [
           { id: '1', module: 'User Management', message: 'System User changed their password.', time: '2 mins ago' },
           { id: '2', module: 'User Management', message: 'Admin archived account for john.doe', time: '1 hour ago' },
@@ -161,7 +152,7 @@ export default function TreasuryHeader({
           ...log,
           read: readIdsRef.current.has(log.id)
         }));
-        // Filter out any IDs the user has explicitly cleared
+
         const visible = isClearedAllRef.current
           ? []
           : incoming.filter((n: AppNotification) => !clearedIdsRef.current.has(n.id));
@@ -171,12 +162,10 @@ export default function TreasuryHeader({
 
     fetchNotifications();
 
-    // Poll every 60 seconds
     const intervalId = setInterval(fetchNotifications, 60000);
     return () => clearInterval(intervalId);
   }, [activeRole]);
 
-  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -196,17 +185,17 @@ export default function TreasuryHeader({
         readIdsRef.current.add(n.id);
         return { ...n, read: true };
       });
-      // Persist the read IDs so they survive a reload
+
       saveReadIds(readIdsRef.current);
       return updated;
     });
   };
 
   const clearAllNotifications = () => {
-    // Record all current IDs as cleared and set the global flag
+
     notifications.forEach(n => clearedIdsRef.current.add(n.id));
     isClearedAllRef.current = true;
-    // Persist both to localStorage so the clear survives a page reload
+
     saveClearedIds(clearedIdsRef.current);
     saveIsClearedAll(true);
     setNotifications([]);
@@ -215,7 +204,7 @@ export default function TreasuryHeader({
   const handleViewAll = () => {
     markAllAsRead();
     setIsNotifMenuOpen(false);
-    setIsViewAllModalOpen(true); // Open the full-screen modal
+    setIsViewAllModalOpen(true); 
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;
@@ -401,7 +390,6 @@ export default function TreasuryHeader({
           )}
         </div>
       </div>
-
 
       {isViewAllModalOpen && (
         <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">

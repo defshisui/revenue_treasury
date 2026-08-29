@@ -1,8 +1,7 @@
-// src/components/CitizenServicePortal.tsx
+
 import React, { useState } from 'react';
 import './layouts/CitizenServicePortal.css';
 
-// Types
 interface ServiceDetail {
   targetUsers: string;
   serviceMethod: string;
@@ -20,7 +19,6 @@ interface ServiceCard {
   iconType: 'id-badge' | 'id-search' | 'building' | 'store' | 'health' | 'market';
 }
 
-// Mock Data matching the screenshots
 const SERVICES_DATA: ServiceCard[] = [
   {
     id: 'qcitizen-id-eapplication',
@@ -131,8 +129,6 @@ export const CitizenServicePortal: React.FC = () => {
   const [activeModule, setActiveModule] = useState<string | null>(null);
   const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
 
-  // Navigation action when clicking card directly or "Go to Portal" inside Modal
-  // Fixed TS6133 by either using serviceId or prefixing with _ if unused
   const handleGoToModule = (_serviceId: string, title: string) => {
     setActiveModalService(null);
     setActiveModule(title);
@@ -145,7 +141,6 @@ export const CitizenServicePortal: React.FC = () => {
     }));
   };
 
-  // Filter services
   const filteredServices = SERVICES_DATA.filter((service) => {
     const matchesSearch =
       service.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -155,14 +150,12 @@ export const CitizenServicePortal: React.FC = () => {
     return matchesSearch && matchesCategory;
   });
 
-  // Group services by category
   const groupedServices = filteredServices.reduce((acc, service) => {
     if (!acc[service.category]) acc[service.category] = [];
     acc[service.category].push(service);
     return acc;
   }, {} as Record<string, ServiceCard[]>);
 
-  // Active Module View simulation
   if (activeModule) {
     return (
       <div className="min-h-screen bg-gray-50 p-8 font-sans text-slate-800">
@@ -466,7 +459,6 @@ export const CitizenServicePortal: React.FC = () => {
   );
 };
 
-// SVG Icon Helper
 function renderIcon(type: ServiceCard['iconType']) {
   switch (type) {
     case 'id-badge':

@@ -43,7 +43,7 @@ export default function FraudMonitoringView({ isCollapsed }: Props) {
       const res = await fetch(`${API_BASE_URL}/audit-logs`);
       if (!res.ok) throw new Error('Failed to fetch');
       const data = await res.json();
-      
+
       const fraudRelated = data.filter((log: FraudLog) => 
         log.newData?.includes('Anti-Fraud') || 
         log.action === 'ACCOUNT_CREATION_BLOCKED' ||
@@ -51,7 +51,7 @@ export default function FraudMonitoringView({ isCollapsed }: Props) {
         log.newData?.includes('Risk Score') ||
         log.auditId?.includes('FRAUD')
       );
-      
+
       setLogs(fraudRelated);
     } catch (err) {
       console.error('Failed to fetch fraud logs:', err);
@@ -155,7 +155,7 @@ export default function FraudMonitoringView({ isCollapsed }: Props) {
       `}
     >
       <div className="max-w-7xl mx-auto space-y-6">
-        
+
         {/* Toast alert */}
         {toastMessage && (
           <div className={`p-4 rounded-2xl flex items-center justify-between shadow-lg text-sm font-medium transition-all ${
@@ -201,7 +201,7 @@ export default function FraudMonitoringView({ isCollapsed }: Props) {
         {/* Tab Navigation & Controls */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-4">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-4">
-            
+
             {/* Tabs */}
             <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800/80 p-1.5 rounded-2xl">
               <button

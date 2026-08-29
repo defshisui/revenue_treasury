@@ -1,14 +1,10 @@
 import { Link } from "react-router-dom"
 
-
-
 export default function Navbar() {
 
   return (
 
     <nav className="lgu-navbar">
-
-
 
       <div className="lgu-navbar-brand">
 
@@ -16,11 +12,7 @@ export default function Navbar() {
 
       </div>
 
-
-
       <ul className="lgu-navbar-menu">
-
-
 
         <li>
 
@@ -33,8 +25,6 @@ export default function Navbar() {
         </li>
 
       </ul>
-
-
 
     </nav>
 

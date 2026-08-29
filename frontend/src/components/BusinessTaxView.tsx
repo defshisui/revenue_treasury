@@ -1,4 +1,4 @@
-// src/components/BusinessTaxAssessmentAdminView.tsx
+
 import React, { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../config/api';
 
@@ -46,14 +46,11 @@ interface AppointmentRecord {
   createdAt: string;
 }
 
-
-
 export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdminViewProps> = ({ isCollapsed = false }) => {
   const [adminUser, setAdminUser] = useState<{ fullname: string; email: string; initials: string; firstName: string; token: string } | null>(null);
 
   const [activeTab, setActiveTab] = useState<'assessments' | 'appointments'>('assessments');
 
-  // Inner Archiver Tabs
   const [assessmentTab, setAssessmentTab] = useState<'Active' | 'Archived'>('Active');
   const [appointmentTab, setAppointmentTab] = useState<'Active' | 'Archived'>('Active');
 
@@ -246,7 +243,6 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
 
       if (!res.ok) throw new Error("Failed to update status");
 
-      // Check if it's an archiving/restoring action to prevent excessive alerts
       if (newStatus !== 'ARCHIVED' && newStatus !== 'PENDING') {
         alert(`Appointment marked as ${newStatus}.`);
       }
@@ -298,7 +294,6 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
     }
   };
 
-
   const handleStatusUpdate = async (newStatus: 'APPROVED' | 'REJECTED' | 'ARCHIVED' | 'PENDING') => {
     if (!selectedAssessment) return;
     if (newStatus === 'APPROVED' && (!checklist.itrChecked || !checklist.clearanceVerified || !checklist.financialStatementValid)) {
@@ -345,7 +340,7 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
       if (!res.ok) throw new Error("Failed to archive");
       setAssessments(prev => prev.map(a => a.id === id ? { ...a, status: 'ARCHIVED' } : a));
     } catch (e) {
-      // fallback optimistic update for mock integrations
+
       setAssessments(prev => prev.map(a => a.id === id ? { ...a, status: 'ARCHIVED' } : a));
     }
   };

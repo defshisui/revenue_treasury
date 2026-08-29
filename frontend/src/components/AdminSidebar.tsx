@@ -11,18 +11,15 @@ export default function AdminSidebar() {
                 LGU Revenue System
             </div>
 
-
             <nav className="admin-menu">
 
                 <a className="admin-menu-item">
                     Dashboard
                 </a>
 
-
                 <p className="admin-menu-section">
                     Revenue Management
                 </p>
-
 
                 <a className="admin-menu-item">
                     Real Property Tax
@@ -42,11 +39,9 @@ export default function AdminSidebar() {
                     Market Rental
                 </a>
 
-
                 <p className="admin-menu-section">
                     Treasury
                 </p>
-
 
                 <a className="admin-menu-item">
                     Payments
@@ -56,11 +51,9 @@ export default function AdminSidebar() {
                     Receipts
                 </a>
 
-
                 <p className="admin-menu-section">
                     System
                 </p>
-
 
                 <a className="admin-menu-item">
                     Reports
@@ -73,7 +66,6 @@ export default function AdminSidebar() {
                 <a className="admin-menu-item">
                     Audit Logs
                 </a>
-
 
             </nav>
 

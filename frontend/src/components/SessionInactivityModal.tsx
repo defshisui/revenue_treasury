@@ -21,7 +21,6 @@ export const SessionInactivityModal: FC<SessionInactivityModalProps> = ({
   const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isWarningOpenRef = useRef(false);
 
-  // Check for an active session on mount and when storage changes
   useEffect(() => {
     const checkSession = () => {
       const data = localStorage.getItem('currentUser') ||
@@ -131,7 +130,7 @@ export const SessionInactivityModal: FC<SessionInactivityModalProps> = ({
   };
 
   useEffect(() => {
-    // Only watch activity if a logged-in session exists
+
     if (!hasSession) {
       if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
       if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
