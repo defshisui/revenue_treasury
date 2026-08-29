@@ -436,7 +436,7 @@ export default function MarketStallApplication() {
                                                             {(() => {
                                                                 const st1 = getStallRealtimeStatus(1, "Fish");
                                                                 return (
-                                                                    <button onClick={() => handleStallClick({ stallNum: 1, holder: st1.holder, availability: st1.availability, section: "Fish", type: "Permanent", size: "3 sqm", classification: "Regular", fee: "₱1,200.00" })} className={`${st1.availability === 'Occupied' ? 'bg-blue-700' : 'bg-blue-500'} hover:opacity-90 text-white text-[10px] font-bold h-10 rounded flex items-center justify-center relative shadow-sm cursor-pointer`}>
+                                                                    <button onClick={() => handleStallClick({ stallNum: 1, holder: st1.holder, availability: st1.availability, section: "Fish", type: "Permanent", size: "3 sqm", classification: "Regular", fee: "₱1.00" })} className={`${st1.availability === 'Occupied' ? 'bg-blue-700' : 'bg-blue-500'} hover:opacity-90 text-white text-[10px] font-bold h-10 rounded flex items-center justify-center relative shadow-sm cursor-pointer`}>
                                                                         1
                                                                         <span className={`absolute top-1 right-1 w-1.5 h-1.5 ${st1.availability === 'Occupied' ? 'bg-red-500' : 'bg-emerald-300'} rounded-full`}></span>
                                                                     </button>
@@ -445,7 +445,7 @@ export default function MarketStallApplication() {
                                                             {(() => {
                                                                 const st5 = getStallRealtimeStatus(5, "Fish");
                                                                 return (
-                                                                    <button onClick={() => handleStallClick({ stallNum: 5, holder: st5.holder, availability: st5.availability, section: "Fish", type: "Permanent", size: "3 sqm", classification: "Regular", fee: "₱1,200.00" })} className={`${st5.availability === 'Occupied' ? 'bg-blue-700' : 'bg-blue-500'} hover:opacity-90 text-white text-[10px] font-bold h-10 rounded flex items-center justify-center relative shadow-sm cursor-pointer`}>
+                                                                    <button onClick={() => handleStallClick({ stallNum: 5, holder: st5.holder, availability: st5.availability, section: "Fish", type: "Permanent", size: "3 sqm", classification: "Regular", fee: "₱1.00" })} className={`${st5.availability === 'Occupied' ? 'bg-blue-700' : 'bg-blue-500'} hover:opacity-90 text-white text-[10px] font-bold h-10 rounded flex items-center justify-center relative shadow-sm cursor-pointer`}>
                                                                         5
                                                                         <span className={`absolute top-1 right-1 w-1.5 h-1.5 ${st5.availability === 'Occupied' ? 'bg-red-500' : 'bg-emerald-300'} rounded-full`}></span>
                                                                     </button>
