@@ -905,9 +905,6 @@ export default function MarketStallApplication() {
                                 <h3 className="text-base sm:text-lg font-bold text-slate-900">
                                     Market Stall Lease Payment ({paymentLeaseId || "Generating..."})
                                 </h3>
-                                <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-                                    Market Stall Lease Payment ({paymentLeaseId || "Generating..."})
-                                </p>
                             </div>
                             <button
                                 onClick={() => {
@@ -929,9 +926,6 @@ export default function MarketStallApplication() {
                                         <h2 className="text-xl sm:text-2xl font-bold text-slate-900">
                                             Market Stall Lease Payment ({paymentLeaseId || "Generating..."})
                                         </h2>
-                                        <p className="text-sm text-slate-500 mt-1">
-                                            Market Stall Lease Payment ({paymentLeaseId || "Generating..."})
-                                        </p>
                                     </div>
 
                                     <div className="text-4xl sm:text-5xl font-extrabold text-emerald-600 tracking-tight">
@@ -943,11 +937,6 @@ export default function MarketStallApplication() {
                                         {currentUser?.email ? <>, {currentUser.email}</> : null}
                                     </p>
 
-                                    <div className="border-b border-slate-200 pb-4">
-                                        <p className="text-sm font-semibold text-slate-700">
-                                            Market Stall Lease Payment ({paymentLeaseId || "Generating..."})
-                                        </p>
-                                    </div>
 
                                     <div className="space-y-3 text-sm">
                                         <div className="flex justify-between items-center">
