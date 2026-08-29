@@ -899,24 +899,6 @@ export default function MarketStallApplication() {
             {isPaymentStep && activeStall && (
                 <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[80] flex items-center justify-center p-4 overflow-y-auto">
                     <div className="bg-white rounded-2xl max-w-5xl w-full shadow-2xl relative border border-slate-200 overflow-hidden my-4">
-                        {/* Header */}
-                        <div className="px-6 sm:px-8 py-4 border-b border-slate-200 flex justify-between items-center">
-                            <div>
-                                <h3 className="text-base sm:text-lg font-bold text-slate-900">
-                                    Market Stall Lease Payment ({paymentLeaseId || "Generating..."})
-                                </h3>
-                            </div>
-                            <button
-                                onClick={() => {
-                                    if (!isProcessingPayment) setIsPaymentStep(false);
-                                }}
-                                disabled={isProcessingPayment}
-                                className="text-slate-400 hover:text-slate-700 disabled:opacity-40 font-bold text-xl cursor-pointer disabled:cursor-not-allowed"
-                                aria-label="Close payment"
-                            >
-                                ✕
-                            </button>
-                        </div>
 
                         <div className="p-6 sm:p-8">
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
