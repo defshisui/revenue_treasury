@@ -1,5 +1,3 @@
-// src/components/TreasuryDashboardView.tsx
-
 import { useState, useEffect } from "react";
 import type { TransactionRecord } from "../types/treasury";
 import { API_BASE_URL } from "../config/api";
@@ -60,7 +58,6 @@ export interface TreasuryDashboardViewProps {
   marketStalls?: StallRecord[];
   isCollapsed: boolean;
   onNavigate?: (view: string) => void;
-  // ADDED: Accept setActiveTab directly so it mimics the Sidebar
   setActiveTab?: (tab: any) => void;
   fetchTransactions?: () => Promise<TransactionRecord[]>;
   fetchStalls?: () => Promise<StallRecord[]>;
@@ -85,7 +82,7 @@ export default function TreasuryDashboardView({
   marketStalls: initialStalls = [],
   isCollapsed,
   onNavigate,
-  setActiveTab, // Destructure here
+  setActiveTab,
   fetchTransactions,
   fetchStalls
 }: TreasuryDashboardViewProps) {
@@ -174,12 +171,11 @@ export default function TreasuryDashboardView({
     return () => window.removeEventListener("db_treasury_updated", handleDbUpdate);
   }, [fetchTransactions, fetchStalls]);
 
-  // FIX: This function now actively changes the main app's state!
   const handleShortcutNavigation = (viewName: string) => {
     if (setActiveTab) {
-      setActiveTab(viewName); // Triggers state change in parent
+      setActiveTab(viewName);
     } else if (onNavigate) {
-      onNavigate(viewName); // Fallback
+      onNavigate(viewName);
     } else {
       console.warn("Dashboard tried to navigate, but setActiveTab was not passed to it!");
     }
@@ -341,7 +337,7 @@ export default function TreasuryDashboardView({
       }}
       className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 p-6 pt-24 transition-all duration-300 box-border"
     >
-      {/* HEADER & YEAR SELECTOR & FILTER TABS */}
+
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center bg-white dark:bg-slate-900 p-6 rounded-2xl mb-6 flex-wrap gap-4 border border-slate-200 dark:border-slate-800 shadow-sm">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -414,7 +410,6 @@ export default function TreasuryDashboardView({
         </div>
       </div>
 
-      {/* TOP FIVE METRICS BANNER */}
       {activeLocalTab === "ALL" && (
         <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-4 mb-6">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm flex items-center gap-4">
@@ -441,7 +436,6 @@ export default function TreasuryDashboardView({
         </div>
       )}
 
-      {/* ROW 1: CORE METRIC CHARTS */}
       {activeLocalTab === "ALL" && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
@@ -496,10 +490,8 @@ export default function TreasuryDashboardView({
         </div>
       )}
 
-      {/* ROW 2: SPECIFIC REVENUE MODULE GRAPHS AS CLICKABLE SHORTCUTS */}
       <div className={`grid grid-cols-1 ${activeLocalTab === 'ALL' ? 'lg:grid-cols-3' : 'lg:grid-cols-1'} gap-6 mb-6`}>
 
-        {/* RPT Shortcut Card */}
         {(activeLocalTab === "ALL" || activeLocalTab === "RPT") && (
           <div
             onClick={() => handleShortcutNavigation('rpt')}
@@ -529,7 +521,6 @@ export default function TreasuryDashboardView({
           </div>
         )}
 
-        {/* Business Tax Shortcut Card */}
         {(activeLocalTab === "ALL" || activeLocalTab === "BUSINESS") && (
           <div
             onClick={() => handleShortcutNavigation('business')}
@@ -559,7 +550,6 @@ export default function TreasuryDashboardView({
           </div>
         )}
 
-        {/* Market Stalls Shortcut Card */}
         {(activeLocalTab === "ALL" || activeLocalTab === "MARKET") && (
           <div
             onClick={() => handleShortcutNavigation('market')}
@@ -590,7 +580,6 @@ export default function TreasuryDashboardView({
         )}
       </div>
 
-      {/* ROW 3: PAYMENT OPTION DONUT CHARTS */}
       {activeLocalTab === "ALL" && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
@@ -631,7 +620,6 @@ export default function TreasuryDashboardView({
         </div>
       )}
 
-      {/* RPT ASSESSMENTS LEDGER */}
       {activeLocalTab === "RPT" && (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm mb-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
           <div className="flex justify-between items-center mb-4">
@@ -687,7 +675,6 @@ export default function TreasuryDashboardView({
         </div>
       )}
 
-      {/* MARKET STALLS OVERVIEW */}
       {activeLocalTab === "MARKET" && (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm mb-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
           <div className="flex justify-between items-center mb-4">
@@ -736,7 +723,6 @@ export default function TreasuryDashboardView({
         </div>
       )}
 
-      {/* BUSINESS TAX ASSESSMENTS LEDGER */}
       {activeLocalTab === "BUSINESS" && (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm mb-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
           <div className="flex justify-between items-center mb-4">
@@ -791,7 +777,6 @@ export default function TreasuryDashboardView({
         </div>
       )}
 
-      {/* POSTGRESQL LIVE TRANSACTION FEED TABLE */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-base font-bold text-slate-900 dark:text-white m-0">
@@ -849,7 +834,6 @@ export default function TreasuryDashboardView({
         )}
       </div>
 
-      {/* FULL LEDGER MODAL */}
       {showAllModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
