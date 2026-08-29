@@ -83,7 +83,14 @@ export class AntiFraudService {
       const score = parseInt(String(data.fraudlabspro_score || '0'), 10);
       const status = data.fraudlabspro_status;
 
-      console.log(`[AntiFraud] Result for ${params.email}: score=${score}, status=${status}`);
+      console.log(
+  `[AntiFraud] Result for ${params.email}: score=${score}, status=${status}, threshold=${threshold}`
+);
+
+console.log(
+  '[AntiFraud] Full FraudLabs response:',
+  JSON.stringify(data, null, 2)
+);
 
       const isFraud = score >= threshold;
 
