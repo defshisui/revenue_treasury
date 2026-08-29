@@ -1,9 +1,12 @@
 // src/controllers/auth.controller.ts
 import type { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 import pool from '../db.js';
 import { recordAudit } from './audit.controller.js';
 import type { LoginBody } from '../types/index.js';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'municipal-treasury-secret-key-9988';
 
 const loginAttemptsTracker = new Map<string, { count: number; lockUntil: number }>();
 const LOCKOUT_LIMIT = 5;
@@ -76,8 +79,15 @@ export async function login(req: Request, res: Response): Promise<void> {
     loginAttemptsTracker.delete(email);
     await recordAudit(req, auditId, user.email, user.role || 'admin', 'Authentication', 'LOGIN_SUCCESS', 'INFO', null, `Successful session init (RememberMe: ${rememberMe})`);
 
+    const token = jwt.sign(
+      { id: user.id, email: user.email, role: user.role || 'admin' },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
     res.status(200).json({
       message: 'Login successful!',
+      token,
       user: {
         id: user.id,
         email: user.email,

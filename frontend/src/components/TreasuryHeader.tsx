@@ -387,6 +387,7 @@ export default function TreasuryHeader({
                   setIsProfileMenuOpen(false);
                   localStorage.removeItem('currentUser');
                   localStorage.removeItem('user');
+                  localStorage.removeItem('token');
                   sessionStorage.removeItem('currentUser');
                   sessionStorage.removeItem('user');
                   notify("You have been logged out.");

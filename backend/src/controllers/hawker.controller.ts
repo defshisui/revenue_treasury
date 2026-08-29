@@ -40,7 +40,22 @@ export async function createHawker(req: Request, res: Response): Promise<void> {
   // Use 'any' here to accommodate the new lguMeta payload that includes Base64 strings
   const data = req.body as any;
 
+  if (!data.associationNumber || !data.associationName || !data.contactNumber ||
+      !data.chairperson?.firstName || !data.chairperson?.lastName || !data.chairperson?.email) {
+    res.status(400).json({ message: 'Association number, association name, contact number, and chairperson details (first name, last name, email) are required.' });
+    return;
+  }
+
   try {
+    const duplicateCheck = await pool.query(
+      'SELECT id FROM hawker_associations WHERE association_number = $1',
+      [data.associationNumber]
+    );
+    if (duplicateCheck.rows.length > 0) {
+      res.status(400).json({ message: `Association number ${data.associationNumber} is already registered.` });
+      return;
+    }
+
     const result = await pool.query(
       `INSERT INTO hawker_associations
        (id, association_number, association_name, sec_registration_no, date_issued, contact_number,

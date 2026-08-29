@@ -62,8 +62,26 @@ export async function getBusinessAssessments(req: Request, res: Response): Promi
 
 export async function createSalesDeclaration(req: Request, res: Response): Promise<void> {
     const { businessName, grossSales, year, psicCode, tin, email } = req.body;
+
+    if (!businessName || grossSales === undefined || !year || !psicCode || !tin || !email) {
+        res.status(400).json({ message: 'Business name, gross sales, year, psic code, tin, and email are required.' });
+        return;
+    }
+
+    const numericSales = Number(grossSales);
+    if (isNaN(numericSales) || numericSales < 0) {
+        res.status(400).json({ message: 'Gross sales must be a valid non-negative number.' });
+        return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        res.status(400).json({ message: 'Invalid email address format.' });
+        return;
+    }
+
     const file = (req as any).file;
-    const trackingNumber = `MP-${year || '2026'}-${Math.floor(100000 + Math.random() * 900000)}`;
+    const trackingNumber = `MP-${year}-${Math.floor(100000 + Math.random() * 900000)}`;
     const id = randomUUID();
 
     try {
@@ -160,6 +178,10 @@ export async function deleteBusinessAssessment(req: Request, res: Response): Pro
 
 export async function verifyTaxBill(req: Request, res: Response): Promise<void> {
     const { permitNo, taxBillNo, tin } = req.body;
+    if (!permitNo || !tin) {
+        res.status(400).json({ message: 'Permit/Tracking number and TIN are required.' });
+        return;
+    }
     try {
         // Cast id to text to prevent operator does not exist: uuid = text errors
         const query = `SELECT * FROM business_assessments WHERE (tracking_number = $1 OR id::text = $1) AND tin = $2`;
@@ -189,6 +211,10 @@ export async function verifyTaxBill(req: Request, res: Response): Promise<void> 
 
 export async function verifyOrNumber(req: Request, res: Response): Promise<void> {
     const { permitNo, orNo, tin } = req.body;
+    if (!permitNo || !orNo || !tin) {
+        res.status(400).json({ message: 'Permit/Tracking number, OR number, and TIN are required.' });
+        return;
+    }
     try {
         // Cast id to text to prevent operator does not exist: uuid = text errors
         const query = `SELECT * FROM business_assessments WHERE (tracking_number = $1 OR id::text = $1) AND tin = $2`;
@@ -228,6 +254,18 @@ export async function verifyOrNumber(req: Request, res: Response): Promise<void>
 
 export async function createAppointment(req: Request, res: Response): Promise<void> {
     const { department, appointmentType, businessName, tin, address, description, fullName, email, phone, date, timeSlot, remarks } = req.body;
+    
+    if (!department || !appointmentType || !fullName || !email || !date) {
+        res.status(400).json({ message: 'Department, appointment type, full name, email, and date are required.' });
+        return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        res.status(400).json({ message: 'Invalid email address format.' });
+        return;
+    }
+
     const id = randomUUID();
 
     try {

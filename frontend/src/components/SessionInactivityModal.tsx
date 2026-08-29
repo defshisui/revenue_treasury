@@ -81,6 +81,7 @@ export const SessionInactivityModal: FC<SessionInactivityModalProps> = ({
     localStorage.removeItem('currentUser');
     localStorage.removeItem('user');
     localStorage.removeItem('user_role');
+    localStorage.removeItem('token');
     sessionStorage.removeItem('currentUser');
     sessionStorage.removeItem('user');
     setIsWarningOpen(false);

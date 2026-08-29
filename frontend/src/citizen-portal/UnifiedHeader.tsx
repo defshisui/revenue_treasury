@@ -97,6 +97,7 @@ export const UnifiedHeader: FC = () => {
         localStorage.removeItem('user');
         localStorage.removeItem('__enc_currentUser');
         localStorage.removeItem('__enc_user');
+        localStorage.removeItem('token');
         sessionStorage.removeItem('currentUser');
         sessionStorage.removeItem('user');
         setUser(null);

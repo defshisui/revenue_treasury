@@ -52,6 +52,10 @@ export function useLogin(
           localStorage.setItem("currentUser", JSON.stringify(data.user));
           localStorage.setItem("user_role", data.user.role || "");
         }
+        // Save the JWT token so the global fetch interceptor can attach it
+        if (data.token) {
+          localStorage.setItem("token", data.token);
+        }
 
         const userRole = data.user?.role?.toLowerCase() || "";
 

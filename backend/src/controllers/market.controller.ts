@@ -74,10 +74,26 @@ export async function createMarketLease(req: Request, res: Response): Promise<vo
   const body = req.body as SaveLeaseBody;
   const { firstName, lastName, marketName, section, stallNumber,
     leaseStatus, amountDue, helperApprovalStatus, advancePaymentStatus, paymentStatus } = body;
+
+  if (!firstName || !lastName || !marketName || !section || !stallNumber) {
+    res.status(400).json({ message: 'First name, last name, market name, section, and stall number are required.' });
+    return;
+  }
+
   const resolvedPaymentMethod = resolvePaymentMethod(body);
-  const applicantEmail = `${firstName || 'applicant'}.${lastName || 'taxpayer'}@citizen.gov.ph`.toLowerCase().replace(/\s+/g, '');
+  const applicantEmail = `${firstName.trim()}.${lastName.trim()}@citizen.gov.ph`.toLowerCase().replace(/\s+/g, '');
 
   try {
+    if (body.leaseId) {
+      const duplicateCheck = await pool.query(
+        'SELECT id FROM market_leases WHERE lease_id = $1',
+        [body.leaseId]
+      );
+      if (duplicateCheck.rows.length > 0) {
+        res.status(400).json({ message: `Lease ID ${body.leaseId} is already registered.` });
+        return;
+      }
+    }
     // --- Real Anti-Fraud AI Validation ---
     const rawForwarded = req?.headers['x-forwarded-for'];
     const clientIP = typeof rawForwarded === 'string'
@@ -143,6 +159,12 @@ export async function updateMarketLease(req: Request, res: Response): Promise<vo
   const body = req.body as SaveLeaseBody;
   const { firstName, lastName, marketName, section, stallNumber,
     leaseStatus, amountDue, helperApprovalStatus, advancePaymentStatus, paymentStatus } = body;
+
+  if (!firstName || !lastName || !marketName || !section || !stallNumber) {
+    res.status(400).json({ message: 'First name, last name, market name, section, and stall number are required.' });
+    return;
+  }
+
   const resolvedPaymentMethod = resolvePaymentMethod(body);
 
   try {
