@@ -59,7 +59,7 @@ export function useLogin(
     setIsSubmittingLogin(true);
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 12000);
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
 
     try {
       const response = await fetch(`${API_BASE_URL}/login`, {

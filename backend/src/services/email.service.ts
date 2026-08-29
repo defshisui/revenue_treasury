@@ -21,6 +21,9 @@ export class EmailService {
           user,
           pass,
         },
+        connectionTimeout: 10000, // 10 seconds
+        greetingTimeout: 10000,
+        socketTimeout: 15000,
         tls: {
           rejectUnauthorized: false,
         },
@@ -129,7 +132,6 @@ Purpose: ${actionTitle} (${actionSubtitle})
       return { success: true, messageId: info.messageId };
     } catch (error: any) {
       console.error(`[EmailService] Error sending OTP email to ${toEmail}:`, error?.message || error);
-      // If in offline/local testing or missing password, throw readable error for the controller
       throw new Error(`Failed to send verification email: ${error?.message || 'SMTP Connection Error'}`);
     }
   }
