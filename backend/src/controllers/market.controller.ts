@@ -165,13 +165,14 @@ export async function createMarketLease(req: Request, res: Response): Promise<vo
       lease: result.rows[0],
     });
   } catch (err: any) {
-    console.error('Error saving market lease:', err);
+  console.error('Error saving market lease:', err);
 
-    res.status(500).json({
-      message: 'Failed to save market lease application to database.',
-      error: err?.message || 'Unknown database error',
-    });
-  }
+  res.status(500).json({
+    message:
+      err?.message ||
+      'Failed to save market lease application to database.'
+  });
+}
 }
 
 export async function updateMarketLease(req: Request, res: Response): Promise<void> {
