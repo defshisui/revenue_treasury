@@ -1,15 +1,16 @@
-import React, { useState, useEffect } from "react";
+
+import React, { useState, useEffect, useRef } from "react";
+import logoSystem from '../assets/logo-system.png';
 import { saveLease, getLeases } from "../services/marketService";
-import { API_BASE_URL } from "../config/api";
 import type { LeaseRecord } from "../services/marketService";
-import { UnifiedHeader } from './UnifiedHeader';
-import { UnifiedFooter } from './UnifiedFooter';
 import {
+    verifyPayMongoSession,
     createPayMongoQrPaymentIntent,
     createQrPhPaymentMethod,
     attachQrPhPaymentMethod,
-    verifyPayMongoSession,
 } from "../services/paymongoService";
+
+// Interfaces for Market Data
 interface MarketInfo {
     address: string;
     name: string;
@@ -21,6 +22,7 @@ interface MarketInfo {
     occupied: number;
     floors: number;
 }
+
 interface StallDetails {
     stallNum: number;
     holder: string;
@@ -31,6 +33,7 @@ interface StallDetails {
     classification: string;
     fee: string;
 }
+
 const marketDatabase: Record<string, MarketInfo> = {
     "Galas": {
         address: "Luzon Avenue cor. Unang Hakbang St., Barangay San Isidro, District 4, Quezon City",
@@ -121,25 +124,49 @@ const marketDatabase: Record<string, MarketInfo> = {
         floors: 1
     }
 };
+
 export default function MarketStallApplication() {
     const [selectedMarket, setSelectedMarket] = useState<string>("");
     const [isFloorPlanOpen, setIsFloorPlanOpen] = useState<boolean>(false);
     const [selectedFloor, setSelectedFloor] = useState<string>("1");
+
+    // Auth Session State matching MarketVendorsHub layout
     const [currentUser, setCurrentUser] = useState<{ fullname: string; email: string; initials: string; firstName: string } | null>(null);
+    const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // Leases synced from database layer to dynamically track occupancy status
     const [leases, setLeases] = useState<LeaseRecord[]>([]);
+
+    // Modal state for active stall details
     const [activeStall, setActiveStall] = useState<StallDetails | null>(null);
+
+    // Application Form States
     const [isApplicationFormOpen, setIsApplicationFormOpen] = useState<boolean>(false);
     const [firstName, setFirstName] = useState<string>("");
     const [lastName, setLastName] = useState<string>("");
+
+    // Digital Payment Integration States
     const [isPaymentStep, setIsPaymentStep] = useState<boolean>(false);
     const [isProcessingPayment, setIsProcessingPayment] = useState<boolean>(false);
-    const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
+    const [qrImageUrl, setQrImageUrl] = useState<string>("");
     const [qrReferenceNumber, setQrReferenceNumber] = useState<string>("");
-    const [qrPaymentIntentId, setQrPaymentIntentId] = useState<string>("");
-    const [qrLeaseId, setQrLeaseId] = useState<string>("");
-    const [qrError, setQrError] = useState<string>("");
-    const [qrSecondsRemaining, setQrSecondsRemaining] = useState<number>(300);
-    const [qrPaymentPaid, setQrPaymentPaid] = useState<boolean>(false);
+    const [paymentLeaseId, setPaymentLeaseId] = useState<string>("");
+    const [isGeneratingQr, setIsGeneratingQr] = useState<boolean>(false);
+    const [qrGenerationError, setQrGenerationError] = useState<string>("");
+
+    // Close dropdown on outside click
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsDropdownOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    // Fetch leases and check active user session on initial mount
     useEffect(() => {
         const checkUserSession = () => {
             const rawData = localStorage.getItem('currentUser') ||
@@ -147,10 +174,13 @@ export default function MarketStallApplication() {
                 localStorage.getItem('citizen_user') ||
                 sessionStorage.getItem('currentUser') ||
                 sessionStorage.getItem('user');
+
             if (!rawData) return null;
+
             try {
                 const parsed = JSON.parse(rawData);
                 const target = parsed.user && typeof parsed.user === 'object' ? parsed.user : parsed;
+
                 const fullName = target.fullname || target.name || target.fullName || target.firstName || target.email || "User";
                 const email = target.email || "";
                 const nameParts = String(fullName).trim().split(" ");
@@ -158,20 +188,25 @@ export default function MarketStallApplication() {
                 const initials = nameParts.length > 1
                     ? (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase()
                     : nameParts[0].slice(0, 2).toUpperCase();
+
                 return { fullname: String(fullName), email, firstName, initials };
             } catch (e) {
                 console.error("Failed to parse user session", e);
                 return null;
             }
         };
+
         const fetchInitialData = async () => {
             try {
                 setCurrentUser(checkUserSession());
                 const data = await getLeases();
                 setLeases(data);
+
+                // Check for PayMongo return callback
                 const urlParams = new URLSearchParams(window.location.search);
                 const paymentSuccess = urlParams.get("payment") === "success";
                 const sessionId = urlParams.get("session_id");
+
                 if (paymentSuccess && sessionId) {
                     try {
                         const verifyRes = await verifyPayMongoSession(sessionId);
@@ -192,65 +227,26 @@ export default function MarketStallApplication() {
         };
         fetchInitialData();
     }, []);
-    const marketData = marketDatabase[selectedMarket];
-    const getStallRealtimeStatus = (stallNum: number, section: string) => {
-        const matchedLease = leases.find((l) =>
-            l.marketName.includes(selectedMarket) &&
-            l.stallNumber === String(stallNum) &&
-            l.section.toLowerCase().includes(section.toLowerCase())
-        );
-        const isTerminated = matchedLease?.leaseStatus?.toLowerCase() === "terminated" ||
-            matchedLease?.leaseStatus?.toLowerCase() === "cancelled";
-        if (matchedLease && matchedLease.paymentStatus === "Paid" && !isTerminated) {
-            return {
-                availability: "Occupied" as const,
-                holder: `${matchedLease.firstName} ${matchedLease.lastName}`
-            };
-        }
-        return {
-            availability: "Vacant" as const,
-            holder: "Available (Bakante)"
-        };
-    };
-    const handleStallClick = (baseStall: StallDetails) => {
-        const dynamicStatus = getStallRealtimeStatus(baseStall.stallNum, baseStall.section);
-        setActiveStall({
-            ...baseStall,
-            availability: dynamicStatus.availability,
-            holder: dynamicStatus.holder
-        });
-    };
-    const handleOpenApplicationForm = () => {
-        if (!currentUser) {
-            alert("Please log in to your citizen portal account first to submit a market stall application.");
-            return;
-        }
-        if (currentUser.fullname) {
-            const nameParts = currentUser.fullname.trim().split(" ");
-            if (nameParts.length > 1) {
-                setLastName(nameParts.pop() || "");
-                setFirstName(nameParts.join(" "));
-            } else {
-                setFirstName(currentUser.fullname);
-                setLastName("");
-            }
-        }
-        setIsApplicationFormOpen(true);
-    };
-    const handlePayMongoQrPayment = async (existingLeaseId?: string) => {
+
+    /**
+     * Creates the Dynamic QR Ph payment and keeps the customer inside our
+     * own payment screen. No PayMongo hosted checkout redirect is used.
+     */
+    const handlePayMongoQrPayment = async () => {
         if (!activeStall || !selectedMarket) return;
+
         setIsProcessingPayment(true);
-        setQrCodeUrl("");
+        setIsGeneratingQr(true);
+        setQrImageUrl("");
         setQrReferenceNumber("");
-        setQrPaymentIntentId("");
-        setQrError("");
-        setQrPaymentPaid(false);
-        setQrSecondsRemaining(300);
+        setPaymentLeaseId("");
+        setQrGenerationError("");
+
         const feeAmount =
             parseFloat(activeStall.fee.replace(/[^\d.]/g, "")) || 1500.00;
-        const generatedLeaseId = existingLeaseId ||
-  `LEASE-${new Date().getFullYear()}-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
-        setQrLeaseId(generatedLeaseId);
+        const generatedLeaseId =
+            `LEASE-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`;
+
         const pendingLease: LeaseRecord = {
             leaseId: generatedLeaseId,
             firstName: firstName.trim(),
@@ -263,104 +259,267 @@ export default function MarketStallApplication() {
             helperApprovalStatus: "Pending",
             advancePaymentStatus: "Pending",
             paymentStatus: "Pending Payment",
-            paymentMethod: "PayMongo QRPh",
+            paymentMethod: "QR Ph",
         };
+
         try {
-            if (!existingLeaseId) {
-                await saveLease(pendingLease);
-            }
-            const paymentIntent = await createPayMongoQrPaymentIntent({
+            // Save the application first. The PayMongo webhook should later
+            // change the payment status from Pending Payment to Paid.
+            await saveLease(pendingLease);
+            setLeases((prev) => [...prev, pendingLease]);
+            setPaymentLeaseId(generatedLeaseId);
+
+            // 1. Create a PayMongo Payment Intent for QR Ph.
+            const intent = await createPayMongoQrPaymentIntent({
                 amount: feeAmount,
                 leaseId: generatedLeaseId,
                 customerName: `${firstName.trim()} ${lastName.trim()}`,
                 customerEmail: currentUser?.email || "vendor@gov.ph",
-                description: `Market Stall Lease Payment (${generatedLeaseId})`,
+                description:
+                    `Market Stall Rental - Stall #${activeStall.stallNum} - ${selectedMarket}`,
             });
-            setQrPaymentIntentId(paymentIntent.paymentIntentId);
-            setQrReferenceNumber(paymentIntent.referenceNumber);
+
+            setQrReferenceNumber(intent.referenceNumber || generatedLeaseId);
+
+            // 2. Create the QR Ph Payment Method using the PayMongo public key.
             const paymentMethodId = await createQrPhPaymentMethod(
-                paymentIntent.publicKey,
-                300
+                intent.publicKey
             );
-            const attachedPayment = await attachQrPhPaymentMethod(
-                paymentIntent.paymentIntentId,
+
+            // 3. Attach the QR Ph Payment Method to the Payment Intent.
+            const attachedIntent = await attachQrPhPaymentMethod(
+                intent.paymentIntentId,
                 paymentMethodId,
-                paymentIntent.clientKey,
-                paymentIntent.publicKey
+                intent.clientKey,
+                intent.publicKey
             );
+
+            // 4. PayMongo returns the actual Dynamic QR image here.
             const imageUrl =
-                attachedPayment?.attributes?.next_action?.code?.image_url ||
-                attachedPayment?.next_action?.code?.image_url ||
-                attachedPayment?.attributes?.next_action?.qr_code?.image_url ||
-                attachedPayment?.qr_code?.image_url ||
-                "";
+                attachedIntent?.attributes?.next_action?.code?.image_url;
+
             if (!imageUrl) {
-                console.error("PayMongo QR response:", attachedPayment);
+                console.error("PayMongo QR response:", attachedIntent);
                 throw new Error(
-                    "PayMongo did not return the QRPh code image. Please try again."
+                    "PayMongo did not return a QR code image. Check QR Ph activation and the PayMongo API response."
                 );
             }
-            setQrCodeUrl(imageUrl);
+
+            setQrImageUrl(imageUrl);
         } catch (err: any) {
-            console.error("PayMongo QRPh payment error:", err);
-            setQrError(
-                err?.message ||
-                "Unable to generate the PayMongo QRPh code. Please try again."
-            );
+            console.error("PayMongo QR Ph payment error:", err);
+            setQrGenerationError(err?.message || "Unable to generate the QR Ph payment.");
         } finally {
+            setIsGeneratingQr(false);
             setIsProcessingPayment(false);
         }
     };
-    // Dynamic QR Ph is refreshed every 5 minutes. The existing market lease is reused
-    // so a QR refresh never creates a duplicate lease record.
-    useEffect(() => {
-        if (!isPaymentStep || !qrCodeUrl || qrPaymentPaid) return;
-        const timer = window.setInterval(() => {
-            setQrSecondsRemaining((seconds) => {
-                if (seconds <= 1) {
-                    window.clearInterval(timer);
-                    setQrCodeUrl("");
-                    void handlePayMongoQrPayment(qrLeaseId || undefined);
-                    return 300;
-                }
-                return seconds - 1;
-            });
-        }, 1000);
-        return () => window.clearInterval(timer);
-    }, [isPaymentStep, qrCodeUrl, qrPaymentPaid, qrLeaseId]);
 
-    // Poll the backend for webhook-confirmed payment status while the QR is open.
-    useEffect(() => {
-        if (!isPaymentStep || !qrPaymentIntentId || qrPaymentPaid) return;
-        const poll = window.setInterval(async () => {
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/payments/qr-status/${encodeURIComponent(qrPaymentIntentId)}`);
-                if (!response.ok) return;
-                const data = await response.json();
-                if (data.paid) {
-                    setQrPaymentPaid(true);
-                    setQrSecondsRemaining(0);
-                    setQrCodeUrl("");
-                    const updatedLeases = await getLeases();
-                    setLeases(updatedLeases);
-                }
-            } catch (error) {
-                console.error("QR payment status check failed:", error);
+    const marketData = marketDatabase[selectedMarket];
+
+    // Helper to dynamically evaluate if a specific stall is paid/occupied based on backend lease records
+    const getStallRealtimeStatus = (stallNum: number, section: string) => {
+        const matchedLease = leases.find((l) =>
+            l.marketName.includes(selectedMarket) &&
+            l.stallNumber === String(stallNum) &&
+            l.section.toLowerCase().includes(section.toLowerCase())
+        );
+
+        const isTerminated = matchedLease?.leaseStatus?.toLowerCase() === "terminated" ||
+            matchedLease?.leaseStatus?.toLowerCase() === "cancelled";
+
+        if (matchedLease && matchedLease.paymentStatus === "Paid" && !isTerminated) {
+            return {
+                availability: "Occupied" as const,
+                holder: `${matchedLease.firstName} ${matchedLease.lastName}`
+            };
+        }
+
+        return {
+            availability: "Vacant" as const,
+            holder: "Available (Bakante)"
+        };
+    };
+
+    const handleStallClick = (baseStall: StallDetails) => {
+        const dynamicStatus = getStallRealtimeStatus(baseStall.stallNum, baseStall.section);
+        setActiveStall({
+            ...baseStall,
+            availability: dynamicStatus.availability,
+            holder: dynamicStatus.holder
+        });
+    };
+
+    // Trigger opening the application form and autofilling the detected session user's name
+    const handleOpenApplicationForm = () => {
+        if (!currentUser) {
+            alert("Please log in to your citizen portal account first to submit a market stall application.");
+            return;
+        }
+
+        if (currentUser.fullname) {
+            const nameParts = currentUser.fullname.trim().split(" ");
+            if (nameParts.length > 1) {
+                setLastName(nameParts.pop() || "");
+                setFirstName(nameParts.join(" "));
+            } else {
+                setFirstName(currentUser.fullname);
+                setLastName("");
             }
-        }, 3000);
-        return () => window.clearInterval(poll);
-    }, [isPaymentStep, qrPaymentIntentId, qrPaymentPaid]);
+        }
+
+        setIsApplicationFormOpen(true);
+    };
 
     const handleFormSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!activeStall || !selectedMarket) return;
+
+        // Close the application form and immediately open the custom
+        // payment screen. The QR code is generated automatically, so the
+        // customer does not need to click another payment button.
         setIsApplicationFormOpen(false);
         setIsPaymentStep(true);
+
         await handlePayMongoQrPayment();
     };
+
+    const handleLogout = () => {
+        localStorage.removeItem("currentUser");
+        localStorage.removeItem("user");
+        localStorage.removeItem("citizen_user");
+        sessionStorage.removeItem("currentUser");
+        sessionStorage.removeItem("user");
+        setCurrentUser(null);
+        setIsDropdownOpen(false);
+        window.location.href = "/login";
+    };
+
     return (
-        <div className="bg-slate-100 text-slate-800 min-h-screen flex flex-col antialiased">
-            <UnifiedHeader />
+        <div className="bg-slate-100 font-sans text-slate-800 min-h-screen flex flex-col antialiased">
+            {/* Main Navigation Header */}
+            <header className="w-full bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-xs sticky top-0 z-40">
+                <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+
+                    {/* Logo & Branding */}
+                    <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 cursor-pointer" onClick={() => { window.location.href = '/citizen-portal'; }}>
+                            <div className="p-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xs flex items-center justify-center">
+                                <img
+                                    src={logoSystem}
+                                    alt="System Logo"
+                                    className="h-8 w-8 object-contain"
+                                />
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="font-extrabold text-lg tracking-tight text-slate-900 dark:text-white leading-tight">
+                                    Gov Serv
+                                </span>
+                                <span className="text-[10px] font-bold text-blue-700 dark:text-blue-400 tracking-wider uppercase">
+                                    Unified Portal
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Desktop Navigation */}
+                    <div className="hidden md:flex items-center space-x-6 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                        <span className="hover:text-blue-700 cursor-pointer" onClick={() => window.location.href = '/citizen-portal'}>HOME</span>
+
+                        {/* Services Dropdown */}
+                        <div className="relative group py-2">
+                            <span className="hover:text-blue-700 cursor-pointer flex items-center gap-1 select-none">
+                                SERVICES ▾
+                            </span>
+
+                            <div className="absolute left-0 top-full h-2 w-full"></div>
+
+                            <div className="absolute left-0 top-[calc(100%+8px)] w-60 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 py-2 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-1 group-hover:translate-y-0">
+                                <button
+                                    onClick={() => window.location.href = '/citizen-portal'}
+                                    className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer"
+                                >
+                                    Home
+                                </button>
+                                <button
+                                    onClick={() => window.location.href = '/Market-Vendor'}
+                                    className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer"
+                                >
+                                    Market &amp; Vendors Hub
+                                </button>
+                                <button
+                                    onClick={() => window.location.href = '/real-property-tax-hub'}
+                                    className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer"
+                                >
+                                    Real Property Tax Hub
+                                </button>
+                                <button
+                                    onClick={() => window.location.href = '/Bsiness-Tax-Assessment-View'}
+                                    className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer"
+                                >
+                                    Business Tax Assessment Hub
+                                </button>
+                            </div>
+                        </div>
+
+                        <span className="hover:text-blue-700 cursor-pointer">CONTACT US</span>
+                    </div>
+
+                    {/* Authentication & User Dropdown */}
+                    <div className="flex items-center space-x-3">
+                        {currentUser ? (
+                            <div className="relative" ref={dropdownRef}>
+                                <button
+                                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                                    className="flex items-center space-x-2.5 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-xl transition-all cursor-pointer shadow-xs group"
+                                >
+                                    <span className="text-xs font-extrabold text-slate-800 dark:text-slate-200 tracking-tight">
+                                        Hi, {currentUser.firstName}
+                                    </span>
+                                    <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-[10px] shadow-sm tracking-wider">
+                                        {currentUser.initials}
+                                    </div>
+                                </button>
+
+                                {isDropdownOpen && (
+                                    <div className="absolute right-0 mt-2 w-52 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 py-2 z-50">
+                                        <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-800 mb-1">
+                                            <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{currentUser.fullname}</p>
+                                            <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{currentUser.email}</p>
+                                        </div>
+
+                                        <button
+                                            onClick={() => {
+                                                setIsDropdownOpen(false);
+                                                window.location.href = '/edit-profile';
+                                            }}
+                                            className="w-full text-left px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-700 transition-colors cursor-pointer"
+                                        >
+                                            Edit Profile
+                                        </button>
+
+                                        <button
+                                            onClick={handleLogout}
+                                            className="w-full text-left px-4 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer border-t border-slate-100 dark:border-slate-800 mt-1 pt-2"
+                                        >
+                                            Log Out
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <button
+                                onClick={() => window.location.href = '/login'}
+                                className="bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs px-4 py-2 rounded-xl shadow transition-all cursor-pointer"
+                            >
+                                Login / Register
+                            </button>
+                        )}
+                    </div>
+                </div>
+            </header>
+
+            {/* Main Content Container */}
             <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
                 <div className="bg-white rounded-3xl p-6 sm:p-10 border border-slate-200 shadow-sm space-y-8">
                     <div className="border-b border-slate-200 pb-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -372,6 +531,8 @@ export default function MarketStallApplication() {
                             &larr; Back to Previous Page
                         </button>
                     </div>
+
+                    {/* Palengke Selection Dropdown Row */}
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-slate-50 p-5 rounded-2xl border border-slate-200">
                         <label htmlFor="palengke-select" className="font-bold text-sm text-slate-700 w-44">Pamilihang Lungsod :</label>
                         <div className="flex-1 w-full max-w-md">
@@ -393,13 +554,17 @@ export default function MarketStallApplication() {
                             </select>
                         </div>
                     </div>
+
+                    {/* Details & Map Grid (Shown after selection) */}
                     {marketData && (
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 pt-2">
+                            {/* Left Column: Contact & Info */}
                             <div className="lg:col-span-5 space-y-6">
                                 <div className="space-y-1.5 bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
                                     <h4 className="text-xs font-black uppercase text-slate-400 tracking-wider">Address:</h4>
                                     <p className="text-sm font-bold text-slate-800 leading-relaxed">{marketData.address}</p>
                                 </div>
+
                                 <div className="space-y-2 bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
                                     <h4 className="text-xs font-black uppercase text-slate-400 tracking-wider">Contact Person:</h4>
                                     <div className="space-y-1 text-sm">
@@ -409,6 +574,7 @@ export default function MarketStallApplication() {
                                         <a href={`mailto:${marketData.email}`} className="font-semibold text-blue-900 hover:underline block">{marketData.email}</a>
                                     </div>
                                 </div>
+
                                 <div className="space-y-2 bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
                                     <h4 className="text-xs font-black uppercase text-slate-400 tracking-wider">Impormasyon sa Palengke</h4>
                                     <div className="space-y-1 text-xs font-semibold text-slate-700">
@@ -417,6 +583,7 @@ export default function MarketStallApplication() {
                                         <p>Kabuuang bilang ng mga stall na okupado: <span className="font-bold text-rose-600">{marketData.occupied}</span></p>
                                     </div>
                                 </div>
+
                                 <div className="flex flex-col sm:flex-row gap-3 pt-2">
                                     <button onClick={() => setIsFloorPlanOpen(true)} className="flex-1 bg-blue-900 hover:bg-blue-800 text-white font-bold px-5 py-3.5 rounded-xl text-xs shadow-md transition-all text-center cursor-pointer">
                                         Tingnan ang Listahan ng available stall
@@ -426,6 +593,8 @@ export default function MarketStallApplication() {
                                     </button>
                                 </div>
                             </div>
+
+                            {/* Right Column: Floor Plan Thumbnail Placeholder */}
                             <div className="lg:col-span-7 bg-slate-50 border-2 border-dashed border-slate-300 rounded-2xl p-6 flex flex-col items-center justify-center min-h-[380px] text-center space-y-3 cursor-pointer hover:border-blue-500 transition-all" onClick={() => setIsFloorPlanOpen(true)}>
                                 <div className="w-16 h-16 rounded-full bg-blue-50 text-blue-900 flex items-center justify-center text-2xl font-bold shadow-inner">
                                     🗺️
@@ -440,9 +609,12 @@ export default function MarketStallApplication() {
                     )}
                 </div>
             </main>
+
+            {/* Modal: Floor Selection & Floor Plan Interactive Popup */}
             {isFloorPlanOpen && (
                 <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-40 flex items-center justify-center p-4">
                     <div className="bg-white rounded-3xl max-w-6xl w-full max-h-[92vh] flex flex-col shadow-2xl relative overflow-hidden">
+                        {/* Modal Header */}
                         <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
                             <div>
                                 <span className="text-[10px] font-bold uppercase tracking-wider text-blue-900">Interactive Layout</span>
@@ -450,6 +622,8 @@ export default function MarketStallApplication() {
                             </div>
                             <button onClick={() => setIsFloorPlanOpen(false)} className="w-8 h-8 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold flex items-center justify-center transition-colors">✕</button>
                         </div>
+
+                        {/* Floor Selector Bar */}
                         <div className="p-4 bg-white border-b border-slate-200 flex flex-wrap items-center justify-between gap-4">
                             <div className="flex items-center space-x-3">
                                 <label htmlFor="floor-select" className="text-xs font-bold text-slate-700 uppercase">Pumili ng Palapag:</label>
@@ -467,9 +641,12 @@ export default function MarketStallApplication() {
                                 </select>
                             </div>
                         </div>
+
+                        {/* Modal Body */}
                         <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-100">
                             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-x-auto flex flex-col items-center">
                                 <div className="relative w-full max-w-4xl bg-white border-4 border-slate-800 rounded-xl p-4 shadow-inner min-h-[500px]">
+
                                     {selectedFloor === "1" && (
                                         <div>
                                             <div className="text-center font-bold text-xs bg-slate-200 py-1 border border-slate-400 mb-4 tracking-widest text-slate-700">
@@ -483,7 +660,7 @@ export default function MarketStallApplication() {
                                                             {(() => {
                                                                 const st1 = getStallRealtimeStatus(1, "Fish");
                                                                 return (
-                                                                    <button onClick={() => handleStallClick({ stallNum: 1, holder: st1.holder, availability: st1.availability, section: "Fish", type: "Permanent", size: "3 sqm", classification: "Regular", fee: "₱1.00" })} className={`${st1.availability === 'Occupied' ? 'bg-blue-700' : 'bg-blue-500'} hover:opacity-90 text-white text-[10px] font-bold h-10 rounded flex items-center justify-center relative shadow-sm cursor-pointer`}>
+                                                                    <button onClick={() => handleStallClick({ stallNum: 1, holder: st1.holder, availability: st1.availability, section: "Fish", type: "Permanent", size: "3 sqm", classification: "Regular", fee: "₱1,200.00" })} className={`${st1.availability === 'Occupied' ? 'bg-blue-700' : 'bg-blue-500'} hover:opacity-90 text-white text-[10px] font-bold h-10 rounded flex items-center justify-center relative shadow-sm cursor-pointer`}>
                                                                         1
                                                                         <span className={`absolute top-1 right-1 w-1.5 h-1.5 ${st1.availability === 'Occupied' ? 'bg-red-500' : 'bg-emerald-300'} rounded-full`}></span>
                                                                     </button>
@@ -492,7 +669,7 @@ export default function MarketStallApplication() {
                                                             {(() => {
                                                                 const st5 = getStallRealtimeStatus(5, "Fish");
                                                                 return (
-                                                                    <button onClick={() => handleStallClick({ stallNum: 5, holder: st5.holder, availability: st5.availability, section: "Fish", type: "Permanent", size: "3 sqm", classification: "Regular", fee: "₱1.00" })} className={`${st5.availability === 'Occupied' ? 'bg-blue-700' : 'bg-blue-500'} hover:opacity-90 text-white text-[10px] font-bold h-10 rounded flex items-center justify-center relative shadow-sm cursor-pointer`}>
+                                                                    <button onClick={() => handleStallClick({ stallNum: 5, holder: st5.holder, availability: st5.availability, section: "Fish", type: "Permanent", size: "3 sqm", classification: "Regular", fee: "₱1,200.00" })} className={`${st5.availability === 'Occupied' ? 'bg-blue-700' : 'bg-blue-500'} hover:opacity-90 text-white text-[10px] font-bold h-10 rounded flex items-center justify-center relative shadow-sm cursor-pointer`}>
                                                                         5
                                                                         <span className={`absolute top-1 right-1 w-1.5 h-1.5 ${st5.availability === 'Occupied' ? 'bg-red-500' : 'bg-emerald-300'} rounded-full`}></span>
                                                                     </button>
@@ -544,6 +721,7 @@ export default function MarketStallApplication() {
                                             </div>
                                         </div>
                                     )}
+
                                     {selectedFloor === "2" && (
                                         <div>
                                             <div className="text-center font-bold text-xs bg-purple-200 py-1 border border-purple-400 mb-4 tracking-widest text-purple-900">
@@ -562,6 +740,7 @@ export default function MarketStallApplication() {
                                             </div>
                                         </div>
                                     )}
+
                                     {selectedFloor === "3" && (
                                         <div className="grid grid-cols-12 gap-4 relative py-6 text-center">
                                             <div className="col-span-6 bg-slate-200 border-2 border-slate-400 rounded-xl p-6 flex flex-col justify-center items-center">
@@ -576,9 +755,12 @@ export default function MarketStallApplication() {
                                             </div>
                                         </div>
                                     )}
+
                                 </div>
                             </div>
                         </div>
+
+                        {/* Modal Footer */}
                         <div className="px-6 py-3 border-t border-slate-200 bg-slate-50 flex justify-end">
                             <button onClick={() => setIsFloorPlanOpen(false)} className="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-5 py-2 rounded-xl text-xs transition-colors cursor-pointer">
                                 Close Floor Plan
@@ -587,6 +769,8 @@ export default function MarketStallApplication() {
                     </div>
                 </div>
             )}
+
+            {/* Modal: Individual Stall Details Popup */}
             {activeStall && (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
                     <div className="bg-white rounded-lg p-6 max-w-sm w-full space-y-4 shadow-2xl relative border border-slate-300">
@@ -597,6 +781,7 @@ export default function MarketStallApplication() {
                             </div>
                             <button onClick={() => setActiveStall(null)} className="text-slate-500 hover:text-slate-800 font-bold text-base px-1 cursor-pointer">✕</button>
                         </div>
+
                         <div className="space-y-2 text-xs text-slate-800">
                             <p><strong>Stallholder Name:</strong> <span className="text-slate-700">{activeStall.holder}</span></p>
                             <p className="flex items-center gap-1.5">
@@ -612,6 +797,7 @@ export default function MarketStallApplication() {
                             <p><strong>Location Classification:</strong> <span className="text-slate-700">{activeStall.classification}</span></p>
                             <p className="pt-1"><strong>Rental Fee (kada buwan):</strong> <span className="text-slate-900">{activeStall.fee}</span></p>
                         </div>
+
                         <div className="pt-2">
                             {activeStall.availability === 'Occupied' ? (
                                 <div className="bg-rose-50 border border-rose-200 text-rose-700 text-center font-bold py-2 px-3 rounded text-xs cursor-not-allowed select-none">
@@ -639,6 +825,8 @@ export default function MarketStallApplication() {
                     </div>
                 </div>
             )}
+
+            {/* Modal: Application Form Popup */}
             {isApplicationFormOpen && activeStall && (
                 <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
                     <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative border border-slate-300 space-y-4">
@@ -649,6 +837,7 @@ export default function MarketStallApplication() {
                             </div>
                             <button onClick={() => setIsApplicationFormOpen(false)} className="text-slate-500 hover:text-slate-800 font-bold text-sm cursor-pointer">✕</button>
                         </div>
+
                         <form onSubmit={handleFormSubmit} className="space-y-3 text-xs">
                             {currentUser && (
                                 <div className="bg-blue-50 border border-blue-200 p-2.5 rounded-xl text-[11px] text-blue-900 flex items-center justify-between">
@@ -656,6 +845,7 @@ export default function MarketStallApplication() {
                                     <span className="text-[10px] bg-blue-200 px-2 py-0.5 rounded font-semibold">Active Session</span>
                                 </div>
                             )}
+
                             <div>
                                 <label className="block font-semibold text-slate-700 mb-1">Unang Pangalan (First Name)</label>
                                 <input
@@ -667,6 +857,7 @@ export default function MarketStallApplication() {
                                     className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-900"
                                 />
                             </div>
+
                             <div>
                                 <label className="block font-semibold text-slate-700 mb-1">Apelyido (Last Name)</label>
                                 <input
@@ -678,10 +869,12 @@ export default function MarketStallApplication() {
                                     className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-900"
                                 />
                             </div>
+
                             <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-[11px] space-y-1 text-slate-600">
                                 <p><strong>Rental Fee:</strong> {activeStall.fee}</p>
                                 <p><strong>Market Location:</strong> {selectedMarket} Market</p>
                             </div>
+
                             <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
                                 <button
                                     type="button"
@@ -701,149 +894,170 @@ export default function MarketStallApplication() {
                     </div>
                 </div>
             )}
+
+            {/* Modal: Custom Digital Payment Screen with Dynamic QR Ph */}
             {isPaymentStep && activeStall && (
-                <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[80] flex items-center justify-center p-4">
-                    <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative border border-slate-300">
-                        <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[80] flex items-center justify-center p-4 overflow-y-auto">
+                    <div className="bg-white rounded-2xl max-w-5xl w-full shadow-2xl relative border border-slate-200 overflow-hidden my-4">
+                        {/* Header */}
+                        <div className="px-6 sm:px-8 py-4 border-b border-slate-200 flex justify-between items-center">
                             <div>
-                                <h3 className="text-sm font-bold text-slate-900 uppercase">
-                                    PayMongo Secure Checkout
+                                <h3 className="text-base sm:text-lg font-bold text-slate-900">
+                                    Market Stall Lease Payment ({paymentLeaseId || "Generating..."})
                                 </h3>
-                                <p className="text-[11px] text-slate-500">
-                                    Market Stall Lease Payment
+                                <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+                                    Market Stall Lease Payment ({paymentLeaseId || "Generating..."})
                                 </p>
                             </div>
                             <button
                                 onClick={() => {
-                                    if (!isProcessingPayment) {
-                                        setIsPaymentStep(false);
-                                    }
+                                    if (!isProcessingPayment) setIsPaymentStep(false);
                                 }}
                                 disabled={isProcessingPayment}
-                                className="text-slate-500 hover:text-slate-800 font-bold text-sm cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+                                className="text-slate-400 hover:text-slate-700 disabled:opacity-40 font-bold text-xl cursor-pointer disabled:cursor-not-allowed"
+                                aria-label="Close payment"
                             >
                                 ✕
                             </button>
                         </div>
-                        <div className="space-y-4 pt-4">
-                            <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl text-slate-800">
-                                <p className="font-bold text-sm">
-                                    Stall Lease Payment ({qrLeaseId || `LEASE-${new Date().getFullYear()}-${activeStall.stallNum}`})
-                                </p>
-                                <p className="text-xs text-slate-500 mt-1">
-                                    Market Stall Lease Payment ({selectedMarket} -
-                                    Stall #{activeStall.stallNum})
-                                </p>
-                                <div className="mt-4 pt-3 border-t border-blue-200 space-y-2 text-xs">
-                                    <div className="flex justify-between">
-                                        <span>Subtotal</span>
-                                        <span className="font-semibold">{activeStall.fee}</span>
+
+                        <div className="p-6 sm:p-8">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
+                                {/* Invoice / Payment Details */}
+                                <div className="space-y-5">
+                                    <div>
+                                        <h2 className="text-xl sm:text-2xl font-bold text-slate-900">
+                                            Market Stall Lease Payment ({paymentLeaseId || "Generating..."})
+                                        </h2>
+                                        <p className="text-sm text-slate-500 mt-1">
+                                            Market Stall Lease Payment ({paymentLeaseId || "Generating..."})
+                                        </p>
                                     </div>
-                                    <div className="flex justify-between">
-                                        <span>Fees</span>
-                                        <span>Free</span>
+
+                                    <div className="text-4xl sm:text-5xl font-extrabold text-emerald-600 tracking-tight">
+                                        {activeStall.fee}
                                     </div>
-                                    <div className="flex justify-between pt-2 border-t border-blue-200 text-sm">
-                                        <span className="font-bold">Total Due</span>
-                                        <span className="font-black">{activeStall.fee}</span>
+
+                                    <p className="text-sm text-slate-500 border-b border-slate-200 pb-5">
+                                        Billed to <span className="font-semibold text-slate-700">{firstName.trim()} {lastName.trim()}</span>
+                                        {currentUser?.email ? <>, {currentUser.email}</> : null}
+                                    </p>
+
+                                    <div className="border-b border-slate-200 pb-4">
+                                        <p className="text-sm font-semibold text-slate-700">
+                                            Market Stall Lease Payment ({paymentLeaseId || "Generating..."})
+                                        </p>
                                     </div>
+
+                                    <div className="space-y-3 text-sm">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-slate-500">Subtotal</span>
+                                            <span className="font-medium text-slate-700">{activeStall.fee}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-slate-500">Fees</span>
+                                            <span className="font-medium text-slate-700">Free</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="border-t border-slate-300 pt-4 flex justify-between items-center">
+                                        <span className="font-bold text-slate-900">Total Due</span>
+                                        <span className="font-extrabold text-slate-900 text-lg">{activeStall.fee}</span>
+                                    </div>
+                                </div>
+
+                                {/* QR Ph */}
+                                <div className="flex flex-col items-center justify-center min-h-[360px] lg:border-l lg:border-slate-200 lg:pl-10">
+                                    <div className="w-full max-w-sm border border-slate-200 rounded-2xl p-6 bg-slate-50 text-center shadow-sm">
+                                        <div className="mb-4">
+                                            <p className="text-base font-bold text-slate-900">Scan QR Ph code to pay</p>
+                                            <p className="text-xs text-slate-500 mt-1">Use your supported banking or e-wallet app.</p>
+                                        </div>
+
+                                        {isGeneratingQr ? (
+                                            <div className="w-64 h-64 mx-auto bg-white border border-slate-200 rounded-xl flex flex-col items-center justify-center shadow-inner">
+                                                <div className="w-10 h-10 border-4 border-slate-200 border-t-blue-700 rounded-full animate-spin mb-4"></div>
+                                                <p className="text-sm font-semibold text-blue-700">Generating QR Ph...</p>
+                                                <p className="text-[11px] text-slate-400 mt-1">Please wait</p>
+                                            </div>
+                                        ) : qrImageUrl ? (
+                                            <div className="w-64 h-64 mx-auto bg-white border border-slate-200 rounded-xl p-3 shadow-md flex items-center justify-center">
+                                                <img
+                                                    src={qrImageUrl}
+                                                    alt="PayMongo Dynamic QR Ph"
+                                                    className="w-full h-full object-contain"
+                                                />
+                                            </div>
+                                        ) : (
+                                            <div className="w-64 h-64 mx-auto bg-white border border-rose-200 rounded-xl flex flex-col items-center justify-center px-6">
+                                                <p className="text-sm font-bold text-rose-600">QR code unavailable</p>
+                                                <p className="text-[11px] text-slate-500 mt-2 leading-relaxed">
+                                                    {qrGenerationError || "Unable to generate the payment QR code."}
+                                                </p>
+                                                <button
+                                                    type="button"
+                                                    onClick={handlePayMongoQrPayment}
+                                                    disabled={isProcessingPayment}
+                                                    className="mt-4 px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-lg text-xs font-bold disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
+                                                >
+                                                    Try Again
+                                                </button>
+                                            </div>
+                                        )}
+
+                                        <div className="mt-4 space-y-1">
+                                            <p className="text-xs font-bold text-slate-700">QR Ph</p>
+                                            {qrReferenceNumber && (
+                                                <p className="text-[10px] text-slate-400 break-all">
+                                                    Reference: {qrReferenceNumber}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <p className="text-xs text-slate-500 text-center mt-5 max-w-sm">
+                                        {qrImageUrl
+                                            ? "Scan the QR code with your preferred supported payment app. Your payment will be confirmed through PayMongo."
+                                            : "Your payment QR code is being prepared automatically."}
+                                    </p>
                                 </div>
                             </div>
-                            {isProcessingPayment && !qrCodeUrl && (
-                                <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 flex flex-col items-center justify-center bg-slate-50 text-center">
-                                    <div className="w-10 h-10 border-4 border-blue-200 border-t-blue-700 rounded-full animate-spin mb-4"></div>
-                                    <p className="font-bold text-slate-800 text-sm">
-                                        Generating your QRPh code...
-                                    </p>
-                                    <p className="text-[11px] text-slate-500 mt-1">
-                                        Please wait while PayMongo prepares your secure payment.
-                                    </p>
-                                </div>
-                            )}
-                            {!isProcessingPayment && qrError && (
-                                <div className="border border-rose-200 bg-rose-50 rounded-xl p-4 text-center">
-                                    <p className="text-xs font-bold text-rose-700">
-                                        {qrError}
-                                    </p>
-                                    <button
-                                        type="button"
-                                        onClick={() => void handlePayMongoQrPayment(qrLeaseId || undefined)}
-                                        className="mt-3 px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-lg text-xs font-bold cursor-pointer"
-                                    >
-                                        Generate QR Again
-                                    </button>
-                                </div>
-                            )}
-                            {qrPaymentPaid && (
-                                <div className="border border-emerald-200 bg-emerald-50 rounded-xl p-6 text-center">
-                                    <div className="mx-auto mb-3 h-12 w-12 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-2xl">✓</div>
-                                    <p className="font-black text-emerald-800">Payment Confirmed</p>
-                                    <p className="text-xs text-emerald-700 mt-1">PayMongo has confirmed your payment. Your lease payment status is being updated.</p>
-                                </div>
-                            )}
-                            {qrCodeUrl && !qrPaymentPaid && (
-                                <div className="border border-slate-200 rounded-xl p-4 bg-slate-50 flex flex-col items-center">
-                                    <p className="text-sm font-bold text-slate-900 mb-1">
-                                        Scan QRPh code to pay
-                                    </p>
-                                    <p className="text-[11px] text-slate-500 text-center mb-3">
-                                        Scan with a participating QR Ph bank or e-wallet.
-                                    </p>
-                                    <div className="w-full mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-center">
-                                        <p className="text-[10px] font-bold uppercase tracking-wide text-amber-700">QR valid for</p>
-                                        <p className="text-sm font-black text-amber-900">{Math.floor(qrSecondsRemaining / 60)}:{String(qrSecondsRemaining % 60).padStart(2, "0")}</p>
-                                    </div>
-                                    <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-sm">
-                                        <img
-                                            src={qrCodeUrl}
-                                            alt="PayMongo Dynamic QRPh payment code"
-                                            className="w-64 h-64 object-contain"
-                                        />
-                                    </div>
-<div className="mt-4 w-full rounded-xl border border-sky-200 bg-sky-50 p-3 text-left">
-  <div className="flex items-center gap-2 mb-2">
-    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-sky-600 text-white text-xs font-black">i</span>
-    <p className="text-[11px] font-extrabold text-sky-900">How to pay with QR Ph</p>
-  </div>
-  <p className="text-[10px] leading-relaxed text-slate-600">Scan this QR Ph using bank or e-wallet app. Depending on your provider, supported apps may include GCash, Maya, BPI, BDO, UnionBank, RCBC, LandBank, Metrobank, PNB, Security Bank, and other participating QR Ph institutions.</p>
-  <p className="text-[10px] leading-relaxed text-slate-500 mt-2"><strong>Tip:</strong> Before confirming, check that the amount shown in your banking or e-wallet app matches the Total Due.</p>
-</div>
-                                    <div className="w-full mt-4 bg-white border border-slate-200 rounded-lg px-3 py-2 text-center">
-                                        <p className="text-[10px] uppercase font-bold text-slate-400">
-                                            Reference Number
-                                        </p>
-                                        <p className="text-xs font-black text-slate-800 break-all">
-                                            {qrReferenceNumber || "Generating..."}
-                                        </p>
-                                    </div>
-                                    <p className="text-[10px] text-slate-500 text-center mt-3">
-                                        Complete the payment by scanning the QR code.
-                                        Payment confirmation is handled by PayMongo.
-                                    </p>
-                                    {qrPaymentIntentId && (
-                                        <p className="text-[9px] text-slate-400 text-center mt-1 break-all">
-                                            Payment Intent: {qrPaymentIntentId}
-                                        </p>
-                                    )}
-                                </div>
-                            )}
-                            <button
-                                type="button"
-                                disabled={isProcessingPayment}
-                                onClick={() => {
-                                    setIsPaymentStep(false);
-                                    setQrCodeUrl("");
-                                    setQrError("");
-                                }}
-                                className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-all text-center cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                                Close
-                            </button>
+
+                            {/* Footer Actions */}
+                            <div className="mt-8 pt-5 border-t border-slate-200 flex flex-col sm:flex-row gap-3 justify-end">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        if (!isProcessingPayment) {
+                                            setIsPaymentStep(false);
+                                            setIsApplicationFormOpen(true);
+                                        }
+                                    }}
+                                    disabled={isProcessingPayment}
+                                    className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-xl transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    &larr; Back to Form
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
             )}
-            <UnifiedFooter />
+
+            {/* Official Government Footer */}
+            <footer className="bg-slate-900 text-slate-400 text-xs mt-16 py-10 border-t border-slate-800">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6">
+                    <div>
+                        <p className="font-bold text-white text-sm">Gov Serv Unified Citizen Portal</p>
+                        <p className="mt-1 text-slate-400">Official digital transformation platform under Zero-Corruption &amp; Red Tape Reduction governance.</p>
+                    </div>
+                    <div className="flex space-x-6 text-slate-400">
+                        <span className="hover:text-white cursor-pointer">Terms of Service</span>
+                        <span className="hover:text-white cursor-pointer">Data Privacy Policy</span>
+                        <span className="hover:text-white cursor-pointer">Citizen Helpdesk (122)</span>
+                    </div>
+                </div>
+            </footer>
         </div>
     );
 }
