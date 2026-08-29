@@ -287,9 +287,18 @@ export async function createAppointment(req: Request, res: Response): Promise<vo
     }
 }
 
-export async function getAppointments(_req: Request, res: Response): Promise<void> {
+export async function getAppointments(req: Request, res: Response): Promise<void> {
+    const { email } = req.query;
     try {
-        const result = await pool.query('SELECT * FROM appointments ORDER BY created_at DESC');
+        let result;
+        if (email && typeof email === 'string' && email.trim() !== '') {
+            result = await pool.query(
+                'SELECT * FROM appointments WHERE email ILIKE $1 ORDER BY created_at DESC',
+                [email.trim()]
+            );
+        } else {
+            result = await pool.query('SELECT * FROM appointments ORDER BY created_at DESC');
+        }
         const formatted = result.rows.map(row => ({
             id: row.id,
             department: row.department,
