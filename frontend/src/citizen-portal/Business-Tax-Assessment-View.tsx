@@ -1181,6 +1181,13 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
         <div className="fixed inset-0 z-[60] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
           <div className="bg-white rounded-3xl w-full max-w-5xl shadow-2xl border border-slate-200 overflow-hidden my-auto">
             <div className="px-5 sm:px-7 py-5 border-b border-slate-200">
+              <div className="flex items-center gap-3">
+                <div className="h-11 w-11 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center text-xl">🔒</div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-black text-slate-900 uppercase tracking-tight">PayMongo Secure Checkout</h3>
+                  <p className="text-xs sm:text-sm text-slate-500">Business Tax Payment</p>
+                </div>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2">
@@ -1272,11 +1279,6 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
 
                     <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-md">
                       <img src={qrCodeUrl} alt="PayMongo Dynamic QR Ph payment code" className="w-64 h-64 sm:w-72 sm:h-72 object-contain" />
-                    </div>
-
-                    <div className="w-full max-w-sm mt-5 bg-white border border-slate-200 rounded-xl px-4 py-3 text-center">
-                      <p className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Reference Number</p>
-                      <p className="text-xs font-black text-slate-800 break-all mt-1">{qrReferenceNumber || 'Generating...'}</p>
                     </div>
 
                     <p className="text-xs text-slate-500 text-center mt-3 max-w-sm">Complete the payment by scanning the QR code. Payment confirmation is handled automatically by PayMongo.</p>
