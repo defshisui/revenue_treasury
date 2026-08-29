@@ -351,11 +351,11 @@ export default function TreasuryDashboardView({
             </span>
           </div>
           <h2 className="text-xl font-bold mb-1 text-slate-900 dark:text-white flex items-center gap-3">
-            Treasury ePayment Dashboard
+            TreasuryDashboard
             {loading && <span className="text-xs font-normal text-blue-500 animate-pulse">(Querying PostgreSQL...)</span>}
           </h2>
           <p className="text-[13px] m-0 text-slate-500 dark:text-slate-400">
-            Comprehensive ePayment analytics, transaction volumes, and gateway distribution
+            Comprehensive analytics, transaction volumes, and gateway distribution
           </p>
         </div>
 
