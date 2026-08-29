@@ -150,10 +150,11 @@ export default function MarketStallApplication() {
     const [isPaymentStep, setIsPaymentStep] = useState<boolean>(false);
     const [isProcessingPayment, setIsProcessingPayment] = useState<boolean>(false);
     const [qrImageUrl, setQrImageUrl] = useState<string>("");
-    const [qrReferenceNumber, setQrReferenceNumber] = useState<string>("");
+    const [, setQrReferenceNumber] = useState<string>("");
     const [paymentLeaseId, setPaymentLeaseId] = useState<string>("");
     const [isGeneratingQr, setIsGeneratingQr] = useState<boolean>(false);
     const [qrGenerationError, setQrGenerationError] = useState<string>("");
+    const [qrTimeLeft, setQrTimeLeft] = useState<number>(300);
 
     // Close dropdown on outside click
     useEffect(() => {
@@ -232,20 +233,24 @@ export default function MarketStallApplication() {
      * Creates the Dynamic QR Ph payment and keeps the customer inside our
      * own payment screen. No PayMongo hosted checkout redirect is used.
      */
-    const handlePayMongoQrPayment = async () => {
+    const handlePayMongoQrPayment = async (refreshExistingQr = false) => {
         if (!activeStall || !selectedMarket) return;
 
         setIsProcessingPayment(true);
         setIsGeneratingQr(true);
-        setQrImageUrl("");
-        setQrReferenceNumber("");
-        setPaymentLeaseId("");
         setQrGenerationError("");
+        if (!refreshExistingQr) {
+            setQrImageUrl("");
+            setQrReferenceNumber("");
+            setPaymentLeaseId("");
+        }
 
         const feeAmount =
             parseFloat(activeStall.fee.replace(/[^\d.]/g, "")) || 1500.00;
         const generatedLeaseId =
-            `LEASE-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`;
+            refreshExistingQr && paymentLeaseId
+                ? paymentLeaseId
+                : `LEASE-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`;
 
         const pendingLease: LeaseRecord = {
             leaseId: generatedLeaseId,
@@ -263,11 +268,14 @@ export default function MarketStallApplication() {
         };
 
         try {
-            // Save the application first. The PayMongo webhook should later
-            // change the payment status from Pending Payment to Paid.
-            await saveLease(pendingLease);
-            setLeases((prev) => [...prev, pendingLease]);
-            setPaymentLeaseId(generatedLeaseId);
+            // Save the application only on the first QR generation.
+            // When the 5-minute QR expires, refresh the QR for the same lease
+            // instead of creating duplicate lease records.
+            if (!refreshExistingQr) {
+                await saveLease(pendingLease);
+                setLeases((prev) => [...prev, pendingLease]);
+                setPaymentLeaseId(generatedLeaseId);
+            }
 
             // 1. Create a PayMongo Payment Intent for QR Ph.
             const intent = await createPayMongoQrPaymentIntent({
@@ -306,6 +314,7 @@ export default function MarketStallApplication() {
             }
 
             setQrImageUrl(imageUrl);
+            setQrTimeLeft(300);
         } catch (err: any) {
             console.error("PayMongo QR Ph payment error:", err);
             setQrGenerationError(err?.message || "Unable to generate the QR Ph payment.");
@@ -313,6 +322,32 @@ export default function MarketStallApplication() {
             setIsGeneratingQr(false);
             setIsProcessingPayment(false);
         }
+    };
+
+    // QR Ph countdown: 5 minutes per generated QR code.
+    // When the timer reaches zero, a fresh QR is generated automatically
+    // for the same lease/payment record.
+    useEffect(() => {
+        if (!isPaymentStep || !qrImageUrl || isGeneratingQr) return;
+
+        const timer = window.setInterval(() => {
+            setQrTimeLeft((previous) => {
+                if (previous <= 1) {
+                    window.clearInterval(timer);
+                    void handlePayMongoQrPayment(true);
+                    return 0;
+                }
+                return previous - 1;
+            });
+        }, 1000);
+
+        return () => window.clearInterval(timer);
+    }, [isPaymentStep, qrImageUrl, isGeneratingQr]);
+
+    const formatQrTime = (seconds: number) => {
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = seconds % 60;
+        return `${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2, "0")}`;
     };
 
     const marketData = marketDatabase[selectedMarket];
@@ -899,7 +934,6 @@ export default function MarketStallApplication() {
             {isPaymentStep && activeStall && (
                 <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[80] flex items-center justify-center p-4 overflow-y-auto">
                     <div className="bg-white rounded-2xl max-w-5xl w-full shadow-2xl relative border border-slate-200 overflow-hidden my-4">
-
                         <div className="p-6 sm:p-8">
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
                                 {/* Invoice / Payment Details */}
@@ -967,7 +1001,7 @@ export default function MarketStallApplication() {
                                                 </p>
                                                 <button
                                                     type="button"
-                                                    onClick={handlePayMongoQrPayment}
+                                                    onClick={() => handlePayMongoQrPayment(true)}
                                                     disabled={isProcessingPayment}
                                                     className="mt-4 px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-lg text-xs font-bold disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
                                                 >
@@ -976,12 +1010,20 @@ export default function MarketStallApplication() {
                                             </div>
                                         )}
 
-                                        <div className="mt-4 space-y-1">
+                                        <div className="mt-4">
                                             <p className="text-xs font-bold text-slate-700">QR Ph</p>
-                                            {qrReferenceNumber && (
-                                                <p className="text-[10px] text-slate-400 break-all">
-                                                    Reference: {qrReferenceNumber}
-                                                </p>
+                                            {qrImageUrl && (
+                                                <div className={`mt-3 rounded-xl border px-4 py-3 ${qrTimeLeft <= 30 ? "border-rose-200 bg-rose-50" : "border-blue-200 bg-blue-50"}`}>
+                                                    <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                                                        QR code refreshes in
+                                                    </p>
+                                                    <p className={`mt-1 text-2xl font-extrabold font-mono ${qrTimeLeft <= 30 ? "text-rose-600" : "text-blue-700"}`}>
+                                                        {formatQrTime(qrTimeLeft)}
+                                                    </p>
+                                                    <p className="text-[10px] text-slate-500 mt-1">
+                                                        A new QR code will be generated automatically when the timer expires.
+                                                    </p>
+                                                </div>
                                             )}
                                         </div>
                                     </div>
