@@ -159,10 +159,26 @@ export async function initializeDatabase(): Promise<void> {
           quarter_coverage VARCHAR(50) DEFAULT '2025(Q1) - 2025(Q4)',
           paymongo_session_id VARCHAR(255)
       );
+
+      CREATE TABLE IF NOT EXISTS otp_verifications (
+          id SERIAL PRIMARY KEY,
+          user_id INT REFERENCES users(id) ON DELETE CASCADE,
+          email VARCHAR(255) NOT NULL,
+          otp_hash VARCHAR(255) NOT NULL,
+          purpose VARCHAR(50) NOT NULL,
+          expires_at TIMESTAMPTZ NOT NULL,
+          attempts INT DEFAULT 0,
+          used BOOLEAN DEFAULT FALSE,
+          payload JSONB,
+          created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_otp_verifications_email_purpose ON otp_verifications(email, purpose);
+      CREATE INDEX IF NOT EXISTS idx_otp_verifications_created_at ON otp_verifications(created_at);
     `);
 
     // Ensure columns exist on tables created before
     await pool.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT TRUE;
       ALTER TABLE rpt_applications ADD COLUMN IF NOT EXISTS documents TEXT[];
       ALTER TABLE rpt_applications ADD COLUMN IF NOT EXISTS reference_number VARCHAR(100);
       ALTER TABLE rpt_applications ADD COLUMN IF NOT EXISTS applicant_type VARCHAR(100);

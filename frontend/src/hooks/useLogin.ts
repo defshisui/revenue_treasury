@@ -1,4 +1,5 @@
-import { useState } from "react";
+// src/hooks/useLogin.ts
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../config/api";
 
@@ -12,17 +13,53 @@ export function useLogin(
   const [rememberMe, setRememberMe] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [isErrorState, setIsErrorState] = useState(false);
+  const [isSubmittingLogin, setIsSubmittingLogin] = useState(false);
+
+  // --- Two-Factor Email OTP State ---
+  const [isOtpStep, setIsOtpStep] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [otpExpirySeconds, setOtpExpirySeconds] = useState(300); // 5 minutes
+  const [resendCooldown, setResendCooldown] = useState(60); // 60 seconds
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [isResendingOtp, setIsResendingOtp] = useState(false);
+  const [otpNotice, setOtpNotice] = useState("");
+
   const navigate = useNavigate();
 
+  // OTP Expiration & Resend Cooldown Countdown Timers
+  useEffect(() => {
+    let interval: any = null;
+    if (isOtpStep) {
+      interval = setInterval(() => {
+        setOtpExpirySeconds((prev) => (prev > 0 ? prev - 1 : 0));
+        setResendCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isOtpStep]);
+
+  const formatOtpTimer = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
+  };
+
+  /**
+   * STEP 1: Verify Password -> Initiate Email OTP
+   */
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (timeLeft > 0) return;
 
     setIsErrorState(false);
     setErrorMessage("");
+    setOtpNotice("");
+    setIsSubmittingLogin(true);
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 12000);
 
     try {
       const response = await fetch(`${API_BASE_URL}/login`, {
@@ -39,32 +76,24 @@ export function useLogin(
 
       clearTimeout(timeoutId);
       const text = await response.text();
-      let data;
+      let data: any;
       try {
         data = JSON.parse(text);
-      } catch (err) {
+      } catch {
         throw new Error(`Server returned non-JSON response: ${text.slice(0, 100)}`);
       }
 
       if (response.ok) {
-        if (data.user) {
-          // Save the full user object and the specific role for RBAC
-          localStorage.setItem("currentUser", JSON.stringify(data.user));
-          localStorage.setItem("user_role", data.user.role || "");
-        }
-        // Save the JWT token so the global fetch interceptor can attach it
-        if (data.token) {
-          localStorage.setItem("token", data.token);
-        }
-
-        const userRole = data.user?.role?.toLowerCase() || "";
-
-        // Route staff, auditors, and admins to the internal dashboard
-        if (["admin", "treasury-staff", "auditor"].includes(userRole)) {
-          navigate("/legacy-treasury");
+        if (data.requireOtp) {
+          // Password is valid! Show OTP verification view
+          setIsOtpStep(true);
+          setOtp("");
+          setOtpExpirySeconds(300); // 5 minutes
+          setResendCooldown(60); // 60 seconds
+          setOtpNotice(`A 6-digit verification code was sent to ${data.email || email}.`);
         } else {
-          // Normal citizens go to the citizen portal
-          navigate("/citizen-portal");
+          // Direct fallback if OTP was bypassed by server
+          finishSession(data);
         }
       } else {
         setIsErrorState(true);
@@ -79,11 +108,122 @@ export function useLogin(
       if (error.name === "AbortError") {
         setErrorMessage("Request timed out. Please check your connection.");
       } else if (error.message?.includes("Failed to fetch") || error.message?.includes("NetworkError")) {
-        setErrorMessage(`Cannot reach server at (${API_BASE_URL}). Please verify backend is running and CORS is enabled.`);
+        setErrorMessage(`Cannot reach server at (${API_BASE_URL}). Please verify backend is running.`);
       } else {
         setErrorMessage(error.message || "Network error. Please try again later.");
       }
+    } finally {
+      setIsSubmittingLogin(false);
     }
+  };
+
+  /**
+   * STEP 2: Verify Login OTP -> Issue JWT & Navigate
+   */
+  const handleVerifyLoginOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!otp || otp.trim().length !== 6) {
+      setErrorMessage("Please enter the complete 6-digit verification code.");
+      setIsErrorState(true);
+      return;
+    }
+
+    setIsErrorState(false);
+    setErrorMessage("");
+    setIsVerifyingOtp(true);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/verify-login-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          otp: otp.trim(),
+          rememberMe,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        finishSession(data);
+      } else {
+        setIsErrorState(true);
+        setErrorMessage(data.message || "Invalid verification code.");
+      }
+    } catch (error: any) {
+      setIsErrorState(true);
+      setErrorMessage(error.message || "Failed to verify code. Please check your network.");
+    } finally {
+      setIsVerifyingOtp(false);
+    }
+  };
+
+  /**
+   * Resend Sign-In OTP with 60s cooldown
+   */
+  const handleResendLoginOtp = async () => {
+    if (resendCooldown > 0 || isResendingOtp) return;
+
+    setIsResendingOtp(true);
+    setErrorMessage("");
+    setIsErrorState(false);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/resend-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          purpose: "LOGIN",
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setOtp("");
+        setOtpExpirySeconds(300);
+        setResendCooldown(data.retryAfterSeconds || 60);
+        setOtpNotice("A new 6-digit verification code has been sent to your email.");
+      } else {
+        setIsErrorState(true);
+        setErrorMessage(data.message || "Failed to resend code.");
+        if (data.retryAfterSeconds) {
+          setResendCooldown(data.retryAfterSeconds);
+        }
+      }
+    } catch (error: any) {
+      setIsErrorState(true);
+      setErrorMessage(error.message || "Network error while requesting new OTP.");
+    } finally {
+      setIsResendingOtp(false);
+    }
+  };
+
+  const finishSession = (data: any) => {
+    if (data.user) {
+      localStorage.setItem("currentUser", JSON.stringify(data.user));
+      localStorage.setItem("user_role", data.user.role || "");
+    }
+    if (data.token) {
+      localStorage.setItem("token", data.token);
+    }
+
+    const userRole = data.user?.role?.toLowerCase() || "";
+    if (["admin", "treasury-staff", "auditor"].includes(userRole)) {
+      navigate("/legacy-treasury");
+    } else {
+      navigate("/citizen-portal");
+    }
+  };
+
+  const handleCancelOtp = () => {
+    setIsOtpStep(false);
+    setOtp("");
+    setErrorMessage("");
+    setIsErrorState(false);
+    setOtpNotice("");
   };
 
   return {
@@ -96,7 +236,22 @@ export function useLogin(
     rememberMe,
     setRememberMe,
     errorMessage,
+    setErrorMessage,
     isErrorState,
+    isSubmittingLogin,
     handleLogin,
+    // 2FA OTP States
+    isOtpStep,
+    otp,
+    setOtp,
+    otpExpirySeconds,
+    resendCooldown,
+    isVerifyingOtp,
+    isResendingOtp,
+    otpNotice,
+    handleVerifyLoginOtp,
+    handleResendLoginOtp,
+    handleCancelOtp,
+    formatOtpTimer,
   };
 }
