@@ -1183,10 +1183,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
             <div className="px-5 sm:px-7 py-5 border-b border-slate-200">
               <div className="flex items-center gap-3">
                 <div className="h-11 w-11 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center text-xl">🔒</div>
-                <div>
-                  <h3 className="text-base sm:text-lg font-black text-slate-900 uppercase tracking-tight">PayMongo Secure Checkout</h3>
-                  <p className="text-xs sm:text-sm text-slate-500">Business Tax Payment</p>
-                </div>
+             
               </div>
             </div>
 
