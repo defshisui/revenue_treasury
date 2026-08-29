@@ -527,6 +527,9 @@ Purpose: ${actionTitle}
         );
       } catch (brevoErr: any) {
         console.error('[EmailService] Brevo HTTPS dispatch failed:', brevoErr?.message || brevoErr);
+        throw new Error(
+          `Failed to send verification email: ${brevoErr?.message || 'Brevo API Error'}`
+        );
       }
     }
 
@@ -544,6 +547,9 @@ Purpose: ${actionTitle}
         );
       } catch (resendErr: any) {
         console.error('[EmailService] Resend HTTPS dispatch failed:', resendErr?.message || resendErr);
+        throw new Error(
+          `Failed to send verification email: ${resendErr?.message || 'Resend API Error'}`
+        );
       }
     }
 
@@ -562,6 +568,9 @@ Purpose: ${actionTitle}
         );
       } catch (sendgridErr: any) {
         console.error('[EmailService] SendGrid HTTPS dispatch failed:', sendgridErr?.message || sendgridErr);
+        throw new Error(
+          `Failed to send verification email: ${sendgridErr?.message || 'SendGrid API Error'}`
+        );
       }
     }
 
