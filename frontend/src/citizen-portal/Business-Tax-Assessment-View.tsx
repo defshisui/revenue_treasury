@@ -1181,9 +1181,6 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
         <div className="fixed inset-0 z-[60] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
           <div className="bg-white rounded-3xl w-full max-w-5xl shadow-2xl border border-slate-200 overflow-hidden my-auto">
             <div className="px-5 sm:px-7 py-5 border-b border-slate-200">
-              <div className="flex items-center gap-3">
-             
-              </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2">
