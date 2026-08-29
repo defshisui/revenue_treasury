@@ -1182,7 +1182,6 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
           <div className="bg-white rounded-3xl w-full max-w-5xl shadow-2xl border border-slate-200 overflow-hidden my-auto">
             <div className="px-5 sm:px-7 py-5 border-b border-slate-200">
               <div className="flex items-center gap-3">
-                <div className="h-11 w-11 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center text-xl">🔒</div>
              
               </div>
             </div>
