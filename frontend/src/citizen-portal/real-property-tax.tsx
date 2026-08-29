@@ -195,6 +195,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
   const [rptQrPaymentIntentId, setRptQrPaymentIntentId] = useState<string>("");
   const [rptQrSecondsRemaining, setRptQrSecondsRemaining] = useState<number>(300);
   const [rptQrPaid, setRptQrPaid] = useState<boolean>(false);
+  const [rptPaymentSuccessCountdown, setRptPaymentSuccessCountdown] = useState<number>(5);
   const [rptQrError, setRptQrError] = useState<string>("");
 
   // --- Applications Queue (Assessor Request Form) ---
@@ -560,6 +561,24 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
     setRptQrPaid(false);
     setRptQrSecondsRemaining(300);
   };
+
+  useEffect(() => {
+    if (!rptQrPaid) return;
+
+    setRptPaymentSuccessCountdown(5);
+    const timer = window.setInterval(() => {
+      setRptPaymentSuccessCountdown((seconds) => {
+        if (seconds <= 1) {
+          window.clearInterval(timer);
+          closeRPTQrPayment();
+          return 0;
+        }
+        return seconds - 1;
+      });
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [rptQrPaid]);
 
   useEffect(() => {
     if (!isQrPaymentOpen || !rptQrCodeUrl || rptQrPaid) return;
@@ -1960,10 +1979,41 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                 )}
 
                 {rptQrPaid && (
-                  <div className="w-full max-w-sm mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-7 text-center">
-                    <div className="mx-auto mb-3 h-14 w-14 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-3xl">✓</div>
-                    <p className="font-black text-emerald-800">Payment Confirmed</p>
-                    <p className="text-xs text-emerald-700 mt-1">PayMongo has confirmed your RPT payment. Your records are being updated.</p>
+                  <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 overflow-hidden">
+                    <style>{`
+                      @keyframes rptSuccessPop { 0% { opacity: 0; transform: scale(.72) translateY(25px); } 70% { opacity: 1; transform: scale(1.04); } 100% { opacity: 1; transform: scale(1); } }
+                      @keyframes rptSuccessCheck { 0% { transform: scale(0) rotate(-45deg); opacity: 0; } 70% { transform: scale(1.15) rotate(0); opacity: 1; } 100% { transform: scale(1); } }
+                      @keyframes rptConfettiFall { 0% { transform: translateY(-25px) rotate(0); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(420px) rotate(360deg); opacity: 0; } }
+                      .rpt-success-card { animation: rptSuccessPop .55s cubic-bezier(.2,.8,.2,1) both; }
+                      .rpt-success-check { animation: rptSuccessCheck .65s cubic-bezier(.2,.8,.2,1) .15s both; }
+                      .rpt-payment-confetti { animation: rptConfettiFall 2.7s linear infinite; }
+                    `}</style>
+                    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                      {Array.from({ length: 24 }).map((_, i) => (
+                        <span key={i} className="rpt-payment-confetti absolute top-[-20px] h-2.5 w-2.5 rounded-sm" style={{ left: `${(i * 41) % 100}%`, animationDelay: `${(i % 8) * 0.18}s`, background: ['#22c55e','#3b82f6','#f59e0b','#ec4899','#8b5cf6'][i % 5] }} />
+                      ))}
+                    </div>
+                    <div className="rpt-success-card relative w-full max-w-md rounded-[2rem] bg-white shadow-2xl border border-emerald-100 overflow-hidden text-center">
+                      <div className="absolute top-0 left-0 right-0 h-2 bg-emerald-500" />
+                      <div className="p-7 sm:p-9">
+                        <div className="rpt-success-check mx-auto mb-5 h-24 w-24 rounded-full bg-emerald-100 border-8 border-white shadow-lg flex items-center justify-center">
+                          <div className="h-16 w-16 rounded-full bg-emerald-500 text-white flex items-center justify-center text-4xl font-black">✓</div>
+                        </div>
+                        <p className="text-2xl sm:text-3xl font-black text-emerald-700">Payment Successful!</p>
+                        <p className="text-sm text-slate-600 mt-2">Your Real Property Tax payment has been successfully confirmed.</p>
+                        <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left space-y-3">
+                          <div className="flex justify-between gap-4 text-sm"><span className="text-slate-500">Properties Paid</span><span className="font-bold text-slate-900">{cart.length}</span></div>
+                          <div className="flex justify-between gap-4 text-sm"><span className="text-slate-500">Amount Paid</span><span className="font-black text-emerald-700">{formatCurrency(grandCartTotal)}</span></div>
+                          <div className="flex justify-between gap-4 text-sm"><span className="text-slate-500">Payment Method</span><span className="font-bold text-slate-900">PayMongo (QR Ph)</span></div>
+                        </div>
+                        <div className="mt-5 rounded-2xl bg-emerald-50 border border-emerald-100 p-4 text-left">
+                          <p className="font-black text-emerald-800">🎉 Thank you!</p>
+                          <p className="text-xs text-emerald-700 mt-1">Your RPT payment has been recorded and your property records are being updated.</p>
+                        </div>
+                        <button type="button" onClick={closeRPTQrPayment} className="mt-6 w-full rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 font-black text-sm transition-all shadow-lg shadow-emerald-200">View My RPT Records →</button>
+                        <p className="text-[11px] text-slate-400 mt-3">This window will close automatically in <span className="font-black text-emerald-600">{rptPaymentSuccessCountdown}</span> seconds.</p>
+                      </div>
+                    </div>
                   </div>
                 )}
 
