@@ -41,9 +41,11 @@ export interface CheckoutResult {
 
 export interface CreateQrPaymentIntentParams {
   amount: number;
-  type?: 'MARKET_STALL' | 'BUSINESS_TAX' | 'CUSTOM';
+  type?: 'RPT' | 'MARKET_STALL' | 'BUSINESS_TAX' | 'CUSTOM';
   leaseId?: string;
   businessTrackingNumber?: string;
+  taxDeclarationNumber?: string;
+  rptRecordId?: string | number;
   customerName?: string;
   customerEmail?: string;
   description?: string;
@@ -180,7 +182,8 @@ export async function createPayMongoQrPaymentIntent(
  * Only the PUBLIC PayMongo key is used here.
  */
 export async function createQrPhPaymentMethod(
-  publicKey: string
+  publicKey: string,
+  expirySeconds: number = 300
 ): Promise<string> {
   if (!publicKey) {
     throw new Error('PayMongo public key is missing.');
@@ -200,6 +203,7 @@ export async function createQrPhPaymentMethod(
         data: {
           attributes: {
             type: 'qrph',
+            expiry_seconds: Math.min(9000, Math.max(60, Math.round(expirySeconds))),
           },
         },
       }),

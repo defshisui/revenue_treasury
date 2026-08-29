@@ -25,10 +25,16 @@ window.fetch = async function (input: RequestInfo | URL, init?: RequestInit): Pr
     const token = localStorage.getItem("token");
     if (token) {
       init = init ?? {};
+      const existingHeaders: Record<string, string> = {};
+      if (init.headers instanceof Headers) {
+        init.headers.forEach((value, key) => {
+          existingHeaders[key] = value;
+        });
+      } else if (init.headers) {
+        Object.assign(existingHeaders, init.headers as Record<string, string>);
+      }
       init.headers = {
-        ...(init.headers instanceof Headers
-          ? Object.fromEntries((init.headers as Headers).entries())
-          : (init.headers as Record<string, string> ?? {})),
+        ...existingHeaders,
         Authorization: `Bearer ${token}`,
       };
     }

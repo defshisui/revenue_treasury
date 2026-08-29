@@ -456,6 +456,58 @@ export async function handlePayMongoWebhook(
         : `PayMongo (${String(sourceType).toUpperCase()})`;
 
     // =========================================================
+    // REAL PROPERTY TAX PAYMENT
+    // =========================================================
+    if (metadata.type === 'RPT' && metadata.taxDeclarationNumber) {
+      const tdns = String(metadata.taxDeclarationNumber)
+        .split(',')
+        .map((value: string) => value.trim())
+        .filter(Boolean);
+
+      for (const tdn of tdns) {
+        await pool.query(
+          `UPDATE lgu_rpt_records
+           SET balance = 0,
+               amountPaid = totalAssessment,
+               status = 'Paid',
+               paymentStatus = 'Paid',
+               paymentMethod = $1,
+               officialReceiptNumber = $2,
+               paymentReference = $3,
+               paymentDate = NOW()
+           WHERE taxDeclarationNumber ILIKE $4`,
+          [formattedPaymentMethod, officialReceiptNumber, paymentReference, tdn]
+        );
+      }
+
+      await recordAudit(
+        req,
+        'AUD-PAYMONGO-WEBHOOK',
+        metadata.customerEmail || 'citizen@gov.ph',
+        'Citizen',
+        'ePayment Gateway',
+        'PAYMENT_WEBHOOK_SUCCESS',
+        'INFO',
+        null,
+        `RPT payment confirmed via ${formattedPaymentMethod}. TDN(s) ${tdns.join(', ')}. Reference ${paymentReference}. Amount ₱${amountPhp.toFixed(2)}. O.R. ${officialReceiptNumber}.`
+      );
+
+      res.status(200).json({
+        received: true,
+        success: true,
+        paymentId,
+        paymentIntentId,
+        amount: amountPhp,
+        paymentMethod: formattedPaymentMethod,
+        paymentReference,
+        officialReceiptNumber,
+        taxDeclarationNumbers: tdns,
+      });
+
+      return;
+    }
+
+    // =========================================================
     // MARKET STALL PAYMENT
     // =========================================================
     if (
@@ -727,6 +779,57 @@ export async function handlePayMongoWebhook(
   }
 }
 
+export async function getQrPaymentStatus(req: Request, res: Response): Promise<void> {
+  const { paymentIntentId } = req.params;
+
+  if (!paymentIntentId) {
+    res.status(400).json({ success: false, error: 'paymentIntentId is required.' });
+    return;
+  }
+
+  try {
+    const secretKey = PayMongoService.getSecretKey();
+    if (!secretKey) {
+      throw new Error('PAYMONGO_SECRET_KEY is not configured.');
+    }
+
+    const response = await fetch(
+      `https://api.paymongo.com/v1/payment_intents/${paymentIntentId}`,
+      {
+        method: 'GET',
+        headers: {
+          Authorization: `Basic ${Buffer.from(`${secretKey}:`).toString('base64')}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    const data = await response.json();
+    if (!response.ok) {
+      const errorMsg =
+        data.errors?.map((e: any) => e.detail || e.code).join(', ') ||
+        'Failed to retrieve PayMongo Payment Intent';
+      throw new Error(errorMsg);
+    }
+
+    const attributes = data.data?.attributes || {};
+    res.status(200).json({
+      success: true,
+      paymentIntentId,
+      status: attributes.status,
+      paid: attributes.status === 'succeeded',
+      amount: Number(attributes.amount || 0) / 100,
+      metadata: attributes.metadata || {},
+    });
+  } catch (err: any) {
+    console.error('❌ QR payment status error:', err);
+    res.status(500).json({
+      success: false,
+      error: err?.message || 'Failed to check QR payment status.',
+    });
+  }
+}
+
 export async function createQrPaymentIntent(
   req: Request,
   res: Response
@@ -735,6 +838,8 @@ export async function createQrPaymentIntent(
     amount,
     type,
     leaseId,
+    taxDeclarationNumber,
+    rptRecordId,
     businessTrackingNumber,
     customerName,
     customerEmail,
@@ -752,12 +857,20 @@ export async function createQrPaymentIntent(
   try {
     const numericAmount = Number(amount);
 
-    const paymentType = type || (businessTrackingNumber ? 'BUSINESS_TAX' : 'MARKET_STALL');
+    const paymentType =
+      type ||
+      (businessTrackingNumber
+        ? 'BUSINESS_TAX'
+        : taxDeclarationNumber
+          ? 'RPT'
+          : 'MARKET_STALL');
 
     const referenceNumber =
       paymentType === 'BUSINESS_TAX'
         ? `BIZ-${businessTrackingNumber || Date.now()}-${Math.floor(100000 + Math.random() * 900000)}`
-        : `MKT-${leaseId || Date.now()}-${Math.floor(100000 + Math.random() * 900000)}`;
+        : paymentType === 'RPT'
+          ? `RPT-${taxDeclarationNumber || Date.now()}-${Math.floor(100000 + Math.random() * 900000)}`
+          : `MKT-${leaseId || Date.now()}-${Math.floor(100000 + Math.random() * 900000)}`;
 
     const result = await PayMongoService.createQrPaymentIntent({
       amount: numericAmount,
@@ -770,6 +883,8 @@ export async function createQrPaymentIntent(
       metadata: {
         type: paymentType,
         leaseId: paymentType === 'MARKET_STALL' ? leaseId : undefined,
+        taxDeclarationNumber: paymentType === 'RPT' ? taxDeclarationNumber : undefined,
+        rptRecordId: paymentType === 'RPT' ? rptRecordId : undefined,
         businessTrackingNumber:
           paymentType === 'BUSINESS_TAX'
             ? businessTrackingNumber
