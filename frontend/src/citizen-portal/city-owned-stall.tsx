@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import logoSystem from '../assets/logo-system.png';
+import { API_BASE_URL } from "../config/api";
 import { saveLease, getLeases } from "../services/marketService";
 import type { LeaseRecord } from "../services/marketService";
 import {
@@ -152,6 +153,7 @@ export default function MarketStallApplication() {
     const [qrImageUrl, setQrImageUrl] = useState<string>("");
     const [, setQrReferenceNumber] = useState<string>("");
     const [paymentLeaseId, setPaymentLeaseId] = useState<string>("");
+    const [paymentIntentId, setPaymentIntentId] = useState<string>("");
     const [isGeneratingQr, setIsGeneratingQr] = useState<boolean>(false);
     const [qrGenerationError, setQrGenerationError] = useState<string>("");
     const [qrTimeLeft, setQrTimeLeft] = useState<number>(300);
@@ -287,6 +289,7 @@ export default function MarketStallApplication() {
                     `Market Stall Rental - Stall #${activeStall.stallNum} - ${selectedMarket}`,
             });
 
+            setPaymentIntentId(intent.paymentIntentId);
             setQrReferenceNumber(intent.referenceNumber || generatedLeaseId);
 
             // 2. Create the QR Ph Payment Method using the PayMongo public key.
@@ -343,6 +346,58 @@ export default function MarketStallApplication() {
 
         return () => window.clearInterval(timer);
     }, [isPaymentStep, qrImageUrl, isGeneratingQr]);
+
+    // Poll PayMongo while the Dynamic QR Ph code is displayed.
+    // PayMongo marks the Payment Intent as "succeeded" after the citizen pays.
+    // The webhook remains the primary server-side confirmation; this polling
+    // simply makes the citizen portal update immediately without requiring a refresh.
+    useEffect(() => {
+        if (!isPaymentStep || !paymentIntentId || isGeneratingQr) return;
+
+        let cancelled = false;
+
+        const checkQrPaymentStatus = async () => {
+            try {
+                const response = await fetch(
+                    `${API_BASE_URL}/api/payments/qr-status/${encodeURIComponent(paymentIntentId)}`
+                );
+
+                const data = await response.json();
+
+                if (!response.ok || !data.success || cancelled) return;
+
+                if (data.paid) {
+                    const updatedLeases = await getLeases();
+                    if (cancelled) return;
+
+                    setLeases(updatedLeases);
+                    setIsPaymentStep(false);
+                    setActiveStall(null);
+                    setQrImageUrl("");
+                    setPaymentIntentId("");
+                    setPaymentLeaseId("");
+                    setQrGenerationError("");
+
+                    alert(
+                        `Payment Confirmed!\n\nYour market stall payment has been successfully confirmed.`
+                    );
+                }
+            } catch (error) {
+                console.error("QR Ph payment status check failed:", error);
+            }
+        };
+
+        void checkQrPaymentStatus();
+
+        const interval = window.setInterval(() => {
+            void checkQrPaymentStatus();
+        }, 2000);
+
+        return () => {
+            cancelled = true;
+            window.clearInterval(interval);
+        };
+    }, [isPaymentStep, paymentIntentId, isGeneratingQr]);
 
     const formatQrTime = (seconds: number) => {
         const minutes = Math.floor(seconds / 60);

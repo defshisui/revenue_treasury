@@ -779,18 +779,27 @@ export async function handlePayMongoWebhook(
   }
 }
 
-export async function getQrPaymentStatus(req: Request, res: Response): Promise<void> {
+export async function getQrPaymentStatus(
+  req: Request,
+  res: Response
+): Promise<void> {
   const { paymentIntentId } = req.params;
 
   if (!paymentIntentId) {
-    res.status(400).json({ success: false, error: 'paymentIntentId is required.' });
+    res.status(400).json({
+      success: false,
+      error: 'paymentIntentId is required.',
+    });
     return;
   }
 
   try {
     const secretKey = PayMongoService.getSecretKey();
+
     if (!secretKey) {
-      throw new Error('PAYMONGO_SECRET_KEY is not configured.');
+      throw new Error(
+        'PAYMONGO_SECRET_KEY is not configured.'
+      );
     }
 
     const response = await fetch(
@@ -798,34 +807,96 @@ export async function getQrPaymentStatus(req: Request, res: Response): Promise<v
       {
         method: 'GET',
         headers: {
-          Authorization: `Basic ${Buffer.from(`${secretKey}:`).toString('base64')}`,
+          Authorization: `Basic ${Buffer.from(
+            `${secretKey}:`
+          ).toString('base64')}`,
           'Content-Type': 'application/json',
         },
       }
     );
 
     const data = await response.json();
+
     if (!response.ok) {
       const errorMsg =
-        data.errors?.map((e: any) => e.detail || e.code).join(', ') ||
+        data.errors
+          ?.map((e: any) => e.detail || e.code)
+          .join(', ') ||
         'Failed to retrieve PayMongo Payment Intent';
+
       throw new Error(errorMsg);
     }
 
     const attributes = data.data?.attributes || {};
+
+    const status = attributes.status;
+    const paid = status === 'succeeded';
+    const metadata = attributes.metadata || {};
+
+    console.log('🔎 QR Payment Status:', {
+      paymentIntentId,
+      status,
+      paid,
+      metadata,
+    });
+
+    // =========================================================
+    // PAYMENT SUCCESS
+    // =========================================================
+    if (
+      paid &&
+      metadata.type === 'MARKET_STALL' &&
+      metadata.leaseId
+    ) {
+      console.log(
+        `🏪 QR payment succeeded for lease ${metadata.leaseId}`
+      );
+
+      const leaseResult = await pool.query(
+        `
+        UPDATE market_leases
+        SET
+          payment_status = 'Paid',
+          advance_payment_status = 'Paid',
+          payment_method = 'PayMongo (QR Ph)'
+        WHERE lease_id = $1
+           OR id::text = $1
+        RETURNING *
+        `,
+        [metadata.leaseId]
+      );
+
+      if (leaseResult.rows.length > 0) {
+        console.log(
+          `✅ Market lease ${metadata.leaseId} marked as PAID.`
+        );
+      } else {
+        console.warn(
+          `⚠️ Market lease not found: ${metadata.leaseId}`
+        );
+      }
+    }
+
     res.status(200).json({
       success: true,
       paymentIntentId,
-      status: attributes.status,
-      paid: attributes.status === 'succeeded',
+      status,
+      paid,
       amount: Number(attributes.amount || 0) / 100,
-      metadata: attributes.metadata || {},
+      metadata,
     });
+
   } catch (err: any) {
-    console.error('❌ QR payment status error:', err);
+    console.error(
+      '❌ QR payment status error:',
+      err
+    );
+
     res.status(500).json({
       success: false,
-      error: err?.message || 'Failed to check QR payment status.',
+      error:
+        err?.message ||
+        'Failed to check QR payment status.',
     });
   }
 }
