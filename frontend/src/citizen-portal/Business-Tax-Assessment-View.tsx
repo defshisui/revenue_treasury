@@ -1178,149 +1178,122 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
         </div>
       )}
       {isPaymentStep && paymentAssessment && (
-        <div className="fixed inset-0 z-[60] bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 relative">
-            <div className="flex justify-between items-center border-b border-slate-200 pb-3">
-              <div>
-                <h3 className="text-sm font-bold text-slate-900 uppercase">
-                  PayMongo Secure Checkout
-                </h3>
-                <p className="text-[11px] text-slate-500">
-                  Business Tax Payment
-                </p>
+        <div className="fixed inset-0 z-[60] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
+          <div className="bg-white rounded-3xl w-full max-w-5xl shadow-2xl border border-slate-200 overflow-hidden my-auto">
+            <div className="px-5 sm:px-7 py-5 border-b border-slate-200">
+              <div className="flex items-center gap-3">
+                <div className="h-11 w-11 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center text-xl">🔒</div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-black text-slate-900 uppercase tracking-tight">PayMongo Secure Checkout</h3>
+                  <p className="text-xs sm:text-sm text-slate-500">Business Tax Payment</p>
+                </div>
               </div>
-              <button
-                type="button"
-                onClick={closeBusinessTaxPayment}
-                disabled={isProcessingPayment}
-                className="text-slate-500 hover:text-slate-800 font-bold text-lg cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                ✕
-              </button>
             </div>
-            <div className="space-y-4 pt-4">
-              <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl text-slate-800">
-                <p className="font-bold text-sm">
-                  Business Tax Payment ({paymentAssessment.trackingNumber})
-                </p>
-                <p className="text-xs text-slate-500 mt-1">
-                  Business Tax Assessment ({paymentAssessment.businessName})
-                </p>
-                <div className="mt-4 pt-3 border-t border-blue-200 space-y-2 text-xs">
-                  <div className="flex justify-between">
-                    <span>Subtotal</span>
-                    <span className="font-semibold">
-                      ₱{(Number(paymentAssessment.grossSales || 0) > 0
-                        ? Math.max(Number(paymentAssessment.grossSales || 0) * 0.02, 500)
-                        : 1500
-                      ).toLocaleString('en-PH', {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </span>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2">
+              {/* LEFT: PAYMENT INFORMATION */}
+              <div className="p-5 sm:p-7 border-b lg:border-b-0 lg:border-r border-slate-200 space-y-4">
+                <div className="rounded-2xl border border-blue-200 bg-blue-50/70 p-5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-blue-100 text-blue-700 text-lg">▤</span>
+                    <p className="text-sm font-black uppercase tracking-wide text-blue-800">Payment Summary</p>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Fees</span>
-                    <span>Free</span>
+                  <p className="text-base font-black text-slate-900 break-words">Business Tax Payment</p>
+                  <p className="text-sm font-bold text-slate-800 break-all mt-1">({paymentAssessment.trackingNumber})</p>
+                  <p className="text-xs text-slate-500 mt-2">Business Tax Assessment ({paymentAssessment.businessName})</p>
+
+                  <div className="mt-5 pt-4 border-t border-blue-200 space-y-3 text-sm">
+                    <div className="flex justify-between gap-4 text-slate-600">
+                      <span>Subtotal</span>
+                      <span className="font-bold text-slate-900">₱{(Number(paymentAssessment.grossSales || 0) > 0 ? Math.max(Number(paymentAssessment.grossSales || 0) * 0.02, 500) : 1500).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                    <div className="flex justify-between gap-4 text-slate-600">
+                      <span>Fees</span>
+                      <span className="font-semibold text-slate-900">Free</span>
+                    </div>
+                    <div className="flex justify-between gap-4 pt-4 border-t border-blue-200">
+                      <span className="font-black uppercase text-blue-800">Total Due</span>
+                      <span className="font-black text-xl text-blue-700">₱{(Number(paymentAssessment.grossSales || 0) > 0 ? Math.max(Number(paymentAssessment.grossSales || 0) * 0.02, 500) : 1500).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
                   </div>
-                  <div className="flex justify-between pt-2 border-t border-blue-200 text-sm">
-                    <span className="font-bold">Total Due</span>
-                    <span className="font-black">
-                      ₱{(Number(paymentAssessment.grossSales || 0) > 0
-                        ? Math.max(Number(paymentAssessment.grossSales || 0) * 0.02, 500)
-                        : 1500
-                      ).toLocaleString('en-PH', {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </span>
+                </div>
+
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-5">
+                  <div className="flex items-center gap-3">
+                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 text-lg">✓</span>
+                    <div>
+                      <p className="text-sm font-black uppercase tracking-wide text-emerald-800">Secure Payment</p>
+                      <p className="text-xs text-emerald-700 mt-1">Your payment is secured by PayMongo.</p>
+                    </div>
                   </div>
+                  <p className="text-xs text-emerald-700 mt-3 pl-12">We do not store your payment details.</p>
+                </div>
+
+                <div className="rounded-2xl border border-sky-200 bg-sky-50 p-5 text-left">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-sky-600 text-white text-xs font-black">i</span>
+                    <p className="text-sm font-black text-sky-900">How to pay with QR Ph</p>
+                  </div>
+                  <p className="text-xs leading-relaxed text-slate-600">Scan this Dynamic QR Ph using a participating Philippine bank or e-wallet app. Depending on your provider, supported apps may include GCash, Maya, BPI, BDO, UnionBank, RCBC, LandBank, Metrobank, PNB, Security Bank, and other participating QR Ph institutions.</p>
+                  <p className="text-xs leading-relaxed text-slate-500 mt-3"><strong>Tip:</strong> Before confirming, check that the amount shown in your banking or e-wallet app matches the Total Due.</p>
                 </div>
               </div>
-              {isProcessingPayment && !qrCodeUrl && (
-                <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 flex flex-col items-center justify-center bg-slate-50 text-center">
-                  <div className="w-10 h-10 border-4 border-blue-200 border-t-blue-700 rounded-full animate-spin mb-4"></div>
-                  <p className="font-bold text-slate-800 text-sm">
-                    Generating your QRPh code...
-                  </p>
-                  <p className="text-[11px] text-slate-500 mt-1">
-                    Please wait while PayMongo prepares your secure payment.
-                  </p>
+
+              {/* RIGHT: QR PAYMENT */}
+              <div className="p-5 sm:p-7 bg-slate-50/60 flex flex-col items-center">
+                <div className="w-full text-center">
+                  <p className="text-lg font-black text-slate-900 uppercase tracking-tight">Scan QR Ph Code to Pay</p>
+                  <p className="text-xs text-slate-500 mt-1">Scan with a participating QR Ph bank or e-wallet.</p>
                 </div>
-              )}
-              {!isProcessingPayment && qrError && (
-                <div className="border border-rose-200 bg-rose-50 rounded-xl p-4 text-center">
-                  <p className="text-xs font-bold text-rose-700">
-                    {qrError}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => void handlePayMongoBusinessTaxQrPayment(paymentAssessment)}
-                    className="mt-3 px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-lg text-xs font-bold cursor-pointer"
-                  >
-                    Generate QR Again
-                  </button>
-                </div>
-              )}
-              {qrPaymentPaid && (
-                <div className="border border-emerald-200 bg-emerald-50 rounded-xl p-6 text-center">
-                  <div className="mx-auto mb-3 h-12 w-12 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-2xl">✓</div>
-                  <p className="font-black text-emerald-800">Payment Confirmed</p>
-                  <p className="text-xs text-emerald-700 mt-1">PayMongo has confirmed your payment. Your business tax payment status is being updated.</p>
-                </div>
-              )}
-              {qrCodeUrl && !qrPaymentPaid && (
-                <div className="border border-slate-200 rounded-xl p-4 bg-slate-50 flex flex-col items-center">
-                  <p className="text-sm font-bold text-slate-900 mb-1">
-                    Scan QRPh code to pay
-                  </p>
-                  <p className="text-[11px] text-slate-500 text-center mb-3">
-                    Scan with a participating QR Ph bank or e-wallet.
-                  </p>
-                  <div className="w-full mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-center">
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-amber-700">QR valid for</p>
-                    <p className="text-sm font-black text-amber-900">{Math.floor(qrSecondsRemaining / 60)}:{String(qrSecondsRemaining % 60).padStart(2, '0')}</p>
+
+                {isProcessingPayment && !qrCodeUrl && (
+                  <div className="w-full mt-5 border-2 border-dashed border-slate-300 rounded-2xl p-10 flex flex-col items-center justify-center bg-white text-center">
+                    <div className="w-10 h-10 border-4 border-blue-200 border-t-blue-700 rounded-full animate-spin mb-4"></div>
+                    <p className="font-bold text-slate-800 text-sm">Generating your QR Ph code...</p>
+                    <p className="text-xs text-slate-500 mt-1">Please wait while PayMongo prepares your secure payment.</p>
                   </div>
-                                    <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-sm">
-                    <img
-                      src={qrCodeUrl}
-                      alt="PayMongo Dynamic QRPh payment code"
-                      className="w-64 h-64 object-contain"
-                    />
+                )}
+
+                {!isProcessingPayment && qrError && !qrCodeUrl && (
+                  <div className="w-full mt-5 border border-rose-200 bg-rose-50 rounded-2xl p-5 text-center">
+                    <p className="text-xs font-bold text-rose-700">{qrError}</p>
+                    <button type="button" onClick={() => void handlePayMongoBusinessTaxQrPayment(paymentAssessment)} className="mt-3 px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-lg text-xs font-bold cursor-pointer">Generate QR Again</button>
                   </div>
-<div className="mt-4 w-full rounded-xl border border-sky-200 bg-sky-50 p-3 text-left">
-  <div className="flex items-center gap-2 mb-2">
-    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-sky-600 text-white text-xs font-black">i</span>
-    <p className="text-[11px] font-extrabold text-sky-900">How to pay with QR Ph</p>
-  </div>
-  <p className="text-[10px] leading-relaxed text-slate-600">Scan this QR Ph using bank or e-wallet app. Depending on your provider, supported apps may include GCash, Maya, BPI, BDO, UnionBank, RCBC, LandBank, Metrobank, PNB, Security Bank, and other participating QR Ph institutions.</p>
-  <p className="text-[10px] leading-relaxed text-slate-500 mt-2"><strong>Tip:</strong> Before confirming, check that the amount shown in your banking or e-wallet app matches the Total Due.</p>
-</div>
-<div className="w-full mt-4 bg-white border border-slate-200 rounded-lg px-3 py-2 text-center">
-                    <p className="text-[10px] uppercase font-bold text-slate-400">
-                      Reference Number
-                    </p>
-                    <p className="text-xs font-black text-slate-800 break-all">
-                      {qrReferenceNumber || 'Generating...'}
-                    </p>
+                )}
+
+                {qrPaymentPaid && (
+                  <div className="w-full mt-5 border border-emerald-200 bg-emerald-50 rounded-2xl p-7 text-center">
+                    <div className="mx-auto mb-3 h-14 w-14 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-3xl">✓</div>
+                    <p className="font-black text-emerald-800">Payment Confirmed</p>
+                    <p className="text-xs text-emerald-700 mt-1">PayMongo has confirmed your business tax payment. Your payment status is being updated.</p>
                   </div>
-                  <p className="text-[10px] text-slate-500 text-center mt-3">
-                    Complete the payment by scanning the QR code.
-                    Payment confirmation is handled by PayMongo.
-                  </p>
-                  {qrPaymentIntentId && (
-                    <span className="hidden">{qrPaymentIntentId}</span>
-                  )}
-                </div>
-              )}
-              <button
-                type="button"
-                disabled={isProcessingPayment}
-                onClick={closeBusinessTaxPayment}
-                className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-all text-center cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Close
-              </button>
+                )}
+
+                {qrCodeUrl && !qrPaymentPaid && (
+                  <div className="w-full mt-5 flex flex-col items-center">
+                    {/* TIMER DIRECTLY ABOVE QR */}
+                    <div className="w-full max-w-sm rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-center mb-4">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-amber-700">QR valid for</p>
+                      <p className="text-2xl font-black tabular-nums text-amber-900">{Math.floor(qrSecondsRemaining / 60)}:{String(qrSecondsRemaining % 60).padStart(2, '0')}</p>
+                    </div>
+
+                    <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-md">
+                      <img src={qrCodeUrl} alt="PayMongo Dynamic QR Ph payment code" className="w-64 h-64 sm:w-72 sm:h-72 object-contain" />
+                    </div>
+
+                    <div className="w-full max-w-sm mt-5 bg-white border border-slate-200 rounded-xl px-4 py-3 text-center">
+                      <p className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Reference Number</p>
+                      <p className="text-xs font-black text-slate-800 break-all mt-1">{qrReferenceNumber || 'Generating...'}</p>
+                    </div>
+
+                    <p className="text-xs text-slate-500 text-center mt-3 max-w-sm">Complete the payment by scanning the QR code. Payment confirmation is handled automatically by PayMongo.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="px-5 sm:px-7 py-4 border-t border-slate-200 bg-white">
+              <button type="button" disabled={isProcessingPayment} onClick={closeBusinessTaxPayment} className="w-full sm:max-w-xs sm:mx-auto block py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold rounded-xl transition-all text-center cursor-pointer disabled:cursor-not-allowed disabled:opacity-50">Close</button>
             </div>
           </div>
         </div>

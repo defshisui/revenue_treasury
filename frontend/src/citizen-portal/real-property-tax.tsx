@@ -1891,64 +1891,114 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
 
       {/* PAYMONGO DYNAMIC QR PH MODAL */}
       {isQrPaymentOpen && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl border border-slate-200 p-6 max-w-lg w-full shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-              <div>
-                <h3 className="text-sm font-black text-slate-900 uppercase">PayMongo Secure Checkout</h3>
-                <p className="text-[11px] text-slate-500">Real Property Tax • Dynamic QR Ph</p>
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-3 sm:p-5 overflow-y-auto">
+          <div className="bg-white rounded-3xl border border-slate-200 w-full max-w-5xl shadow-2xl overflow-hidden my-auto">
+            <div className="px-5 sm:px-7 py-5 border-b border-slate-200">
+              <div className="flex items-center gap-3">
+                <div className="h-11 w-11 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center text-xl">🔒</div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-black text-slate-900 uppercase tracking-tight">PayMongo Secure Checkout</h3>
+                  <p className="text-xs sm:text-sm text-slate-500">Real Property Tax • Dynamic QR Ph</p>
+                </div>
               </div>
-              <button type="button" onClick={closeRPTQrPayment} disabled={isGeneratingQr} className="text-slate-500 hover:text-slate-800 font-bold text-lg disabled:opacity-40">✕</button>
             </div>
 
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-              <div className="flex justify-between text-xs text-slate-600"><span>Properties</span><span className="font-bold">{cart.length}</span></div>
-              <div className="flex justify-between text-sm font-black text-[#0B3B60] mt-2 pt-2 border-t border-blue-200"><span>Total Due</span><span>{formatCurrency(grandCartTotal)}</span></div>
+            <div className="grid grid-cols-1 lg:grid-cols-2">
+              {/* LEFT: PAYMENT INFORMATION */}
+              <div className="p-5 sm:p-7 border-b lg:border-b-0 lg:border-r border-slate-200 space-y-4">
+                <div className="rounded-2xl border border-blue-200 bg-blue-50/70 p-5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-blue-100 text-blue-700 text-lg">▤</span>
+                    <p className="text-sm font-black uppercase tracking-wide text-blue-800">Payment Summary</p>
+                  </div>
+                  <p className="text-sm font-bold text-slate-700">Selected Properties</p>
+                  <p className="text-2xl font-black text-slate-900 mt-1">{cart.length}</p>
+                  <p className="text-xs text-slate-500 mt-1">Real Property Tax declaration(s) selected for payment.</p>
+
+                  <div className="mt-5 pt-4 border-t border-blue-200">
+                    <div className="flex justify-between gap-4 items-end">
+                      <span className="font-black uppercase text-blue-800">Total Due</span>
+                      <span className="font-black text-2xl text-blue-700">{formatCurrency(grandCartTotal)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-5">
+                  <div className="flex items-center gap-3">
+                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 text-lg">✓</span>
+                    <div>
+                      <p className="text-sm font-black uppercase tracking-wide text-emerald-800">Secure Payment</p>
+                      <p className="text-xs text-emerald-700 mt-1">Your payment is secured by PayMongo.</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-emerald-700 mt-3 pl-12">We do not store your payment details.</p>
+                </div>
+
+                <div className="rounded-2xl border border-sky-200 bg-sky-50 p-5 text-left">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-sky-600 text-white text-xs font-black">i</span>
+                    <p className="text-sm font-black text-sky-900">How to pay with QR Ph</p>
+                  </div>
+                  <p className="text-xs leading-relaxed text-slate-600">Scan this Dynamic QR Ph using a participating Philippine bank or e-wallet app. Depending on your provider, supported apps may include GCash, Maya, BPI, BDO, UnionBank, RCBC, LandBank, Metrobank, PNB, Security Bank, and other participating QR Ph institutions.</p>
+                  <p className="text-xs leading-relaxed text-slate-500 mt-3"><strong>Tip:</strong> Before confirming, check that the amount shown in your banking or e-wallet app matches the Total Due.</p>
+                </div>
+              </div>
+
+              {/* RIGHT: QR PAYMENT */}
+              <div className="p-5 sm:p-7 bg-slate-50/60 flex flex-col items-center">
+                <div className="w-full text-center">
+                  <p className="text-lg font-black text-slate-900 uppercase tracking-tight">Scan QR Ph Code to Pay</p>
+                  <p className="text-xs text-slate-500 mt-1">Scan with a participating QR Ph bank or e-wallet.</p>
+                </div>
+
+                {isGeneratingQr && !rptQrCodeUrl && (
+                  <div className="w-full mt-5 border-2 border-dashed border-slate-300 rounded-2xl p-10 text-center bg-white">
+                    <div className="w-10 h-10 border-4 border-blue-200 border-t-blue-700 rounded-full animate-spin mx-auto mb-4" />
+                    <p className="font-bold text-slate-800 text-sm">Generating your QR Ph code...</p>
+                    <p className="text-xs text-slate-500 mt-1">Please wait while PayMongo prepares your secure payment.</p>
+                  </div>
+                )}
+
+                {!isGeneratingQr && rptQrError && !rptQrCodeUrl && (
+                  <div className="w-full mt-5 border border-rose-200 bg-rose-50 rounded-2xl p-5 text-center">
+                    <p className="text-xs font-bold text-rose-700">{rptQrError}</p>
+                    <button type="button" onClick={() => void generateRPTQrPayment()} className="mt-3 px-4 py-2 bg-[#0B3B60] hover:bg-[#082944] text-white rounded-lg text-xs font-bold">Generate QR Again</button>
+                  </div>
+                )}
+
+                {rptQrPaid && (
+                  <div className="w-full mt-5 border border-emerald-200 bg-emerald-50 rounded-2xl p-7 text-center">
+                    <div className="mx-auto mb-3 h-14 w-14 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-3xl">✓</div>
+                    <p className="font-black text-emerald-800">Payment Confirmed</p>
+                    <p className="text-xs text-emerald-700 mt-1">PayMongo has confirmed your RPT payment. Your records are being updated.</p>
+                  </div>
+                )}
+
+                {rptQrCodeUrl && !rptQrPaid && (
+                  <div className="w-full mt-5 flex flex-col items-center">
+                    {/* TIMER DIRECTLY ABOVE QR */}
+                    <div className="w-full max-w-sm rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-center mb-4">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-amber-700">QR valid for</p>
+                      <p className="text-2xl font-black tabular-nums text-amber-900">{Math.floor(rptQrSecondsRemaining / 60)}:{String(rptQrSecondsRemaining % 60).padStart(2, "0")}</p>
+                    </div>
+
+                    <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-md">
+                      <img src={rptQrCodeUrl} alt="PayMongo Dynamic QR Ph payment code" className="w-64 h-64 sm:w-72 sm:h-72 object-contain" />
+                    </div>
+
+                    <div className="w-full max-w-sm mt-5 bg-white border border-slate-200 rounded-xl px-4 py-3 text-center">
+                      <p className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Reference Number</p>
+                      <p className="text-xs font-black text-slate-800 break-all mt-1">{rptQrReferenceNumber || "Generating..."}</p>
+                    </div>
+                    <p className="text-xs text-slate-500 text-center mt-3 max-w-sm">Complete the payment by scanning the QR code. Payment confirmation is handled automatically by PayMongo.</p>
+                  </div>
+                )}
+              </div>
             </div>
 
-            {isGeneratingQr && !rptQrCodeUrl && (
-              <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center bg-slate-50">
-                <div className="w-10 h-10 border-4 border-blue-200 border-t-blue-700 rounded-full animate-spin mx-auto mb-4" />
-                <p className="font-bold text-slate-800 text-sm">Generating your QR Ph code...</p>
-                <p className="text-[11px] text-slate-500 mt-1">Please wait while PayMongo prepares your secure payment.</p>
-              </div>
-            )}
-
-            {!isGeneratingQr && rptQrError && !rptQrCodeUrl && (
-              <div className="border border-rose-200 bg-rose-50 rounded-xl p-4 text-center">
-                <p className="text-xs font-bold text-rose-700">{rptQrError}</p>
-                <button type="button" onClick={() => void generateRPTQrPayment()} className="mt-3 px-4 py-2 bg-[#0B3B60] hover:bg-[#082944] text-white rounded-lg text-xs font-bold">Generate QR Again</button>
-              </div>
-            )}
-
-            {rptQrPaid && (
-              <div className="border border-emerald-200 bg-emerald-50 rounded-xl p-6 text-center">
-                <div className="mx-auto mb-3 h-12 w-12 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-2xl">✓</div>
-                <p className="font-black text-emerald-800">Payment Confirmed</p>
-                <p className="text-xs text-emerald-700 mt-1">PayMongo has confirmed your RPT payment. Your records are being updated.</p>
-              </div>
-            )}
-
-            {rptQrCodeUrl && !rptQrPaid && (
-              <div className="border border-slate-200 rounded-xl p-4 bg-slate-50 flex flex-col items-center">
-                <p className="text-sm font-bold text-slate-900 mb-1">Scan QR Ph code to pay</p>
-                <p className="text-[11px] text-slate-500 text-center mb-3">Scan with a participating QR Ph bank or e-wallet.</p>
-                <div className="mt-3 w-full rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-center">
-                  <p className="text-[10px] font-bold uppercase tracking-wide text-amber-700">QR valid for</p>
-                  <p className="text-sm font-black text-amber-900">{Math.floor(rptQrSecondsRemaining / 60)}:{String(rptQrSecondsRemaining % 60).padStart(2, "0")}</p>
-                </div>
-                                <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-sm"><img src={rptQrCodeUrl} alt="PayMongo Dynamic QR Ph payment code" className="w-64 h-64 object-contain" /></div>
-<div className="mt-3 w-full rounded-xl border border-sky-200 bg-sky-50 p-3 text-left">
-                  <div className="flex items-center gap-2 mb-2"><span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-sky-600 text-white text-xs font-black">i</span><p className="text-[11px] font-extrabold text-sky-900">How to pay with QR Ph</p></div>
-                  <p className="text-[10px] leading-relaxed text-slate-600">Scan this QR Ph using bank or e-wallet app. Depending on your provider, supported apps may include GCash, Maya, BPI, BDO, UnionBank, RCBC, LandBank, Metrobank, PNB, Security Bank, and other participating QR Ph institutions.</p>
-                  <p className="text-[10px] leading-relaxed text-slate-500 mt-2"><strong>Tip:</strong> Before confirming, check that the amount shown in your banking or e-wallet app matches the Total Due.</p>
-                </div>
-                <div className="w-full mt-3 bg-white border border-slate-200 rounded-lg px-3 py-2 text-center"><p className="text-[10px] uppercase font-bold text-slate-400">Reference Number</p><p className="text-xs font-black text-slate-800 break-all">{rptQrReferenceNumber || "Generating..."}</p></div>
-                <p className="text-[10px] text-slate-500 text-center mt-3">Payment confirmation is handled automatically by PayMongo.</p>
-              </div>
-            )}
-
-            <button type="button" onClick={closeRPTQrPayment} disabled={isGeneratingQr} className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl disabled:opacity-50">Close</button>
+            <div className="px-5 sm:px-7 py-4 border-t border-slate-200 bg-white">
+              <button type="button" onClick={closeRPTQrPayment} disabled={isGeneratingQr} className="w-full sm:max-w-xs sm:mx-auto block py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold rounded-xl disabled:opacity-50">Close</button>
+            </div>
           </div>
         </div>
       )}
