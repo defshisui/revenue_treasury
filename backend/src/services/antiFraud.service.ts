@@ -58,8 +58,10 @@ export class AntiFraudService {
 
       // FraudLabs Pro requires a valid public IP format.
       // If client IP is local/private/loopback, use a standard public gateway IP.
-      const ipToSend = (params.ip && this.isPublicIP(params.ip)) ? params.ip.replace(/^::ffff:/, '') : '124.106.12.34';
-      url.searchParams.append('ip', ipToSend);
+      if (params.ip && this.isPublicIP(params.ip)) {
+  const ipToSend = params.ip.replace(/^::ffff:/, '');
+  url.searchParams.append('ip', ipToSend);
+}
       if (params.email) url.searchParams.append('email', params.email);
       if (params.username) url.searchParams.append('username', params.username);
       if (params.amount) url.searchParams.append('amount', params.amount.toString());
@@ -83,14 +85,16 @@ export class AntiFraudService {
 
       console.log(`[AntiFraud] Result for ${params.email}: score=${score}, status=${status}`);
 
-      const isFraud = score >= threshold || status === 'REJECT';
+      const isFraud = score >= threshold;
 
       return {
-        score,
-        isFraud,
-        reason: isFraud ? `Risk score ${score} exceeds threshold ${threshold}` : undefined,
-        raw: data,
-      };
+  score,
+  isFraud,
+  reason: isFraud
+    ? `Risk score ${score} exceeds threshold ${threshold} (FraudLabs status: ${status})`
+    : `Risk score ${score} is below threshold ${threshold} (FraudLabs status: ${status})`,
+  raw: data,
+};
     } catch (error: any) {
       console.error('Anti-fraud check failed:', error.message);
       // Fall open if API is unreachable
