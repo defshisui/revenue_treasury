@@ -31,13 +31,14 @@ const poolConfig: pg.PoolConfig = dbConnectionString
   ? {
       connectionString: dbConnectionString,
       ssl: isInternalDb ? false : { rejectUnauthorized: false },
+      password: String(process.env.PGPASSWORD || process.env.DB_PASSWORD || 'admin'),
     }
   : {
       host: process.env.PGHOST || process.env.DB_HOST || 'localhost',
       port: Number(process.env.PGPORT || process.env.DB_PORT) || 5432,
       database: process.env.PGDATABASE || process.env.DB_NAME || 'revenue_treasury',
       user: process.env.PGUSER || process.env.DB_USER || 'postgres',
-      password: String(process.env.PGPASSWORD || process.env.DB_PASSWORD || ''),
+      password: String(process.env.PGPASSWORD || process.env.DB_PASSWORD || 'admin'),
     };
 
 const pool = new Pool(poolConfig);

@@ -9,25 +9,37 @@ export class EmailService {
     if (!this.transporter) {
       const user = process.env.SMTP_USER || 'govserve.treasury@gmail.com';
       const pass = process.env.SMTP_PASS || '';
-      const host = process.env.SMTP_HOST || 'smtp.gmail.com';
-      const port = Number(process.env.SMTP_PORT) || 465;
-      const secure = process.env.SMTP_SECURE !== undefined ? process.env.SMTP_SECURE === 'true' : port === 465;
+      const host = process.env.SMTP_HOST;
+      const port = Number(process.env.SMTP_PORT) || 587;
 
-      this.transporter = nodemailer.createTransport({
-        host,
-        port,
-        secure,
-        auth: {
-          user,
-          pass,
-        },
-        connectionTimeout: 10000, // 10 seconds
-        greetingTimeout: 10000,
-        socketTimeout: 15000,
-        tls: {
-          rejectUnauthorized: false,
-        },
-      });
+      // If using Gmail (default or explicitly configured), use Nodemailer's native 'gmail' service
+      // which uses Port 587 with STARTTLS, preventing Connection Timeouts on cloud hosts like Railway
+      if (!host || host.toLowerCase().includes('gmail')) {
+        this.transporter = nodemailer.createTransport({
+          service: 'gmail',
+          auth: {
+            user,
+            pass,
+          },
+          tls: {
+            rejectUnauthorized: false,
+          },
+        });
+      } else {
+        // Custom non-Gmail SMTP configuration
+        this.transporter = nodemailer.createTransport({
+          host,
+          port,
+          secure: port === 465,
+          auth: {
+            user,
+            pass,
+          },
+          tls: {
+            rejectUnauthorized: false,
+          },
+        });
+      }
     }
     return this.transporter;
   }
@@ -132,7 +144,7 @@ Purpose: ${actionTitle} (${actionSubtitle})
       return { success: true, messageId: info.messageId };
     } catch (error: any) {
       console.error(`[EmailService] Error sending OTP email to ${toEmail}:`, error?.message || error);
-      throw new Error(`Failed to send verification email: ${error?.message || 'SMTP Connection Error'}`);
+      throw new Error(`Failed to send verification email: ${error?.message || 'SMTP Error'}`);
     }
   }
 }
