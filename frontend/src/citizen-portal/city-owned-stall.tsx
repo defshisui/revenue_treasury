@@ -695,7 +695,7 @@ export default function MarketStallApplication() {
                                                             {(() => {
                                                                 const st1 = getStallRealtimeStatus(1, "Fish");
                                                                 return (
-                                                                    <button onClick={() => handleStallClick({ stallNum: 1, holder: st1.holder, availability: st1.availability, section: "Fish", type: "Permanent", size: "3 sqm", classification: "Regular", fee: "₱1.00" })} className={`${st1.availability === 'Occupied' ? 'bg-blue-700' : 'bg-blue-500'} hover:opacity-90 text-white text-[10px] font-bold h-10 rounded flex items-center justify-center relative shadow-sm cursor-pointer`}>
+                                                                    <button onClick={() => handleStallClick({ stallNum: 1, holder: st1.holder, availability: st1.availability, section: "Fish", type: "Permanent", size: "3 sqm", classification: "Regular", fee: "₱1,200.00" })} className={`${st1.availability === 'Occupied' ? 'bg-blue-700' : 'bg-blue-500'} hover:opacity-90 text-white text-[10px] font-bold h-10 rounded flex items-center justify-center relative shadow-sm cursor-pointer`}>
                                                                         1
                                                                         <span className={`absolute top-1 right-1 w-1.5 h-1.5 ${st1.availability === 'Occupied' ? 'bg-red-500' : 'bg-emerald-300'} rounded-full`}></span>
                                                                     </button>
@@ -704,7 +704,7 @@ export default function MarketStallApplication() {
                                                             {(() => {
                                                                 const st5 = getStallRealtimeStatus(5, "Fish");
                                                                 return (
-                                                                    <button onClick={() => handleStallClick({ stallNum: 5, holder: st5.holder, availability: st5.availability, section: "Fish", type: "Permanent", size: "3 sqm", classification: "Regular", fee: "₱1.10" })} className={`${st5.availability === 'Occupied' ? 'bg-blue-700' : 'bg-blue-500'} hover:opacity-90 text-white text-[10px] font-bold h-10 rounded flex items-center justify-center relative shadow-sm cursor-pointer`}>
+                                                                    <button onClick={() => handleStallClick({ stallNum: 5, holder: st5.holder, availability: st5.availability, section: "Fish", type: "Permanent", size: "3 sqm", classification: "Regular", fee: "₱1,200.00" })} className={`${st5.availability === 'Occupied' ? 'bg-blue-700' : 'bg-blue-500'} hover:opacity-90 text-white text-[10px] font-bold h-10 rounded flex items-center justify-center relative shadow-sm cursor-pointer`}>
                                                                         5
                                                                         <span className={`absolute top-1 right-1 w-1.5 h-1.5 ${st5.availability === 'Occupied' ? 'bg-red-500' : 'bg-emerald-300'} rounded-full`}></span>
                                                                     </button>
@@ -719,7 +719,7 @@ export default function MarketStallApplication() {
                                                             {(() => {
                                                                 const st12 = getStallRealtimeStatus(12, "Vegetables");
                                                                 return (
-                                                                    <button onClick={() => handleStallClick({ stallNum: 12, holder: st12.holder, availability: st12.availability, section: "Vegetables", type: "Permanent", size: "3 sqm", classification: "Regular", fee: "₱1.20" })} className={`${st12.availability === 'Occupied' ? 'bg-emerald-700' : 'bg-emerald-400'} hover:opacity-90 text-white text-[10px] font-bold h-10 rounded flex items-center justify-center relative shadow-sm cursor-pointer`}>
+                                                                    <button onClick={() => handleStallClick({ stallNum: 12, holder: st12.holder, availability: st12.availability, section: "Vegetables", type: "Permanent", size: "3 sqm", classification: "Regular", fee: "₱1,380.00" })} className={`${st12.availability === 'Occupied' ? 'bg-emerald-700' : 'bg-emerald-400'} hover:opacity-90 text-white text-[10px] font-bold h-10 rounded flex items-center justify-center relative shadow-sm cursor-pointer`}>
                                                                         12
                                                                         <span className={`absolute top-1 right-1 w-1.5 h-1.5 ${st12.availability === 'Occupied' ? 'bg-red-500' : 'bg-emerald-200'} rounded-full`}></span>
                                                                     </button>
@@ -728,7 +728,7 @@ export default function MarketStallApplication() {
                                                             {(() => {
                                                                 const st14 = getStallRealtimeStatus(14, "Vegetables");
                                                                 return (
-                                                                    <button onClick={() => handleStallClick({ stallNum: 14, holder: st14.holder, availability: st14.availability, section: "Vegetables", type: "Permanent", size: "3 sqm", classification: "Regular", fee: "₱1.30" })} className={`${st14.availability === 'Occupied' ? 'bg-emerald-700' : 'bg-emerald-400'} hover:opacity-90 text-white text-[10px] font-bold h-10 rounded flex items-center justify-center relative shadow-sm cursor-pointer`}>
+                                                                    <button onClick={() => handleStallClick({ stallNum: 14, holder: st14.holder, availability: st14.availability, section: "Vegetables", type: "Permanent", size: "3 sqm", classification: "Regular", fee: "₱1,380.00" })} className={`${st14.availability === 'Occupied' ? 'bg-emerald-700' : 'bg-emerald-400'} hover:opacity-90 text-white text-[10px] font-bold h-10 rounded flex items-center justify-center relative shadow-sm cursor-pointer`}>
                                                                         14
                                                                         <span className={`absolute top-1 right-1 w-1.5 h-1.5 ${st14.availability === 'Occupied' ? 'bg-red-500' : 'bg-emerald-200'} rounded-full`}></span>
                                                                     </button>
@@ -744,7 +744,7 @@ export default function MarketStallApplication() {
                                                             {(() => {
                                                                 const st102 = getStallRealtimeStatus(102, "Dry Goods");
                                                                 return (
-                                                                    <button onClick={() => handleStallClick({ stallNum: 102, holder: st102.holder, availability: st102.availability, section: "Dry Goods", type: "Permanent", size: "2.5 sqm", classification: "Regular", fee: "₱1.40" })} className={`${st102.availability === 'Occupied' ? 'bg-slate-700' : 'bg-slate-400'} hover:opacity-90 text-white text-[10px] font-bold h-10 rounded flex items-center justify-center relative shadow-sm cursor-pointer`}>
+                                                                    <button onClick={() => handleStallClick({ stallNum: 102, holder: st102.holder, availability: st102.availability, section: "Dry Goods", type: "Permanent", size: "2.5 sqm", classification: "Regular", fee: "₱1,000.00" })} className={`${st102.availability === 'Occupied' ? 'bg-slate-700' : 'bg-slate-400'} hover:opacity-90 text-white text-[10px] font-bold h-10 rounded flex items-center justify-center relative shadow-sm cursor-pointer`}>
                                                                         102
                                                                         <span className={`absolute top-1 right-1 w-1.5 h-1.5 ${st102.availability === 'Occupied' ? 'bg-red-500' : 'bg-emerald-200'} rounded-full`}></span>
                                                                     </button>
@@ -766,7 +766,7 @@ export default function MarketStallApplication() {
                                                 {(() => {
                                                     const st202 = getStallRealtimeStatus(202, "Apparel");
                                                     return (
-                                                        <button onClick={() => handleStallClick({ stallNum: 202, holder: st202.holder, availability: st202.availability, section: "Apparel", type: "Permanent", size: "4 sqm", classification: "Commercial", fee: "₱1.50" })} className={`${st202.availability === 'Occupied' ? 'bg-purple-700' : 'bg-purple-400'} hover:opacity-90 text-white text-xs font-bold h-12 rounded flex items-center justify-center relative shadow-sm cursor-pointer`}>
+                                                        <button onClick={() => handleStallClick({ stallNum: 202, holder: st202.holder, availability: st202.availability, section: "Apparel", type: "Permanent", size: "4 sqm", classification: "Commercial", fee: "₱2,500.00" })} className={`${st202.availability === 'Occupied' ? 'bg-purple-700' : 'bg-purple-400'} hover:opacity-90 text-white text-xs font-bold h-12 rounded flex items-center justify-center relative shadow-sm cursor-pointer`}>
                                                             202
                                                             <span className={`absolute top-1 right-1 w-2 h-2 ${st202.availability === 'Occupied' ? 'bg-red-500' : 'bg-emerald-300'} rounded-full`}></span>
                                                         </button>
