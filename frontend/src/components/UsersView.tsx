@@ -51,7 +51,7 @@ export default function UsersView({
   // Automatically fetch user records from backend on mount
   useEffect(() => {
     fetchUsers();
-  }, [API_BASE_URL]);
+  }, []);
 
   const filteredRecords = records.filter((record) => {
     // Archiver separation

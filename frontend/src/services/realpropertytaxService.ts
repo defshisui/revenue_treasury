@@ -128,3 +128,116 @@ export const saveRPTApplication = async (application: Partial<RPTApplicationReco
     throw error;
   }
 };
+
+export const searchRPTByTDN = async (tdn: string): Promise<{
+  found: boolean;
+  matchedTdn?: string;
+  ownerName?: string;
+  totalPropertiesCount?: number;
+  properties?: any[];
+  message?: string;
+}> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/rpt/search?tdn=${encodeURIComponent(tdn.trim())}`);
+    const data = await response.json();
+    if (!response.ok) {
+      return { found: false, message: data.message || `No property records found for ${tdn}` };
+    }
+    return data;
+  } catch (error: any) {
+    console.error('Error searching TDN:', error);
+    return { found: false, message: error.message || 'Network error while searching Tax Declaration.' };
+  }
+};
+
+export const processGroupRPTPayment = async (payload: {
+  items: Array<{
+    id?: number | string;
+    taxDeclarationNumber: string;
+    ownerName: string;
+    totalAmount: number;
+    selectedOption?: string;
+    billCoverage?: string;
+  }>;
+  customerName: string;
+  customerEmail: string;
+  paymentMethod: string;
+  paymongoSessionId?: string;
+}): Promise<any> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/citizen-rpt-payments/group`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(errData.message || 'Failed to process group payment');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Group RPT payment error:', error);
+    throw error;
+  }
+};
+
+export const getLguMasterRptRecords = async (): Promise<any[]> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/lgu-rpt-records`);
+    if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching LGU master records:', error);
+    return [];
+  }
+};
+
+export const createLguMasterRptRecord = async (record: any): Promise<any> => {
+  const response = await fetch(`${API_BASE_URL}/lgu-rpt-records`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(record)
+  });
+  if (!response.ok) {
+    const errData = await response.json().catch(() => ({}));
+    throw new Error(errData.message || 'Failed to create assessment record');
+  }
+  return await response.json();
+};
+
+export const updateLguMasterRptRecord = async (id: string | number, record: any): Promise<any> => {
+  const response = await fetch(`${API_BASE_URL}/lgu-rpt-records/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(record)
+  });
+  if (!response.ok) {
+    const errData = await response.json().catch(() => ({}));
+    throw new Error(errData.message || 'Failed to update assessment record');
+  }
+  return await response.json();
+};
+
+export const deleteLguMasterRptRecord = async (id: string | number): Promise<any> => {
+  const response = await fetch(`${API_BASE_URL}/lgu-rpt-records/${id}`, {
+    method: 'DELETE'
+  });
+  if (!response.ok) {
+    const errData = await response.json().catch(() => ({}));
+    throw new Error(errData.message || 'Failed to delete assessment record');
+  }
+  return await response.json();
+};
+
+export const updateRptApplicationStatus = async (id: string, status: string, notes?: string): Promise<any> => {
+  const response = await fetch(`${API_BASE_URL}/citizen-rpt-applications/${id}/status`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status, notes })
+  });
+  if (!response.ok) {
+    const errData = await response.json().catch(() => ({}));
+    throw new Error(errData.message || 'Failed to update application status');
+  }
+  return await response.json();
+};

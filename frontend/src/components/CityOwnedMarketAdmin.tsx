@@ -174,7 +174,7 @@ export default function CityOwnedMarketAdmin({
     if (!selectedRecord) return;
 
     try {
-      let recordToSave = { ...selectedRecord };
+      const recordToSave = { ...selectedRecord };
 
       if (recordToSave.paymentStatus === "Paid") {
         recordToSave.leaseStatus = "Active";

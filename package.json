@@ -11,8 +11,7 @@
     "dev:backend": "npm --prefix backend run dev",
     "build:frontend": "npm --prefix frontend run build",
     "start:backend": "npm --prefix backend run start",
-    "lint:frontend": "npm --prefix frontend run lint",
-    "postinstall": "npm run install:all"
+    "lint:frontend": "npm --prefix frontend run lint"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

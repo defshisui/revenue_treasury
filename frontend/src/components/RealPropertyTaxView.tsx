@@ -1,18 +1,63 @@
 // src/components/RealPropertyTaxView.tsx
 import React, { useState, useMemo, useEffect } from 'react';
 import type {
-  StatusType,
-  AdminStats
+  StatusType
 } from '../types/treasury';
 import {
   getRPTApplications,
-  saveRPTApplication,
+  getLguMasterRptRecords,
+  createLguMasterRptRecord,
+  updateLguMasterRptRecord,
+  deleteLguMasterRptRecord,
   type RPTApplicationRecord
 } from '../services/realpropertytaxService';
 import { API_BASE_URL } from '../config/api';
 
 // Extend status type to support Archiver
 type ExtendedStatusType = StatusType | 'Archived';
+
+export interface LguMasterProperty {
+  id: number | string;
+  propertyIndexNumber: string;
+  newPspin: string;
+  taxDeclarationNumber: string;
+  ownerName: string;
+  ownerAddress: string;
+  contactInfo: string;
+  barangay: string;
+  location: string;
+  propertyType: string;
+  lotAreaSqm: number;
+  marketValue: number;
+  assessedValue: number;
+  billingYear: number;
+  billExpiryDate: string;
+  basicTax: number;
+  sefTax: number;
+  shttcApplied: number;
+  penalty: number;
+  discount: number;
+  totalAssessment: number;
+  amountPaid: number;
+  balance: number;
+  delinquentStatus: boolean;
+  status: string;
+  paymentStatus: string;
+}
+
+export interface PaymentLedgerRecord {
+  id: number | string;
+  taxDeclarationNumber: string;
+  ownerName: string;
+  amountPaid: number;
+  officialReceiptNumber: string;
+  paymentDate: string;
+  paymentMethod: string;
+  quarterCoverage?: string;
+  paymentOption?: string;
+  paymongoSessionId?: string;
+  status: string;
+}
 
 interface ExtendedApplicationRecord extends Omit<RPTApplicationRecord, 'documents' | 'status'> {
   status: ExtendedStatusType;
@@ -74,30 +119,47 @@ export interface RealPropertyTaxViewProps {
   isCollapsed: boolean;
 }
 
+function formatCurrency(val: number): string {
+  return new Intl.NumberFormat('en-PH', {
+    style: 'currency',
+    currency: 'PHP',
+    minimumFractionDigits: 2,
+  }).format(val || 0);
+}
+
 export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
   isCollapsed
 }) => {
+  // --- Tab States ---
+  // 'master': LGU Master Property Database | 'queue': Citizen Applications | 'payments': Payment Ledger | 'citizenAudit': Audit Trail
+  const [mainViewTab, setMainViewTab] = useState<'master' | 'queue' | 'payments' | 'citizenAudit'>('master');
+  const [queueTab, setQueueTab] = useState<'Active' | 'Archived'>('Active');
+
+  // --- Master Properties State ---
+  const [masterProperties, setMasterProperties] = useState<LguMasterProperty[]>([]);
+  const [masterSearch, setMasterSearch] = useState<string>('');
+  const [masterTypeFilter, setMasterTypeFilter] = useState<string>('ALL');
+  const [masterStatusFilter, setMasterStatusFilter] = useState<string>('ALL');
+  const [isPropertyModalOpen, setIsPropertyModalOpen] = useState<boolean>(false);
+  const [editingProperty, setEditingProperty] = useState<Partial<LguMasterProperty> | null>(null);
+
+  // --- Payments Ledger State ---
+  const [paymentsLedger, setPaymentsLedger] = useState<PaymentLedgerRecord[]>([]);
+  const [paymentSearch, setPaymentSearch] = useState<string>('');
+
+  // --- Citizen Applications Queue State ---
   const [applications, setApplications] = useState<ExtendedApplicationRecord[]>([]);
   const [citizenAuditTrail, setCitizenAuditTrail] = useState<ExtendedApplicationRecord[]>([]);
-  const [selectedCitizenAppId, setSelectedCitizenAppId] = useState<string>('');
-
   const [selectedAppId, setSelectedAppId] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('ALL');
 
-  const [selectedAppIds, setSelectedAppIds] = useState<string[]>([]);
-
-  // Tab States
-  const [mainViewTab, setMainViewTab] = useState<'queue' | 'citizenAudit'>('queue');
-  const [queueTab, setQueueTab] = useState<'Active' | 'Archived'>('Active');
-  const [detailTab, setDetailTab] = useState<'overview' | 'audit' | 'notifications'>('overview');
-
   // Document Preview Lightbox State
   const [previewDocUrl, setPreviewDocUrl] = useState<string | null>(null);
   const [previewDocTitle, setPreviewDocTitle] = useState<string>('');
 
-  // Toast Notification Feedback State
+  // Toast State
   const [toastMessage, setToastMessage] = useState<{
     text: string;
     type: 'success' | 'warning' | 'error';
@@ -110,541 +172,591 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     }, 4000);
   };
 
-  useEffect(() => {
-    let isMounted = true;
-    getRPTApplications()
-      .then((data) => {
-        if (!isMounted) return;
-        const mapped: ExtendedApplicationRecord[] = (Array.isArray(data) ? data : []).map((item: any) => {
-          let rawDocs = item.documents;
-          if (typeof rawDocs === 'string') {
-            try { rawDocs = JSON.parse(rawDocs); } catch { rawDocs = []; }
-          }
-          if (rawDocs && !Array.isArray(rawDocs) && typeof rawDocs === 'object') {
-            rawDocs = Object.values(rawDocs);
-          }
+  // --- Initial Data Load ---
+  const loadMasterRecords = async () => {
+    try {
+      const records = await getLguMasterRptRecords();
+      const mapped: LguMasterProperty[] = records.map((r: any) => ({
+        id: r.id,
+        propertyIndexNumber: r.property_index_number || r.propertyIndexNumber || '',
+        newPspin: r.new_pspin || r.newPspin || '09-021-009-166- - -',
+        taxDeclarationNumber: r.tax_declaration_number || r.taxDeclarationNumber || '',
+        ownerName: r.owner_name || r.ownerName || '',
+        ownerAddress: r.owner_address || r.ownerAddress || '',
+        contactInfo: r.contact_info || r.contactInfo || '',
+        barangay: r.barangay || '',
+        location: r.location || '',
+        propertyType: r.property_type || r.propertyType || 'Residential',
+        lotAreaSqm: Number(r.lot_area_sqm || r.lotAreaSqm || 0),
+        marketValue: Number(r.market_value || r.marketValue || 0),
+        assessedValue: Number(r.assessed_value || r.assessedValue || 0),
+        billingYear: Number(r.billing_year || r.billingYear || 2025),
+        billExpiryDate: r.bill_expiry_date || r.billExpiryDate || '2025-10-31',
+        basicTax: Number(r.basic_tax || r.basicTax || 0),
+        sefTax: Number(r.sef_tax || r.sefTax || 0),
+        shttcApplied: Number(r.shttc_applied || r.shttcApplied || 0),
+        penalty: Number(r.penalty || 0),
+        discount: Number(r.discount || 0),
+        totalAssessment: Number(r.total_assessment || r.totalAssessment || 0),
+        amountPaid: Number(r.amount_paid || r.amountPaid || 0),
+        balance: Number(r.balance || 0),
+        delinquentStatus: Boolean(r.delinquent_status || r.delinquentStatus),
+        status: r.status || 'Active',
+        paymentStatus: r.payment_status || r.paymentStatus || 'Unpaid',
+      }));
+      setMasterProperties(mapped);
+    } catch (e) {
+      console.error('Failed to load master records:', e);
+    }
+  };
 
-          return {
-            ...item,
-            id: item.id || `RPT-${Math.random().toString(36).substring(2, 9)}`,
-            applicantName: item.applicantName || item.ownerName || 'Unknown Applicant',
-            status: item.status || 'Under Evaluation',
-            referenceNumber: item.controlNumber || item.referenceNumber || `REF-${item.id}`,
-            applicantEmail: item.email || '',
-            applicantPhone: item.mobileNumber || '',
-            category: item.service || '',
-            submissionDate: item.filedDate || '',
-            penaltyFee: item.penalty ? Number(item.penalty) : 0,
-            propertyDetails: item.propertyDetails || {
-              pin: item.pin || '',
-              titleNumber: item.taxDeclarationNumber || '',
-              lotAreaSqM: item.lotAreaSqM || 0,
-              address: item.propertyLocation || '',
-              currentValuation: item.currentValuation || 0
-            },
-            documents: (Array.isArray(rawDocs) ? rawDocs : []).map((doc: any, idx: number) => {
-              if (!doc) {
-                return {
-                  id: `DOC-${idx + 1}`,
-                  name: `Document ${idx + 1}`,
-                  type: 'PDF',
-                  url: '',
-                  status: 'Pending' as const,
-                  uploadedAt: item.filedDate || ''
-                };
-              }
-              if (typeof doc === 'string') {
-                return {
-                  id: `DOC-${idx + 1}`,
-                  name: doc,
-                  type: doc.includes('.pdf') ? 'PDF' : 'IMAGE',
-                  url: doc.startsWith('data:') || doc.startsWith('http') ? doc : `${API_BASE_URL}/uploads/${doc}`,
-                  status: 'Pending' as const,
-                  uploadedAt: item.filedDate || ''
-                };
-              }
-              return {
-                id: doc.id || `DOC-${idx + 1}`,
-                name: doc.name || doc.fileName || `Document ${idx + 1}`,
-                type: doc.type || 'PDF',
-                url: doc.url ? (doc.url.startsWith('data:') || doc.url.startsWith('http') ? doc.url : `${API_BASE_URL}${doc.url.startsWith('/') ? '' : '/'}${doc.url}`) : '',
-                status: doc.status || 'Pending',
-                uploadedAt: doc.uploadedAt || item.filedDate || ''
-              };
-            }),
-            auditLogs: item.auditLogs || [],
-            notificationLogs: item.notificationLogs || []
-          };
-        });
-        setApplications(mapped);
-        if (mapped.length > 0) {
-          setSelectedAppId(mapped[0].id);
+  const loadPayments = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/citizen-rpt-payments`);
+      if (response.ok) {
+        const data = await response.json();
+        setPaymentsLedger(
+          data.map((p: any) => ({
+            id: p.id,
+            taxDeclarationNumber: p.tax_declaration_number || p.taxDeclarationNumber,
+            ownerName: p.owner_name || p.ownerName,
+            amountPaid: Number(p.amount_paid || p.amountPaid || 0),
+            officialReceiptNumber: p.official_receipt_number || p.officialReceiptNumber,
+            paymentDate: p.payment_date || p.paymentDate,
+            paymentMethod: p.payment_method || p.paymentMethod || 'Online Gateway',
+            quarterCoverage: p.quarter_coverage || p.quarterCoverage || 'Full Year',
+            paymentOption: p.payment_option || p.paymentOption || 'Full',
+            paymongoSessionId: p.paymongo_session_id || p.paymongoSessionId || '',
+            status: p.status || 'Verified',
+          }))
+        );
+      }
+    } catch (e) {
+      console.error('Failed to load payments ledger:', e);
+    }
+  };
+
+  const loadApplications = async () => {
+    try {
+      const data = await getRPTApplications();
+      const mapped: ExtendedApplicationRecord[] = (Array.isArray(data) ? data : []).map((item: any) => {
+        let rawDocs = item.documents;
+        if (typeof rawDocs === 'string') {
+          try {
+            rawDocs = JSON.parse(rawDocs);
+          } catch {
+            rawDocs = [];
+          }
         }
-      })
-      .catch((err) => {
-        console.error("Failed to load RPT applications:", err);
-        triggerToast("Failed to fetch applications from server database.", "error");
-      });
+        if (rawDocs && !Array.isArray(rawDocs) && typeof rawDocs === 'object') {
+          rawDocs = Object.values(rawDocs);
+        }
 
-    return () => {
-      isMounted = false;
-    };
+        return {
+          ...item,
+          id: item.id || `RPT-${Math.random().toString(36).substring(2, 9)}`,
+          applicantName: item.applicantName || item.ownerName || 'Unknown Applicant',
+          status: item.status || 'Under Evaluation',
+          referenceNumber: item.controlNumber || item.referenceNumber || `REF-${item.id}`,
+          applicantEmail: item.email || '',
+          applicantPhone: item.mobileNumber || '',
+          category: item.service || 'Transfer of Ownership',
+          submissionDate: item.filedDate || '',
+          penaltyFee: item.penalty ? Number(item.penalty) : 0,
+          propertyDetails: item.propertyDetails || {
+            pin: item.pin || '',
+            titleNumber: item.taxDeclarationNumber || '',
+            lotAreaSqM: item.lotAreaSqM || 0,
+            address: item.propertyLocation || '',
+            currentValuation: item.currentValuation || 0,
+          },
+          documents: (Array.isArray(rawDocs) ? rawDocs : []).map((doc: any, idx: number) => {
+            if (!doc) {
+              return {
+                id: `DOC-${idx + 1}`,
+                name: `Document ${idx + 1}`,
+                type: 'PDF',
+                url: '',
+                status: 'Pending' as const,
+                uploadedAt: item.filedDate || '',
+              };
+            }
+            if (typeof doc === 'string') {
+              return {
+                id: `DOC-${idx + 1}`,
+                name: doc,
+                type: doc.includes('.pdf') ? 'PDF' : 'IMAGE',
+                url: doc.startsWith('data:') || doc.startsWith('http') ? doc : `${API_BASE_URL}/uploads/${doc}`,
+                status: 'Pending' as const,
+                uploadedAt: item.filedDate || '',
+              };
+            }
+            return {
+              id: doc.id || `DOC-${idx + 1}`,
+              name: doc.name || doc.fileName || `Document ${idx + 1}`,
+              type: doc.type || 'PDF',
+              url: doc.url
+                ? doc.url.startsWith('data:') || doc.url.startsWith('http')
+                  ? doc.url
+                  : `${API_BASE_URL}${doc.url.startsWith('/') ? '' : '/'}${doc.url}`
+                : '',
+              status: doc.status || 'Pending',
+              uploadedAt: doc.uploadedAt || item.filedDate || '',
+            };
+          }),
+          auditLogs: item.auditLogs || [],
+          notificationLogs: item.notificationLogs || [],
+        };
+      });
+      setApplications(mapped);
+      if (mapped.length > 0) {
+        setSelectedAppId(mapped[0].id);
+      }
+    } catch (err) {
+      console.error('Failed to load RPT applications:', err);
+    }
+  };
+
+  useEffect(() => {
+    loadMasterRecords();
+    loadPayments();
+    loadApplications();
   }, []);
 
   const currentApp = useMemo(() => {
-    return (
-      applications.find((app) => app.id === selectedAppId) ||
-      applications[0]
-    );
+    return applications.find((app) => app.id === selectedAppId) || applications[0];
   }, [applications, selectedAppId]);
 
-  const currentCitizenApp = useMemo(() => {
-    return (
-      citizenAuditTrail.find((app) => app.id === selectedCitizenAppId) ||
-      citizenAuditTrail[0]
-    );
-  }, [citizenAuditTrail, selectedCitizenAppId]);
+  // Filtered Master Properties
+  const filteredMasterProperties = useMemo(() => {
+    return masterProperties.filter((p) => {
+      const matchesSearch =
+        p.taxDeclarationNumber.toLowerCase().includes(masterSearch.toLowerCase()) ||
+        p.ownerName.toLowerCase().includes(masterSearch.toLowerCase()) ||
+        p.newPspin.toLowerCase().includes(masterSearch.toLowerCase()) ||
+        p.barangay.toLowerCase().includes(masterSearch.toLowerCase());
+      const matchesType = masterTypeFilter === 'ALL' || p.propertyType === masterTypeFilter;
+      const matchesStatus = masterStatusFilter === 'ALL' || p.paymentStatus === masterStatusFilter;
+      return matchesSearch && matchesType && matchesStatus;
+    });
+  }, [masterProperties, masterSearch, masterTypeFilter, masterStatusFilter]);
 
-  const stats: AdminStats = useMemo(() => {
-    return {
-      totalApplications: applications.filter(a => a.status !== 'Archived').length,
-      pendingReview: applications.filter(
-        (a) => a.status === 'Under Evaluation'
-      ).length,
-      pendingInspectionOrGIS: applications.filter(
-        (a) =>
-          a.status === 'Field Inspection Scheduled' ||
-          a.status === 'Technical Plotting (GIS)'
-      ).length,
-      readyForRelease: applications.filter(
-        (a) =>
-          a.status === 'Approved & Ready for Release' ||
-          a.status === 'Digital Certificate Issued'
-      ).length,
-      totalPenaltiesCollected: applications.reduce(
-        (acc, curr) =>
-          acc + (curr.paymentStatus === 'Paid' ? curr.penaltyFee : 0),
-        0
-      )
-    };
-  }, [applications]);
-
+  // Filtered Applications Queue
   const filteredApplications = useMemo(() => {
     return applications.filter((app) => {
-      // Filter by Active/Archived queue tab
-      const isArchived = app.status === 'Archived';
-      if (queueTab === 'Active' && isArchived) return false;
-      if (queueTab === 'Archived' && !isArchived) return false;
+      if (queueTab === 'Active' && app.status === 'Archived') return false;
+      if (queueTab === 'Archived' && app.status !== 'Archived') return false;
 
       const matchesSearch =
         app.referenceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
         app.applicantName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        app.propertyDetails.pin.includes(searchTerm);
-
-      const matchesCategory =
-        selectedCategory === 'ALL' || app.category === selectedCategory;
-
-      const matchesStatus =
-        selectedStatusFilter === 'ALL' || app.status === selectedStatusFilter;
+        app.propertyDetails.address.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = selectedCategory === 'ALL' || app.category === selectedCategory;
+      const matchesStatus = selectedStatusFilter === 'ALL' || app.status === selectedStatusFilter;
 
       return matchesSearch && matchesCategory && matchesStatus;
     });
   }, [applications, searchTerm, selectedCategory, selectedStatusFilter, queueTab]);
 
-  const persistChanges = async (updatedList: ExtendedApplicationRecord[]) => {
-    setApplications(updatedList);
-    if (currentApp) {
-      const target = updatedList.find(a => a.id === currentApp.id);
-      if (target) {
-        try {
-          const servicePayload: RPTApplicationRecord = {
-            id: target.id,
-            status: target.status as StatusType,
-            applicantName: target.applicantName,
-            documents: target.documents.map(d => ({ name: d.name, url: d.url || '' })),
-            controlNumber: target.referenceNumber,
-            email: target.applicantEmail,
-            mobileNumber: target.applicantPhone,
-            service: target.category,
-            filedDate: target.submissionDate,
-            assignedOfficer: target.assignedOfficer,
-            penalty: target.penaltyFee,
-            propertyDetails: target.propertyDetails
-          };
-          await saveRPTApplication(servicePayload);
-        } catch (e) {
-          console.error("Sync error:", e);
-        }
-      }
+  // Master Property CRUD Handlers
+  const handleSavePropertyRecord = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingProperty?.taxDeclarationNumber || !editingProperty?.ownerName) {
+      triggerToast('Please provide TDN and Owner Name.', 'warning');
+      return;
     }
-  };
-
-  const handleArchiveApplication = (appId: string) => {
-    const targetApp = applications.find(a => a.id === appId);
-    if (!targetApp) return;
-
-    if (window.confirm(`Are you sure you want to move application ${targetApp.referenceNumber} to the Archiver?`)) {
-      const updatedList = applications.map(app =>
-        app.id === appId ? { ...app, status: 'Archived' as ExtendedStatusType } : app
-      );
-      persistChanges(updatedList);
-      triggerToast(`Application ${targetApp.referenceNumber} archived.`, 'warning');
-    }
-  };
-
-  const handleRestoreApplication = (appId: string) => {
-    const targetApp = applications.find(a => a.id === appId);
-    if (!targetApp) return;
-
-    if (window.confirm(`Restore application ${targetApp.referenceNumber} to Active Queue?`)) {
-      const updatedList = applications.map(app =>
-        app.id === appId ? { ...app, status: 'Under Evaluation' as ExtendedStatusType } : app
-      );
-      persistChanges(updatedList);
-      triggerToast(`Application ${targetApp.referenceNumber} restored.`, 'success');
-    }
-  };
-
-  const handleDeleteApplication = async (appId: string) => {
-    const targetApp = applications.find(a => a.id === appId);
-    if (!targetApp) return;
-
-    if (!window.confirm(`WARNING: Permanently delete application ${targetApp.referenceNumber}?`)) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/citizen-rpt-applications/${appId}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete application from server');
-      }
-
-      const updatedList = applications.filter(a => a.id !== appId);
-      setApplications(updatedList);
-
-      if (updatedList.length > 0) {
-        setSelectedAppId(updatedList[0].id);
+      if (editingProperty.id) {
+        await updateLguMasterRptRecord(editingProperty.id, editingProperty);
+        triggerToast(`Property record ${editingProperty.taxDeclarationNumber} updated successfully.`, 'success');
       } else {
-        setSelectedAppId('');
+        await createLguMasterRptRecord(editingProperty);
+        triggerToast(`New Property ${editingProperty.taxDeclarationNumber} added to master database.`, 'success');
       }
-
-      triggerToast(`Application ${targetApp.referenceNumber} deleted successfully.`, 'error');
-    } catch (err) {
-      console.error("Delete error:", err);
-      triggerToast("Failed to delete application from the server database.", "error");
+      setIsPropertyModalOpen(false);
+      setEditingProperty(null);
+      loadMasterRecords();
+    } catch (err: any) {
+      triggerToast(err.message || 'Failed to save property record.', 'error');
     }
   };
 
+  const handleDeleteMasterProperty = async (id: string | number, tdn: string) => {
+    if (!window.confirm(`Are you sure you want to delete assessment record ${tdn}?`)) return;
+    try {
+      await deleteLguMasterRptRecord(id);
+      triggerToast(`Assessment record ${tdn} deleted.`, 'success');
+      loadMasterRecords();
+    } catch (err: any) {
+      triggerToast(err.message || 'Failed to delete record.', 'error');
+    }
+  };
+
+  // Helper to calculate taxes automatically when values change
+  const handleValuationChange = (marketVal: number, propType: string) => {
+    let assessmentLevel = 0.2; // 20% Residential Land default
+    if (propType === 'Commercial') assessmentLevel = 0.5;
+    else if (propType === 'Industrial') assessmentLevel = 0.5;
+    else if (propType === 'Building') assessmentLevel = 0.4;
+
+    const assessedVal = marketVal * assessmentLevel;
+    const basicTax = assessedVal * 0.015; // 1.5% basic
+    const sefTax = assessedVal * 0.01; // 1.0% SEF
+    const totalDue = basicTax + sefTax;
+
+    setEditingProperty((prev) => ({
+      ...prev,
+      marketValue: marketVal,
+      assessedValue: assessedVal,
+      basicTax,
+      sefTax,
+      totalAssessment: totalDue,
+      balance: totalDue,
+    }));
+  };
+
+  // Document Lightbox & Status
   const handleOpenPreview = (doc: { name: string; url?: string }) => {
     let targetUrl = doc.url || '';
-
-    if (!targetUrl || targetUrl.trim() === '') {
-      targetUrl = doc.name;
-    }
-
-    if (targetUrl.startsWith('data:')) {
-      // Base64 string ready for lightbox
-    } else if (targetUrl.startsWith('http://') || targetUrl.startsWith('https://')) {
-      // Fully qualified absolute URL
+    if (!targetUrl || targetUrl.trim() === '') targetUrl = doc.name;
+    if (targetUrl.startsWith('data:') || targetUrl.startsWith('http://') || targetUrl.startsWith('https://')) {
+      // Direct
     } else if (targetUrl.startsWith('/uploads/')) {
       targetUrl = `${API_BASE_URL}${targetUrl}`;
     } else {
       targetUrl = `${API_BASE_URL}/uploads/${targetUrl}`;
     }
-
     setPreviewDocTitle(doc.name);
     setPreviewDocUrl(targetUrl);
   };
 
-  const checkAndAutoCloseQueueItem = (app: ExtendedApplicationRecord, updatedDocs: typeof app.documents) => {
-    const allVerified = updatedDocs.length > 0 && updatedDocs.every(d => d.status === 'Verified');
-    if (allVerified) {
-      setTimeout(() => {
-        setApplications(prev => {
-          const filtered = prev.filter(a => a.id !== app.id);
-          if (filtered.length > 0 && selectedAppId === app.id) {
-            setSelectedAppId(filtered[0].id);
-          }
-          return filtered;
-        });
+  const handleUpdateStatus = (newStatus: ExtendedStatusType) => {
+    if (!currentApp) return;
+    const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 16);
 
-        const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 16);
-        const closedRecord: ExtendedApplicationRecord = {
+    const updatedList = applications.map((app) => {
+      if (app.id === currentApp.id) {
+        return {
           ...app,
-          documents: updatedDocs,
-          status: 'Digital Certificate Issued',
+          status: newStatus,
           auditLogs: [
             {
               id: `LOG-${Date.now()}`,
               timestamp,
-              officer: 'System Automation',
-              action: 'All citizen uploaded documents verified. Automatically closed and transferred to Audit Trail.'
+              officer: app.assignedOfficer || 'City Assessor',
+              action: `Status advanced to "${newStatus}".`,
             },
-            ...(app.auditLogs || [])
-          ]
-        };
-
-        setCitizenAuditTrail(prev => [closedRecord, ...prev]);
-        setSelectedCitizenAppId(closedRecord.id);
-        triggerToast(`Queue item ${app.referenceNumber} verified and moved to Audit Trail.`, 'success');
-      }, 300);
-    }
-  };
-
-  const handleUpdateStatus = (newStatus: ExtendedStatusType) => {
-    if (!currentApp) return;
-
-    const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 16);
-
-    const updatedList = applications.map((app) => {
-      if (app.id === currentApp.id) {
-        const newLog = {
-          id: `LOG-${Date.now()}`,
-          timestamp,
-          officer: app.assignedOfficer || 'System Admin',
-          action: `Status updated to "${newStatus}".`
-        };
-
-        const newNotif = {
-          id: `NOTIF-${Date.now()}`,
-          timestamp,
-          type: 'SMS' as const,
-          message: `Your application ${app.referenceNumber} status has been updated to ${newStatus}.`,
-          status: 'Delivered' as const
-        };
-
-        return {
-          ...app,
-          status: newStatus,
-          auditLogs: [newLog, ...(app.auditLogs || [])],
-          notificationLogs: [newNotif, ...(app.notificationLogs || [])]
+            ...(app.auditLogs || []),
+          ],
         };
       }
       return app;
     });
 
-    persistChanges(updatedList);
-    triggerToast(`Application workflow updated to "${newStatus}".`, 'success');
-  };
-
-  const handleDocumentStatusChange = (
-    docId: string,
-    status: 'Verified' | 'Rejected' | 'Pending'
-  ) => {
-    if (!currentApp) return;
-
-    const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 16);
-    let updatedDocsState: typeof currentApp.documents = [];
-
-    const updatedList = applications.map((app) => {
-      if (app.id === currentApp.id) {
-        updatedDocsState = app.documents.map((doc) =>
-          doc.id === docId ? { ...doc, status } : doc
-        );
-
-        const docName = app.documents.find((d) => d.id === docId)?.name || docId;
-        const newLog = {
-          id: `LOG-${Date.now()}`,
-          timestamp,
-          officer: app.assignedOfficer || 'System Admin',
-          action: `Citizen uploaded document "${docName}" marked as ${status}.`
-        };
-
-        return {
-          ...app,
-          documents: updatedDocsState,
-          auditLogs: [newLog, ...(app.auditLogs || [])]
-        };
-      }
-      return app;
-    });
-
-    persistChanges(updatedList);
-
-    if (status === 'Verified') {
-      triggerToast('Document successfully verified.', 'success');
-      checkAndAutoCloseQueueItem(currentApp, updatedDocsState);
-    } else if (status === 'Rejected') {
-      triggerToast('Document marked as rejected.', 'warning');
-    }
+    setApplications(updatedList);
+    triggerToast(`Application workflow advanced to "${newStatus}".`, 'success');
   };
 
   const handleDigitalRelease = () => {
     if (!currentApp) return;
-
     const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 16);
-    const qrVerificationCode = `QC-${currentApp.referenceNumber}-${Date.now()}`.replace(/[^A-Za-z0-9-]/g, '');
+    const qrCode = `QC-RPT-${currentApp.referenceNumber}-${Date.now()}`;
 
     const releasedApp: ExtendedApplicationRecord = {
       ...currentApp,
       status: 'Digital Certificate Issued',
       digitalRelease: {
-        releaseMethod: 'Digital' as const,
+        releaseMethod: 'Digital',
         releasedAt: timestamp,
-        releasedBy: currentApp.assignedOfficer || 'System Admin',
-        certificateType: 'Tax Declaration / CTC' as const,
-        digitalSignatureStatus: 'Signed' as const,
-        qrVerificationCode,
-        downloadCount: (currentApp.digitalRelease?.downloadCount || 0) + 1,
-        citizenNotified: true
+        releasedBy: 'City Assessor Officer',
+        certificateType: 'Tax Declaration / CTC',
+        digitalSignatureStatus: 'Signed',
+        qrVerificationCode: qrCode,
+        downloadCount: 1,
+        citizenNotified: true,
       },
-      auditLogs: [
-        {
-          id: `LOG-${Date.now()}`,
-          timestamp,
-          officer: currentApp.assignedOfficer || 'System Admin',
-          action: 'Application approved and archived.'
-        },
-        ...(currentApp.auditLogs || [])
-      ],
-      notificationLogs: [
-        {
-          id: `NOTIF-${Date.now()}`,
-          timestamp,
-          type: 'Email' as const,
-          message: `Your application ${currentApp.referenceNumber} has been approved.`,
-          status: 'Delivered' as const
-        },
-        ...(currentApp.notificationLogs || [])
-      ]
     };
 
-    setApplications(prev => prev.filter(a => a.id !== currentApp.id));
-    setCitizenAuditTrail(prev => [releasedApp, ...prev]);
-    setSelectedCitizenAppId(releasedApp.id);
+    setApplications((prev) => prev.filter((a) => a.id !== currentApp.id));
+    setCitizenAuditTrail((prev) => [releasedApp, ...prev]);
     setMainViewTab('citizenAudit');
-
-    triggerToast('Application approved and moved to Audit Trail.', 'success');
-  };
-
-  const handleDownloadCertificate = (appId?: string) => {
-    const target = appId ? citizenAuditTrail.find(a => a.id === appId) || currentCitizenApp : currentCitizenApp;
-    if (!target) return;
-    triggerToast(`Document package for ${target.referenceNumber} downloaded successfully.`, 'success');
-  };
-
-  const toggleSelectAll = () => {
-    if (selectedAppIds.length === filteredApplications.length) {
-      setSelectedAppIds([]);
-    } else {
-      setSelectedAppIds(filteredApplications.map((a) => a.id));
-    }
-  };
-
-  const toggleSelectApp = (id: string) => {
-    setSelectedAppIds((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
-    );
+    triggerToast(`Digital Tax Certificate issued for ${currentApp.referenceNumber}. Transferred to Audit Trail.`, 'success');
   };
 
   return (
     <div
       style={{
         marginLeft: isCollapsed ? '80px' : '256px',
-        width: isCollapsed ? 'calc(100% - 80px)' : 'calc(100% - 256px)'
+        width: isCollapsed ? 'calc(100% - 80px)' : 'calc(100% - 256px)',
       }}
-      className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 px-4 sm:px-6 pb-6 pt-28 sm:pt-32 transition-all duration-300 box-border flex flex-col font-sans relative selection:bg-blue-600 selection:text-white"
+      className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 px-4 sm:px-6 pb-6 pt-28 sm:pt-32 transition-all duration-300 box-border flex flex-col font-sans relative"
     >
+      {/* Toast Alert */}
       {toastMessage && (
         <div className="fixed top-20 right-6 z-50 animate-in fade-in slide-in-from-top-4 duration-300">
           <div
-            className={`px-4 py-3 rounded-xl shadow-lg border flex items-center gap-3 text-xs font-semibold ${toastMessage.type === 'success'
-              ? 'bg-emerald-950 text-emerald-200 border-emerald-800/80 shadow-emerald-950/20'
-              : toastMessage.type === 'warning'
-                ? 'bg-amber-950 text-amber-200 border-amber-800/80 shadow-amber-950/20'
-                : 'bg-rose-950 text-rose-200 border-rose-800/80 shadow-rose-950/20'
-              }`}
+            className={`px-4 py-3 rounded-xl shadow-lg border flex items-center gap-3 text-xs font-semibold ${
+              toastMessage.type === 'success'
+                ? 'bg-emerald-950 text-emerald-200 border-emerald-800'
+                : toastMessage.type === 'warning'
+                ? 'bg-amber-950 text-amber-200 border-amber-800'
+                : 'bg-rose-950 text-rose-200 border-rose-800'
+            }`}
           >
-            <span className="w-2 h-2 rounded-full bg-current animate-pulse"></span>
+            <span>{toastMessage.type === 'success' ? '✓' : 'ℹ'}</span>
             <span>{toastMessage.text}</span>
           </div>
         </div>
       )}
 
-      {/* HEADER BANNER WITH FULL LIGHT/DARK SUPPORT */}
+      {/* Main Header Banner */}
       <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
         <div>
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
             <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 tracking-wider uppercase">
-              OFFICE OF THE CITY ASSESSOR & TREASURY
+              OFFICE OF THE CITY ASSESSOR &amp; TREASURER
             </span>
           </div>
           <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white mt-1">
-            Real Property Tax Assessment & Compliance Hub
+            Real Property Tax &amp; Assessment Management Hub
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Zoning Accreditation, Document Vault, Fee Licensing & Violation Enforcement
+            QC E-Services RPT Search DB, Group Bill Sets, Assessment Valuation &amp; Electronic Official Receipts
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-200 dark:border-slate-800">
-            <button
-              onClick={() => setMainViewTab('queue')}
-              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${mainViewTab === 'queue'
+        {/* Master Navigation Tabs */}
+        <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-950 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-x-auto">
+          <button
+            onClick={() => setMainViewTab('master')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+              mainViewTab === 'master'
                 ? 'bg-blue-600 text-white shadow-md'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-            >
-              Active Queue ({applications.filter(a => a.status !== 'Archived').length})
-            </button>
-            <button
-              onClick={() => setMainViewTab('citizenAudit')}
-              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${mainViewTab === 'citizenAudit'
+            }`}
+          >
+            <span>🏛️ Master Database ({masterProperties.length})</span>
+          </button>
+          <button
+            onClick={() => setMainViewTab('queue')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+              mainViewTab === 'queue'
                 ? 'bg-blue-600 text-white shadow-md'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
+            }`}
+          >
+            <span>📝 Citizen Applications ({applications.length})</span>
+          </button>
+          <button
+            onClick={() => setMainViewTab('payments')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+              mainViewTab === 'payments'
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <span>💳 Payment Ledger ({paymentsLedger.length})</span>
+          </button>
+          <button
+            onClick={() => setMainViewTab('citizenAudit')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+              mainViewTab === 'citizenAudit'
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <span>📜 Audit Trail ({citizenAuditTrail.length})</span>
+          </button>
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* TAB 1: MASTER PROPERTY ASSESSMENT DATABASE                                */}
+      {/* ========================================================================= */}
+      {mainViewTab === 'master' && (
+        <div className="space-y-6">
+          {/* Controls Bar */}
+          <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+              <input
+                type="text"
+                value={masterSearch}
+                onChange={(e) => setMasterSearch(e.target.value)}
+                placeholder="Search TDN, Owner, PSPIN, Barangay..."
+                className="w-full sm:w-72 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3.5 py-2 text-xs text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <select
+                value={masterTypeFilter}
+                onChange={(e) => setMasterTypeFilter(e.target.value)}
+                className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-semibold outline-none text-slate-700 dark:text-slate-300"
+              >
+                <option value="ALL">All Types</option>
+                <option value="Land">Land</option>
+                <option value="Building">Building</option>
+                <option value="Commercial">Commercial</option>
+                <option value="Residential">Residential</option>
+              </select>
+              <select
+                value={masterStatusFilter}
+                onChange={(e) => setMasterStatusFilter(e.target.value)}
+                className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-semibold outline-none text-slate-700 dark:text-slate-300"
+              >
+                <option value="ALL">All Status</option>
+                <option value="Paid">Paid</option>
+                <option value="Unpaid">Unpaid</option>
+              </select>
+            </div>
+
+            <button
+              onClick={() => {
+                setEditingProperty({
+                  taxDeclarationNumber: `E-0${Math.floor(10 + Math.random() * 90)}-0${Math.floor(1000 + Math.random() * 9000)}`,
+                  newPspin: '09-021-009-166- - -',
+                  ownerName: '',
+                  ownerAddress: 'Quezon City',
+                  barangay: 'Central',
+                  location: 'Quezon City',
+                  propertyType: 'Residential',
+                  lotAreaSqm: 150,
+                  marketValue: 1500000,
+                  assessedValue: 300000,
+                  billingYear: 2025,
+                  billExpiryDate: '2025-10-31',
+                  basicTax: 4500,
+                  sefTax: 3000,
+                  shttcApplied: 0,
+                  penalty: 0,
+                  discount: 0,
+                  totalAssessment: 7500,
+                  amountPaid: 0,
+                  balance: 7500,
+                  status: 'Active',
+                  paymentStatus: 'Unpaid',
+                });
+                setIsPropertyModalOpen(true);
+              }}
+              className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition shadow-sm cursor-pointer flex items-center justify-center gap-1.5"
             >
-              Audit Trail ({citizenAuditTrail.length})
+              <span>+ Add New Property Assessment</span>
             </button>
           </div>
-        </div>
-      </div>
 
-      {/* STREAMLINED STATS CARDS ROW (Reduced to 3 relevant cards) */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
-          <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Applications</span>
-          <div className="text-2xl font-black text-slate-900 dark:text-white mt-3">{stats.totalApplications}</div>
-          <span className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold mt-1">Registered Submissions</span>
+          {/* Master Table */}
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-800">
+                  <tr>
+                    <th className="p-4">Tax Declaration No.</th>
+                    <th className="p-4">Owner Name</th>
+                    <th className="p-4">NewPSPIN</th>
+                    <th className="p-4">Barangay / Location</th>
+                    <th className="p-4">Type</th>
+                    <th className="p-4 text-right">Assessed Value</th>
+                    <th className="p-4 text-right">Tax Due</th>
+                    <th className="p-4 text-center">Status</th>
+                    <th className="p-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {filteredMasterProperties.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} className="p-8 text-center text-slate-400 italic">
+                        No property assessment records match your search filter.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredMasterProperties.map((prop) => (
+                      <tr key={prop.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition">
+                        <td className="p-4 font-mono font-bold text-blue-600 dark:text-blue-400">
+                          {prop.taxDeclarationNumber}
+                        </td>
+                        <td className="p-4 font-semibold text-slate-900 dark:text-white">
+                          {prop.ownerName}
+                        </td>
+                        <td className="p-4 font-mono text-slate-500 text-[11px]">
+                          {prop.newPspin}
+                        </td>
+                        <td className="p-4 text-slate-600 dark:text-slate-300">
+                          {prop.barangay}
+                        </td>
+                        <td className="p-4">
+                          <span className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold px-2 py-0.5 rounded text-[10px]">
+                            {prop.propertyType}
+                          </span>
+                        </td>
+                        <td className="p-4 text-right font-mono font-semibold">
+                          {formatCurrency(prop.assessedValue)}
+                        </td>
+                        <td className="p-4 text-right font-mono font-bold text-slate-900 dark:text-white">
+                          {formatCurrency(prop.balance || prop.totalAssessment)}
+                        </td>
+                        <td className="p-4 text-center">
+                          <span
+                            className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                              prop.paymentStatus === 'Paid'
+                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                                : 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
+                            }`}
+                          >
+                            {prop.paymentStatus}
+                          </span>
+                        </td>
+                        <td className="p-4 text-right space-x-2">
+                          <button
+                            onClick={() => {
+                              setEditingProperty(prop);
+                              setIsPropertyModalOpen(true);
+                            }}
+                            className="text-blue-600 hover:text-blue-800 font-bold cursor-pointer"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteMasterProperty(prop.id, prop.taxDeclarationNumber)}
+                            className="text-rose-600 hover:text-rose-800 font-bold cursor-pointer"
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
-          <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Under Evaluation</span>
-          <div className="text-2xl font-black text-blue-600 dark:text-blue-400 mt-3">{stats.pendingReview}</div>
-          <span className="text-[10px] text-slate-400 font-semibold mt-1">Requires document check</span>
-        </div>
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
-          <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">Inspection / GIS</span>
-          <div className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-3">{stats.pendingInspectionOrGIS}</div>
-          <span className="text-[10px] text-slate-400 font-semibold mt-1">Field schedule pending</span>
-        </div>
-      </div>
+      )}
 
-      {/* ACTIVE QUEUE & ARCHIVER VIEW */}
+      {/* ========================================================================= */}
+      {/* TAB 2: CITIZEN APPLICATIONS REVIEW QUEUE                                  */}
+      {/* ========================================================================= */}
       {mainViewTab === 'queue' && (
         <div className="flex-1 flex flex-col lg:flex-row overflow-hidden gap-6 h-[calc(100vh-22rem)] min-h-0 w-full">
+          {/* Applications List Sidebar */}
           <div className="w-full lg:w-[420px] xl:w-[460px] flex-shrink-0 flex flex-col gap-4 min-h-0 h-1/2 lg:h-full">
             <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col gap-3">
-
-              {/* Inner Archiver Tabs styled like the preview button but with slate tones */}
-              <div className="flex gap-2 mb-1">
+              <div className="flex gap-2">
                 <button
                   onClick={() => setQueueTab('Active')}
-                  className={`px-4 py-2 text-xs font-semibold rounded-lg border transition-colors cursor-pointer ${queueTab === 'Active'
-                    ? 'bg-slate-100 dark:bg-slate-800/80 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-600 shadow-sm'
-                    : 'bg-transparent text-slate-500 border-transparent hover:bg-slate-50 dark:hover:bg-slate-900'
-                    }`}
+                  className={`px-4 py-2 text-xs font-semibold rounded-lg border transition-colors cursor-pointer ${
+                    queueTab === 'Active'
+                      ? 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-600'
+                      : 'text-slate-500 border-transparent'
+                  }`}
                 >
                   Active Processing
                 </button>
                 <button
                   onClick={() => setQueueTab('Archived')}
-                  className={`px-4 py-2 text-xs font-semibold rounded-lg border transition-colors cursor-pointer ${queueTab === 'Archived'
-                    ? 'bg-slate-100 dark:bg-slate-800/80 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-600 shadow-sm'
-                    : 'bg-transparent text-slate-500 border-transparent hover:bg-slate-50 dark:hover:bg-slate-900'
-                    }`}
+                  className={`px-4 py-2 text-xs font-semibold rounded-lg border transition-colors cursor-pointer ${
+                    queueTab === 'Archived'
+                      ? 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-600'
+                      : 'text-slate-500 border-transparent'
+                  }`}
                 >
                   System Archiver
                 </button>
@@ -652,304 +764,65 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
 
               <input
                 type="text"
-                placeholder="Search Ref No, Applicant, PIN..."
-                className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-600"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search applications..."
+                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-slate-200 outline-none"
               />
-              <div className="grid grid-cols-2 gap-2">
+              <div className="flex gap-2">
                 <select
-                  className="text-xs p-2.5 border border-slate-300 dark:border-slate-800 rounded-xl bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-medium cursor-pointer"
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="w-1/2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-2 py-1.5 text-[11px] font-semibold text-slate-700 dark:text-slate-300 outline-none"
                 >
-                  <option value="ALL">All Categories</option>
-                  <option value="1.1 Transfer of Ownership">1.1 Transfer of Ownership</option>
-                  <option value="1.2 Consolidation / Segregation">1.2 Consolidation / Segregation</option>
-                  <option value="1.3 New Assessment / Reassessment / Reclassification">1.3 New / Reassessment</option>
+                  <option value="ALL">All Services</option>
+                  <option value="Transfer of Ownership">Transfer of Ownership</option>
+                  <option value="Consolidation / Segregation">Consolidation / Segregation</option>
+                  <option value="New Assessment / Reassessment / Reclassification">New Assessment</option>
+                  <option value="Correction / Updating / Revision">Correction</option>
+                  <option value="Declaration of New / Undeclared Land">Undeclared Land</option>
                 </select>
                 <select
-                  className="text-xs p-2.5 border border-slate-300 dark:border-slate-800 rounded-xl bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-medium cursor-pointer"
                   value={selectedStatusFilter}
                   onChange={(e) => setSelectedStatusFilter(e.target.value)}
+                  className="w-1/2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-2 py-1.5 text-[11px] font-semibold text-slate-700 dark:text-slate-300 outline-none"
                 >
-                  <option value="ALL">All Statuses</option>
+                  <option value="ALL">All Status</option>
+                  <option value="Submitted">Submitted</option>
                   <option value="Under Evaluation">Under Evaluation</option>
-                  <option value="Field Inspection Scheduled">Field Inspection Scheduled</option>
-                  <option value="Approved & Ready for Release">Approved & Ready for Release</option>
-                  {queueTab === 'Archived' && <option value="Archived">Archived</option>}
+                  <option value="Field Inspection Scheduled">Field Inspection</option>
+                  <option value="Ready for Release">Ready for Release</option>
+                  <option value="Approved">Approved</option>
+                  <option value="Rejected">Rejected</option>
                 </select>
               </div>
             </div>
 
             <div className="flex-1 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden flex flex-col min-h-0">
-              <div className="p-3.5 bg-slate-100 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider flex justify-between items-center">
-                <div className="flex items-center gap-2.5">
-                  <input
-                    type="checkbox"
-                    checked={filteredApplications.length > 0 && selectedAppIds.length === filteredApplications.length}
-                    onChange={toggleSelectAll}
-                    className="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
-                  />
-                  <span>{queueTab === 'Active' ? 'Queue Masterlist' : 'Archived Records'} ({filteredApplications.length})</span>
-                </div>
-              </div>
-
               <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800 p-2 space-y-1">
                 {filteredApplications.length === 0 ? (
-                  <div className="p-8 text-center text-slate-400 text-xs flex flex-col items-center justify-center space-y-2.5">
-                    <p>No matching application records found</p>
-                  </div>
+                  <div className="p-8 text-center text-slate-400 text-xs">No applications found.</div>
                 ) : (
-                  filteredApplications.map((app) => {
-                    const isSelected = app.id === currentApp?.id;
-                    const isChecked = selectedAppIds.includes(app.id);
-
-                    return (
-                      <div
-                        key={app.id}
-                        className={`w-full text-left p-3 rounded-xl transition-all flex items-start gap-3 border ${isSelected
-                          ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-300 dark:border-blue-600/60 shadow-xs'
-                          : 'bg-transparent border-transparent hover:bg-slate-100 dark:hover:bg-slate-800/50'
-                          }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={() => toggleSelectApp(app.id)}
-                          className="mt-1 rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer flex-shrink-0"
-                        />
-                        <button
-                          onClick={() => setSelectedAppId(app.id)}
-                          className="flex-1 text-left flex flex-col gap-1.5 cursor-pointer"
-                        >
-                          <div className="flex justify-between items-start gap-2">
-                            <span className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white font-mono">
-                              {app.referenceNumber}
-                            </span>
-                            <div className="flex items-center gap-1.5 flex-shrink-0">
-                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${app.status === 'Archived'
-                                ? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-700'
-                                : 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800'
-                                }`}>
-                                {app.status}
-                              </span>
-                              {queueTab === 'Archived' && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteApplication(app.id);
-                                  }}
-                                  title="Delete Application Permanently"
-                                  className="text-slate-400 hover:text-rose-600 p-1 rounded transition-colors cursor-pointer"
-                                >
-                                  ✕
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                          <div className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
-                            {app.applicantName}
-                          </div>
-                          <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                            {app.category}
-                          </div>
-                        </button>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex-1 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col overflow-hidden min-h-0 h-1/2 lg:h-full">
-            {!currentApp ? (
-              <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-3">
-                <h3 className="text-base font-bold text-slate-700 dark:text-slate-300">No Application Selected</h3>
-                <p className="text-xs text-slate-400 max-w-sm">Select an application from the queue to inspect documents and workflow steps.</p>
-              </div>
-            ) : (
-              <>
-                <div className="p-5 sm:p-6 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                  <div>
-                    <h2 className="text-lg sm:text-xl font-black tracking-tight text-slate-900 dark:text-white font-mono">
-                      {currentApp.referenceNumber}
-                    </h2>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                      Applicant: <span className="font-semibold text-slate-800 dark:text-slate-200">{currentApp.applicantName}</span>
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    {queueTab === 'Active' ? (
-                      <>
-                        <button
-                          onClick={() => handleArchiveApplication(currentApp.id)}
-                          className="px-3.5 py-2.5 text-xs bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 rounded-xl font-semibold cursor-pointer shadow-sm hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors"
-                        >
-                          Archive Application
-                        </button>
-                        <select
-                          value={currentApp.status}
-                          onChange={(e) => handleUpdateStatus(e.target.value as ExtendedStatusType)}
-                          className="text-xs font-semibold px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-950 text-slate-800 dark:text-white cursor-pointer"
-                        >
-                          <option value="Under Evaluation">Under Evaluation</option>
-                          <option value="Field Inspection Scheduled">Field Inspection Scheduled</option>
-                          <option value="Approved & Ready for Release">Approved & Ready for Release</option>
-                          <option value="Digital Certificate Issued">Digital Certificate Issued</option>
-                        </select>
-                      </>
-                    ) : (
-                      <>
-                        <button
-                          onClick={() => handleRestoreApplication(currentApp.id)}
-                          className="px-3.5 py-2.5 text-xs bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60 rounded-xl font-semibold cursor-pointer shadow-sm hover:bg-emerald-100 dark:hover:bg-emerald-900 transition-colors"
-                        >
-                          Restore Record
-                        </button>
-                        <button
-                          onClick={() => handleDeleteApplication(currentApp.id)}
-                          className="px-3.5 py-2.5 text-xs bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800/60 rounded-xl font-semibold cursor-pointer shadow-sm hover:bg-rose-100 dark:hover:bg-rose-900 transition-colors"
-                        >
-                          Delete (Final)
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex border-b border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-950 px-5 text-xs font-bold">
-                  {(
-                    [
-                      ['overview', 'Overview & Uploads'],
-                      ['audit', `Audit Trail (${currentApp.auditLogs?.length || 0})`],
-                      ['notifications', `SMS / Email Log (${currentApp.notificationLogs?.length || 0})`]
-                    ] as const
-                  ).map(([tab, label]) => (
-                    <button
-                      key={tab}
-                      onClick={() => setDetailTab(tab as any)}
-                      className={`py-3.5 px-4 border-b-2 transition-colors cursor-pointer whitespace-nowrap ${detailTab === tab
-                        ? 'border-blue-600 dark:border-blue-500 text-blue-600 dark:text-blue-400 font-black'
-                        : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-                        }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6">
-                  {detailTab === 'overview' && (
-                    <>
-                      <section className="space-y-3">
-                        <h3 className="font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider text-[11px]">
-                          Documents Uploaded by Citizen ({currentApp.documents.length})
-                        </h3>
-                        <div className="space-y-3">
-                          {currentApp.documents.map((doc) => (
-                            <div key={doc.id} className="flex flex-col p-4 border border-slate-200 dark:border-slate-800 rounded-xl text-xs bg-slate-50 dark:bg-slate-950/40 gap-3">
-                              <div className="flex justify-between items-center">
-                                <div>
-                                  <p className="font-bold text-slate-900 dark:text-white">{doc.name}</p>
-                                  <p className="text-[10px] text-slate-400">Status: {doc.status}</p>
-                                </div>
-                                <div className="flex gap-2">
-                                  <button
-                                    onClick={() => handleOpenPreview(doc)}
-                                    className="px-3 py-1.5 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-lg font-semibold cursor-pointer"
-                                  >
-                                    Preview
-                                  </button>
-                                  {queueTab === 'Active' && (
-                                    <>
-                                      <button
-                                        onClick={() => handleDocumentStatusChange(doc.id, 'Verified')}
-                                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold cursor-pointer transition-colors"
-                                      >
-                                        Verify
-                                      </button>
-                                      <button
-                                        onClick={() => handleDocumentStatusChange(doc.id, 'Rejected')}
-                                        className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-semibold cursor-pointer shadow-xs transition-colors"
-                                      >
-                                        Reject
-                                      </button>
-                                    </>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </section>
-
-                      {queueTab === 'Active' && (
-                        <section className="pt-4 border-t border-slate-200 dark:border-slate-800">
-                          <button
-                            onClick={handleDigitalRelease}
-                            className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs cursor-pointer shadow-md"
-                          >
-                            Approve, Release & Move to Audit Trail
-                          </button>
-                        </section>
-                      )}
-                    </>
-                  )}
-
-                  {detailTab === 'audit' && (
-                    <div className="space-y-2">
-                      {currentApp.auditLogs?.map((log) => (
-                        <div key={log.id} className="p-3 border border-slate-200 dark:border-slate-800 rounded-xl text-xs bg-slate-50 dark:bg-slate-950/40">
-                          <p className="font-bold text-slate-800 dark:text-slate-200">{log.action}</p>
-                          <span className="text-[10px] text-slate-400">{log.timestamp}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {detailTab === 'notifications' && (
-                    <div className="space-y-2">
-                      {currentApp.notificationLogs?.map((notif) => (
-                        <div key={notif.id} className="p-3 border border-slate-200 dark:border-slate-800 rounded-xl text-xs bg-slate-50 dark:bg-slate-950/40">
-                          <p className="text-slate-800 dark:text-slate-200">{notif.message}</p>
-                          <span className="text-[10px] text-slate-400">{notif.timestamp}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* CITIZEN DOCUMENTS AUDIT TRAIL VIEW */}
-      {mainViewTab === 'citizenAudit' && (
-        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden gap-6 h-[calc(100vh-22rem)] min-h-0 w-full">
-          <div className="w-full lg:w-[420px] xl:w-[460px] flex-shrink-0 flex flex-col gap-4 min-h-0 h-1/2 lg:h-full">
-            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex justify-between items-center">
-              <div>
-                <h3 className="font-bold text-xs uppercase tracking-wider text-slate-700 dark:text-slate-300">Citizen Documents Trail</h3>
-                <p className="text-[11px] text-slate-400">Archived records</p>
-              </div>
-            </div>
-
-            <div className="flex-1 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden flex flex-col min-h-0">
-              <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800 p-2 space-y-1">
-                {citizenAuditTrail.length === 0 ? (
-                  <div className="p-8 text-center text-slate-400 text-xs">No verified records in the audit trail.</div>
-                ) : (
-                  citizenAuditTrail.map((app) => (
+                  filteredApplications.map((app) => (
                     <div
                       key={app.id}
-                      onClick={() => setSelectedCitizenAppId(app.id)}
-                      className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/50 bg-slate-50 dark:bg-slate-950/40"
+                      onClick={() => setSelectedAppId(app.id)}
+                      className={`p-3 rounded-xl border transition cursor-pointer ${
+                        currentApp?.id === app.id
+                          ? 'bg-blue-50/60 dark:bg-blue-950/40 border-blue-300 dark:border-blue-800'
+                          : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                      }`}
                     >
-                      <div className="font-bold text-xs font-mono text-slate-900 dark:text-white">{app.referenceNumber}</div>
-                      <div className="text-xs text-slate-600 dark:text-slate-300">{app.applicantName}</div>
+                      <div className="flex justify-between items-start">
+                        <span className="font-mono font-bold text-xs text-blue-600 dark:text-blue-400">
+                          {app.referenceNumber}
+                        </span>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+                          {app.status}
+                        </span>
+                      </div>
+                      <p className="font-bold text-xs text-slate-900 dark:text-white mt-1">{app.applicantName}</p>
+                      <p className="text-[11px] text-slate-500 truncate">{app.category}</p>
                     </div>
                   ))
                 )}
@@ -957,41 +830,356 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
             </div>
           </div>
 
+          {/* Application Detail & Document Review Panel */}
           <div className="flex-1 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col overflow-hidden min-h-0 h-1/2 lg:h-full">
-            {!currentCitizenApp ? (
+            {!currentApp ? (
               <div className="flex-1 flex items-center justify-center p-8 text-center text-xs text-slate-400">
-                Select an archived record from the list.
+                Select an application from the queue to review documents and update evaluation status.
               </div>
             ) : (
-              <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                <h2 className="text-lg font-black font-mono text-slate-900 dark:text-white">{currentCitizenApp.referenceNumber}</h2>
-                <div className="space-y-2 pt-2">
-                  <h3 className="text-xs font-bold uppercase text-slate-500">Archived Documents</h3>
-                  {currentCitizenApp.documents.map((doc) => (
-                    <div key={doc.id} className="p-3 border border-slate-200 dark:border-slate-800 rounded-xl flex justify-between items-center text-xs bg-slate-50 dark:bg-slate-950/40">
-                      <span className="text-slate-800 dark:text-slate-200">{doc.name}</span>
-                      <button
-                        onClick={() => handleOpenPreview(doc)}
-                        className="px-3 py-1 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-lg font-semibold cursor-pointer"
-                      >
-                        Preview
-                      </button>
-                    </div>
-                  ))}
+              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 dark:border-slate-800 pb-4">
+                  <div>
+                    <span className="text-[10px] font-bold uppercase text-blue-600 dark:text-blue-400">
+                      CONTROL NUMBER
+                    </span>
+                    <h2 className="text-lg font-black font-mono text-slate-900 dark:text-white">
+                      {currentApp.referenceNumber}
+                    </h2>
+                    <p className="text-xs text-slate-500 font-semibold">{currentApp.category}</p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleDigitalRelease}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition cursor-pointer shadow-sm"
+                    >
+                      ✓ Approve &amp; Issue Digital Certificate
+                    </button>
+                  </div>
                 </div>
-                <button
-                  onClick={() => handleDownloadCertificate(currentCitizenApp.id)}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold cursor-pointer"
-                >
-                  Download Package
-                </button>
+
+                {/* Workflow Status Advance Bar */}
+                <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2">
+                  <span className="text-[10px] font-bold uppercase text-slate-400 block">Advance Assessor Workflow:</span>
+                  <div className="flex flex-wrap gap-2">
+                    {(['Under Evaluation', 'Field Inspection Scheduled', 'Technical Plotting (GIS)', 'Ready for Release', 'Rejected'] as ExtendedStatusType[]).map((st) => (
+                      <button
+                        key={st}
+                        onClick={() => handleUpdateStatus(st)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer border ${
+                          currentApp.status === st
+                            ? 'bg-blue-600 text-white border-blue-600'
+                            : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-blue-400'
+                        }`}
+                      >
+                        {st}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Uploaded Documents List */}
+                <div className="space-y-3">
+                  <h3 className="text-xs font-bold uppercase text-slate-700 dark:text-slate-300">
+                    Documentary Verification Vault
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {currentApp.documents.map((doc) => (
+                      <div
+                        key={doc.id}
+                        className="p-4 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50 dark:bg-slate-950/40 space-y-2"
+                      >
+                        <div className="flex justify-between items-start">
+                          <span className="font-bold text-xs text-slate-800 dark:text-slate-200 truncate max-w-[180px]">
+                            {doc.name}
+                          </span>
+                          <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950 px-2 py-0.5 rounded">
+                            {doc.type}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => handleOpenPreview(doc)}
+                          className="w-full py-1.5 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-300 transition cursor-pointer"
+                        >
+                          🔍 Inspect Document
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
           </div>
         </div>
       )}
 
-      {/* POP-UP DOCUMENT PREVIEW LIGHTBOX MODAL */}
+      {/* ========================================================================= */}
+      {/* TAB 3: ONLINE PAYMENTS & eOR LEDGER                                       */}
+      {/* ========================================================================= */}
+      {mainViewTab === 'payments' && (
+        <div className="space-y-6">
+          <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center justify-between">
+            <input
+              type="text"
+              value={paymentSearch}
+              onChange={(e) => setPaymentSearch(e.target.value)}
+              placeholder="Search OR No., TDN, Payor..."
+              className="w-72 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3.5 py-2 text-xs text-slate-800 dark:text-slate-200 outline-none"
+            />
+            <span className="text-xs font-bold text-slate-500">
+              Total Real Property Tax Revenue Settled: <strong className="text-emerald-600 dark:text-emerald-400 font-mono">{formatCurrency(paymentsLedger.reduce((sum, p) => sum + p.amountPaid, 0))}</strong>
+            </span>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead className="bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-800">
+                <tr>
+                  <th className="p-4">Official Receipt (eOR)</th>
+                  <th className="p-4">Tax Declaration No.</th>
+                  <th className="p-4">Payor / Property Owner</th>
+                  <th className="p-4">Payment Method</th>
+                  <th className="p-4">Coverage</th>
+                  <th className="p-4">Payment Date</th>
+                  <th className="p-4 text-right">Amount Settled</th>
+                  <th className="p-4 text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {paymentsLedger.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="p-8 text-center text-slate-400 italic">
+                      No online payments recorded yet.
+                    </td>
+                  </tr>
+                ) : (
+                  paymentsLedger.map((pay) => (
+                    <tr key={pay.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition">
+                      <td className="p-4 font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                        {pay.officialReceiptNumber}
+                      </td>
+                      <td className="p-4 font-mono font-bold text-[#0B3B60] dark:text-sky-400">
+                        {pay.taxDeclarationNumber}
+                      </td>
+                      <td className="p-4 font-semibold text-slate-900 dark:text-white">
+                        {pay.ownerName}
+                      </td>
+                      <td className="p-4 text-slate-600 dark:text-slate-300">
+                        {pay.paymentMethod}
+                      </td>
+                      <td className="p-4 text-slate-500">
+                        {pay.quarterCoverage || 'Full Year'}
+                      </td>
+                      <td className="p-4 font-mono text-slate-500">
+                        {new Date(pay.paymentDate).toLocaleDateString()}
+                      </td>
+                      <td className="p-4 text-right font-mono font-black text-slate-900 dark:text-white">
+                        {formatCurrency(pay.amountPaid)}
+                      </td>
+                      <td className="p-4 text-center">
+                        <span className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 px-2.5 py-1 rounded-full text-[10px] font-bold">
+                          ✓ {pay.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 4: CITIZEN AUDIT TRAIL                                                */}
+      {/* ========================================================================= */}
+      {mainViewTab === 'citizenAudit' && (
+        <div className="flex-1 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs p-6 space-y-4">
+          <h2 className="text-lg font-black text-slate-900 dark:text-white">Archived &amp; Certified Applications</h2>
+          <p className="text-xs text-slate-500">
+            Immutable log of all released Tax Declarations and Certified True Copies.
+          </p>
+
+          {citizenAuditTrail.length === 0 ? (
+            <div className="p-8 text-center text-slate-400 text-xs italic bg-slate-50 dark:bg-slate-950 rounded-xl">
+              No applications in the audit trail yet. Approved applications will appear here.
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl">
+              {citizenAuditTrail.map((app) => (
+                <div key={app.id} className="p-4 flex justify-between items-center text-xs">
+                  <div>
+                    <span className="font-mono font-bold text-blue-600 dark:text-blue-400">{app.referenceNumber}</span>
+                    <p className="font-semibold text-slate-800 dark:text-slate-200">{app.applicantName} • {app.category}</p>
+                  </div>
+                  <span className="bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full font-bold text-[10px]">
+                    ✓ Digital Certificate Issued
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: ADD / EDIT MASTER PROPERTY ASSESSMENT                              */}
+      {/* ========================================================================= */}
+      {isPropertyModalOpen && editingProperty && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 sm:p-8 max-w-2xl w-full shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+              <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
+                {editingProperty.id ? 'Edit Property Assessment Record' : 'Add New Property Assessment Record'}
+              </h3>
+              <button
+                onClick={() => setIsPropertyModalOpen(false)}
+                className="text-slate-400 hover:text-slate-700 font-bold text-lg cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSavePropertyRecord} className="space-y-4 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700 dark:text-slate-300">Tax Declaration No. *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingProperty.taxDeclarationNumber || ''}
+                    onChange={(e) => setEditingProperty({ ...editingProperty, taxDeclarationNumber: e.target.value })}
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 font-mono font-bold outline-none"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700 dark:text-slate-300">NewPSPIN *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingProperty.newPspin || ''}
+                    onChange={(e) => setEditingProperty({ ...editingProperty, newPspin: e.target.value })}
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 font-mono outline-none"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700 dark:text-slate-300">Owner Name / Corporation *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingProperty.ownerName || ''}
+                    onChange={(e) => setEditingProperty({ ...editingProperty, ownerName: e.target.value })}
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 outline-none font-semibold"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700 dark:text-slate-300">Property Type *</label>
+                  <select
+                    value={editingProperty.propertyType || 'Residential'}
+                    onChange={(e) => {
+                      const newType = e.target.value;
+                      handleValuationChange(editingProperty.marketValue || 1000000, newType);
+                      setEditingProperty((prev) => ({ ...prev, propertyType: newType }));
+                    }}
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 outline-none font-semibold"
+                  >
+                    <option value="Residential">Residential</option>
+                    <option value="Commercial">Commercial</option>
+                    <option value="Industrial">Industrial</option>
+                    <option value="Building">Building</option>
+                    <option value="Land">Land</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700 dark:text-slate-300">Barangay *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingProperty.barangay || ''}
+                    onChange={(e) => setEditingProperty({ ...editingProperty, barangay: e.target.value })}
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 outline-none"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700 dark:text-slate-300">Lot Area (sqm)</label>
+                  <input
+                    type="number"
+                    value={editingProperty.lotAreaSqm || 0}
+                    onChange={(e) => setEditingProperty({ ...editingProperty, lotAreaSqm: Number(e.target.value) })}
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 outline-none font-mono"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700 dark:text-slate-300">Market Value (₱)</label>
+                  <input
+                    type="number"
+                    value={editingProperty.marketValue || 0}
+                    onChange={(e) => handleValuationChange(Number(e.target.value), editingProperty.propertyType || 'Residential')}
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 outline-none font-mono font-bold"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700 dark:text-slate-300">Computed Assessed Value (₱)</label>
+                  <input
+                    type="number"
+                    value={editingProperty.assessedValue || 0}
+                    readOnly
+                    className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 outline-none font-mono font-bold"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700 dark:text-slate-300">Annual Basic Tax (1.5%)</label>
+                  <input
+                    type="number"
+                    value={editingProperty.basicTax || 0}
+                    onChange={(e) => setEditingProperty({ ...editingProperty, basicTax: Number(e.target.value) })}
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 outline-none font-mono"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700 dark:text-slate-300">Annual SEF Tax (1.0%)</label>
+                  <input
+                    type="number"
+                    value={editingProperty.sefTax || 0}
+                    onChange={(e) => setEditingProperty({ ...editingProperty, sefTax: Number(e.target.value) })}
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 outline-none font-mono"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700 dark:text-slate-300">Payment Status</label>
+                  <select
+                    value={editingProperty.paymentStatus || 'Unpaid'}
+                    onChange={(e) => setEditingProperty({ ...editingProperty, paymentStatus: e.target.value })}
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 outline-none font-semibold"
+                  >
+                    <option value="Unpaid">Unpaid</option>
+                    <option value="Paid">Paid</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsPropertyModalOpen(false)}
+                  className="px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold cursor-pointer shadow-md"
+                >
+                  Save Assessment Record
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* POP-UP DOCUMENT PREVIEW LIGHTBOX */}
       {previewDocUrl && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-4xl h-[85vh] shadow-2xl overflow-hidden flex flex-col">
@@ -1002,37 +1190,18 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
               </div>
               <button
                 onClick={() => setPreviewDocUrl(null)}
-                className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-bold cursor-pointer transition-colors"
+                className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-bold cursor-pointer"
               >
                 Close ✕
               </button>
             </div>
             <div className="flex-1 bg-slate-100 dark:bg-slate-950 overflow-auto flex items-center justify-center p-4">
-              {(() => {
-                const url = previewDocUrl;
-                const isPdf = url.toLowerCase().includes('.pdf') || url.startsWith('data:application/pdf') || url.toLowerCase().endsWith('.pdf');
-
-                if (isPdf) {
-                  return (
-                    <iframe
-                      src={url}
-                      className="w-full h-full rounded-xl border-0 shadow-inner bg-white"
-                      title="PDF Document Preview"
-                    />
-                  );
-                }
-
-                return (
-                  <div className="overflow-auto w-full h-full flex items-center justify-center">
-                    <img
-                      src={url}
-                      alt="Document Preview"
-                      className="max-w-none object-contain rounded-xl shadow-lg transition-transform duration-200 hover:scale-105 cursor-zoom-in"
-                      style={{ minHeight: '50vh', maxHeight: '75vh' }}
-                    />
-                  </div>
-                );
-              })()}
+              <img
+                src={previewDocUrl}
+                alt="Document Preview"
+                className="max-w-none object-contain rounded-xl shadow-lg"
+                style={{ minHeight: '50vh', maxHeight: '75vh' }}
+              />
             </div>
           </div>
         </div>

@@ -115,14 +115,20 @@ export async function initializeDatabase(): Promise<void> {
           id SERIAL PRIMARY KEY,
           taxDeclarationNumber VARCHAR(100) UNIQUE NOT NULL,
           pin VARCHAR(100),
+          new_pspin VARCHAR(100),
           ownerName VARCHAR(255),
           propertyLocation TEXT,
           barangay VARCHAR(100),
           propertyType VARCHAR(50),
-          billingYear INT,
-          quarter VARCHAR(20),
+          billingYear INT DEFAULT 2025,
+          quarter VARCHAR(20) DEFAULT 'Q1-Q4',
+          bill_expiry_date VARCHAR(50) DEFAULT '2025-10-31',
+          lot_area_sqm NUMERIC(12, 2) DEFAULT 0,
+          market_value NUMERIC(12, 2) DEFAULT 0,
+          assessed_value NUMERIC(12, 2) DEFAULT 0,
           basicTax NUMERIC(12, 2) DEFAULT 0,
           sefTax NUMERIC(12, 2) DEFAULT 0,
+          shttc_applied NUMERIC(12, 2) DEFAULT 0,
           specialLevy NUMERIC(12, 2) DEFAULT 0,
           penalty NUMERIC(12, 2) DEFAULT 0,
           discount NUMERIC(12, 2) DEFAULT 0,
@@ -135,7 +141,8 @@ export async function initializeDatabase(): Promise<void> {
           officialReceiptNumber VARCHAR(100),
           paymentReference VARCHAR(100),
           paymentDate DATE,
-          amountDue NUMERIC(12, 2) DEFAULT 0
+          amountDue NUMERIC(12, 2) DEFAULT 0,
+          quarterly_amounts JSONB
       );
 
       CREATE TABLE IF NOT EXISTS citizen_rpt_payments (
@@ -147,17 +154,83 @@ export async function initializeDatabase(): Promise<void> {
           payment_method VARCHAR(50) NOT NULL,
           payment_reference VARCHAR(100) UNIQUE NOT NULL,
           official_receipt_number VARCHAR(100) UNIQUE NOT NULL,
-          payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          payment_option VARCHAR(50) DEFAULT 'Full',
+          quarter_coverage VARCHAR(50) DEFAULT '2025(Q1) - 2025(Q4)',
+          paymongo_session_id VARCHAR(255)
       );
     `);
 
-    // Ensure documents column exists on tables created before the column was added
+    // Ensure columns exist on tables created before
     await pool.query(`
-      ALTER TABLE rpt_applications
-      ADD COLUMN IF NOT EXISTS documents TEXT[];
+      ALTER TABLE rpt_applications ADD COLUMN IF NOT EXISTS documents TEXT[];
+      ALTER TABLE rpt_applications ADD COLUMN IF NOT EXISTS reference_number VARCHAR(100);
+      ALTER TABLE rpt_applications ADD COLUMN IF NOT EXISTS applicant_type VARCHAR(100);
+      ALTER TABLE rpt_applications ADD COLUMN IF NOT EXISTS notes TEXT;
+      ALTER TABLE rpt_applications ADD COLUMN IF NOT EXISTS owner_name VARCHAR(255);
 
-      ALTER TABLE citizen_rpt_payments
-      ADD COLUMN IF NOT EXISTS paymongo_session_id VARCHAR(255);
+      ALTER TABLE lgu_rpt_records ADD COLUMN IF NOT EXISTS new_pspin VARCHAR(100);
+      ALTER TABLE lgu_rpt_records ADD COLUMN IF NOT EXISTS bill_expiry_date VARCHAR(50);
+      ALTER TABLE lgu_rpt_records ADD COLUMN IF NOT EXISTS shttc_applied NUMERIC(12, 2) DEFAULT 0;
+      ALTER TABLE lgu_rpt_records ADD COLUMN IF NOT EXISTS lot_area_sqm NUMERIC(12, 2) DEFAULT 0;
+      ALTER TABLE lgu_rpt_records ADD COLUMN IF NOT EXISTS market_value NUMERIC(12, 2) DEFAULT 0;
+      ALTER TABLE lgu_rpt_records ADD COLUMN IF NOT EXISTS assessed_value NUMERIC(12, 2) DEFAULT 0;
+      ALTER TABLE lgu_rpt_records ADD COLUMN IF NOT EXISTS quarterly_amounts JSONB;
+
+      ALTER TABLE citizen_rpt_payments ADD COLUMN IF NOT EXISTS paymongo_session_id VARCHAR(255);
+      ALTER TABLE citizen_rpt_payments ADD COLUMN IF NOT EXISTS payment_option VARCHAR(50);
+      ALTER TABLE citizen_rpt_payments ADD COLUMN IF NOT EXISTS quarter_coverage VARCHAR(50);
+    `);
+
+    // Seed QC Sample Real Property Records
+    await pool.query(`
+      INSERT INTO lgu_rpt_records (
+        taxDeclarationNumber, pin, new_pspin, ownerName, propertyLocation, barangay, propertyType,
+        billingYear, quarter, bill_expiry_date, lot_area_sqm, market_value, assessed_value,
+        basicTax, sefTax, shttc_applied, penalty, discount, totalAssessment, amountPaid, balance,
+        status, paymentStatus, amountDue, quarterly_amounts
+      ) VALUES
+      (
+        'F-021-01491', '09-021-009-166', '09-021-009-166- - -', '1 OMEGA PRIME PROPERTY MANAGEMENT INC',
+        'Lot 14 Blk 5 Diliman Commercial Center', 'Central', 'Land',
+        2025, 'Q1-Q4', '2025-10-31', 450.00, 1500000.00, 300000.00,
+        600.00, 420.00, 0.00, 107.10, 0.00, 1020.00, 0.00, 1127.10,
+        'Unpaid', 'Unpaid', 1127.10,
+        '{"q1": 255.00, "q2": 255.00, "q3": 255.00, "q4": 255.00}'::jsonb
+      ),
+      (
+        'G-021-01164', '09-021-009-166-1', '09-021-009-166-1-001-', '1 OMEGA PRIME PROPERTY MANAGEMENT INC',
+        '3-Storey Commercial Building, Lot 14 Blk 5 Diliman', 'Central', 'Building',
+        2025, 'Q1-Q4', '2025-10-31', 780.00, 4200000.00, 1260000.00,
+        1200.00, 840.00, 0.00, 0.00, 0.00, 2040.00, 0.00, 2040.00,
+        'Unpaid', 'Unpaid', 2040.00,
+        '{"q1": 510.00, "q2": 510.00, "q3": 510.00, "q4": 510.00}'::jsonb
+      ),
+      (
+        'E-015-08832', '09-015-004-122', '09-015-004-122- - -', 'JUAN DELA CRUZ & MARIA DELA CRUZ',
+        'Blk 12 Lot 8 Commonwealth Heights', 'Commonwealth', 'Residential Land',
+        2025, 'Q1-Q4', '2025-12-31', 240.00, 850000.00, 170000.00,
+        850.00, 595.00, 0.00, 0.00, 144.50, 1445.00, 0.00, 1300.50,
+        'Unpaid', 'Unpaid', 1300.50,
+        '{"q1": 361.25, "q2": 361.25, "q3": 361.25, "q4": 361.25}'::jsonb
+      ),
+      (
+        'B-015-08833', '09-015-004-122-1', '09-015-004-122-1-001-', 'JUAN DELA CRUZ & MARIA DELA CRUZ',
+        '2-Storey Residence, Blk 12 Lot 8 Commonwealth Heights', 'Commonwealth', 'Residential Building',
+        2025, 'Q1-Q4', '2025-12-31', 180.00, 1500000.00, 300000.00,
+        1500.00, 1050.00, 0.00, 0.00, 255.00, 2550.00, 0.00, 2295.00,
+        'Unpaid', 'Unpaid', 2295.00,
+        '{"q1": 637.50, "q2": 637.50, "q3": 637.50, "q4": 637.50}'::jsonb
+      ),
+      (
+        'C-088-02451', '09-088-012-501', '09-088-012-501- - -', 'METRO HORIZON HOLDINGS CORP',
+        'Tower 1 Commercial Complex, North Avenue', 'Batasan Hills', 'Commercial',
+        2025, 'Q1-Q4', '2025-10-31', 1200.00, 25000000.00, 7500000.00,
+        12500.00, 8750.00, 0.00, 2125.00, 0.00, 21250.00, 0.00, 23375.00,
+        'Unpaid', 'Unpaid', 23375.00,
+        '{"q1": 5312.50, "q2": 5312.50, "q3": 5312.50, "q4": 5312.50}'::jsonb
+      )
+      ON CONFLICT (taxDeclarationNumber) DO NOTHING;
     `);
 
     // Seed default admin account with hashed password

@@ -1,6 +1,1972 @@
+// src/citizen-portal/real-property-tax.tsx
 import { useEffect, useMemo, useState } from "react";
-import type { ChangeEvent, FormEvent, ReactNode } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { API_BASE_URL } from '../config/api';
-import { UnifiedHeader } from './UnifiedHeader';
-import { UnifiedFooter } from './UnifiedFooter';import { createPayMongoCheckout, verifyPayMongoSession } from '../services/paymongoService';type ApplicantType = "Property Owner" | "Authorized Representative" | "Corporation / Company";type RPTApplicationStatus =  | "Submitted"  | "For Review"  | "Under Evaluation"  | "For Compliance"  | "Processing"  | "Approved"  | "Ready for Release"  | "Completed"  | "Rejected";type RPTPaymentStatus = "Unpaid" | "Pending Payment" | "Paid";interface AttachmentFile {  name: string;  url: string;}interface RPTApplicationRecord {  id: string;  controlNumber: string;  taxDeclarationNumber: string;  ownerName: string;  applicantName: string;  applicantType: ApplicantType;  email: string;  mobileNumber: string;  service: string;  propertyLocation: string;  barangay: string;  propertyType: string;  status: RPTApplicationStatus;  filedDate: string;  documents: AttachmentFile[] | string[] | Record<string, any>;  rptRecordId?: string;  amountDue?: number;  paymentStatus?: RPTPaymentStatus;  paymentMethod?: string;  paymentReference?: string;  officialReceiptNumber?: string;  paymentDate?: string;}interface CitizenRPTRecord {  id: string;  taxDeclarationNumber: string;  pin?: string;  ownerName?: string;  propertyLocation?: string;  barangay?: string;  propertyType?: string;  billingYear?: number | string;  quarter?: string;  basicTax?: number | string;  sefTax?: number | string;  specialLevy?: number | string;  penalty?: number | string;  discount?: number | string;  totalAssessment?: number | string;  amountPaid?: number | string;  balance?: number | string;  status?: string;  paymentStatus?: string;  paymentMethod?: string;  officialReceiptNumber?: string;  paymentReference?: string;  paymentDate?: string;  amountDue?: number | string;}interface RPTFormData {  service: string;  applicantType: ApplicantType;  ownerName: string;  applicantName: string;  email: string;  mobileNumber: string;  taxDeclarationNumber: string;  tin: string;  propertyLocation: string;  barangay: string;  propertyType: string;  notes: string;}export interface RealPropertyApplicationProps {  isCollapsed?: boolean;}const services = [  "Transfer of Ownership",  "Consolidation / Segregation",  "New Assessment / Reassessment / Reclassification",  "Correction / Updating / Revision",  "Declaration of New / Undeclared Land",  "Cancellation of Assessment Records",];function toAmount(value: unknown): number {  const amount = Number(String(value ?? 0).replace(/[^0-9.-]/g, ""));  return Number.isFinite(amount) ? Math.max(0, amount) : 0;}function formatCurrency(value: number) {  return new Intl.NumberFormat("en-PH", {    style: "currency",    currency: "PHP",    minimumFractionDigits: 2,  }).format(value);}function getRPTAmountDue(record: CitizenRPTRecord): number {  if (record.balance !== undefined) return toAmount(record.balance);  if (record.amountDue !== undefined) return toAmount(record.amountDue);  const total = toAmount(record.totalAssessment);  const paid = toAmount(record.amountPaid);  if (total > 0) return Math.max(0, total - paid);  return (    toAmount(record.basicTax) +    toAmount(record.sefTax) +    toAmount(record.specialLevy) +    toAmount(record.penalty) -    toAmount(record.discount) -    paid  );}function getStoredCitizenSession() {  const rawUser = localStorage.getItem("currentUser") || localStorage.getItem("user") || sessionStorage.getItem("currentUser") || sessionStorage.getItem("user");  if (!rawUser) return null;  try {    const parsed = JSON.parse(rawUser);    const target = parsed.user && typeof parsed.user === "object" ? parsed.user : parsed;    const fullName = target.fullname || target.name || target.fullName || target.firstName || target.email;    if (!fullName) return null;    const email = target.email || "";    const nameParts = String(fullName).trim().split(" ");    const firstName = nameParts[0];    const initials = nameParts.length > 1      ? (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase()      : (nameParts[0].slice(0, 2) || "U").toUpperCase();    return { fullname: String(fullName), email, firstName, initials };  } catch {    return null;  }}function createEmptyForm(): RPTFormData {  const session = getStoredCitizenSession();  return {    service: services[0],    applicantType: "Property Owner",    ownerName: session?.fullname || "",    applicantName: session?.fullname || "",    email: session?.email || "",    mobileNumber: "",    taxDeclarationNumber: "",    tin: "",    propertyLocation: "",    barangay: "",    propertyType: "Residential",    notes: "",  };}function makeControlNumber() {  const date = new Date();  const period = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}`;  const random = Math.floor(100000 + Math.random() * 900000);  return `RPT-${period}-${random}`;}function formatDate(date: string) {  if (!date) return "—";  try {    const cleanDate = date.includes('T') ? date : `${date}T00:00:00`;    return new Intl.DateTimeFormat("en-PH", { year: "numeric", month: "short", day: "numeric" }).format(new Date(cleanDate));  } catch (e) {    return "Invalid Date";  }}const getStatusColor = (status?: string) => {  const s = (status || "Submitted").toUpperCase();  if (s === 'APPROVED' || s === 'COMPLETED' || s === 'READY FOR RELEASE') return 'bg-emerald-100 text-emerald-800  ';  if (s === 'REJECTED') return 'bg-rose-100 text-rose-800  ';  return 'bg-amber-100 text-amber-800  ';};export default function RealPropertyApplication({ isCollapsed = false }: RealPropertyApplicationProps) {  const navigate = useNavigate();  const location = useLocation();  const [user, setUser] = useState<{ fullname: string; email: string; initials: string; firstName: string } | null>(null);  const [applications, setApplications] = useState<RPTApplicationRecord[]>([]);  const [formData, setFormData] = useState<RPTFormData>(createEmptyForm);  const [documents, setDocuments] = useState<{ [key: string]: { name: string; url: string } }>({    ownershipProof: { name: "", url: "" },    validId: { name: "", url: "" },    taxRecord: { name: "", url: "" },    propertySketch: { name: "", url: "" },    authorization: { name: "", url: "" }  });  const initialView = new URLSearchParams(location.search).get("view");  const [currentView, setCurrentView] = useState<"hub" | "status" | "form">(    initialView === "status" ? "status" : initialView === "form" ? "form" : "hub"  );  const [isFormOpen, setIsFormOpen] = useState(initialView === "form");  const [isPreviewOpen, setIsPreviewOpen] = useState(false);  const [notice, setNotice] = useState("");  const [docUploadError, setDocUploadError] = useState("");  const [selectedApplication, setSelectedApplication] = useState<RPTApplicationRecord | null>(null);  const [rptRecords, setRptRecords] = useState<CitizenRPTRecord[]>([]);  const [selectedRPTId, setSelectedRPTId] = useState("");  const [paymentMethod, setPaymentMethod] = useState("GCash");  const [isPaymentOpen, setIsPaymentOpen] = useState(false);  const [isPayMongoProcessing, setIsPayMongoProcessing] = useState(false);  const [paymongoReceipt, setPaymongoReceipt] = useState<any | null>(null);  const [previewFile, setPreviewFile] = useState<{ name: string; url: string } | null>(null);  const [loading, setLoading] = useState(false);  const [statusFilter, setStatusFilter] = useState("ALL");  const [searchType, setSearchType] = useState("Tax Declaration");  const [searchQuery, setSearchQuery] = useState("");  const [currentPage, setCurrentPage] = useState(1);  const pageSize = 10;  useEffect(() => {    const params = new URLSearchParams(location.search);    const paymentParam = params.get("payment");    const sessionId = params.get("session_id");    if (paymentParam === "success" && sessionId) {      const activeSessionId = sessionId;      async function handleSessionVerification() {        setIsPayMongoProcessing(true);        try {          const res = await verifyPayMongoSession(activeSessionId);          if (res.paid) {            setPaymongoReceipt(res);            setNotice(`Payment completed successfully via PayMongo. Official Receipt: ${res.officialReceiptNumber}`);            const rptRes = await fetch(`${API_BASE_URL}/lgu-rpt-records`);            if (rptRes.ok) {              setRptRecords(await rptRes.json());            }          } else {            setNotice("Payment verification is still processing with PayMongo.");          }        } catch (e: any) {          console.error("PayMongo verification failed:", e);          setNotice(`Payment verification error: ${e.message || e}`);        } finally {          setIsPayMongoProcessing(false);        }      }      handleSessionVerification();    } else if (paymentParam === "cancelled") {      setNotice("PayMongo payment process was cancelled.");    }  }, [location.search]);  useEffect(() => {    setUser(getStoredCitizenSession());  }, []);  useEffect(() => {    async function fetchData() {      setLoading(true);      try {        const activeUser = getStoredCitizenSession();        if (activeUser?.email) {          const appsRes = await fetch(`${API_BASE_URL}/citizen-rpt-applications`);          if (appsRes.ok) {            const data = await appsRes.json();            const userApps = Array.isArray(data)              ? data.map((app: any) => ({                ...app,                controlNumber: app.control_number || app.controlNumber || "",                taxDeclarationNumber: app.tax_declaration_number || app.taxDeclarationNumber || "",                ownerName: app.owner_name || app.ownerName || "",                applicantName: app.applicant_name || app.applicantName || "",                applicantType: app.applicant_type || app.applicantType || "",                mobileNumber: app.mobile_number || app.mobileNumber || "",                propertyLocation: app.property_location || app.propertyLocation || "",                propertyType: app.property_type || app.propertyType || "",                filedDate: app.filed_date || app.filedDate || app.created_at || "",                status: app.status || "Submitted",              })).filter((app: RPTApplicationRecord) => app.email === activeUser.email)              : [];            setApplications(userApps);          }        }        const rptRes = await fetch(`${API_BASE_URL}/lgu-rpt-records`);        if (rptRes.ok) {          const data = await rptRes.json();          setRptRecords(data);        }      } catch (error) {        console.error("Failed to fetch database records:", error);        setNotice("Could not connect to the database server.");      } finally {        setLoading(false);      }    }    fetchData();  }, []);  useEffect(() => {    const viewParam = new URLSearchParams(location.search).get("view");    const nextView: "hub" | "status" | "form" =      viewParam === "status" ? "status" : viewParam === "form" ? "form" : "hub";    setCurrentView(nextView);    setIsFormOpen(nextView === "form");    if (location.pathname !== "/citizen-rpt") {      const query = nextView === "hub" ? "" : `?view=${nextView}`;      navigate(`/citizen-rpt${query}`, { replace: true });    }  }, [location.pathname, location.search, navigate]);  const filteredApplications = useMemo(() => {    let result = applications;    if (statusFilter !== "ALL") {      result = result.filter(app => (app.status || "Submitted").toUpperCase() === statusFilter.toUpperCase());    }    const query = searchQuery.trim().toLowerCase();    if (query) {      result = result.filter(app => {        if (searchType === "Tax Declaration") return String(app.taxDeclarationNumber || "").toLowerCase().includes(query);        if (searchType === "Owner Name") return String(app.ownerName || "").toLowerCase().includes(query);        if (searchType === "Control No.") return String(app.controlNumber || "").toLowerCase().includes(query);        return true;      });    }    return result.sort((a, b) => new Date(b.filedDate || 0).getTime() - new Date(a.filedDate || 0).getTime());  }, [applications, statusFilter, searchType, searchQuery]);  const totalPages = Math.max(1, Math.ceil(filteredApplications.length / pageSize));  const paginatedApplications = filteredApplications.slice((currentPage - 1) * pageSize, currentPage * pageSize);  function updateForm(event: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {    const { name, value } = event.target;    if (name === "mobileNumber") {      setFormData((current) => ({ ...current, mobileNumber: value.replace(/\D/g, "").slice(0, 11) }));      return;    }    setFormData((current) => ({ ...current, [name]: value }));  }  function updateDocument(event: ChangeEvent<HTMLInputElement>) {    const { name, files } = event.target;    const file = files?.[0];    if (!file) return;    const ALLOWED_MIME_TYPES = [      'image/jpeg', 'image/png', 'image/gif', 'image/webp',      'application/pdf'    ];    const ALLOWED_EXTENSIONS = /\.(jpe?g|png|gif|webp|pdf)$/i;    const mimeOk = ALLOWED_MIME_TYPES.includes(file.type);    const extOk  = ALLOWED_EXTENSIONS.test(file.name);    if (!mimeOk || !extOk) {      setDocUploadError('⚠️ Invalid file type. Only images (JPEG, PNG, GIF, WebP) and PDF documents are accepted.');      event.target.value = '';      return;    }    const reader = new FileReader();    reader.onload = (uploadEvent) => {      const base64Url = uploadEvent.target?.result as string || '';      setDocuments((current) => ({        ...current,        [name]: { name: file.name, url: base64Url }      }));      setDocUploadError('');    };    reader.readAsDataURL(file);  }  function selectedRPT() {    return rptRecords.find((record) => String(record.id) === selectedRPTId);  }  function startPaymentForRecord(record: CitizenRPTRecord) {    const amountDue = getRPTAmountDue(record);    if (amountDue <= 0) {      setNotice("This RPT record has no outstanding balance.");      return;    }    setSelectedRPTId(String(record.id));    setPaymentMethod("GCash");    setNotice("");    setIsPaymentOpen(true);  }  async function handlePayMongoCheckout() {    const record = selectedRPT();    if (!record) {      setNotice("Select an RPT assessment first.");      return;    }    const amountDue = getRPTAmountDue(record);    if (amountDue <= 0) {      setNotice("This RPT record has no outstanding balance.");      setIsPaymentOpen(false);      return;    }    setIsPayMongoProcessing(true);    try {      const checkoutResult = await createPayMongoCheckout({        type: 'RPT',        amount: amountDue,        taxDeclarationNumber: record.taxDeclarationNumber,        rptRecordId: record.id,        customerName: record.ownerName || user?.fullname || "Citizen Taxpayer",        customerEmail: user?.email || "citizen@gov.ph",        description: `Real Property Tax Payment for TD# ${record.taxDeclarationNumber}`,      });      if (checkoutResult?.checkoutUrl) {        window.location.href = checkoutResult.checkoutUrl;      } else {        throw new Error("No checkout URL returned from PayMongo server.");      }    } catch (err: any) {      console.error("PayMongo initiate error:", err);      setNotice(`Failed to open PayMongo checkout: ${err.message || err}`);      setIsPayMongoProcessing(false);    }  }  async function confirmPayment() {    const record = selectedRPT();    if (!record) {      setNotice("Select an RPT assessment first.");      return;    }    const amountDue = getRPTAmountDue(record);    if (amountDue <= 0) {      setNotice("This RPT record has no outstanding balance.");      setIsPaymentOpen(false);      return;    }    const paymentReference = `RPT-PAY-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, "0")}${String(new Date().getDate()).padStart(2, "0")}-${Math.floor(100000 + Math.random() * 900000)}`;    const officialReceiptNumber = `OR-RPT-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;    try {      const response = await fetch(`${API_BASE_URL}/citizen-rpt-payments`, {        method: "POST",        headers: { "Content-Type": "application/json" },        body: JSON.stringify({          rptRecordId: record.id,          taxDeclarationNumber: record.taxDeclarationNumber,          ownerName: record.ownerName || user?.fullname || "",          amount: amountDue,          paymentMethod,          paymentReference,          officialReceiptNumber,        }),      });      if (!response.ok) throw new Error("Payment processing failed");      const rptRes = await fetch(`${API_BASE_URL}/lgu-rpt-records`);      if (rptRes.ok) {        setRptRecords(await rptRes.json());      }      setIsPaymentOpen(false);      setNotice(`Payment successful. OR No. ${officialReceiptNumber}. Payment reference: ${paymentReference}.`);      setSelectedRPTId("");    } catch (error) {      console.error(error);      setNotice("Error processing payment. Please try again.");    }  }  function openApplicationStatus() {    setCurrentView("status");    setIsFormOpen(false);    setIsPreviewOpen(false);    setNotice("");    navigate("/citizen-rpt?view=status");  }  function startApplication() {    setCurrentView("form");    setFormData(createEmptyForm());    setDocuments({      ownershipProof: { name: "", url: "" },      validId: { name: "", url: "" },      taxRecord: { name: "", url: "" },      propertySketch: { name: "", url: "" },      authorization: { name: "", url: "" }    });    setNotice("");    setIsPreviewOpen(false);    setIsFormOpen(true);    navigate("/citizen-rpt?view=form");  }  function openReview(event: FormEvent<HTMLFormElement>) {    event.preventDefault();    if (!documents.ownershipProof.name || !documents.validId.name) {      setNotice("Attach proof of ownership and a valid government-issued ID before continuing.");      return;    }    if (formData.applicantType === "Authorized Representative" && !documents.authorization.name) {      setNotice("Attach the authorization or Special Power of Attorney before continuing as a representative.");      return;    }    setNotice("");    setIsPreviewOpen(true);  }  async function submitApplication() {    const generatedControlNo = makeControlNumber();    const currentDate = new Date().toISOString().slice(0, 10);    const attachedDocsList = Object.values(documents)      .filter((doc) => doc.name)      .map((doc) => ({ name: doc.name, url: doc.url }));    const formDataPayload = {      control_number: generatedControlNo,      tax_declaration_number: formData.taxDeclarationNumber || "For issuance",      owner_name: formData.ownerName,      applicant_name: formData.applicantName,      applicant_type: formData.applicantType,      email: formData.email,      mobile_number: formData.mobileNumber,      service: formData.service,      property_location: formData.propertyLocation,      barangay: formData.barangay,      property_type: formData.propertyType,      status: "Submitted",      filed_date: currentDate,      notes: formData.notes,      documents: JSON.stringify(attachedDocsList)    };    try {      const response = await fetch(`${API_BASE_URL}/citizen-rpt-applications`, {        method: "POST",        headers: { "Content-Type": "application/json" },        body: JSON.stringify(formDataPayload),      });      if (!response.ok) throw new Error("Failed to submit application");      const savedAppResult = await response.json();      const rawApp = savedAppResult.record || savedAppResult;      let parsedDocs = rawApp.documents;      if (typeof parsedDocs === "string") {        try { parsedDocs = JSON.parse(parsedDocs); } catch { parsedDocs = attachedDocsList; }      }      const savedApp = {        ...rawApp,        controlNumber: rawApp.control_number || rawApp.controlNumber || generatedControlNo,        taxDeclarationNumber: rawApp.tax_declaration_number || rawApp.taxDeclarationNumber || formData.taxDeclarationNumber,        ownerName: rawApp.owner_name || rawApp.ownerName || formData.ownerName,        applicantName: rawApp.applicant_name || rawApp.applicantName || formData.applicantName,        applicantType: rawApp.applicant_type || rawApp.applicantType || formData.applicantType,        mobileNumber: rawApp.mobile_number || rawApp.mobileNumber || formData.mobileNumber,        propertyLocation: rawApp.property_location || rawApp.propertyLocation || formData.propertyLocation,        propertyType: rawApp.property_type || rawApp.propertyType || formData.propertyType,        filedDate: rawApp.filed_date || rawApp.filedDate || currentDate,        status: rawApp.status || "Submitted",        documents: parsedDocs || attachedDocsList,      };      setApplications([savedApp, ...applications]);      setIsPreviewOpen(false);      setCurrentView("status");      setIsFormOpen(false);      setNotice(`Application submitted. Your control number is ${savedApp.controlNumber}.`);      navigate("/citizen-rpt?view=status");    } catch (error) {      console.error(error);      setNotice("Error submitting application to the database.");    }  }  function cancelApplication() {    setIsPreviewOpen(false);    setCurrentView("status");    setIsFormOpen(false);    setNotice("");    navigate("/citizen-rpt?view=status");  }  function goHome() {    setIsPreviewOpen(false);    setIsFormOpen(false);    setCurrentView("hub");    setNotice("");    navigate("/citizen-rpt");  }  const documentItems = [    { label: "Proof of ownership", value: documents.ownershipProof.name || "Not attached" },    { label: "Valid government-issued ID", value: documents.validId.name || "Not attached" },    { label: "Latest tax receipt or Tax Declaration", value: documents.taxRecord.name || "Not attached" },    { label: "Property sketch / plan, if applicable", value: documents.propertySketch.name || "Not attached" },    ...(formData.applicantType === "Authorized Representative" ? [{ label: "Authorization / SPA", value: documents.authorization.name || "Not attached" }] : []),  ];  return (    <div      style={{        marginLeft: isCollapsed ? "80px" : "0px",        width: isCollapsed ? "calc(100% - 80px)" : "100%",      }}      className="min-h-screen flex flex-col justify-between bg-slate-100 text-slate-800 transition-all duration-300 box-border"    >      <div>        <UnifiedHeader />        <div className="relative w-full bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 h-36 sm:h-48 overflow-hidden flex items-center justify-center border-b-4 border-blue-600">          <div className="absolute inset-0 opacity-30 bg-[radial-gradient(#3b82f6_1px,transparent_1px)] [background-size:16px_16px]"></div>          <div className="relative z-10 text-center px-4">            <h1 className="text-xl sm:text-3xl font-extrabold text-white tracking-wide uppercase">              {currentView === 'hub' ? 'WELCOME TO REAL PROPERTY TAX' : currentView === 'status' ? 'APPLICATION STATUS' : 'REAL PROPERTY TAX APPLICATION'}            </h1>            <p className="text-xs sm:text-sm text-slate-200 mt-1 max-w-xl mx-auto">              Manage your real property tax services and submissions directly through the secure database portal.            </p>          </div>        </div>        <div className="max-w-7xl mx-auto px-4 py-8 w-full">          <section className={currentView === "hub" ? "" : "overflow-hidden rounded-3xl border border-slate-200  bg-white  shadow-sm"}>            {currentView !== "hub" && currentView !== "status" && (              <div className="border-b border-slate-200 px-6 py-6 sm:px-8">                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-blue-700">Office of the City Assessor</p>                <div className="mt-2">                  <h3 className="text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">Real Property Tax Portal</h3>                  <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">Submit a single tax declaration request, attach requirements, and track records stored securely.</p>                </div>              </div>            )}            {notice && <div role="status" className="mx-6 mt-6 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-900 sm:mx-8">{notice}</div>}            {docUploadError && <div className="mx-6 mt-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-900 sm:mx-8">{docUploadError}</div>}            {currentView === "hub" ? (              <div className="py-2 sm:py-4">                <div className="grid grid-cols-1 gap-5 md:grid-cols-2">                  <button type="button" onClick={openApplicationStatus} className="group min-h-[205px] rounded-2xl border border-slate-200 bg-white p-7 text-left shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg cursor-pointer flex flex-col justify-between">                    <div>                      <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-2xl text-blue-600">✓</div>                      <h3 className="text-base font-extrabold uppercase tracking-wide text-blue-900">CHECK APPLICATION STATUS</h3>                      <p className="mt-3 max-w-xl text-sm leading-6 text-slate-600">Find your control number, review updates, or settle tax assessment balances.</p>                    </div>                    <span className="mt-6 inline-flex rounded-xl bg-blue-800 px-5 py-2.5 text-xs font-bold text-white shadow-sm transition group-hover:bg-blue-900 self-start">CHECK STATUS</span>                  </button>                  <button type="button" onClick={startApplication} className="group min-h-[205px] rounded-2xl border border-slate-200 bg-white p-7 text-left shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg cursor-pointer flex flex-col justify-between">                    <div>                      <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-2xl text-blue-600">▤</div>                      <h3 className="text-base font-extrabold uppercase tracking-wide text-blue-900">REAL PROPERTY TAX APPLICATION</h3>                      <p className="mt-3 max-w-xl text-sm leading-6 text-slate-600">Submit a new tax declaration request or property record update.</p>                    </div>                    <span className="mt-6 inline-flex rounded-xl bg-blue-800 px-5 py-2.5 text-xs font-bold text-white shadow-sm transition group-hover:bg-blue-900 self-start">PROCEED WITH RPT APPLICATION</span>                  </button>                </div>              </div>            ) : isFormOpen ? (              <div className="p-6 sm:p-8">                <div className="mb-5 flex justify-start">                  <button type="button" onClick={goHome} className="rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-xs font-bold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 cursor-pointer">                    ← Back Home                  </button>                </div>                {!isPreviewOpen ? (                  <form onSubmit={openReview} className="space-y-7">                    <div>                      <h3 className="text-base font-extrabold text-slate-900">Transaction details</h3>                      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">                        <Field label="Requested service" required><select name="service" value={formData.service} onChange={updateForm} className={inputClass}>{services.map((service) => <option key={service}>{service}</option>)}</select></Field>                        <Field label="Applying as" required><select name="applicantType" value={formData.applicantType} onChange={updateForm} className={inputClass}><option>Property Owner</option><option>Authorized Representative</option><option>Corporation / Company</option></select></Field>                      </div>                    </div>                    <div className="border-t border-slate-100 pt-7">                      <h3 className="text-base font-extrabold text-slate-900">Applicant information</h3>                      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">                        <Field label="Property owner / company name" required><input name="ownerName" value={formData.ownerName} onChange={updateForm} required className={inputClass} /></Field>                        <Field label="Applicant name" required><input name="applicantName" value={formData.applicantName} onChange={updateForm} required className={inputClass} /></Field>                        <Field label="Email address" required><input type="email" name="email" value={formData.email} onChange={updateForm} required className={inputClass} /></Field>                        <Field label="Mobile number" required><input name="mobileNumber" value={formData.mobileNumber} onChange={updateForm} inputMode="numeric" placeholder="09XXXXXXXXX" required className={inputClass} /></Field>                        <Field label="TIN"><input name="tin" value={formData.tin} onChange={updateForm} className={inputClass} /></Field>                      </div>                    </div>                    <div className="border-t border-slate-100 pt-7">                      <h3 className="text-base font-extrabold text-slate-900">Property information</h3>                      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">                        <Field label="Tax Declaration number"><input name="taxDeclarationNumber" value={formData.taxDeclarationNumber} onChange={updateForm} placeholder="e.g. 12345-67890" className={inputClass} /></Field>                        <Field label="Property type" required><select name="propertyType" value={formData.propertyType} onChange={updateForm} className={inputClass}><option>Residential</option><option>Commercial</option><option>Industrial</option><option>Agricultural</option><option>Mixed Use</option></select></Field>                        <Field label="Barangay" required><input name="barangay" value={formData.barangay} onChange={updateForm} required className={inputClass} /></Field>                        <div className="md:col-span-2 lg:col-span-3"><Field label="Property location" required><input name="propertyLocation" value={formData.propertyLocation} onChange={updateForm} placeholder="House / lot number, street, subdivision" required className={inputClass} /></Field></div>                      </div>                    </div>                    <div className="border-t border-slate-100 pt-7">                      <h3 className="text-base font-extrabold text-slate-900">Documentary requirements</h3>                      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">                        <UploadField label="Proof of ownership" name="ownershipProof" onChange={updateDocument} required help="Deed of Sale, title, or applicable proof" />                        <UploadField label="Valid government-issued ID" name="validId" onChange={updateDocument} required help="Owner or authorized applicant" />                        <UploadField label="Latest tax receipt or Tax Declaration" name="taxRecord" onChange={updateDocument} help="Attach if available" />                        <UploadField label="Property sketch / plan" name="propertySketch" onChange={updateDocument} help="Attach if applicable" />                        {formData.applicantType === "Authorized Representative" && <UploadField label="Authorization / Special Power of Attorney" name="authorization" onChange={updateDocument} required help="Required for representatives" />}                      </div>                    </div>                    <div className="border-t border-slate-100 pt-7"><Field label="Additional notes"><textarea name="notes" value={formData.notes} onChange={updateForm} rows={3} className={inputClass} placeholder="Add details that may help the assessor review this request." /></Field></div>                    <div className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-6 sm:flex-row sm:justify-end">                      <button type="button" onClick={cancelApplication} className="rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 cursor-pointer">Cancel</button>                      <button type="submit" className="rounded-xl bg-blue-800 px-6 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-blue-900 cursor-pointer">Review Application</button>                    </div>                  </form>                ) : (                  <section className="space-y-6">                    <div className="rounded-2xl border border-blue-100 bg-blue-50 p-5"><h3 className="text-lg font-extrabold text-blue-950">Review your application</h3></div>                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">                      <Summary title="Transaction details" items={[["Service", formData.service], ["Applicant type", formData.applicantType], ["Tax Declaration", formData.taxDeclarationNumber || "For issuance"], ["Property type", formData.propertyType]]} />                      <Summary title="Applicant and property" items={[["Property owner", formData.ownerName], ["Applicant", formData.applicantName], ["Email", formData.email], ["Mobile", formData.mobileNumber], ["Property location", `${formData.propertyLocation}, ${formData.barangay}`]]} />                    </div>                    <Summary title="Attached documents" items={documentItems.map((item) => [item.label, item.value])} />                    <div className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-6 sm:flex-row sm:justify-end">                      <button type="button" onClick={() => setIsPreviewOpen(false)} className="rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 cursor-pointer">Back to Edit</button>                      <button type="button" onClick={submitApplication} className="rounded-xl bg-blue-800 px-6 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-blue-900 cursor-pointer">Confirm and Submit</button>                    </div>                  </section>                )}              </div>            ) : (              <div className="p-6 sm:p-8 space-y-4">                <div className="flex flex-wrap items-center gap-2">                  <button onClick={goHome} className="text-xs text-blue-700 hover:underline font-semibold flex items-center gap-1 cursor-pointer">                    ← Back to Home                  </button>                </div>                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">                  <div className="flex items-center gap-2 w-full sm:w-auto">                    <button onClick={startApplication} className="px-4 py-2 bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold rounded-md shadow-xs cursor-pointer">                      + NEW RPT APPLICATION                    </button>                  </div>                </div>                <div className="flex flex-col md:flex-row justify-between items-center gap-3 pt-4 border-t border-slate-200">                  <div className="w-full md:w-64">                    <label className="block text-[11px] font-semibold text-slate-500 mb-1">Application Status</label>                    <select                      value={statusFilter}                      onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}                      className="w-full p-2 text-xs border border-slate-300 rounded bg-slate-50 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"                    >                      <option value="ALL">ALL</option>                      <option value="Submitted">Submitted / Pending</option>                      <option value="Approved">Approved</option>                      <option value="Rejected">Rejected</option>                      <option value="For Compliance">For Compliance</option>                      <option value="Processing">Processing</option>                    </select>                  </div>                  <div className="flex items-center gap-2 w-full md:w-auto justify-end">                    <div className="w-full sm:w-48">                      <label className="block text-[11px] font-semibold text-slate-500 mb-1">Search By:</label>                      <select                        value={searchType}                        onChange={(e) => { setSearchType(e.target.value); setCurrentPage(1); }}                        className="w-full p-2 text-xs border border-slate-300 rounded bg-slate-50 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"                      >                        <option value="Tax Declaration">Tax Declaration No.</option>                        <option value="Control No.">Control No.</option>                        <option value="Owner Name">Owner Name</option>                      </select>                    </div>                    <div className="w-full sm:w-64 pt-5">                      <div className="flex gap-1">                        <input                          type="text"                          value={searchQuery}                          onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}                          placeholder="Search records..."                          className="w-full p-2 text-xs border border-slate-300 rounded bg-slate-50 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"                        />                        <button className="px-3 py-2 bg-slate-200 text-slate-700 text-xs font-semibold rounded cursor-pointer">                          Search                        </button>                      </div>                    </div>                  </div>                </div>                <div className="overflow-x-auto rounded-lg border border-slate-200">                  <table className="w-full border-collapse text-left text-xs table-fixed min-w-[1000px]">                    <thead className="bg-blue-900 text-white font-semibold">                      <tr>                        {["#", "Tax Declaration", "Owner Name", "Control No.", "Status", "Services", "Filed Date", "Amount Due", "Payment Status", "Action"].map((heading, i) =>                          <th key={heading} className={`p-3 ${i === 0 ? 'w-10' : ''}`}>{heading}</th>                        )}                      </tr>                    </thead>                    <tbody className="divide-y divide-slate-100 bg-white">                      {loading ? (                        <tr><td colSpan={10} className="p-8 text-center text-slate-500 bg-slate-50">Loading applications from server...</td></tr>                      ) : paginatedApplications.length ? paginatedApplications.map((application, index) => {                        const rptRecord = rptRecords.find((record) => String(record.taxDeclarationNumber || "").trim().toLowerCase() === String(application.taxDeclarationNumber || "").trim().toLowerCase());                        const balance = rptRecord ? getRPTAmountDue(rptRecord) : null;                        const isPaid = rptRecord ? (balance !== null && balance <= 0) || String(rptRecord.status || "").toLowerCase() === "paid" : false;                        const paymentStatus = rptRecord ? (isPaid ? "Paid" : (rptRecord.paymentStatus || "Unpaid")) : "Not available";                        return (                          <tr key={application.id} className="hover:bg-slate-50">                            <td className="p-3 font-semibold text-slate-500">{(currentPage - 1) * pageSize + index + 1}</td>                            <td className="p-3 font-bold text-slate-800">{application.taxDeclarationNumber}</td>                            <td className="p-3 text-slate-700 truncate" title={application.ownerName}>{application.ownerName}</td>                            <td className="p-3 font-mono font-semibold text-blue-700">{application.controlNumber}</td>                            <td className="p-3">                              <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold ${getStatusColor(application.status)}`}>                                {application.status || "Submitted"}                              </span>                            </td>                            <td className="p-3 text-slate-600 truncate" title={application.service}>{application.service}</td>                            <td className="p-3 text-slate-600">{formatDate(application.filedDate)}</td>                            <td className="p-3 font-bold text-slate-900">{balance === null ? "—" : formatCurrency(balance)}</td>                            <td className="p-3"><span className="text-slate-700 font-semibold">{paymentStatus}</span></td>                            <td className="p-3">                              <div className="flex flex-col gap-2">                                <button type="button" onClick={() => setSelectedApplication(application)} className="text-left font-bold text-blue-600 hover:underline cursor-pointer">View Details</button>                                {rptRecord && balance !== null && balance > 0 && (                                  <button type="button" onClick={() => startPaymentForRecord(rptRecord)} className="text-left font-bold text-emerald-600 hover:underline cursor-pointer">Pay RPT</button>                                )}                              </div>                            </td>                          </tr>                        );                      }) : <tr><td colSpan={10} className="p-8 text-center text-sm font-medium text-slate-500 bg-slate-50">No applications match your search criteria.</td></tr>}                    </tbody>                  </table>                </div>                <div className="flex justify-between items-center text-xs text-slate-500 pt-2">                  <span>Page {currentPage} of {totalPages}</span>                  <div className="flex gap-1">                    <button                      disabled={currentPage <= 1 || loading}                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}                      className="px-3 py-1 border border-slate-300 rounded disabled:opacity-40 cursor-pointer hover:bg-slate-100"                    >                      Previous                    </button>                    <button                      disabled={currentPage >= totalPages || loading}                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}                      className="px-3 py-1 border border-slate-300 rounded disabled:opacity-40 cursor-pointer hover:bg-slate-100"                    >                      Next                    </button>                  </div>                </div>              </div>            )}          </section>        </div>      </div>      <UnifiedFooter />      {selectedApplication && (        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-xs p-4">          <div className="w-full max-w-2xl rounded-3xl bg-white p-6 shadow-2xl max-h-[90vh] overflow-y-auto border border-slate-200">            <div className="border-b border-slate-100 pb-4 flex justify-between items-center">              <div>                <p className="text-[11px] font-bold uppercase tracking-wider text-blue-700">Application Details</p>                <h3 className="mt-1 text-xl font-extrabold text-slate-900">{selectedApplication.controlNumber || "—"}</h3>              </div>              <button type="button" onClick={() => setSelectedApplication(null)} className="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer">✕</button>            </div>            <div className="mt-5 space-y-5">              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">                <Detail label="Tax Declaration Number" value={selectedApplication.taxDeclarationNumber || "—"} />                <Detail label="Status" value={selectedApplication.status || "—"} />                <Detail label="Owner Name" value={selectedApplication.ownerName || "—"} />                <Detail label="Applicant Name" value={selectedApplication.applicantName || "—"} />                <Detail label="Applicant Type" value={selectedApplication.applicantType || "—"} />                <Detail label="Service Requested" value={selectedApplication.service || "—"} />                <Detail label="Email Address" value={selectedApplication.email || "—"} />                <Detail label="Mobile Number" value={selectedApplication.mobileNumber || "—"} />                <Detail label="Property Type" value={selectedApplication.propertyType || "—"} />                <Detail label="Barangay" value={selectedApplication.barangay || "—"} />              </div>              <Detail label="Property Location" value={selectedApplication.propertyLocation || "—"} />              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-2">                <div className="font-semibold text-slate-700">Submitted Documentary Requirements:</div>                {(() => {                  let docs = selectedApplication.documents;                  if (typeof docs === "string") {                    try { docs = JSON.parse(docs); } catch { }                  }                  if (docs && !Array.isArray(docs) && typeof docs === "object") {                    docs = Object.values(docs).filter((v) => v);                  }                  const docArray = Array.isArray(docs) ? docs : [];                  if (docArray.length === 0) {                    return <p className="text-slate-400 italic text-xs">No files attached.</p>;                  }                  return docArray.map((fileObj, idx) => {                    let fileName = "Document";                    let fileUrl = "";                    if (typeof fileObj === "object" && fileObj !== null) {                      fileName = (fileObj as any).name || "Document";                      fileUrl = (fileObj as any).url || "";                    } else {                      const docStr = String(fileObj);                      fileName = docStr.includes(': ') ? docStr.split(': ')[1].trim() : docStr;                      fileUrl = "";                    }                    return (                      <div key={idx} className="flex justify-between items-center bg-white px-3 py-2 rounded-xl border border-slate-200">                        <span className="font-medium text-slate-800 truncate max-w-[260px] flex items-center gap-1.5 text-xs">                          <svg className="w-3.5 h-3.5 text-blue-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>                          {fileName}                        </span>                        <button                          type="button"                          onClick={() => setPreviewFile({ name: fileName, url: fileUrl })}                          className="text-blue-600 font-bold hover:underline flex items-center gap-1 text-xs cursor-pointer"                        >                          Preview Document                        </button>                      </div>                    );                  });                })()}              </div>            </div>            <div className="mt-6 flex justify-end pt-4 border-t border-slate-100">              <button type="button" onClick={() => setSelectedApplication(null)} className="rounded-xl bg-blue-800 px-5 py-2.5 text-sm font-bold text-white hover:bg-blue-900 cursor-pointer">Done</button>            </div>          </div>        </div>      )}      {isPaymentOpen && selectedRPT() && (        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-xs p-4">          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl border border-slate-200">            <div className="border-b border-slate-100 pb-4 flex justify-between items-start">              <div>                <p className="text-[11px] font-bold uppercase tracking-wider text-blue-700">ePayment Gateway</p>                <h3 className="mt-1 text-xl font-extrabold text-slate-900">Pay Outstanding RPT</h3>              </div>              <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-full uppercase tracking-wider">                Live Gateway              </span>            </div>            <div className="mt-5 space-y-4">              <Detail label="Tax Declaration" value={selectedRPT()?.taxDeclarationNumber || "—"} />              <Detail label="Property Owner" value={selectedRPT()?.ownerName || "—"} />              <div className="rounded-2xl bg-blue-50 p-4 border border-blue-100">                <p className="text-[11px] font-bold uppercase tracking-wide text-blue-700">Total Assessment Balance</p>                <p className="mt-1 text-2xl font-black text-blue-900">{formatCurrency(getRPTAmountDue(selectedRPT() as CitizenRPTRecord))}</p>              </div>              <div className="space-y-3 pt-1">                <p className="text-xs font-bold text-slate-700">Supported Digital Payment Channels:</p>                <div className="grid grid-cols-4 gap-2 text-center text-[10px] font-semibold text-slate-600">                  <div className="p-2 rounded-xl bg-blue-50 border border-blue-200 font-bold text-blue-800">GCash</div>                  <div className="p-2 rounded-xl bg-emerald-50 border border-emerald-200 font-bold text-emerald-800">Maya</div>                  <div className="p-2 rounded-xl bg-slate-100 border border-slate-200 font-bold text-slate-800">Cards (Visa/MC)</div>                  <div className="p-2 rounded-xl bg-indigo-50 border border-indigo-200 font-bold text-indigo-800">QR Ph / Banks</div>                </div>              </div>            </div>            <div className="mt-6 flex flex-col gap-2 pt-4 border-t border-slate-100">              <button                type="button"                disabled={isPayMongoProcessing}                onClick={handlePayMongoCheckout}                className="w-full rounded-xl bg-blue-700 hover:bg-blue-800 text-white px-4 py-3.5 text-sm font-bold shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"              >                {isPayMongoProcessing ? (                  <span>Connecting to PayMongo...</span>                ) : (                  <>                    <span>Proceed to PayMongo Checkout</span>                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>                  </>                )}              </button>              <div className="flex gap-2">                <button                  type="button"                  onClick={() => setIsPaymentOpen(false)}                  className="flex-1 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer"                >                  Cancel                </button>                <button                  type="button"                  onClick={confirmPayment}                  className="flex-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 px-4 py-2.5 text-xs font-semibold cursor-pointer"                >                  Direct / Cash Test                </button>              </div>            </div>          </div>        </div>      )}      {paymongoReceipt && (        <div className="fixed inset-0 z-60 flex items-center justify-center bg-slate-950/75 backdrop-blur-xs p-4">          <div className="w-full max-w-lg rounded-3xl bg-white p-7 shadow-2xl border border-emerald-200">            <div className="text-center space-y-2 pb-4 border-b border-slate-100">              <div className="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto text-2xl font-bold">                ✓              </div>              <p className="text-[11px] font-bold uppercase tracking-widest text-emerald-600">ePayment Successful</p>              <h3 className="text-2xl font-extrabold text-slate-900">Official Tax Receipt</h3>              <p className="text-xs text-slate-500">Government Electronic Treasury Receipt</p>            </div>            <div className="mt-5 space-y-3 text-xs bg-slate-50 p-4 rounded-2xl border border-slate-200">              <div className="flex justify-between py-1 border-b border-slate-200">                <span className="text-slate-500 font-semibold">Official Receipt No. (O.R.):</span>                <span className="font-mono font-bold text-blue-600">{paymongoReceipt.officialReceiptNumber}</span>              </div>              <div className="flex justify-between py-1 border-b border-slate-200">                <span className="text-slate-500 font-semibold">Payment Reference:</span>                <span className="font-mono font-semibold text-slate-800">{paymongoReceipt.paymentReference}</span>              </div>              <div className="flex justify-between py-1 border-b border-slate-200">                <span className="text-slate-500 font-semibold">Payment Channel:</span>                <span className="font-bold text-slate-800">{paymongoReceipt.paymentMethod || 'PayMongo'}</span>              </div>              <div className="flex justify-between py-1 border-b border-slate-200">                <span className="text-slate-500 font-semibold">Amount Paid:</span>                <span className="font-extrabold text-emerald-600 text-sm">₱{Number(paymongoReceipt.amount || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>              </div>              <div className="flex justify-between py-1">                <span className="text-slate-500 font-semibold">Date & Time:</span>                <span className="text-slate-700">{new Date(paymongoReceipt.paymentDate || Date.now()).toLocaleString('en-PH')}</span>              </div>            </div>            <div className="mt-6 flex gap-3">              <button                type="button"                onClick={() => window.print()}                className="flex-1 rounded-xl border border-slate-300 bg-white px-4 py-3 text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer"              >                🖨️ Print Receipt              </button>              <button                type="button"                onClick={() => setPaymongoReceipt(null)}                className="flex-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-3 text-xs font-bold shadow-md transition-all cursor-pointer"              >                Done              </button>            </div>          </div>        </div>      )}      {previewFile && (        <div className="fixed inset-0 z-60 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">          <div className="bg-white rounded-3xl max-w-3xl w-full p-6 shadow-2xl border border-slate-200 space-y-4">            <div className="flex justify-between items-center border-b border-slate-200 pb-3">              <div className="flex items-center gap-2">                <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>                <h4 className="font-bold text-slate-900 text-sm truncate max-w-[320px]">{previewFile.name}</h4>              </div>              <button type="button" onClick={() => setPreviewFile(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer font-bold text-lg">✕</button>            </div>            <div className="h-[60vh] bg-slate-100 rounded-2xl flex items-center justify-center border border-slate-200 overflow-hidden relative">              {previewFile.url.startsWith('data:image/') || previewFile.url.match(/\.(jpeg|jpg|gif|png)$/i) || previewFile.name.match(/\.(jpeg|jpg|gif|png)$/i) ? (                <img src={previewFile.url} alt="Document Preview" className="max-h-full max-w-full object-contain" />              ) : (                <iframe src={previewFile.url} title="Document Preview" className="w-full h-full border-0 bg-white" />              )}            </div>            <div className="flex justify-end pt-2">              <button                type="button"                onClick={() => setPreviewFile(null)}                className="px-5 py-2 bg-slate-200 hover:bg-slate-300 font-bold rounded-xl text-xs cursor-pointer"              >                Close Preview              </button>            </div>          </div>        </div>      )}    </div>  );}const inputClass = "w-full rounded-xl border border-slate-300  bg-white  px-3.5 py-3 text-sm font-medium text-slate-800  outline-none transition-colors placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100";function Field({ label, children, required = false }: { label: string; children: ReactNode; required?: boolean }) {  return <label className="block text-xs font-bold text-slate-700">{label} {required && <span className="text-rose-600">*</span>}<span className="mt-2 block">{children}</span></label>;}function UploadField({ label, name, onChange, required = false, help }: { label: string; name: string; onChange: (event: ChangeEvent<HTMLInputElement>) => void; required?: boolean; help: string }) {  return <label className="block rounded-2xl border border-slate-200 bg-slate-50 p-4 text-xs font-bold text-slate-800">{label} {required && <span className="text-rose-600">*</span>}<span className="mt-1 block text-[11px] font-medium leading-4 text-slate-500">{help}</span><input type="file" name={name} accept="image/*,application/pdf" onChange={onChange} required={required} className="mt-3 block w-full text-[11px] font-medium text-slate-500 file:mr-3 file:rounded-lg file:border-0 file:bg-blue-100 file:px-3 file:py-2 file:text-xs file:font-bold file:text-blue-800 hover:file:bg-blue-200 cursor-pointer" /></label>;}function Summary({ title, items }: { title: string; items: string[][] }) {  return <section className="rounded-2xl border border-slate-200 bg-slate-50 p-5"><h4 className="font-extrabold text-slate-900">{title}</h4><dl className="mt-4 space-y-3">{items.map(([label, value]) => <div key={label} className="border-b border-slate-200 pb-3 last:border-b-0 last:pb-0"><dt className="text-[11px] font-bold uppercase tracking-wide text-slate-500">{label}</dt><dd className="mt-1 text-sm font-medium leading-5 text-slate-800 break-words">{value}</dd></div>)}</dl></section>;}function Detail({ label, value }: { label: string; value: string }) {  return <div><p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">{label}</p><p className="mt-1 font-medium leading-5 text-slate-800">{value}</p></div>;}
+import type { ChangeEvent, FormEvent } from "react";
+import { useLocation } from "react-router-dom";
+import { UnifiedHeader } from "./UnifiedHeader";
+import { UnifiedFooter } from "./UnifiedFooter";
+import { createPayMongoCheckout, verifyPayMongoSession } from "../services/paymongoService";
+import {
+  searchRPTByTDN,
+  processGroupRPTPayment,
+  getRPTApplications,
+  saveRPTApplication,
+  type RPTApplicationRecord
+} from "../services/realpropertytaxService";
+
+// --- Types ---
+export type ApplicantType = "Property Owner" | "Authorized Representative" | "Corporation / Company";
+export type RPTApplicationStatus =
+  | "Submitted"
+  | "For Review"
+  | "Under Evaluation"
+  | "For Compliance"
+  | "Processing"
+  | "Approved"
+  | "Ready for Release"
+  | "Completed"
+  | "Rejected";
+
+export interface PropertyItem {
+  id: string | number;
+  taxDeclarationNumber: string;
+  pin?: string;
+  newPspin: string;
+  ownerName: string;
+  propertyLocation: string;
+  barangay: string;
+  propertyType: string;
+  billingYear: number;
+  billExpiryDate: string;
+  lotAreaSqM: number;
+  assessedValue: number;
+  marketValue: number;
+  basicTax: number;
+  sefTax: number;
+  shttcApplied: number;
+  specialLevy?: number;
+  penalty: number;
+  discount: number;
+  totalAssessment: number;
+  amountPaid: number;
+  balance: number;
+  status: string;
+  paymentStatus: string;
+  quarterlyAmounts?: {
+    q1: number;
+    q2: number;
+    q3: number;
+    q4: number;
+  };
+  // Selected option details
+  selectedPaymentOption?: "Quarterly" | "Full" | "";
+  selectedQuarters?: { q1: boolean; q2: boolean; q3: boolean; q4: boolean };
+  computedPayableAmount?: number;
+}
+
+export interface CartItem {
+  tdn: string;
+  ownerName: string;
+  propertyType: string;
+  billCoverage: string;
+  paymentOption: "Quarterly" | "Full";
+  amountDue: number;
+  shttcApplied: number;
+  discount: number;
+  penalty: number;
+  totalPayable: number;
+  rawProperty: PropertyItem;
+}
+
+export interface ElectronicReceipt {
+  officialReceiptNumber: string;
+  groupReferenceNumber: string;
+  paymentDate: string;
+  customerName: string;
+  paymentMethod: string;
+  totalAmount: number;
+  items: Array<{
+    taxDeclarationNumber: string;
+    ownerName: string;
+    amount: number;
+    officialReceiptNumber: string;
+    paymentOption?: string;
+  }>;
+}
+
+const services = [
+  "Transfer of Ownership",
+  "Consolidation / Segregation",
+  "New Assessment / Reassessment / Reclassification",
+  "Correction / Updating / Revision",
+  "Declaration of New / Undeclared Land",
+  "Cancellation of Assessment Records",
+];
+
+function formatCurrency(val: number): string {
+  return new Intl.NumberFormat("en-PH", {
+    style: "currency",
+    currency: "PHP",
+    minimumFractionDigits: 2,
+  }).format(val || 0);
+}
+
+function getStoredCitizenSession() {
+  const rawUser =
+    localStorage.getItem("currentUser") ||
+    localStorage.getItem("user") ||
+    sessionStorage.getItem("currentUser") ||
+    sessionStorage.getItem("user");
+  if (!rawUser) return null;
+  try {
+    const parsed = JSON.parse(rawUser);
+    const target = parsed.user && typeof parsed.user === "object" ? parsed.user : parsed;
+    const fullName = target.fullname || target.name || target.fullName || target.firstName || target.email;
+    if (!fullName) return null;
+    const email = target.email || "";
+    return { fullname: String(fullName), email };
+  } catch {
+    return null;
+  }
+}
+
+export default function RealPropertyApplication({ isCollapsed = false }: { isCollapsed?: boolean }) {
+  const location = useLocation();
+
+  // --- Active Tab / Sub-View ---
+  // "search" (Step 1-4 QC Flow) | "application" (Form) | "status" (Tracker) | "summary" (Receipts & History)
+  const [activePortalTab, setActivePortalTab] = useState<"search" | "application" | "status" | "summary">("search");
+
+  // --- Step Flow within "search" Tab ---
+  // 1: TDN Search | 2: Possible Properties (Group Bill Set) | 3: Selected TDN Config
+  const [rptSearchStep, setRptSearchStep] = useState<1 | 2 | 3>(1);
+
+  // Search Step 1 State
+  const [searchTdnInput, setSearchTdnInput] = useState<string>("F-021-01491");
+  const [isCaptchaVerified, setIsCaptchaVerified] = useState<boolean>(false);
+  const [dailySearchQuota, setDailySearchQuota] = useState<number>(20);
+  const [isSearchingTdn, setIsSearchingTdn] = useState<boolean>(false);
+  const [searchError, setSearchError] = useState<string>("");
+
+  // Step 2 Modal: Owner Verification
+  const [isOwnerModalOpen, setIsOwnerModalOpen] = useState<boolean>(false);
+  const [verifiedOwnerName, setVerifiedOwnerName] = useState<string>("");
+
+  // Step 3 Data: Associated Properties
+  const [associatedProperties, setAssociatedProperties] = useState<PropertyItem[]>([]);
+  const [selectedTdnIds, setSelectedTdnIds] = useState<Set<string>>(new Set());
+
+  // Step 3 Warning Modal: Unselected TDNs
+  const [isUnselectedWarningOpen, setIsUnselectedWarningOpen] = useState<boolean>(false);
+  const [hasAcknowledgedUnselected, setHasAcknowledgedUnselected] = useState<boolean>(false);
+
+  // Step 4: Payment Option Configuration
+  const [isOptionModalOpen, setIsOptionModalOpen] = useState<boolean>(false);
+  const [activeConfiguringTdn, setActiveConfiguringTdn] = useState<PropertyItem | null>(null);
+  const [tempOptionChoice, setTempOptionChoice] = useState<"Quarterly" | "Full">("Full");
+  const [tempQuarterSelection, setTempQuarterSelection] = useState<{ q1: boolean; q2: boolean; q3: boolean; q4: boolean }>({
+    q1: true,
+    q2: true,
+    q3: true,
+    q4: true,
+  });
+
+  // Step 4 Confirmation Modals
+  const [isGroupApplyConfirmOpen, setIsGroupApplyConfirmOpen] = useState<boolean>(false);
+  const [isSuccessFeedbackOpen, setIsSuccessFeedbackOpen] = useState<boolean>(false);
+  const [successFeedbackMessage, setSuccessFeedbackMessage] = useState<string>("");
+
+  // --- Cart & Checkout ---
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
+  const [isCheckingOut, setIsCheckingOut] = useState<boolean>(false);
+  const [issuedReceipt, setIssuedReceipt] = useState<ElectronicReceipt | null>(null);
+  const [isReceiptModalOpen, setIsReceiptModalOpen] = useState<boolean>(false);
+
+  // --- Applications Queue (Assessor Request Form) ---
+  const [applications, setApplications] = useState<RPTApplicationRecord[]>([]);
+  const [appForm, setAppForm] = useState({
+    service: services[0],
+    applicantType: "Property Owner" as ApplicantType,
+    ownerName: "",
+    applicantName: "",
+    email: "",
+    mobileNumber: "",
+    taxDeclarationNumber: "",
+    tin: "",
+    propertyLocation: "",
+    barangay: "",
+    propertyType: "Residential",
+    notes: "",
+  });
+  const [appDocuments, setAppDocuments] = useState<{ [key: string]: { name: string; url: string } }>({
+    ownershipProof: { name: "", url: "" },
+    validId: { name: "", url: "" },
+    taxRecord: { name: "", url: "" },
+    propertySketch: { name: "", url: "" },
+    authorization: { name: "", url: "" },
+  });
+  const [isSubmittingApp, setIsSubmittingApp] = useState(false);
+  const [appNotice, setAppNotice] = useState("");
+  const [selectedAppDetail, setSelectedAppDetail] = useState<RPTApplicationRecord | null>(null);
+
+  // --- Step-by-Step Guide Lightbox Modal ---
+  const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
+
+  // User & Toast
+  const [currentUser, setCurrentUser] = useState<{ fullname: string; email: string } | null>(null);
+  const [toastMessage, setToastMessage] = useState<{ text: string; type: "success" | "error" | "info" } | null>(null);
+
+  const showToast = (text: string, type: "success" | "error" | "info" = "info") => {
+    setToastMessage({ text, type });
+    setTimeout(() => setToastMessage(null), 4000);
+  };
+
+  // Hydrate User and URL params
+  useEffect(() => {
+    const session = getStoredCitizenSession();
+    if (session) {
+      setCurrentUser(session);
+      setAppForm((prev) => ({
+        ...prev,
+        ownerName: session.fullname,
+        applicantName: session.fullname,
+        email: session.email,
+      }));
+    }
+
+    const params = new URLSearchParams(location.search);
+    const viewParam = params.get("view");
+    if (viewParam === "status") setActivePortalTab("status");
+    else if (viewParam === "form") setActivePortalTab("application");
+    else if (viewParam === "summary") setActivePortalTab("summary");
+
+    // PayMongo Session Verification Callback
+    const paymentStatus = params.get("payment");
+    const sessionId = params.get("session_id");
+    if (paymentStatus === "success" && sessionId) {
+      verifyPayMongoSession(sessionId)
+        .then((res) => {
+          if (res.paid) {
+            showToast(`PayMongo Payment Verified! OR #${res.officialReceiptNumber || 'QC-PAID'}`, "success");
+            setIssuedReceipt({
+              officialReceiptNumber: res.officialReceiptNumber || `eOR-QC-2025-${Math.floor(100000 + Math.random() * 900000)}`,
+              groupReferenceNumber: sessionId,
+              paymentDate: new Date().toISOString(),
+              customerName: session?.fullname || "Valued Property Owner",
+              paymentMethod: res.paymentMethod || "PayMongo (Online Gateway)",
+              totalAmount: res.amount || 0,
+              items: [],
+            });
+            setIsReceiptModalOpen(true);
+          }
+        })
+        .catch((err) => {
+          console.error(err);
+          showToast("Failed to verify PayMongo session with gateway.", "error");
+        });
+    }
+  }, [location.search]);
+
+  // Load existing applications
+  const loadApplications = async () => {
+    try {
+      const data = await getRPTApplications();
+      setApplications(data);
+    } catch (e) {
+      console.error("Failed to load applications:", e);
+    }
+  };
+
+  useEffect(() => {
+    loadApplications();
+  }, []);
+
+  // =========================================================================
+  // STEP 1: Search Tax Declaration Number
+  // =========================================================================
+  const handleExecuteTdnSearch = async (e?: FormEvent) => {
+    if (e) e.preventDefault();
+    setSearchError("");
+
+    if (!searchTdnInput.trim()) {
+      setSearchError("Please enter a valid Tax Declaration Number.");
+      return;
+    }
+
+    if (!isCaptchaVerified) {
+      setSearchError("Please check the 'I am not a robot' verification box before searching.");
+      return;
+    }
+
+    if (dailySearchQuota <= 0) {
+      setSearchError("You have reached your 20/20 daily search quota limit. Please try again tomorrow.");
+      return;
+    }
+
+    setIsSearchingTdn(true);
+
+    try {
+      const result = await searchRPTByTDN(searchTdnInput);
+
+      if (result.found && result.properties && result.properties.length > 0) {
+        setDailySearchQuota((prev) => Math.max(0, prev - 1));
+        setVerifiedOwnerName(result.ownerName || result.properties[0].ownerName || "Property Owner");
+
+        // Format properties list
+        const mappedProps: PropertyItem[] = result.properties.map((p: any) => ({
+          ...p,
+          selectedPaymentOption: "Full",
+          computedPayableAmount: p.balance || p.totalAssessment || 1020.0,
+          selectedQuarters: { q1: true, q2: true, q3: true, q4: true },
+        }));
+
+        setAssociatedProperties(mappedProps);
+        // Default select all TDNs
+        setSelectedTdnIds(new Set(mappedProps.map((p) => p.taxDeclarationNumber)));
+
+        // Open Step 2 Owner Verification Modal
+        setIsOwnerModalOpen(true);
+      } else {
+        setSearchError(result.message || `Tax Declaration Number "${searchTdnInput}" not found in city records.`);
+      }
+    } catch (err: any) {
+      setSearchError(err.message || "Failed to query city database.");
+    } finally {
+      setIsSearchingTdn(false);
+    }
+  };
+
+  // Step 2 Modal: User confirms owner name
+  const handleConfirmOwnerVerification = (isCorrect: boolean) => {
+    setIsOwnerModalOpen(false);
+    if (isCorrect) {
+      // Proceed to Step 3: Possible properties table
+      setRptSearchStep(2);
+      showToast(`Verified ownership for ${verifiedOwnerName}. Found associated properties.`, "success");
+    } else {
+      setSearchError("Please double check the Tax Declaration Number you typed in and try again.");
+    }
+  };
+
+  // =========================================================================
+  // STEP 3: Possible Properties You Might Own (Group Bill Set)
+  // =========================================================================
+  const toggleSelectAllTdns = () => {
+    if (selectedTdnIds.size === associatedProperties.length) {
+      setSelectedTdnIds(new Set());
+    } else {
+      setSelectedTdnIds(new Set(associatedProperties.map((p) => p.taxDeclarationNumber)));
+    }
+  };
+
+  const toggleTdnSelection = (tdn: string) => {
+    const next = new Set(selectedTdnIds);
+    if (next.has(tdn)) {
+      next.delete(tdn);
+    } else {
+      next.add(tdn);
+    }
+    setSelectedTdnIds(next);
+  };
+
+  const unselectedTdns = useMemo(() => {
+    return associatedProperties
+      .filter((p) => !selectedTdnIds.has(p.taxDeclarationNumber))
+      .map((p) => p.taxDeclarationNumber);
+  }, [associatedProperties, selectedTdnIds]);
+
+  const handleProceedToPaymentOptions = () => {
+    if (selectedTdnIds.size === 0) {
+      showToast("Please select at least one Tax Declaration Number to proceed.", "error");
+      return;
+    }
+
+    // Check if there are unselected TDNs
+    if (unselectedTdns.length > 0) {
+      setHasAcknowledgedUnselected(false);
+      setIsUnselectedWarningOpen(true);
+    } else {
+      // All selected, jump directly to Step 4
+      setRptSearchStep(3);
+    }
+  };
+
+  const handleConfirmUnselectedProceed = () => {
+    if (!hasAcknowledgedUnselected) {
+      showToast("Please check the acknowledgment box to confirm your review.", "error");
+      return;
+    }
+    setIsUnselectedWarningOpen(false);
+    setRptSearchStep(3);
+  };
+
+  // =========================================================================
+  // STEP 4: Selected TDNs & Choose Payment Option Modal
+  // =========================================================================
+  const selectedPropertiesList = useMemo(() => {
+    return associatedProperties.filter((p) => selectedTdnIds.has(p.taxDeclarationNumber));
+  }, [associatedProperties, selectedTdnIds]);
+
+  const openPaymentOptionModal = (prop: PropertyItem) => {
+    setActiveConfiguringTdn(prop);
+    setTempOptionChoice(prop.selectedPaymentOption === "Quarterly" ? "Quarterly" : "Full");
+    setTempQuarterSelection(prop.selectedQuarters || { q1: true, q2: true, q3: true, q4: true });
+    setIsOptionModalOpen(true);
+  };
+
+  const handleConfirmPaymentOptionModal = () => {
+    if (!activeConfiguringTdn) return;
+    setIsOptionModalOpen(false);
+    // Open Confirmation Modal: Apply to all TDNs in group?
+    setIsGroupApplyConfirmOpen(true);
+  };
+
+  const applyOptionSettingsToTdns = (applyToAll: boolean) => {
+    setIsGroupApplyConfirmOpen(false);
+
+    setAssociatedProperties((prev) =>
+      prev.map((prop) => {
+        const isTarget = applyToAll || (activeConfiguringTdn && prop.taxDeclarationNumber === activeConfiguringTdn.taxDeclarationNumber);
+        if (!isTarget) return prop;
+
+        let computedAmount = prop.balance || prop.totalAssessment || 1020;
+        if (tempOptionChoice === "Quarterly") {
+          const qAmount = (prop.totalAssessment || 1020) / 4;
+          let count = 0;
+          if (tempQuarterSelection.q1) count++;
+          if (tempQuarterSelection.q2) count++;
+          if (tempQuarterSelection.q3) count++;
+          if (tempQuarterSelection.q4) count++;
+          computedAmount = qAmount * count;
+        }
+
+        return {
+          ...prop,
+          selectedPaymentOption: tempOptionChoice,
+          selectedQuarters: tempQuarterSelection,
+          computedPayableAmount: computedAmount,
+        };
+      })
+    );
+
+    // Trigger Success Modal
+    setSuccessFeedbackMessage(
+      applyToAll
+        ? "Successfully applied to all TDN"
+        : `Successfully applied to TDN ${activeConfiguringTdn?.taxDeclarationNumber}`
+    );
+    setIsSuccessFeedbackOpen(true);
+  };
+
+  // =========================================================================
+  // STEP 5: Add to Cart & Group Checkout
+  // =========================================================================
+  const handleAddToCart = () => {
+    if (selectedPropertiesList.length === 0) {
+      showToast("No Tax Declaration Numbers selected.", "error");
+      return;
+    }
+
+    const newCartItems: CartItem[] = selectedPropertiesList.map((prop) => {
+      const isQuarterly = prop.selectedPaymentOption === "Quarterly";
+      const totalPayable = prop.computedPayableAmount || prop.balance || 1020;
+      const coverage = isQuarterly
+        ? `2025 (${Object.entries(prop.selectedQuarters || {})
+            .filter(([, v]) => v)
+            .map(([k]) => k.toUpperCase())
+            .join(", ")})`
+        : "2025 (Q1) - 2025 (Q4)";
+
+      return {
+        tdn: prop.taxDeclarationNumber,
+        ownerName: prop.ownerName,
+        propertyType: prop.propertyType,
+        billCoverage: coverage,
+        paymentOption: isQuarterly ? "Quarterly" : "Full",
+        amountDue: prop.basicTax + prop.sefTax || 1020,
+        shttcApplied: prop.shttcApplied || 0,
+        discount: prop.discount || 0,
+        penalty: prop.penalty || 0,
+        totalPayable: totalPayable,
+        rawProperty: prop,
+      };
+    });
+
+    setCart(newCartItems);
+    setIsCartOpen(true);
+    showToast(`Added ${newCartItems.length} Group Bill Set item(s) to Cart!`, "success");
+  };
+
+  const grandCartTotal = useMemo(() => {
+    return cart.reduce((sum, item) => sum + item.totalPayable, 0);
+  }, [cart]);
+
+  const handleExecuteGroupCheckout = async (method: "PayMongo" | "DirectSimulated") => {
+    if (cart.length === 0) return;
+    setIsCheckingOut(true);
+
+    try {
+      if (method === "PayMongo") {
+        const paymongoRes = await createPayMongoCheckout({
+          type: "RPT",
+          amount: grandCartTotal,
+          taxDeclarationNumber: cart.map((c) => c.tdn).join(", "),
+          customerName: currentUser?.fullname || cart[0].ownerName || "Taxpayer",
+          customerEmail: currentUser?.email || "citizen@gov.ph",
+          description: `RPT Group Payment (${cart.length} Properties)`,
+        });
+
+        if (paymongoRes?.checkoutUrl) {
+          window.location.href = paymongoRes.checkoutUrl;
+          return;
+        }
+      }
+
+      // Direct Settlement
+      const groupPayload = {
+        items: cart.map((item) => ({
+          id: item.rawProperty.id,
+          taxDeclarationNumber: item.tdn,
+          ownerName: item.ownerName,
+          totalAmount: item.totalPayable,
+          selectedOption: item.paymentOption,
+          billCoverage: item.billCoverage,
+        })),
+        customerName: currentUser?.fullname || cart[0].ownerName || "Taxpayer",
+        customerEmail: currentUser?.email || "citizen@gov.ph",
+        paymentMethod: "Electronic LGU Payment Gateway (Direct)",
+      };
+
+      const result = await processGroupRPTPayment(groupPayload);
+
+      setIssuedReceipt({
+        officialReceiptNumber: result.groupOfficialReceipt,
+        groupReferenceNumber: result.groupReferenceNumber,
+        paymentDate: result.paymentDate,
+        customerName: currentUser?.fullname || cart[0].ownerName || "Taxpayer",
+        paymentMethod: "Electronic LGU Payment Gateway",
+        totalAmount: result.totalAmount,
+        items: result.items || [],
+      });
+
+      setCart([]);
+      setIsCartOpen(false);
+      setIsReceiptModalOpen(true);
+      showToast("Group Real Property Tax payment completed successfully!", "success");
+
+      // Refresh list
+      loadApplications();
+    } catch (err: any) {
+      console.error(err);
+      showToast(err.message || "Failed to process payment checkout.", "error");
+    } finally {
+      setIsCheckingOut(false);
+    }
+  };
+
+  // =========================================================================
+  // Application Submission & Document Upload Handler
+  // =========================================================================
+  const handleAppFileChange = (e: ChangeEvent<HTMLInputElement>, field: string) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (uploadEvent) => {
+      const base64Url = (uploadEvent.target?.result as string) || "";
+      setAppDocuments((prev) => ({
+        ...prev,
+        [field]: { name: file.name, url: base64Url },
+      }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleAppSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setAppNotice("");
+
+    if (!appDocuments.ownershipProof.name || !appDocuments.validId.name) {
+      setAppNotice("⚠️ Please attach Proof of Ownership and a Valid Government ID.");
+      return;
+    }
+
+    setIsSubmittingApp(true);
+
+    const attachedList = Object.values(appDocuments)
+      .filter((d) => d.name)
+      .map((d) => ({ name: d.name, url: d.url }));
+
+    const payload: Partial<RPTApplicationRecord> = {
+      controlNumber: `RPT-QC-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`,
+      taxDeclarationNumber: appForm.taxDeclarationNumber || "For Issuance",
+      ownerName: appForm.ownerName,
+      applicantName: appForm.applicantName,
+      applicantType: appForm.applicantType,
+      email: appForm.email,
+      mobileNumber: appForm.mobileNumber,
+      service: appForm.service,
+      propertyLocation: appForm.propertyLocation,
+      barangay: appForm.barangay,
+      propertyType: appForm.propertyType,
+      status: "Submitted",
+      filedDate: new Date().toISOString().split("T")[0],
+      documents: attachedList,
+      notes: appForm.notes,
+    };
+
+    try {
+      await saveRPTApplication(payload);
+      showToast("Application submitted successfully to the City Assessor's Office!", "success");
+      setAppNotice(`Application created with Control No: ${payload.controlNumber}`);
+      loadApplications();
+      setActivePortalTab("status");
+    } catch (err: any) {
+      setAppNotice("Failed to submit application: " + err.message);
+    } finally {
+      setIsSubmittingApp(false);
+    }
+  };
+
+  return (
+    <div
+      style={{
+        marginLeft: isCollapsed ? "80px" : "0px",
+        width: isCollapsed ? "calc(100% - 80px)" : "100%",
+      }}
+      className="min-h-screen flex flex-col justify-between bg-[#F4F6F9] text-slate-800 font-sans transition-all duration-300"
+    >
+      <div>
+        <UnifiedHeader />
+
+        {/* Top QC E-Services Portal Navigation Bar */}
+        <div className="bg-[#0B3B60] text-white shadow-md border-b-2 border-[#D97706]">
+          <div className="max-w-7xl mx-auto px-4 py-2.5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-3 font-semibold">
+              <span className="bg-[#DC2626] text-white px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider">
+                QC E-SERVICES
+              </span>
+              <span className="text-slate-200">QUEZON CITY REAL PROPERTY TAX ONLINE PORTAL</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsGuideModalOpen(true)}
+                className="bg-[#DC2626] hover:bg-red-700 text-white font-bold px-3 py-1.5 rounded-md transition shadow-xs cursor-pointer flex items-center gap-1.5"
+              >
+                <span>📖 Click here for a step-by-step guide</span>
+              </button>
+              <button
+                onClick={() => setActivePortalTab("summary")}
+                className="bg-[#0284C7] hover:bg-sky-700 text-white font-bold px-3 py-1.5 rounded-md transition shadow-xs cursor-pointer"
+              >
+                Go to my Transaction Summary
+              </button>
+              <button
+                onClick={() => setIsCartOpen(true)}
+                className="bg-[#0E7490] hover:bg-cyan-800 text-white font-bold px-3 py-1.5 rounded-md transition shadow-xs cursor-pointer flex items-center gap-1.5"
+              >
+                <span>🛒 MY CART ({cart.length})</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Portal View Selector Tabs */}
+        <div className="max-w-7xl mx-auto px-4 pt-6">
+          <div className="flex items-center gap-2 border-b border-slate-200 pb-2 overflow-x-auto">
+            <button
+              onClick={() => {
+                setActivePortalTab("search");
+                setRptSearchStep(1);
+              }}
+              className={`px-5 py-2.5 rounded-xl font-bold text-xs transition cursor-pointer flex items-center gap-2 ${
+                activePortalTab === "search"
+                  ? "bg-[#0B3B60] text-white shadow-md"
+                  : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+              }`}
+            >
+              <span>💳 RPT Payment (Amilyar)</span>
+            </button>
+            <button
+              onClick={() => setActivePortalTab("application")}
+              className={`px-5 py-2.5 rounded-xl font-bold text-xs transition cursor-pointer flex items-center gap-2 ${
+                activePortalTab === "application"
+                  ? "bg-[#0B3B60] text-white shadow-md"
+                  : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+              }`}
+            >
+              <span>📝 Assessor Services &amp; Applications</span>
+            </button>
+            <button
+              onClick={() => setActivePortalTab("status")}
+              className={`px-5 py-2.5 rounded-xl font-bold text-xs transition cursor-pointer flex items-center gap-2 ${
+                activePortalTab === "status"
+                  ? "bg-[#0B3B60] text-white shadow-md"
+                  : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+              }`}
+            >
+              <span>🔍 Check Application Status</span>
+            </button>
+            <button
+              onClick={() => setActivePortalTab("summary")}
+              className={`px-5 py-2.5 rounded-xl font-bold text-xs transition cursor-pointer flex items-center gap-2 ${
+                activePortalTab === "summary"
+                  ? "bg-[#0B3B60] text-white shadow-md"
+                  : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+              }`}
+            >
+              <span>📜 Official Receipts &amp; Clearance</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Global Toast Alert */}
+        {toastMessage && (
+          <div className="fixed top-20 right-6 z-50 animate-bounce">
+            <div
+              className={`px-5 py-3 rounded-2xl shadow-xl font-bold text-xs flex items-center gap-2 border ${
+                toastMessage.type === "success"
+                  ? "bg-emerald-50 text-emerald-800 border-emerald-300"
+                  : toastMessage.type === "error"
+                  ? "bg-rose-50 text-rose-800 border-rose-300"
+                  : "bg-blue-50 text-blue-800 border-blue-300"
+              }`}
+            >
+              <span>{toastMessage.type === "success" ? "✓" : "ℹ"}</span>
+              <span>{toastMessage.text}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Main Content Area */}
+        <div className="max-w-7xl mx-auto px-4 py-6 w-full">
+          {/* VIEW: RPT SEARCH & PAYMENT */}
+          {activePortalTab === "search" && (
+            <div className="space-y-6">
+              {/* --- STEP 1: REAL PROPERTY TAX SEARCH --- */}
+              {rptSearchStep === 1 && (
+                <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-10 space-y-8">
+                  <div className="border-b border-slate-200 pb-4">
+                    <h2 className="text-xl font-extrabold text-[#0B3B60] uppercase tracking-wide">
+                      REAL PROPERTY TAX SEARCH
+                    </h2>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Search by Tax Declaration Number (TDN) to view property assessment, verify ownership, and calculate quarterly or full-year payments.
+                    </p>
+                  </div>
+
+                  {searchError && (
+                    <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl text-rose-800 text-xs font-bold flex items-center gap-2">
+                      <span>⚠️</span>
+                      <span>{searchError}</span>
+                    </div>
+                  )}
+
+                  {/* Form Box Matching Screenshot 1 */}
+                  <form onSubmit={handleExecuteTdnSearch} className="max-w-2xl mx-auto space-y-6 text-center">
+                    <div className="space-y-2">
+                      <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-700">
+                        ENTER TAX DECLARATION NUMBER
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          required
+                          value={searchTdnInput}
+                          onChange={(e) => setSearchTdnInput(e.target.value)}
+                          placeholder="e.g. F-021-01491"
+                          className="w-full text-center text-lg font-mono font-bold text-slate-900 border-2 border-slate-300 focus:border-[#0284C7] focus:ring-4 focus:ring-sky-100 rounded-2xl py-3.5 px-4 outline-none transition uppercase"
+                        />
+                      </div>
+                      <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+                        <span className="text-[11px] text-slate-400 font-semibold">Sample QC TDNs:</span>
+                        <button
+                          type="button"
+                          onClick={() => setSearchTdnInput("F-021-01491")}
+                          className="text-[11px] bg-slate-100 hover:bg-slate-200 text-[#0B3B60] px-2.5 py-1 rounded-lg font-mono font-bold cursor-pointer transition"
+                        >
+                          F-021-01491 (Commercial Land)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSearchTdnInput("G-021-01164")}
+                          className="text-[11px] bg-slate-100 hover:bg-slate-200 text-[#0B3B60] px-2.5 py-1 rounded-lg font-mono font-bold cursor-pointer transition"
+                        >
+                          G-021-01164 (Building)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSearchTdnInput("E-015-08832")}
+                          className="text-[11px] bg-slate-100 hover:bg-slate-200 text-[#0B3B60] px-2.5 py-1 rounded-lg font-mono font-bold cursor-pointer transition"
+                        >
+                          E-015-08832 (Residential)
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Interactive reCAPTCHA Box */}
+                    <div className="flex justify-center">
+                      <div className="flex items-center justify-between w-72 bg-slate-50 border border-slate-300 rounded-xl p-3.5 shadow-xs">
+                        <label className="flex items-center gap-3 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={isCaptchaVerified}
+                            onChange={(e) => setIsCaptchaVerified(e.target.checked)}
+                            className="size-6 accent-[#0284C7] rounded cursor-pointer"
+                          />
+                          <span className="text-xs font-semibold text-slate-700">I'm not a robot</span>
+                        </label>
+                        <div className="flex flex-col items-center">
+                          <span className="text-[9px] font-bold text-slate-400">reCAPTCHA</span>
+                          <span className="text-[8px] text-slate-400">Privacy - Terms</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Daily Search Limit Display */}
+                    <div className="text-center">
+                      <p className="text-xs font-bold text-rose-600 uppercase tracking-wide">
+                        YOU HAVE {dailySearchQuota}/20 SEARCH FOR THIS DAY
+                      </p>
+                    </div>
+
+                    {/* Search Button */}
+                    <div>
+                      <button
+                        type="submit"
+                        disabled={isSearchingTdn}
+                        className="w-full sm:w-64 bg-[#0B3B60] hover:bg-[#082944] disabled:opacity-50 text-white font-black py-3.5 px-8 rounded-2xl text-sm uppercase tracking-wider transition shadow-md cursor-pointer"
+                      >
+                        {isSearchingTdn ? "Searching City DB..." : "SEARCH"}
+                      </button>
+                    </div>
+                  </form>
+
+                  {/* Step-by-Step Instructions Legend */}
+                  <div className="border-t border-slate-100 pt-6 max-w-2xl mx-auto space-y-2 text-xs text-slate-600 leading-relaxed bg-slate-50 p-5 rounded-2xl border">
+                    <p>
+                      <strong className="text-slate-900">1.</strong> Type and search for the Tax Declaration Number of your property.
+                    </p>
+                    <p>
+                      <strong className="text-slate-900">2.</strong> Click on the box to the left of the "I'm not a robot" message.
+                    </p>
+                    <p>
+                      <strong className="text-slate-900">3.</strong> This section displays your daily search limit.
+                    </p>
+                    <p>
+                      <strong className="text-slate-900">4.</strong> Click on the 'Search' button.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* --- STEP 2: POSSIBLE PROPERTIES YOU MIGHT OWN --- */}
+              {rptSearchStep === 2 && (
+                <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
+                    <div>
+                      <button
+                        onClick={() => setRptSearchStep(1)}
+                        className="text-xs font-bold text-[#0284C7] hover:underline flex items-center gap-1 cursor-pointer mb-2"
+                      >
+                        &lt; GO BACK TO SEARCH
+                      </button>
+                      <h2 className="text-lg font-extrabold text-[#0B3B60]">Possible properties you might own</h2>
+                      <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1.5">
+                        <span>ℹ️</span>
+                        <span>Here is the list of other Tax Declaration Numbers (TDNs) in relation to the TDN that you entered.</span>
+                      </p>
+                    </div>
+
+                    <div className="text-right bg-slate-50 border border-slate-200 px-4 py-2 rounded-xl text-xs font-bold text-slate-700">
+                      <span>Selected TDN: <span className="text-[#0B3B60] font-black">{selectedTdnIds.size}</span></span>
+                      <span className="mx-2 text-slate-300">|</span>
+                      <span>Unselected TDN: <span className="text-rose-600 font-black">{unselectedTdns.length}</span></span>
+                    </div>
+                  </div>
+
+                  {/* Properties Table */}
+                  <div className="overflow-x-auto rounded-2xl border border-slate-200">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead className="bg-[#F8FAFC] text-slate-700 font-bold border-b border-slate-200">
+                        <tr>
+                          <th className="p-4 w-12 text-center">
+                            <input
+                              type="checkbox"
+                              checked={selectedTdnIds.size === associatedProperties.length && associatedProperties.length > 0}
+                              onChange={toggleSelectAllTdns}
+                              className="size-4 accent-[#0B3B60] rounded cursor-pointer"
+                            />
+                          </th>
+                          <th className="p-4">Tax Declaration No.</th>
+                          <th className="p-4">Name of Owner</th>
+                          <th className="p-4">Bill Expiry Date</th>
+                          <th className="p-4">NewPSPIN</th>
+                          <th className="p-4">Type</th>
+                          <th className="p-4 text-right">Assessment Due</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 bg-white">
+                        {associatedProperties.map((prop) => {
+                          const isSelected = selectedTdnIds.has(prop.taxDeclarationNumber);
+                          return (
+                            <tr key={prop.taxDeclarationNumber} className={`hover:bg-slate-50 transition ${isSelected ? "bg-sky-50/40" : ""}`}>
+                              <td className="p-4 text-center">
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => toggleTdnSelection(prop.taxDeclarationNumber)}
+                                  className="size-4 accent-[#0B3B60] rounded cursor-pointer"
+                                />
+                              </td>
+                              <td className="p-4 font-mono font-extrabold text-[#0B3B60]">
+                                {prop.taxDeclarationNumber}
+                              </td>
+                              <td className="p-4 font-semibold text-slate-800">
+                                {prop.ownerName}
+                              </td>
+                              <td className="p-4 font-mono text-slate-600">
+                                {prop.billExpiryDate}
+                              </td>
+                              <td className="p-4 font-mono text-slate-600">
+                                {prop.newPspin}
+                              </td>
+                              <td className="p-4">
+                                <span className="bg-slate-100 text-slate-700 font-bold px-2.5 py-1 rounded-lg text-[10px]">
+                                  {prop.propertyType}
+                                </span>
+                              </td>
+                              <td className="p-4 text-right font-mono font-bold text-slate-900">
+                                {formatCurrency(prop.balance || prop.totalAssessment || 1020)}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="flex justify-end pt-4">
+                    <button
+                      onClick={handleProceedToPaymentOptions}
+                      className="bg-[#DC2626] hover:bg-red-700 text-white font-extrabold px-8 py-3.5 rounded-2xl text-xs uppercase tracking-wider transition shadow-md cursor-pointer flex items-center gap-2"
+                    >
+                      <span>GO TO PAYMENT OPTION</span>
+                      <span>&gt;</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* --- STEP 3: SELECTED TDN LIST & CONFIGURE PAYMENT OPTION --- */}
+              {rptSearchStep === 3 && (
+                <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
+                    <div>
+                      <button
+                        onClick={() => setRptSearchStep(2)}
+                        className="text-xs font-bold text-[#0284C7] hover:underline flex items-center gap-1 cursor-pointer mb-2"
+                      >
+                        &lt; GO BACK TO GROUP BILL SET
+                      </button>
+                      <h2 className="text-lg font-extrabold text-[#0B3B60] uppercase tracking-wide">
+                        SELECTED TAX DECLARATION NUMBER(S):
+                      </h2>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setRptSearchStep(2)}
+                        className="bg-[#0B3B60] hover:bg-[#082944] text-white font-bold text-xs px-4 py-2.5 rounded-xl transition cursor-pointer"
+                      >
+                        Edit Selected TDN(s)
+                      </button>
+                      <button
+                        onClick={handleAddToCart}
+                        className="bg-[#DC2626] hover:bg-red-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition shadow-md cursor-pointer flex items-center gap-1.5"
+                      >
+                        <span>🛒 Add to Cart</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Selected TDN Table */}
+                  <div className="overflow-x-auto rounded-2xl border border-slate-200">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead className="bg-[#F8FAFC] text-slate-700 font-bold border-b border-slate-200">
+                        <tr>
+                          <th className="p-4">Tax Declaration No.</th>
+                          <th className="p-4">Name of Owner</th>
+                          <th className="p-4">Payment Option</th>
+                          <th className="p-4">Payable Amount</th>
+                          <th className="p-4 text-right">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 bg-white">
+                        {selectedPropertiesList.map((prop) => (
+                          <tr key={prop.taxDeclarationNumber} className="hover:bg-slate-50 transition">
+                            <td className="p-4 font-mono font-extrabold text-[#0B3B60]">
+                              {prop.taxDeclarationNumber}
+                            </td>
+                            <td className="p-4 font-semibold text-slate-800">
+                              {prop.ownerName}
+                            </td>
+                            <td className="p-4">
+                              <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 px-3 py-1 rounded-lg text-xs font-bold">
+                                <span>✓</span>
+                                <span>
+                                  {prop.selectedPaymentOption === "Quarterly" ? "Quarterly (Q1-Q4)" : "Full Payment (Annual)"}
+                                </span>
+                              </span>
+                            </td>
+                            <td className="p-4 font-mono font-extrabold text-slate-900">
+                              {formatCurrency(prop.computedPayableAmount || prop.balance || 1020)}
+                            </td>
+                            <td className="p-4 text-right">
+                              <button
+                                onClick={() => openPaymentOptionModal(prop)}
+                                className="text-xs font-bold text-[#0284C7] hover:text-sky-800 hover:underline cursor-pointer flex items-center gap-1 justify-end ml-auto"
+                              >
+                                <span>✏️</span>
+                                <span>Select Payment Option</span>
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Summary & Proceed Banner */}
+                  <div className="flex flex-col sm:flex-row items-center justify-between bg-slate-50 border border-slate-200 p-5 rounded-2xl gap-4">
+                    <div>
+                      <p className="text-xs text-slate-500 font-semibold">Group Bill Set Total Assessment</p>
+                      <p className="text-2xl font-black text-[#0B3B60]">
+                        {formatCurrency(
+                          selectedPropertiesList.reduce((sum, p) => sum + (p.computedPayableAmount || p.balance || 1020), 0)
+                        )}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3 w-full sm:w-auto">
+                      <button
+                        onClick={handleAddToCart}
+                        className="w-full sm:w-auto bg-[#DC2626] hover:bg-red-700 text-white font-extrabold px-8 py-3.5 rounded-2xl text-xs uppercase tracking-wider transition shadow-md cursor-pointer"
+                      >
+                        Add To Cart &amp; Proceed to Checkout →
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* VIEW: ASSESSOR APPLICATIONS FORM */}
+          {activePortalTab === "application" && (
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-10 space-y-8">
+              <div className="border-b border-slate-200 pb-4">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-[#0284C7]">OFFICE OF THE CITY ASSESSOR</p>
+                <h2 className="text-2xl font-extrabold text-[#0B3B60]">Real Property Tax Service Request</h2>
+                <p className="text-xs text-slate-500 mt-1">
+                  Submit a declaration, transfer of ownership, property reclassification, or correction directly for assessor evaluation.
+                </p>
+              </div>
+
+              {appNotice && (
+                <div className="p-4 bg-sky-50 border border-sky-200 rounded-2xl text-sky-900 text-xs font-bold">
+                  {appNotice}
+                </div>
+              )}
+
+              <form onSubmit={handleAppSubmit} className="space-y-8">
+                {/* Transaction details */}
+                <div>
+                  <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-800 border-b border-slate-100 pb-2 mb-4">
+                    1. Transaction Details
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                    <div className="space-y-1.5">
+                      <label className="font-bold text-slate-700">Requested LGU Service *</label>
+                      <select
+                        value={appForm.service}
+                        onChange={(e) => setAppForm({ ...appForm, service: e.target.value })}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
+                      >
+                        {services.map((s) => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="font-bold text-slate-700">Applying As *</label>
+                      <select
+                        value={appForm.applicantType}
+                        onChange={(e) => setAppForm({ ...appForm, applicantType: e.target.value as ApplicantType })}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
+                      >
+                        <option value="Property Owner">Property Owner</option>
+                        <option value="Authorized Representative">Authorized Representative</option>
+                        <option value="Corporation / Company">Corporation / Company</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Applicant Info */}
+                <div>
+                  <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-800 border-b border-slate-100 pb-2 mb-4">
+                    2. Applicant &amp; Owner Details
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                    <div className="space-y-1.5">
+                      <label className="font-bold text-slate-700">Owner Name / Company *</label>
+                      <input
+                        type="text"
+                        required
+                        value={appForm.ownerName}
+                        onChange={(e) => setAppForm({ ...appForm, ownerName: e.target.value })}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="font-bold text-slate-700">Applicant Full Name *</label>
+                      <input
+                        type="text"
+                        required
+                        value={appForm.applicantName}
+                        onChange={(e) => setAppForm({ ...appForm, applicantName: e.target.value })}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="font-bold text-slate-700">Email Address *</label>
+                      <input
+                        type="email"
+                        required
+                        value={appForm.email}
+                        onChange={(e) => setAppForm({ ...appForm, email: e.target.value })}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="font-bold text-slate-700">Mobile Number (PH) *</label>
+                      <input
+                        type="tel"
+                        required
+                        placeholder="09171234567"
+                        value={appForm.mobileNumber}
+                        onChange={(e) => setAppForm({ ...appForm, mobileNumber: e.target.value })}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="font-bold text-slate-700">TIN Number</label>
+                      <input
+                        type="text"
+                        placeholder="000-000-000"
+                        value={appForm.tin}
+                        onChange={(e) => setAppForm({ ...appForm, tin: e.target.value })}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Property Details */}
+                <div>
+                  <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-800 border-b border-slate-100 pb-2 mb-4">
+                    3. Real Property Location &amp; Classification
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                    <div className="space-y-1.5">
+                      <label className="font-bold text-slate-700">Tax Declaration No. (if existing)</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. F-021-01491"
+                        value={appForm.taxDeclarationNumber}
+                        onChange={(e) => setAppForm({ ...appForm, taxDeclarationNumber: e.target.value })}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none font-mono"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="font-bold text-slate-700">Property Type *</label>
+                      <select
+                        value={appForm.propertyType}
+                        onChange={(e) => setAppForm({ ...appForm, propertyType: e.target.value })}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
+                      >
+                        <option value="Residential">Residential</option>
+                        <option value="Commercial">Commercial</option>
+                        <option value="Industrial">Industrial</option>
+                        <option value="Agricultural">Agricultural</option>
+                        <option value="Special">Special / Institutional</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="font-bold text-slate-700">Barangay *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Central, Diliman, Batasan"
+                        value={appForm.barangay}
+                        onChange={(e) => setAppForm({ ...appForm, barangay: e.target.value })}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
+                      />
+                    </div>
+                    <div className="md:col-span-3 space-y-1.5">
+                      <label className="font-bold text-slate-700">Complete Property Location Address *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="House / Lot No., Street, Subdivision, Quezon City"
+                        value={appForm.propertyLocation}
+                        onChange={(e) => setAppForm({ ...appForm, propertyLocation: e.target.value })}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Documentary Requirements Upload */}
+                <div>
+                  <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-800 border-b border-slate-100 pb-2 mb-4">
+                    4. Documentary Requirements (PDF / Images)
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
+                    <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+                      <span className="font-bold text-slate-800 block">Proof of Ownership *</span>
+                      <p className="text-[10px] text-slate-500">Deed of Absolute Sale, Transfer Certificate of Title (TCT)</p>
+                      <input
+                        type="file"
+                        required
+                        accept="image/*,.pdf"
+                        onChange={(e) => handleAppFileChange(e, "ownershipProof")}
+                        className="text-xs file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#0B3B60] file:text-white cursor-pointer"
+                      />
+                      {appDocuments.ownershipProof.name && (
+                        <p className="text-[11px] font-mono text-emerald-700 font-bold">✓ {appDocuments.ownershipProof.name}</p>
+                      )}
+                    </div>
+
+                    <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+                      <span className="font-bold text-slate-800 block">Valid Government ID *</span>
+                      <p className="text-[10px] text-slate-500">Passport, UMID, Driver's License of Owner/Applicant</p>
+                      <input
+                        type="file"
+                        required
+                        accept="image/*,.pdf"
+                        onChange={(e) => handleAppFileChange(e, "validId")}
+                        className="text-xs file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#0B3B60] file:text-white cursor-pointer"
+                      />
+                      {appDocuments.validId.name && (
+                        <p className="text-[11px] font-mono text-emerald-700 font-bold">✓ {appDocuments.validId.name}</p>
+                      )}
+                    </div>
+
+                    <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+                      <span className="font-bold text-slate-800 block">Latest Tax Receipt / Tax Dec</span>
+                      <p className="text-[10px] text-slate-500">Official Receipt or Copy of Previous Assessment</p>
+                      <input
+                        type="file"
+                        accept="image/*,.pdf"
+                        onChange={(e) => handleAppFileChange(e, "taxRecord")}
+                        className="text-xs file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#0B3B60] file:text-white cursor-pointer"
+                      />
+                      {appDocuments.taxRecord.name && (
+                        <p className="text-[11px] font-mono text-emerald-700 font-bold">✓ {appDocuments.taxRecord.name}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                  <button
+                    type="submit"
+                    disabled={isSubmittingApp}
+                    className="bg-[#0B3B60] hover:bg-[#082944] disabled:opacity-50 text-white font-extrabold px-8 py-3.5 rounded-2xl text-xs uppercase tracking-wider transition shadow-md cursor-pointer"
+                  >
+                    {isSubmittingApp ? "Submitting Application..." : "Submit to City Assessor →"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* VIEW: APPLICATION STATUS TRACKER */}
+          {activePortalTab === "status" && (
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
+                <div>
+                  <h2 className="text-xl font-extrabold text-[#0B3B60]">Real Property Applications Status</h2>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Track the evaluation progress and digital certificate release of your submitted applications.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setActivePortalTab("application")}
+                  className="bg-[#0284C7] hover:bg-sky-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition cursor-pointer"
+                >
+                  + New Service Request
+                </button>
+              </div>
+
+              {applications.length === 0 ? (
+                <div className="p-12 text-center text-slate-400 text-xs italic bg-slate-50 rounded-2xl border border-dashed">
+                  No submitted applications found. Click "+ New Service Request" to submit one.
+                </div>
+              ) : (
+                <div className="overflow-x-auto rounded-2xl border border-slate-200">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead className="bg-[#F8FAFC] text-slate-700 font-bold border-b border-slate-200">
+                      <tr>
+                        <th className="p-4">Control No.</th>
+                        <th className="p-4">Service</th>
+                        <th className="p-4">Owner / Applicant</th>
+                        <th className="p-4">Location</th>
+                        <th className="p-4">Status</th>
+                        <th className="p-4">Filed Date</th>
+                        <th className="p-4 text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 bg-white">
+                      {applications.map((app) => (
+                        <tr key={app.id} className="hover:bg-slate-50 transition">
+                          <td className="p-4 font-mono font-extrabold text-[#0B3B60]">{app.controlNumber}</td>
+                          <td className="p-4 font-semibold text-slate-800">{app.service}</td>
+                          <td className="p-4 text-slate-600">{app.ownerName || app.applicantName}</td>
+                          <td className="p-4 text-slate-600 truncate max-w-xs">{app.propertyLocation}</td>
+                          <td className="p-4">
+                            <span
+                              className={`px-3 py-1 rounded-full text-[10px] font-bold ${
+                                app.status === "Approved" || app.status === "Ready for Release"
+                                  ? "bg-emerald-100 text-emerald-800"
+                                  : app.status === "Rejected"
+                                  ? "bg-rose-100 text-rose-800"
+                                  : "bg-amber-100 text-amber-800"
+                              }`}
+                            >
+                              {app.status}
+                            </span>
+                          </td>
+                          <td className="p-4 font-mono text-slate-500">{app.filedDate}</td>
+                          <td className="p-4 text-right">
+                            <button
+                              onClick={() => setSelectedAppDetail(app)}
+                              className="text-xs font-bold text-[#0284C7] hover:underline cursor-pointer"
+                            >
+                              View Details
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* VIEW: OFFICIAL RECEIPTS & SUMMARY */}
+          {activePortalTab === "summary" && (
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
+              <div className="border-b border-slate-200 pb-4">
+                <h2 className="text-xl font-extrabold text-[#0B3B60]">Real Property Tax Clearance &amp; Electronic Receipts</h2>
+                <p className="text-xs text-slate-500 mt-1">
+                  View and download electronic Official Receipts (eOR) and Real Property Tax Clearance certificates.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-6 bg-emerald-50/60 border border-emerald-200 rounded-3xl space-y-3">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-200/60 px-2.5 py-1 rounded-lg">
+                    OFFICIAL LGU TAX CLEARANCE
+                  </span>
+                  <h3 className="text-base font-extrabold text-emerald-950">Property Tax Status Verified</h3>
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    All settled Real Property Taxes are officially transmitted to the Local Government Unit Revenue Repository and recognized by banks, registries, and city assessors.
+                  </p>
+                  <button
+                    onClick={() => showToast("Downloading certified Real Property Tax clearance...", "info")}
+                    className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition cursor-pointer shadow-sm"
+                  >
+                    Download Clearance Certificate (PDF)
+                  </button>
+                </div>
+
+                <div className="p-6 bg-slate-50 border border-slate-200 rounded-3xl space-y-3">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-700 bg-slate-200 px-2.5 py-1 rounded-lg">
+                    ONLINE AMILYAR SUPPORT
+                  </span>
+                  <h3 className="text-base font-extrabold text-slate-900">Need Help with Your Group Bill Set?</h3>
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    If your property TDN is missing or if you have questions regarding Socialized Housing Tax Credits (SHTTC), email the City Treasurer's Office at <strong>rptpayment@quezoncity.gov.ph</strong>.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <UnifiedFooter />
+
+      {/* MODAL 1: OWNER VERIFICATION POP-UP */}
+      {isOwnerModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4">
+          <div className="bg-white rounded-3xl border border-slate-200 p-8 max-w-md w-full shadow-2xl text-center space-y-6">
+            <div className="size-16 rounded-full border-2 border-sky-400 text-sky-500 flex items-center justify-center text-3xl font-light mx-auto">
+              ?
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-xs text-slate-600 font-semibold leading-relaxed">
+                Please verify that you are paying the RPT for :
+              </p>
+              <h3 className="text-base font-black text-slate-900 uppercase tracking-wide">
+                {verifiedOwnerName}
+              </h3>
+            </div>
+
+            <div className="flex items-center justify-center gap-4 pt-2">
+              <button
+                type="button"
+                onClick={() => handleConfirmOwnerVerification(true)}
+                className="w-28 bg-[#0284C7] hover:bg-sky-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs shadow-md transition cursor-pointer"
+              >
+                Yes
+              </button>
+              <button
+                type="button"
+                onClick={() => handleConfirmOwnerVerification(false)}
+                className="w-28 bg-white hover:bg-slate-100 text-[#D97706] border border-[#D97706] font-bold py-2.5 px-4 rounded-xl text-xs transition cursor-pointer"
+              >
+                No
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: UNSELECTED TDNs WARNING */}
+      {isUnselectedWarningOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4">
+          <div className="bg-white rounded-3xl border border-slate-200 p-8 max-w-md w-full shadow-2xl text-center space-y-5">
+            <div className="size-14 rounded-full border-2 border-sky-400 text-sky-500 flex items-center justify-center text-2xl font-bold mx-auto">
+              i
+            </div>
+
+            <div className="space-y-1">
+              <h3 className="text-base font-extrabold text-slate-900">Info</h3>
+              <p className="text-xs text-slate-600">
+                Not all associated Tax Declaration Numbers (TDNs) were selected.
+              </p>
+            </div>
+
+            <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-left space-y-1">
+              <span className="text-[11px] font-bold text-rose-700 block">Unselected TDNs:</span>
+              <p className="text-xs font-mono font-bold text-rose-600">{unselectedTdns.join(", ")}</p>
+            </div>
+
+            <label className="flex items-center gap-2.5 text-left text-xs text-slate-700 font-semibold cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={hasAcknowledgedUnselected}
+                onChange={(e) => setHasAcknowledgedUnselected(e.target.checked)}
+                className="size-4 accent-[#0B3B60] rounded cursor-pointer"
+              />
+              <span>I acknowledge that I have reviewed the properties that may be under my ownership.</span>
+            </label>
+
+            <div className="flex items-center justify-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsUnselectedWarningOpen(false)}
+                className="bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-bold py-2.5 px-4 rounded-xl text-xs transition cursor-pointer"
+              >
+                Edit Selected TDN
+              </button>
+              <button
+                type="button"
+                disabled={!hasAcknowledgedUnselected}
+                onClick={handleConfirmUnselectedProceed}
+                className="bg-[#0B3B60] hover:bg-[#082944] disabled:opacity-40 text-white font-bold py-2.5 px-6 rounded-xl text-xs transition shadow-md cursor-pointer"
+              >
+                Proceed
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: CHOOSE PAYMENT OPTION */}
+      {isOptionModalOpen && activeConfiguringTdn && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4">
+          <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 max-w-2xl w-full shadow-2xl space-y-6">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <div>
+                <h3 className="text-base font-extrabold text-[#0B3B60]">
+                  CHOOSE A PAYMENT OPTION ({activeConfiguringTdn.taxDeclarationNumber}):
+                </h3>
+                <p className="text-xs text-slate-500 font-semibold mt-0.5">
+                  Bill Coverage: 2025(Q1) - 2025(Q4)
+                </p>
+              </div>
+              <button
+                onClick={() => setIsOptionModalOpen(false)}
+                className="text-slate-400 hover:text-slate-700 font-bold text-lg cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Selectable Option Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Option 1: Quarterly */}
+              <div
+                onClick={() => setTempOptionChoice("Quarterly")}
+                className={`p-5 rounded-2xl border-2 transition cursor-pointer space-y-3 ${
+                  tempOptionChoice === "Quarterly"
+                    ? "border-[#0284C7] bg-sky-50/40 shadow-sm"
+                    : "border-slate-200 bg-white hover:border-slate-300"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black uppercase text-[#0B3B60]">
+                    PAYMENT OPTION 1: QUARTERLY
+                  </span>
+                  <input
+                    type="radio"
+                    name="optionChoice"
+                    checked={tempOptionChoice === "Quarterly"}
+                    onChange={() => setTempOptionChoice("Quarterly")}
+                    className="size-4 accent-[#0284C7] cursor-pointer"
+                  />
+                </div>
+
+                <div className="space-y-1.5 text-xs text-slate-600 border-t border-slate-100 pt-3">
+                  <div className="flex justify-between">
+                    <span>AMOUNT DUE:</span>
+                    <span className="font-mono font-bold text-slate-800">
+                      {formatCurrency((activeConfiguringTdn.totalAssessment || 1020) / 4)} / Qtr
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-[11px] text-slate-500">
+                    <span>* SHTTC APPLIED:</span>
+                    <span>-₱0.00</span>
+                  </div>
+                  <div className="flex justify-between text-[11px] text-slate-500">
+                    <span>* DISCOUNT:</span>
+                    <span>-₱0.00</span>
+                  </div>
+                  <div className="flex justify-between font-black text-slate-900 border-t pt-2">
+                    <span>TOTAL:</span>
+                    <span className="font-mono text-[#0B3B60]">
+                      {formatCurrency(
+                        ((activeConfiguringTdn.totalAssessment || 1020) / 4) *
+                          (Object.values(tempQuarterSelection).filter(Boolean).length || 1)
+                      )}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Quarters selector */}
+                <div className="pt-2">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Select Quarters:</span>
+                  <div className="grid grid-cols-4 gap-1 text-center">
+                    {(["q1", "q2", "q3", "q4"] as const).map((q) => (
+                      <label
+                        key={q}
+                        className={`p-1.5 rounded-lg border text-[11px] font-mono font-bold cursor-pointer transition ${
+                          tempQuarterSelection[q] ? "bg-[#0B3B60] text-white border-[#0B3B60]" : "bg-slate-50 text-slate-600 border-slate-200"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          className="hidden"
+                          checked={tempQuarterSelection[q]}
+                          onChange={(e) =>
+                            setTempQuarterSelection({ ...tempQuarterSelection, [q]: e.target.checked })
+                          }
+                        />
+                        {q.toUpperCase()}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Option 2: Full Annual Payment */}
+              <div
+                onClick={() => setTempOptionChoice("Full")}
+                className={`p-5 rounded-2xl border-2 transition cursor-pointer space-y-3 ${
+                  tempOptionChoice === "Full"
+                    ? "border-[#0284C7] bg-sky-50/40 shadow-sm"
+                    : "border-slate-200 bg-white hover:border-slate-300"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black uppercase text-[#0B3B60]">
+                    PAYMENT OPTION 2: FULL
+                  </span>
+                  <input
+                    type="radio"
+                    name="optionChoice"
+                    checked={tempOptionChoice === "Full"}
+                    onChange={() => setTempOptionChoice("Full")}
+                    className="size-4 accent-[#0284C7] cursor-pointer"
+                  />
+                </div>
+
+                <div className="space-y-1.5 text-xs text-slate-600 border-t border-slate-100 pt-3">
+                  <div className="flex justify-between">
+                    <span>AMOUNT DUE:</span>
+                    <span className="font-mono font-bold text-slate-800">
+                      {formatCurrency(activeConfiguringTdn.basicTax + activeConfiguringTdn.sefTax || 1020.0)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-[11px] text-slate-500">
+                    <span>* SHTTC APPLIED:</span>
+                    <span>-₱0.00</span>
+                  </div>
+                  <div className="flex justify-between text-[11px] text-slate-500">
+                    <span>* DISCOUNT:</span>
+                    <span>-₱0.00</span>
+                  </div>
+                  {activeConfiguringTdn.penalty > 0 && (
+                    <div className="flex justify-between text-[11px] text-rose-600 font-bold">
+                      <span>* PENALTY FEE:</span>
+                      <span>+({formatCurrency(activeConfiguringTdn.penalty)})</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between font-black text-slate-900 border-t pt-2">
+                    <span>TOTAL:</span>
+                    <span className="font-mono text-[#0B3B60]">
+                      {formatCurrency(activeConfiguringTdn.balance || activeConfiguringTdn.totalAssessment || 1127.1)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setIsOptionModalOpen(false)}
+                className="w-32 bg-white hover:bg-slate-100 text-rose-600 border border-rose-300 font-bold py-2.5 px-4 rounded-xl text-xs transition cursor-pointer"
+              >
+                CANCEL
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmPaymentOptionModal}
+                className="w-36 bg-[#DC2626] hover:bg-red-700 text-white font-bold py-2.5 px-6 rounded-xl text-xs transition shadow-md cursor-pointer"
+              >
+                CONFIRM
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 4: GROUP APPLY CONFIRMATION */}
+      {isGroupApplyConfirmOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4">
+          <div className="bg-white rounded-3xl border border-slate-200 p-8 max-w-md w-full shadow-2xl text-center space-y-6">
+            <div className="size-16 rounded-full border-2 border-sky-400 text-sky-500 flex items-center justify-center text-3xl font-light mx-auto">
+              ?
+            </div>
+
+            <div className="space-y-1">
+              <h3 className="text-base font-extrabold text-slate-900">Confirmation</h3>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Would you like to apply this payment option to all TDNs included in the Group Bill Set?
+              </p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => applyOptionSettingsToTdns(true)}
+                className="w-full sm:w-auto bg-[#0284C7] hover:bg-sky-700 text-white font-bold py-2.5 px-5 rounded-xl text-xs transition shadow-md cursor-pointer"
+              >
+                Yes, apply to all
+              </button>
+              <button
+                type="button"
+                onClick={() => applyOptionSettingsToTdns(false)}
+                className="w-full sm:w-auto bg-[#0B3B60] hover:bg-[#082944] text-white font-bold py-2.5 px-5 rounded-xl text-xs transition cursor-pointer"
+              >
+                No, apply to this TDN only
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 5: SUCCESS FEEDBACK MODAL */}
+      {isSuccessFeedbackOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4">
+          <div className="bg-white rounded-3xl border border-slate-200 p-8 max-w-sm w-full shadow-2xl text-center space-y-5">
+            <div className="size-16 rounded-full border-2 border-emerald-400 text-emerald-500 flex items-center justify-center text-3xl font-light mx-auto">
+              ✓
+            </div>
+
+            <h3 className="text-base font-extrabold text-slate-900">
+              {successFeedbackMessage}
+            </h3>
+
+            <div>
+              <button
+                type="button"
+                onClick={() => setIsSuccessFeedbackOpen(false)}
+                className="w-28 bg-[#0B3B60] hover:bg-[#082944] text-white font-bold py-2.5 px-6 rounded-xl text-xs transition shadow-md cursor-pointer"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CART DRAWER / MODAL */}
+      {isCartOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4">
+          <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 max-w-xl w-full shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <h3 className="text-base font-extrabold text-[#0B3B60]">
+                🛒 My Cart - Group Bill Set ({cart.length} Properties)
+              </h3>
+              <button
+                onClick={() => setIsCartOpen(false)}
+                className="text-slate-400 hover:text-slate-700 font-bold text-lg cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {cart.length === 0 ? (
+              <div className="p-8 text-center text-slate-400 text-xs italic bg-slate-50 rounded-2xl">
+                Your cart is empty. Select TDNs to add them here.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {cart.map((item, idx) => (
+                  <div key={idx} className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-1 text-xs">
+                    <div className="flex justify-between items-center font-bold">
+                      <span className="text-[#0B3B60] font-mono">{item.tdn}</span>
+                      <span className="font-mono text-slate-900">{formatCurrency(item.totalPayable)}</span>
+                    </div>
+                    <p className="text-slate-600">{item.ownerName} • {item.propertyType}</p>
+                    <div className="flex justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-200">
+                      <span>Coverage: {item.billCoverage}</span>
+                      <span className="font-semibold">{item.paymentOption}</span>
+                    </div>
+                  </div>
+                ))}
+
+                <div className="p-4 bg-sky-50 border border-sky-200 rounded-2xl space-y-1">
+                  <div className="flex justify-between text-xs text-slate-600">
+                    <span>Total Assessed Tax Due:</span>
+                    <span className="font-mono font-bold">{formatCurrency(grandCartTotal)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs text-slate-600">
+                    <span>Convenience / Processing Fee:</span>
+                    <span className="font-mono font-bold text-emerald-700">₱0.00 (Waived)</span>
+                  </div>
+                  <div className="flex justify-between text-sm font-black text-[#0B3B60] pt-2 border-t border-sky-200">
+                    <span>GRAND TOTAL PAYABLE:</span>
+                    <span className="font-mono">{formatCurrency(grandCartTotal)}</span>
+                  </div>
+                </div>
+
+                <div className="space-y-2 pt-2">
+                  <button
+                    onClick={() => handleExecuteGroupCheckout("PayMongo")}
+                    disabled={isCheckingOut}
+                    className="w-full bg-[#0284C7] hover:bg-sky-700 text-white font-extrabold py-3.5 px-4 rounded-2xl text-xs uppercase tracking-wider transition shadow-md cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <span>💳 Pay via PayMongo (GCash / Maya / Cards / QR Ph)</span>
+                  </button>
+                  <button
+                    onClick={() => handleExecuteGroupCheckout("DirectSimulated")}
+                    disabled={isCheckingOut}
+                    className="w-full bg-[#0B3B60] hover:bg-[#082944] text-white font-extrabold py-3.5 px-4 rounded-2xl text-xs uppercase tracking-wider transition cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <span>⚡ Instant Electronic LGU Settlement</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ELECTRONIC OFFICIAL RECEIPT (eOR) MODAL */}
+      {isReceiptModalOpen && issuedReceipt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4">
+          <div className="bg-white rounded-3xl border border-slate-200 p-8 max-w-lg w-full shadow-2xl space-y-6 text-slate-800 max-h-[90vh] overflow-y-auto">
+            <div className="text-center space-y-1 border-b border-slate-200 pb-4">
+              <span className="text-[10px] font-black tracking-widest text-[#0B3B60] uppercase">
+                REPUBLIC OF THE PHILIPPINES • CITY TREASURER'S OFFICE
+              </span>
+              <h3 className="text-xl font-black text-slate-900">ELECTRONIC OFFICIAL RECEIPT (eOR)</h3>
+              <p className="text-xs font-mono font-bold text-emerald-700">
+                OR No: {issuedReceipt.officialReceiptNumber}
+              </p>
+            </div>
+
+            <div className="space-y-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Date &amp; Time:</span>
+                <span className="font-mono font-semibold">{new Date(issuedReceipt.paymentDate).toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Payor / Owner:</span>
+                <span className="font-bold text-slate-900">{issuedReceipt.customerName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Payment Gateway:</span>
+                <span className="font-semibold">{issuedReceipt.paymentMethod}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Group Reference:</span>
+                <span className="font-mono text-slate-600">{issuedReceipt.groupReferenceNumber}</span>
+              </div>
+            </div>
+
+            {issuedReceipt.items && issuedReceipt.items.length > 0 && (
+              <div className="border-t border-slate-200 pt-3 space-y-2">
+                <span className="text-[11px] font-bold uppercase text-slate-700 block">Settled TDNs:</span>
+                {issuedReceipt.items.map((item, i) => (
+                  <div key={i} className="flex justify-between text-xs p-2 bg-slate-50 rounded-lg">
+                    <span className="font-mono font-bold text-[#0B3B60]">{item.taxDeclarationNumber}</span>
+                    <span className="font-mono font-bold">{formatCurrency(item.amount)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex justify-between items-center text-sm font-black text-emerald-950">
+              <span>TOTAL AMOUNT PAID:</span>
+              <span className="font-mono">{formatCurrency(issuedReceipt.totalAmount)}</span>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => window.print()}
+                className="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-3 rounded-xl text-xs transition cursor-pointer"
+              >
+                🖨️ Print Receipt
+              </button>
+              <button
+                onClick={() => setIsReceiptModalOpen(false)}
+                className="w-1/2 bg-[#0B3B60] hover:bg-[#082944] text-white font-bold py-3 rounded-xl text-xs transition shadow-md cursor-pointer"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* APPLICATION DETAIL MODAL */}
+      {selectedAppDetail && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4">
+          <div className="bg-white rounded-3xl border border-slate-200 p-8 max-w-lg w-full shadow-2xl space-y-5">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <div>
+                <span className="text-[10px] font-bold uppercase text-[#0284C7]">Control Number</span>
+                <h3 className="text-base font-extrabold text-[#0B3B60]">{selectedAppDetail.controlNumber}</h3>
+              </div>
+              <button
+                onClick={() => setSelectedAppDetail(null)}
+                className="text-slate-400 hover:text-slate-700 font-bold text-lg cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Service:</span>
+                <span className="font-bold">{selectedAppDetail.service}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Owner Name:</span>
+                <span className="font-bold">{selectedAppDetail.ownerName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Property Location:</span>
+                <span className="font-semibold text-right max-w-xs">{selectedAppDetail.propertyLocation}, {selectedAppDetail.barangay}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Status:</span>
+                <span className="font-bold text-[#0B3B60]">{selectedAppDetail.status}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Filed Date:</span>
+                <span className="font-mono">{selectedAppDetail.filedDate}</span>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setSelectedAppDetail(null)}
+              className="w-full bg-[#0B3B60] hover:bg-[#082944] text-white font-bold py-3 rounded-xl text-xs transition cursor-pointer"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* STEP-BY-STEP GUIDE MODAL */}
+      {isGuideModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4">
+          <div className="bg-white rounded-3xl border border-slate-200 p-8 max-w-xl w-full shadow-2xl space-y-6 max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <h3 className="text-base font-extrabold text-[#0B3B60]">
+                📖 Real Property Tax (RPT) Online Payment Guide
+              </h3>
+              <button
+                onClick={() => setIsGuideModalOpen(false)}
+                className="text-slate-400 hover:text-slate-700 font-bold text-lg cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs text-slate-700 leading-relaxed">
+              <div className="p-3 bg-sky-50 rounded-xl border border-sky-100">
+                <h4 className="font-bold text-[#0B3B60] mb-1">Step 1: Search Tax Declaration Number (TDN)</h4>
+                <p>Enter your TDN (e.g. F-021-01491), complete the "I'm not a robot" captcha, and click SEARCH.</p>
+              </div>
+              <div className="p-3 bg-sky-50 rounded-xl border border-sky-100">
+                <h4 className="font-bold text-[#0B3B60] mb-1">Step 2: Verify Property Ownership</h4>
+                <p>Confirm the owner or corporation name displayed on the prompt. If correct, click YES.</p>
+              </div>
+              <div className="p-3 bg-sky-50 rounded-xl border border-sky-100">
+                <h4 className="font-bold text-[#0B3B60] mb-1">Step 3: Group Bill Set (Multiple TDNs)</h4>
+                <p>Review all properties linked to your ownership or parcel PIN. Select all TDNs you want to pay together.</p>
+              </div>
+              <div className="p-3 bg-sky-50 rounded-xl border border-sky-100">
+                <h4 className="font-bold text-[#0B3B60] mb-1">Step 4: Select Payment Option</h4>
+                <p>Choose between Quarterly (Q1-Q4) or Full Annual payment. You can apply the option to all TDNs with one click!</p>
+              </div>
+              <div className="p-3 bg-sky-50 rounded-xl border border-sky-100">
+                <h4 className="font-bold text-[#0B3B60] mb-1">Step 5: Checkout &amp; Electronic Official Receipt</h4>
+                <p>Add to Cart and complete payment with GCash, Maya, Cards, or QR Ph. Receive instant downloadable eOR.</p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setIsGuideModalOpen(false)}
+              className="w-full bg-[#0B3B60] hover:bg-[#082944] text-white font-bold py-3 rounded-xl text-xs transition cursor-pointer"
+            >
+              Got It
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
