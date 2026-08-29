@@ -1933,14 +1933,14 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
               <div className="border border-slate-200 rounded-xl p-4 bg-slate-50 flex flex-col items-center">
                 <p className="text-sm font-bold text-slate-900 mb-1">Scan QR Ph code to pay</p>
                 <p className="text-[11px] text-slate-500 text-center mb-3">Scan with a participating QR Ph bank or e-wallet.</p>
-                <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-sm"><img src={rptQrCodeUrl} alt="PayMongo Dynamic QR Ph payment code" className="w-64 h-64 object-contain" /></div>
                 <div className="mt-3 w-full rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-center">
                   <p className="text-[10px] font-bold uppercase tracking-wide text-amber-700">QR valid for</p>
                   <p className="text-sm font-black text-amber-900">{Math.floor(rptQrSecondsRemaining / 60)}:{String(rptQrSecondsRemaining % 60).padStart(2, "0")}</p>
                 </div>
-                <div className="mt-3 w-full rounded-xl border border-sky-200 bg-sky-50 p-3 text-left">
+                                <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-sm"><img src={rptQrCodeUrl} alt="PayMongo Dynamic QR Ph payment code" className="w-64 h-64 object-contain" /></div>
+<div className="mt-3 w-full rounded-xl border border-sky-200 bg-sky-50 p-3 text-left">
                   <div className="flex items-center gap-2 mb-2"><span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-sky-600 text-white text-xs font-black">i</span><p className="text-[11px] font-extrabold text-sky-900">How to pay with QR Ph</p></div>
-                  <p className="text-[10px] leading-relaxed text-slate-600">Scan this Dynamic QR Ph using a participating Philippine bank or e-wallet app. Depending on your provider, supported apps may include GCash, Maya, BPI, BDO, UnionBank, RCBC, LandBank, Metrobank, PNB, Security Bank, and other participating QR Ph institutions.</p>
+                  <p className="text-[10px] leading-relaxed text-slate-600">Scan this QR Ph using bank or e-wallet app. Depending on your provider, supported apps may include GCash, Maya, BPI, BDO, UnionBank, RCBC, LandBank, Metrobank, PNB, Security Bank, and other participating QR Ph institutions.</p>
                   <p className="text-[10px] leading-relaxed text-slate-500 mt-2"><strong>Tip:</strong> Before confirming, check that the amount shown in your banking or e-wallet app matches the Total Due.</p>
                 </div>
                 <div className="w-full mt-3 bg-white border border-slate-200 rounded-lg px-3 py-2 text-center"><p className="text-[10px] uppercase font-bold text-slate-400">Reference Number</p><p className="text-xs font-black text-slate-800 break-all">{rptQrReferenceNumber || "Generating..."}</p></div>
