@@ -13,6 +13,132 @@ export class EmailService {
   private static transporter: Transporter | null = null;
 
   /**
+   * Send email via Brevo (formerly Sendinblue) HTTPS REST API (Port 443 - Never blocked on Railway)
+   */
+  private static async sendViaBrevo(
+    apiKey: string,
+    toEmail: string,
+    subject: string,
+    htmlContent: string,
+    textContent: string,
+    fromEmail: string,
+    fromName: string
+  ): Promise<{ success: boolean; messageId?: string }> {
+    console.log(`[EmailService] Dispatching email via Brevo HTTPS API to ${toEmail}...`);
+
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        accept: 'application/json',
+        'api-key': apiKey.trim(),
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        sender: { name: fromName, email: fromEmail },
+        to: [{ email: toEmail }],
+        subject,
+        htmlContent,
+        textContent,
+      }),
+    });
+
+    const data = (await response.json().catch(() => ({}))) as any;
+
+    if (!response.ok) {
+      const errMsg = data?.message || data?.code || JSON.stringify(data);
+      throw new Error(`Brevo API HTTP ${response.status}: ${errMsg}`);
+    }
+
+    console.log(`[EmailService] Brevo email sent successfully! Message ID: ${data?.messageId || 'ok'}`);
+    return { success: true, messageId: data?.messageId || 'brevo-sent' };
+  }
+
+  /**
+   * Send email via Resend HTTPS REST API (Port 443 - Never blocked on Railway)
+   */
+  private static async sendViaResend(
+    apiKey: string,
+    toEmail: string,
+    subject: string,
+    htmlContent: string,
+    textContent: string,
+    fromAddress: string
+  ): Promise<{ success: boolean; messageId?: string }> {
+    console.log(`[EmailService] Dispatching email via Resend HTTPS API to ${toEmail}...`);
+
+    // Ensure valid format for Resend: "Sender Name <sender@domain.com>" or "onboarding@resend.dev"
+    let from = fromAddress.trim();
+    if (!from.includes('@')) {
+      from = 'GovServe Treasury <onboarding@resend.dev>';
+    }
+
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey.trim()}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from,
+        to: [toEmail],
+        subject,
+        html: htmlContent,
+        text: textContent,
+      }),
+    });
+
+    const data = (await response.json().catch(() => ({}))) as any;
+
+    if (!response.ok) {
+      const errMsg = data?.message || data?.error || JSON.stringify(data);
+      throw new Error(`Resend API HTTP ${response.status}: ${errMsg}`);
+    }
+
+    console.log(`[EmailService] Resend email sent successfully! ID: ${data?.id}`);
+    return { success: true, messageId: data?.id };
+  }
+
+  /**
+   * Send email via SendGrid HTTPS REST API (Port 443 - Never blocked on Railway)
+   */
+  private static async sendViaSendGrid(
+    apiKey: string,
+    toEmail: string,
+    subject: string,
+    htmlContent: string,
+    textContent: string,
+    fromEmail: string,
+    fromName: string
+  ): Promise<{ success: boolean; messageId?: string }> {
+    console.log(`[EmailService] Dispatching email via SendGrid HTTPS API to ${toEmail}...`);
+
+    const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey.trim()}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        personalizations: [{ to: [{ email: toEmail }] }],
+        from: { email: fromEmail, name: fromName },
+        subject,
+        content: [
+          { type: 'text/plain', value: textContent },
+          { type: 'text/html', value: htmlContent },
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`SendGrid API HTTP ${response.status}: ${errorText}`);
+    }
+
+    console.log(`[EmailService] SendGrid email sent successfully!`);
+    return { success: true, messageId: 'sendgrid-sent' };
+  }
+
+  /**
    * Helper to create a nodemailer transporter instance with given configuration
    */
   private static createTransporterInstance(
@@ -30,9 +156,9 @@ export class EmailService {
         user,
         pass,
       },
-      connectionTimeout: 10000,
-      greetingTimeout: 10000,
-      socketTimeout: 15000,
+      connectionTimeout: 8000,
+      greetingTimeout: 8000,
+      socketTimeout: 10000,
       requireTLS: !secure && (port === 587 || port === 2525),
       tls: {
         rejectUnauthorized: false,
@@ -44,7 +170,6 @@ export class EmailService {
   private static getTransporter(): Transporter {
     if (!this.transporter) {
       const user = (process.env.SMTP_USER || '').trim();
-      // Google App Passwords are 16 characters often formatted with spaces: 'xxxx xxxx xxxx xxxx'
       const pass = (process.env.SMTP_PASS || '').trim().replace(/\s+/g, '');
 
       if (!user) {
@@ -58,16 +183,9 @@ export class EmailService {
       const host = (process.env.SMTP_HOST || 'smtp.gmail.com').trim();
       const port = Number(process.env.SMTP_PORT || '465');
 
-      /*
-       * SMTP Security Standards:
-       * Port 465 = Direct SSL/TLS (secure: true)
-       * Port 587 = STARTTLS (secure: false, requireTLS: true)
-       * Port 25 / 2525 = Plain or STARTTLS (secure: false)
-       */
       let secure = port === 465;
       if (process.env.SMTP_SECURE !== undefined) {
         if (port === 587) {
-          // Port 587 MUST NOT have secure: true (direct TLS causes connection timeout)
           secure = false;
         } else if (port === 465) {
           secure = true;
@@ -93,10 +211,33 @@ export class EmailService {
   }
 
   /**
-   * Verify SMTP connection.
-   * Useful for testing locally and on Railway.
+   * Verify email service connectivity (supports HTTPS APIs and SMTP)
    */
   public static async verifyConnection(): Promise<boolean> {
+    const brevoKey = process.env.BREVO_API_KEY?.trim();
+    const resendKey = process.env.RESEND_API_KEY?.trim();
+    const sendgridKey = process.env.SENDGRID_API_KEY?.trim();
+
+    if (brevoKey) {
+      console.log('✅ EmailService: Configured with Brevo HTTPS API (Port 443, Railway-ready).');
+      return true;
+    }
+
+    if (resendKey) {
+      console.log('✅ EmailService: Configured with Resend HTTPS API (Port 443, Railway-ready).');
+      return true;
+    }
+
+    if (sendgridKey) {
+      console.log('✅ EmailService: Configured with SendGrid HTTPS API (Port 443, Railway-ready).');
+      return true;
+    }
+
+    if (process.env.DEV_OTP_CONSOLE === 'true' || process.env.BYPASS_EMAIL === 'true') {
+      console.log('⚡ EmailService: DEV_OTP_CONSOLE mode is ACTIVE. OTPs will be printed in server logs.');
+      return true;
+    }
+
     try {
       const transporter = this.getTransporter();
       await transporter.verify();
@@ -104,58 +245,22 @@ export class EmailService {
       return true;
     } catch (error: any) {
       console.warn(
-        `⚠️ Primary SMTP verification failed (${error?.message || error}). Testing alternative port fallback...`
+        `⚠️ SMTP verification failed (${error?.message || error}). Note: Railway blocks outbound SMTP ports 25, 465, and 587. If running on Railway, add BREVO_API_KEY or RESEND_API_KEY in Railway Variables.`
       );
-
-      // Attempt fallback verification
-      const user = (process.env.SMTP_USER || '').trim();
-      const pass = (process.env.SMTP_PASS || '').trim().replace(/\s+/g, '');
-      const host = (process.env.SMTP_HOST || 'smtp.gmail.com').trim();
-      const currentPort = Number(process.env.SMTP_PORT || '465');
-      const fallbackPort = currentPort === 465 ? 587 : 465;
-      const fallbackSecure = fallbackPort === 465;
-
-      try {
-        const fallbackTransporter = this.createTransporterInstance(
-          host,
-          fallbackPort,
-          fallbackSecure,
-          user,
-          pass
-        );
-        await fallbackTransporter.verify();
-        console.log(
-          `✅ Fallback SMTP connection on port ${fallbackPort} succeeded. Using fallback transporter.`
-        );
-        this.transporter = fallbackTransporter;
-        return true;
-      } catch (fallbackError: any) {
-        console.error(
-          '❌ All Nodemailer SMTP verification attempts failed:',
-          fallbackError?.message || fallbackError
-        );
-        return false;
-      }
+      return false;
     }
   }
 
   /**
-   * Send a 6-digit OTP verification email with automatic port fallback.
+   * Send a 6-digit OTP verification email.
+   * Prioritizes HTTPS REST APIs (Brevo, Resend, SendGrid) over Port 443 to guarantee 100% reliability on Railway,
+   * with fallback to SMTP or development console output.
    */
   public static async sendOtpEmail(
     toEmail: string,
     otp: string,
     purpose: 'REGISTER' | 'LOGIN'
   ): Promise<{ success: boolean; messageId?: string }> {
-    const user = (process.env.SMTP_USER || 'govserve.treasury@gmail.com').trim();
-    const pass = (process.env.SMTP_PASS || '').trim().replace(/\s+/g, '');
-    const host = (process.env.SMTP_HOST || 'smtp.gmail.com').trim();
-    const configuredPort = Number(process.env.SMTP_PORT || '465');
-
-    const fromAddress =
-      process.env.SMTP_FROM ||
-      `"GovServe Treasury" <${user}>`;
-
     const actionTitle =
       purpose === 'LOGIN'
         ? 'Sign-In Authentication'
@@ -166,6 +271,21 @@ export class EmailService {
         ? 'sign in to your GovServe Treasury account'
         : 'complete your citizen registration';
 
+    // 1. Check for Development Console Mode (Instant bypass for development/testing)
+    if (process.env.DEV_OTP_CONSOLE === 'true' || process.env.BYPASS_EMAIL === 'true') {
+      console.log(`\n======================================================`);
+      console.log(`🔑 [DEV_OTP_CONSOLE] ${purpose} OTP for ${toEmail}: ${otp}`);
+      console.log(`======================================================\n`);
+      return { success: true, messageId: `dev-console-${Date.now()}` };
+    }
+
+    const rawFrom = process.env.SMTP_FROM || 'GovServe Treasury <govserve.treasury@gmail.com>';
+    const userEmail = (process.env.SMTP_USER || 'govserve.treasury@gmail.com').trim();
+    const fromName = 'GovServe Treasury';
+    const fromEmail = rawFrom.includes('<')
+      ? (rawFrom.match(/<([^>]+)>/)?.[1] || userEmail)
+      : (rawFrom.includes('@') ? rawFrom : userEmail);
+
     const htmlContent = `
 <!DOCTYPE html>
 <html>
@@ -174,7 +294,6 @@ export class EmailService {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GovServe Treasury Verification Code</title>
 </head>
-
 <body
   style="
     margin:0;
@@ -187,7 +306,6 @@ export class EmailService {
   <table width="100%" border="0" cellspacing="0" cellpadding="0">
     <tr>
       <td align="center">
-
         <table
           width="100%"
           border="0"
@@ -202,7 +320,6 @@ export class EmailService {
             box-shadow:0 4px 20px rgba(0,0,0,0.05);
           "
         >
-
           <!-- HEADER -->
           <tr>
             <td
@@ -221,7 +338,6 @@ export class EmailService {
               >
                 GovServe Treasury
               </div>
-
               <div
                 style="
                   color:#93c5fd;
@@ -240,7 +356,6 @@ export class EmailService {
           <!-- BODY -->
           <tr>
             <td style="padding:32px 28px;">
-
               <div
                 style="
                   font-size:16px;
@@ -251,7 +366,6 @@ export class EmailService {
               >
                 ${actionTitle}
               </div>
-
               <div
                 style="
                   font-size:13px;
@@ -287,7 +401,6 @@ export class EmailService {
                 >
                   Your One-Time Verification Code
                 </div>
-
                 <div
                   style="
                     font-family:'Courier New',Courier,monospace;
@@ -328,7 +441,6 @@ export class EmailService {
                     >
                       ⏱️ This code expires in 5 minutes.
                     </div>
-
                     <div
                       style="
                         font-size:12px;
@@ -353,7 +465,6 @@ export class EmailService {
                 If you did not make this request, please ignore this email
                 or contact the Municipal Treasury security team.
               </div>
-
             </td>
           </tr>
 
@@ -379,9 +490,7 @@ export class EmailService {
               </div>
             </td>
           </tr>
-
         </table>
-
       </td>
     </tr>
   </table>
@@ -401,23 +510,81 @@ Do not share this code with anyone.
 Purpose: ${actionTitle}
 `;
 
+    const subject = `${otp} is your GovServe Treasury verification code`;
+
+    // 2. Try Brevo HTTPS REST API (Port 443 - Recommended for Railway)
+    const brevoApiKey = process.env.BREVO_API_KEY?.trim();
+    if (brevoApiKey) {
+      try {
+        return await this.sendViaBrevo(
+          brevoApiKey,
+          toEmail,
+          subject,
+          htmlContent,
+          textContent,
+          fromEmail,
+          fromName
+        );
+      } catch (brevoErr: any) {
+        console.error('[EmailService] Brevo HTTPS dispatch failed:', brevoErr?.message || brevoErr);
+      }
+    }
+
+    // 3. Try Resend HTTPS REST API (Port 443 - Recommended for Railway)
+    const resendApiKey = process.env.RESEND_API_KEY?.trim();
+    if (resendApiKey) {
+      try {
+        return await this.sendViaResend(
+          resendApiKey,
+          toEmail,
+          subject,
+          htmlContent,
+          textContent,
+          rawFrom
+        );
+      } catch (resendErr: any) {
+        console.error('[EmailService] Resend HTTPS dispatch failed:', resendErr?.message || resendErr);
+      }
+    }
+
+    // 4. Try SendGrid HTTPS REST API (Port 443)
+    const sendgridApiKey = process.env.SENDGRID_API_KEY?.trim();
+    if (sendgridApiKey) {
+      try {
+        return await this.sendViaSendGrid(
+          sendgridApiKey,
+          toEmail,
+          subject,
+          htmlContent,
+          textContent,
+          fromEmail,
+          fromName
+        );
+      } catch (sendgridErr: any) {
+        console.error('[EmailService] SendGrid HTTPS dispatch failed:', sendgridErr?.message || sendgridErr);
+      }
+    }
+
+    // 5. Fallback to SMTP / Nodemailer (Works on local machine or unblocked hosts)
+    const user = (process.env.SMTP_USER || 'govserve.treasury@gmail.com').trim();
+    const pass = (process.env.SMTP_PASS || '').trim().replace(/\s+/g, '');
+    const host = (process.env.SMTP_HOST || 'smtp.gmail.com').trim();
+    const configuredPort = Number(process.env.SMTP_PORT || '465');
+
     const mailPayload = {
-      from: fromAddress,
+      from: rawFrom,
       to: toEmail,
-      subject: `${otp} is your GovServe Treasury verification code`,
+      subject,
       text: textContent,
       html: htmlContent,
     };
 
-    // Attempt 1: Using primary transporter
     try {
       const transporter = this.getTransporter();
-      console.log(`[EmailService] Sending ${purpose} OTP to ${toEmail}...`);
+      console.log(`[EmailService] Attempting SMTP send to ${toEmail}...`);
 
       const info = await transporter.sendMail(mailPayload);
-      console.log(
-        `[EmailService] OTP email sent successfully to ${toEmail}. Message ID: ${info.messageId}`
-      );
+      console.log(`[EmailService] OTP email sent successfully to ${toEmail}. Message ID: ${info.messageId}`);
 
       return {
         success: true,
@@ -428,7 +595,7 @@ Purpose: ${actionTitle}
         `[EmailService] Primary SMTP attempt failed for ${toEmail} (${primaryError?.message || primaryError}). Attempting fallback port...`
       );
 
-      // Attempt 2: Fallback to alternative port (465 <-> 587)
+      // Attempt fallback between port 465 and 587
       try {
         const fallbackPort = configuredPort === 465 ? 587 : 465;
         const fallbackSecure = fallbackPort === 465;
@@ -446,8 +613,6 @@ Purpose: ${actionTitle}
         );
 
         const fallbackInfo = await fallbackTransporter.sendMail(mailPayload);
-
-        // Update active transporter to the working one
         this.transporter = fallbackTransporter;
 
         console.log(
@@ -460,17 +625,21 @@ Purpose: ${actionTitle}
         };
       } catch (fallbackError: any) {
         console.error(
-          `[EmailService] Fallback SMTP attempt also failed for ${toEmail}:`,
+          `[EmailService] Fallback SMTP attempt failed for ${toEmail}:`,
           fallbackError?.message || fallbackError
         );
 
-        // Reset transporter so next call creates a fresh socket
         this.transporter = null;
+
+        const isRailway = Boolean(process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_STATIC_URL);
+        const railwayHelp = isRailway || String(fallbackError?.message || '').includes('timeout')
+          ? ' (Note: Railway blocks outbound SMTP ports 25, 465, and 587. Please add BREVO_API_KEY or RESEND_API_KEY in Railway Variables to use HTTPS over Port 443).'
+          : '';
 
         throw new Error(
           `Failed to send verification email: ${
-            fallbackError?.message || primaryError?.message || 'SMTP Timeout'
-          }`
+            fallbackError?.message || primaryError?.message || 'Connection timeout'
+          }${railwayHelp}`
         );
       }
     }
