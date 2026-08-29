@@ -1,4 +1,5 @@
 // src/server.ts
+import dns from 'dns';
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -6,6 +7,14 @@ import dotenv from 'dotenv';
 import { corsMiddleware } from './middleware/cors.js';
 import routes from './routes/index.js';
 import { initializeDatabase } from './init-db.js';
+import { EmailService } from './services/email.service.js';
+
+// Prefer IPv4 globally to avoid connection timeouts on platforms with unroutable IPv6
+try {
+  dns.setDefaultResultOrder('ipv4first');
+} catch (e) {
+  // Ignore in older node versions
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -51,6 +60,11 @@ app.use(routes);
 // Initialize DB tables (non-blocking)
 initializeDatabase().catch((err: Error) =>
   console.error('Database startup background error:', err.message || err)
+);
+
+// Verify SMTP connection (non-blocking)
+EmailService.verifyConnection().catch((err: Error) =>
+  console.warn('SMTP startup verify warning:', err.message || err)
 );
 
 // Start server

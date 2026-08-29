@@ -1,13 +1,51 @@
+import dns from 'dns';
 import nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
+
+// Ensure IPv4 is resolved first to prevent timeout issues on IPv6-restricted cloud platforms (Railway, Docker, etc.)
+try {
+  dns.setDefaultResultOrder('ipv4first');
+} catch (e) {
+  // Ignore in environments where setDefaultResultOrder is not supported
+}
 
 export class EmailService {
   private static transporter: Transporter | null = null;
 
+  /**
+   * Helper to create a nodemailer transporter instance with given configuration
+   */
+  private static createTransporterInstance(
+    host: string,
+    port: number,
+    secure: boolean,
+    user: string,
+    pass: string
+  ): Transporter {
+    return nodemailer.createTransport({
+      host,
+      port,
+      secure,
+      auth: {
+        user,
+        pass,
+      },
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 15000,
+      requireTLS: !secure && (port === 587 || port === 2525),
+      tls: {
+        rejectUnauthorized: false,
+        minVersion: 'TLSv1.2',
+      },
+    });
+  }
+
   private static getTransporter(): Transporter {
     if (!this.transporter) {
-      const user = process.env.SMTP_USER;
-      const pass = process.env.SMTP_PASS;
+      const user = (process.env.SMTP_USER || '').trim();
+      // Google App Passwords are 16 characters often formatted with spaces: 'xxxx xxxx xxxx xxxx'
+      const pass = (process.env.SMTP_PASS || '').trim().replace(/\s+/g, '');
 
       if (!user) {
         throw new Error('SMTP_USER is not configured.');
@@ -17,40 +55,38 @@ export class EmailService {
         throw new Error('SMTP_PASS is not configured.');
       }
 
-      const host = process.env.SMTP_HOST || 'smtp.gmail.com';
-      const port = Number(process.env.SMTP_PORT || '587');
+      const host = (process.env.SMTP_HOST || 'smtp.gmail.com').trim();
+      const port = Number(process.env.SMTP_PORT || '465');
 
       /*
-       * Gmail:
-       * 587 = STARTTLS
-       * 465 = SSL
-       *
-       * For Railway, use 587 + STARTTLS.
+       * SMTP Security Standards:
+       * Port 465 = Direct SSL/TLS (secure: true)
+       * Port 587 = STARTTLS (secure: false, requireTLS: true)
+       * Port 25 / 2525 = Plain or STARTTLS (secure: false)
        */
-      const secure = port === 465;
+      let secure = port === 465;
+      if (process.env.SMTP_SECURE !== undefined) {
+        if (port === 587) {
+          // Port 587 MUST NOT have secure: true (direct TLS causes connection timeout)
+          secure = false;
+        } else if (port === 465) {
+          secure = true;
+        } else {
+          secure = process.env.SMTP_SECURE === 'true';
+        }
+      }
 
       console.log(
-        `[EmailService] Creating SMTP transporter: ${host}:${port} secure=${secure}`
+        `[EmailService] Initializing SMTP transporter -> Host: ${host}, Port: ${port}, Secure: ${secure}`
       );
 
-      this.transporter = nodemailer.createTransport({
-  host,
-  port,
-  secure: true,
-
-  auth: {
-    user,
-    pass,
-  },
-
-  connectionTimeout: 15000,
-  greetingTimeout: 15000,
-  socketTimeout: 20000,
-
-  tls: {
-    rejectUnauthorized: true,
-  },
-});
+      this.transporter = this.createTransporterInstance(
+        host,
+        port,
+        secure,
+        user,
+        pass
+      );
     }
 
     return this.transporter;
@@ -63,32 +99,58 @@ export class EmailService {
   public static async verifyConnection(): Promise<boolean> {
     try {
       const transporter = this.getTransporter();
-
       await transporter.verify();
-
       console.log('✅ Nodemailer SMTP verification successful.');
-
       return true;
     } catch (error: any) {
-      console.error(
-        '❌ Nodemailer SMTP verification failed:',
-        error?.message || error
+      console.warn(
+        `⚠️ Primary SMTP verification failed (${error?.message || error}). Testing alternative port fallback...`
       );
 
-      return false;
+      // Attempt fallback verification
+      const user = (process.env.SMTP_USER || '').trim();
+      const pass = (process.env.SMTP_PASS || '').trim().replace(/\s+/g, '');
+      const host = (process.env.SMTP_HOST || 'smtp.gmail.com').trim();
+      const currentPort = Number(process.env.SMTP_PORT || '465');
+      const fallbackPort = currentPort === 465 ? 587 : 465;
+      const fallbackSecure = fallbackPort === 465;
+
+      try {
+        const fallbackTransporter = this.createTransporterInstance(
+          host,
+          fallbackPort,
+          fallbackSecure,
+          user,
+          pass
+        );
+        await fallbackTransporter.verify();
+        console.log(
+          `✅ Fallback SMTP connection on port ${fallbackPort} succeeded. Using fallback transporter.`
+        );
+        this.transporter = fallbackTransporter;
+        return true;
+      } catch (fallbackError: any) {
+        console.error(
+          '❌ All Nodemailer SMTP verification attempts failed:',
+          fallbackError?.message || fallbackError
+        );
+        return false;
+      }
     }
   }
 
   /**
-   * Send a 6-digit OTP verification email.
+   * Send a 6-digit OTP verification email with automatic port fallback.
    */
   public static async sendOtpEmail(
     toEmail: string,
     otp: string,
     purpose: 'REGISTER' | 'LOGIN'
   ): Promise<{ success: boolean; messageId?: string }> {
-    const user =
-      process.env.SMTP_USER || 'govserve.treasury@gmail.com';
+    const user = (process.env.SMTP_USER || 'govserve.treasury@gmail.com').trim();
+    const pass = (process.env.SMTP_PASS || '').trim().replace(/\s+/g, '');
+    const host = (process.env.SMTP_HOST || 'smtp.gmail.com').trim();
+    const configuredPort = Number(process.env.SMTP_PORT || '465');
 
     const fromAddress =
       process.env.SMTP_FROM ||
@@ -339,22 +401,20 @@ Do not share this code with anyone.
 Purpose: ${actionTitle}
 `;
 
+    const mailPayload = {
+      from: fromAddress,
+      to: toEmail,
+      subject: `${otp} is your GovServe Treasury verification code`,
+      text: textContent,
+      html: htmlContent,
+    };
+
+    // Attempt 1: Using primary transporter
     try {
       const transporter = this.getTransporter();
+      console.log(`[EmailService] Sending ${purpose} OTP to ${toEmail}...`);
 
-      console.log(
-        `[EmailService] Sending ${purpose} OTP to ${toEmail}...`
-      );
-
-      const info = await transporter.sendMail({
-        from: fromAddress,
-        to: toEmail,
-        subject:
-          `${otp} is your GovServe Treasury verification code`,
-        text: textContent,
-        html: htmlContent,
-      });
-
+      const info = await transporter.sendMail(mailPayload);
       console.log(
         `[EmailService] OTP email sent successfully to ${toEmail}. Message ID: ${info.messageId}`
       );
@@ -363,17 +423,56 @@ Purpose: ${actionTitle}
         success: true,
         messageId: info.messageId,
       };
-    } catch (error: any) {
-      console.error(
-        `[EmailService] SMTP error sending OTP to ${toEmail}:`,
-        error?.message || error
+    } catch (primaryError: any) {
+      console.warn(
+        `[EmailService] Primary SMTP attempt failed for ${toEmail} (${primaryError?.message || primaryError}). Attempting fallback port...`
       );
 
-      throw new Error(
-        `Failed to send verification email: ${
-          error?.message || 'SMTP Error'
-        }`
-      );
+      // Attempt 2: Fallback to alternative port (465 <-> 587)
+      try {
+        const fallbackPort = configuredPort === 465 ? 587 : 465;
+        const fallbackSecure = fallbackPort === 465;
+
+        const fallbackTransporter = this.createTransporterInstance(
+          host,
+          fallbackPort,
+          fallbackSecure,
+          user,
+          pass
+        );
+
+        console.log(
+          `[EmailService] Retrying send via fallback SMTP on ${host}:${fallbackPort} (secure: ${fallbackSecure})...`
+        );
+
+        const fallbackInfo = await fallbackTransporter.sendMail(mailPayload);
+
+        // Update active transporter to the working one
+        this.transporter = fallbackTransporter;
+
+        console.log(
+          `[EmailService] OTP email sent successfully via fallback port ${fallbackPort} to ${toEmail}. Message ID: ${fallbackInfo.messageId}`
+        );
+
+        return {
+          success: true,
+          messageId: fallbackInfo.messageId,
+        };
+      } catch (fallbackError: any) {
+        console.error(
+          `[EmailService] Fallback SMTP attempt also failed for ${toEmail}:`,
+          fallbackError?.message || fallbackError
+        );
+
+        // Reset transporter so next call creates a fresh socket
+        this.transporter = null;
+
+        throw new Error(
+          `Failed to send verification email: ${
+            fallbackError?.message || primaryError?.message || 'SMTP Timeout'
+          }`
+        );
+      }
     }
   }
 }
