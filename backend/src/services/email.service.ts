@@ -34,27 +34,23 @@ export class EmailService {
       );
 
       this.transporter = nodemailer.createTransport({
-        host,
-        port,
-        secure,
+  host,
+  port,
+  secure: true,
 
-        auth: {
-          user,
-          pass,
-        },
+  auth: {
+    user,
+    pass,
+  },
 
-        // Important for cloud deployment.
-        connectionTimeout: 10000,
-        greetingTimeout: 10000,
-        socketTimeout: 15000,
+  connectionTimeout: 15000,
+  greetingTimeout: 15000,
+  socketTimeout: 20000,
 
-        // Required for Gmail STARTTLS on port 587.
-        requireTLS: port === 587,
-
-        tls: {
-          rejectUnauthorized: true,
-        },
-      });
+  tls: {
+    rejectUnauthorized: true,
+  },
+});
     }
 
     return this.transporter;
