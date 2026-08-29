@@ -75,7 +75,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
   const [isPaymentStep, setIsPaymentStep] = useState<boolean>(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState<boolean>(false);
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
-  const [qrReferenceNumber, setQrReferenceNumber] = useState<string>('');
+  const [, setQrReferenceNumber] = useState<string>("");
   const [qrPaymentIntentId, setQrPaymentIntentId] = useState<string>('');
   const [qrError, setQrError] = useState<string>('');
   const [paymentAssessment, setPaymentAssessment] = useState<AssessmentRecord | null>(null);
