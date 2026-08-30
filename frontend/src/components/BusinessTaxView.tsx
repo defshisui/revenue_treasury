@@ -143,9 +143,9 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
       else if (bType === 'Service') lbtRate = 0.015;
 
       const lbt = gross * lbtRate;
-      const mayorsPermit = Math.max(500, gross * 0.001);
-      const sanitaryFee = 350;
-      const garbageFee = 500;
+      const mayorsPermit = Math.max(0.05, gross * 0.001);
+      const sanitaryFee = 0.1;
+      const garbageFee = 0.05;
       const fireSafetyFee = mayorsPermit * 0.15;
       const total = lbt + mayorsPermit + sanitaryFee + garbageFee + fireSafetyFee;
 
