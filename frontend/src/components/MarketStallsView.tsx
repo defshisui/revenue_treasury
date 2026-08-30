@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from "react";
-import type { StallRecord, StallStatus, MarketBranch, MarketSection } from "../types/treasury";
-import { getLeases, updateLease, deleteLease, saveLease } from "../services/marketService";
+import type { StallRecord, StallStatus } from "../types/treasury";
+import { getLeases, updateLease, deleteLease } from "../services/marketService";
 import type { LeaseRecord } from "../services/marketService";
 
 interface Props {
@@ -9,7 +9,6 @@ interface Props {
   isCollapsed?: boolean;
   onUpdateRecord?: (record: any) => void;
   onDeleteRecord?: (id: string) => void;
-  onCreateRecord?: (record: any) => void;
 }
 
 export default function MarketStallsView({
@@ -17,7 +16,6 @@ export default function MarketStallsView({
   isCollapsed = false,
   onUpdateRecord,
   onDeleteRecord,
-  onCreateRecord,
 }: Props) {
   const [rawRecords, setRawRecords] = useState<any[]>(initialRecords);
 
@@ -79,7 +77,6 @@ export default function MarketStallsView({
   const [selectedStatus, setSelectedStatus] = useState<string>("All");
   const [searchTerm, setSearchTerm] = useState<string>("");
 
-  const [isAddStallOpen, setIsAddStallOpen] = useState(false);
   const [isAssignLeaseOpen, setIsAssignLeaseOpen] = useState(false);
   const [selectedStall, setSelectedStall] = useState<StallRecord | null>(null);
 
@@ -87,14 +84,6 @@ export default function MarketStallsView({
   const [isSurchargeModalOpen, setIsSurchargeModalOpen] = useState(false);
   const [selectedBillingStallIds, setSelectedBillingStallIds] = useState<string[]>([]);
   const [selectedSurchargeStallIds, setSelectedSurchargeStallIds] = useState<string[]>([]);
-
-  const [newStallForm, setNewStallForm] = useState({
-    stallNumber: "",
-    marketBranch: "Central Public Market" as MarketBranch,
-    marketSection: "Meat & Poultry Section" as MarketSection,
-    sizeSqMeters: 12,
-    monthlyBaseRate: 2500,
-  });
 
   const [leaseForm, setLeaseForm] = useState({
     vendorName: "",
@@ -240,50 +229,6 @@ export default function MarketStallsView({
     setStalls(resolvedStalls);
     setIsSurchargeModalOpen(false);
     alert("System surcharge applied to selected delinquent stall ledgers.");
-  };
-
-  const handleCreateStall = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const newRecord: StallRecord = {
-      id: crypto.randomUUID(),
-      stallNumber: newStallForm.stallNumber || `STL-${Math.floor(100 + Math.random() * 900)}`,
-      marketBranch: newStallForm.marketBranch,
-      marketSection: newStallForm.marketSection,
-      sizeSqMeters: Number(newStallForm.sizeSqMeters),
-      monthlyBaseRate: Number(newStallForm.monthlyBaseRate),
-      status: "Vacant",
-      currentBalance: 0,
-      accumulatedPenalty: 0,
-      overdueStatus: false,
-      paymentHistory: [],
-    };
-
-    setStalls([newRecord, ...stalls]);
-    if (onCreateRecord) onCreateRecord(newRecord);
-    else {
-      await saveLease({
-        leaseId: newRecord.id,
-        firstName: "",
-        lastName: "",
-        marketName: newRecord.marketBranch,
-        section: newRecord.marketSection,
-        stallNumber: newRecord.stallNumber,
-        leaseStatus: "Inactive",
-        amountDue: newRecord.monthlyBaseRate,
-        helperApprovalStatus: "Pending",
-        advancePaymentStatus: "Unpaid",
-        paymentStatus: "Pending Payment",
-      });
-    }
-
-    setIsAddStallOpen(false);
-    setNewStallForm({
-      stallNumber: "",
-      marketBranch: "Central Public Market",
-      marketSection: "Meat & Poultry Section",
-      sizeSqMeters: 12,
-      monthlyBaseRate: 2500,
-    });
   };
 
   const handleAssignLease = async (e: React.FormEvent) => {
@@ -526,12 +471,6 @@ export default function MarketStallsView({
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
-          <button
-            onClick={() => setIsAddStallOpen(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-4 py-2.5 rounded-xl transition-all shadow-md shadow-blue-500/20 cursor-pointer flex items-center gap-1.5"
-          >
-            <i className="fa-solid fa-plus text-[10px]"></i> Add New Stall
-          </button>
           <button
             onClick={handleOpenBillingModal}
             className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs px-4 py-2.5 rounded-xl transition-all border border-slate-200 dark:border-slate-700 cursor-pointer"
@@ -1011,108 +950,6 @@ export default function MarketStallsView({
                 Apply Surcharges ({selectedSurchargeStallIds.length} Selected)
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Add New Stall Modal */}
-      {isAddStallOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-8 shadow-2xl border border-slate-200 dark:border-slate-800 my-8">
-            <div className="border-b border-slate-100 dark:border-slate-800 pb-4 mb-6">
-              <h3 className="text-base font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                Register New Physical Market Stall
-              </h3>
-              <p className="text-xs text-slate-400 mt-0.5">Municipal asset directory entry</p>
-            </div>
-
-            <form onSubmit={handleCreateStall} className="space-y-4 text-xs">
-              <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Stall Code / Identifier *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. CPM-MEAT-104"
-                  value={newStallForm.stallNumber}
-                  onChange={(e) => setNewStallForm({ ...newStallForm, stallNumber: e.target.value })}
-                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 text-slate-900 dark:text-white font-mono focus:border-blue-500 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Market Branch *</label>
-                <select
-                  value={newStallForm.marketBranch}
-                  onChange={(e) => setNewStallForm({ ...newStallForm, marketBranch: e.target.value as MarketBranch })}
-                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 text-slate-900 dark:text-white font-medium focus:border-blue-500 focus:outline-none cursor-pointer"
-                >
-                  <option value="Central Public Market">Central Public Market</option>
-                  <option value="Galas City-Owned Market">Galas City-Owned Market</option>
-                  <option value="Kamuning City-Owned Market">Kamuning City-Owned Market</option>
-                  <option value="Murphy City-owned Market">Murphy City-owned Market</option>
-                  <option value="Project 2 City-Owned Market">Project 2 City-Owned Market</option>
-                  <option value="Project 4 City-Owned Market (New)">Project 4 City-Owned Market (New)</option>
-                  <option value="R.A. Calalay City-Owned Market - Temporary">R.A. Calalay City-Owned Market - Temporary</option>
-                  <option value="Roxas City-Owned Market">Roxas City-Owned Market</option>
-                  <option value="San Jose City-Owned Market">San Jose City-Owned Market</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Section Allocation *</label>
-                <select
-                  value={newStallForm.marketSection}
-                  onChange={(e) => setNewStallForm({ ...newStallForm, marketSection: e.target.value as MarketSection })}
-                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 text-slate-900 dark:text-white font-medium focus:border-blue-500 focus:outline-none cursor-pointer"
-                >
-                  <option value="Meat & Poultry Section">Meat & Poultry Section</option>
-                  <option value="Fish & Seafood Section">Fish & Seafood Section</option>
-                  <option value="Vegetables & Fruits">Vegetables & Fruits</option>
-                  <option value="Dry Goods Section">Dry Goods Section</option>
-                  <option value="Eatery / Food Stalls">Eatery / Food Stalls</option>
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Area (Sq. M.) *</label>
-                  <input
-                    type="number"
-                    required
-                    value={newStallForm.sizeSqMeters}
-                    onChange={(e) => setNewStallForm({ ...newStallForm, sizeSqMeters: Number(e.target.value) })}
-                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 text-slate-900 dark:text-white focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Base Rate (₱) *</label>
-                  <input
-                    type="number"
-                    required
-                    value={newStallForm.monthlyBaseRate}
-                    onChange={(e) => setNewStallForm({ ...newStallForm, monthlyBaseRate: Number(e.target.value) })}
-                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 text-slate-900 dark:text-white focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800 mt-6">
-                <button
-                  type="button"
-                  onClick={() => setIsAddStallOpen(false)}
-                  className="px-4 py-2.5 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2.5 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-md shadow-blue-500/20 cursor-pointer transition-all"
-                >
-                  Save Stall Master
-                </button>
-              </div>
-            </form>
           </div>
         </div>
       )}
