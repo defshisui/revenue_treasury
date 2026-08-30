@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import logoSystem from '../assets/logo-system.png';
 import { UnifiedHeader } from './UnifiedHeader';
 import { UnifiedFooter } from './UnifiedFooter';
 
@@ -32,11 +33,12 @@ export default function CitizenPortalLanding() {
 
         if (!fullName) return null;
 
-        const firstName = String(fullName).trim().split(' ')[0];
+        const nameParts = String(fullName).trim().split(' ');
+        const firstName = nameParts[0];
 
         return { firstName };
-      } catch (error) {
-        console.error('Failed to parse user session', error);
+      } catch (e) {
+        console.error('Failed to parse user session', e);
         return null;
       }
     };
@@ -45,144 +47,184 @@ export default function CitizenPortalLanding() {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-100 font-sans transition-colors duration-300">
+    <div className="min-h-screen bg-slate-100 text-slate-800 pt-0 transition-all duration-300 box-border flex flex-col justify-between font-['Segoe_UI',Tahoma,Geneva,Verdana,sans-serif]">
+      <div>
+        <UnifiedHeader />
 
-      <UnifiedHeader />
+        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 mt-4">
 
-      {/* HERO */}
-      <section className="bg-[#1D2F86] text-white border-b-2 border-[#2563EB] bg-[radial-gradient(#3152B5_1px,transparent_1px)] [background-size:16px_16px]">
+          {/* HERO */}
+          <div className="relative overflow-hidden bg-[#122261] rounded-3xl p-8 sm:p-12 text-white shadow-lg flex flex-col justify-center bg-[radial-gradient(#1e3a8a_1px,transparent_1px)] [background-size:16px_16px]">
 
-        <div className="max-w-7xl mx-auto px-4 py-12 sm:py-14 text-center">
+            <div className="absolute right-[-20px] bottom-[-40px] pointer-events-none opacity-10 select-none">
+              <img
+                src={logoSystem}
+                alt=""
+                className="w-80 h-80 sm:w-96 sm:h-96 object-contain"
+              />
+            </div>
 
-          <h1 className="text-3xl sm:text-4xl font-black tracking-wide uppercase">
-            WELCOME TO GOV SERVE
-          </h1>
+            <div className="relative z-10 flex flex-col items-start space-y-4 max-w-2xl">
+              <span className="bg-blue-500/30 text-blue-200 text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full border border-blue-400/30">
+                CITIZEN PORTAL DASHBOARD
+              </span>
 
-          <p className="max-w-2xl mx-auto mt-2 text-sm sm:text-base text-white/95 leading-relaxed">
-            Welcome{user ? `, ${user.firstName}` : ''}! Access your revenue
-            and treasury services quickly and securely.
-          </p>
+              <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
+                Welcome{user ? `, ${user.firstName}` : ''}! Access Your Services Here.
+              </h1>
 
-        </div>
-
-      </section>
-
-
-      {/* SERVICES */}
-      <main className="flex-1">
-
-        <div className="max-w-6xl mx-auto px-4 py-8 sm:py-10">
-
-          <div className="text-center mb-6">
-
-            <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
-              AVAILABLE ONLINE SERVICES
-            </h2>
-
-            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-              Select a service below to continue.
-            </p>
-
+              <p className="text-xs sm:text-sm text-blue-100 leading-relaxed">
+                Manage your applications, check local business registrations,
+                pay dues, and access government support services quickly and securely.
+              </p>
+            </div>
           </div>
 
+          {/* SERVICES */}
+          <div className="space-y-4">
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">
+                Available Online Services
+              </h2>
 
-            {/* MARKET & VENDORS */}
-            <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 text-center transition-colors duration-300">
+              <span className="text-xs font-bold text-blue-700 cursor-pointer hover:underline">
+                View All &rarr;
+              </span>
+            </div>
 
-              <p className="text-sm font-extrabold text-[#1D2F86] dark:text-blue-400 uppercase tracking-wide">
-                MARKET &amp; VENDORS
-              </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
 
-              <h3 className="mt-2 text-lg font-black text-slate-900 dark:text-white">
-                Market &amp; Vendors Hub
-              </h3>
-
-              <p className="mt-3 text-xs sm:text-sm text-[#36527A] dark:text-slate-400 leading-relaxed">
-                Access city-owned market stalls, private market services,
-                and hawker registration services through the online portal.
-              </p>
-
-              <button
-                type="button"
+              {/* MARKET & VENDORS */}
+              <div
                 onClick={() => {
                   window.location.href = '/market-vendor-tab';
                 }}
-                className="mt-6 inline-flex items-center justify-center bg-[#1D3F99] hover:bg-[#17357F] text-white font-black text-xs uppercase px-5 py-3 rounded-full shadow-md transition cursor-pointer"
+                className="bg-white hover:bg-slate-50 p-6 rounded-2xl border border-slate-200 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between space-y-4 group"
               >
-                MARKET &amp; VENDORS
-              </button>
+                <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-700 border border-blue-100 flex items-center justify-center group-hover:scale-105 transition-transform">
+                  <svg
+                    className="w-6 h-6"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M9 22V12h6v10"
+                    />
+                  </svg>
+                </div>
 
-            </section>
+                <div>
+                  <h3 className="font-extrabold text-base text-slate-900 group-hover:text-blue-900">
+                    Market &amp; Vendors Hub
+                  </h3>
+
+                  <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                    Access public/private market stalls, hawker registrations,
+                    and market operator guidelines.
+                  </p>
+                </div>
+
+                <div className="text-xs font-bold text-blue-700 flex items-center gap-1 pt-2">
+                  Launch Service &rarr;
+                </div>
+              </div>
 
 
-            {/* REAL PROPERTY TAX */}
-            <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 text-center transition-colors duration-300">
-
-              <p className="text-sm font-extrabold text-[#1D2F86] dark:text-blue-400 uppercase tracking-wide">
-                REAL PROPERTY TAX
-              </p>
-
-              <h3 className="mt-2 text-lg font-black text-slate-900 dark:text-white">
-                Real Property Tax Hub
-              </h3>
-
-              <p className="mt-3 text-xs sm:text-sm text-[#36527A] dark:text-slate-400 leading-relaxed">
-                Search your property tax information, view assessments,
-                check balances, and access Real Property Tax services.
-              </p>
-
-              <button
-                type="button"
+              {/* REAL PROPERTY TAX */}
+              <div
                 onClick={() => {
                   window.location.href = '/real-property-tax-hub';
                 }}
-                className="mt-6 inline-flex items-center justify-center bg-[#1D3F99] hover:bg-[#17357F] text-white font-black text-xs uppercase px-5 py-3 rounded-full shadow-md transition cursor-pointer"
+                className="bg-white hover:bg-slate-50 p-6 rounded-2xl border border-slate-200 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between space-y-4 group"
               >
-                REAL PROPERTY TAX
-              </button>
+                <div className="w-12 h-12 rounded-xl bg-teal-50 text-teal-700 border border-teal-100 flex items-center justify-center group-hover:scale-105 transition-transform">
+                  <svg
+                    className="w-6 h-6"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                </div>
 
-            </section>
+                <div>
+                  <h3 className="font-extrabold text-base text-slate-900 group-hover:text-teal-900">
+                    Real Property Tax
+                  </h3>
+
+                  <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                    View property evaluations, file tax details, pay statements,
+                    and track assessment requests.
+                  </p>
+                </div>
+
+                <div className="text-xs font-bold text-teal-700 flex items-center gap-1 pt-2">
+                  Launch Service &rarr;
+                </div>
+              </div>
 
 
-            {/* BUSINESS TAX */}
-            <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 text-center transition-colors duration-300">
-
-              <p className="text-sm font-extrabold text-[#1D2F86] dark:text-blue-400 uppercase tracking-wide">
-                BUSINESS TAX
-              </p>
-
-              <h3 className="mt-2 text-lg font-black text-slate-900 dark:text-white">
-                Business Tax Assessment
-              </h3>
-
-              <p className="mt-3 text-xs sm:text-sm text-[#36527A] dark:text-slate-400 leading-relaxed">
-                Process business tax assessments, submit requirements,
-                schedule appointments, and manage your business tax services.
-              </p>
-
-              <button
-                type="button"
+              {/* BUSINESS TAX */}
+              <div
                 onClick={() => {
                   window.location.href = '/business-tax-assessment';
                 }}
-                className="mt-6 inline-flex items-center justify-center bg-[#1D3F99] hover:bg-[#17357F] text-white font-black text-xs uppercase px-5 py-3 rounded-full shadow-md transition cursor-pointer"
+                className="bg-white hover:bg-slate-50 p-6 rounded-2xl border border-slate-200 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between space-y-4 group"
               >
-                BUSINESS TAX
-              </button>
+                <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-700 border border-purple-100 flex items-center justify-center group-hover:scale-105 transition-transform">
+                  <svg
+                    className="w-6 h-6"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                    />
+                  </svg>
+                </div>
 
-            </section>
+                <div>
+                  <h3 className="font-extrabold text-base text-slate-900 group-hover:text-purple-900">
+                    Business Tax Assessment
+                  </h3>
 
+                  <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                    Compute assessments, review business gross receipts,
+                    and process local business taxes.
+                  </p>
+                </div>
+
+                <div className="text-xs font-bold text-purple-700 flex items-center gap-1 pt-2">
+                  Launch Service &rarr;
+                </div>
+              </div>
+
+            </div>
           </div>
-
-        </div>
-
-      </main>
-
+        </main>
+      </div>
 
       <UnifiedFooter />
-
     </div>
   );
 }
