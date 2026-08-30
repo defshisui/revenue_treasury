@@ -139,43 +139,119 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
   const navigate = useNavigate();
 
   // RPT Hub: this same file handles both /real-property-tax-hub and /citizen-rpt.
+  // The hub matches the Market & Vendors and Business Tax landing-page style.
   if (location.pathname === "/real-property-tax-hub") {
     return (
       <div className="min-h-screen flex flex-col bg-[#F4F6F9] text-slate-800 font-sans">
         <UnifiedHeader />
-        <div className="bg-[#0B3B60] text-white shadow-md border-b-2 border-[#D97706]">
-          <div className="max-w-7xl mx-auto px-4 py-2.5 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 font-semibold">
-              <span className="bg-[#DC2626] text-white px-2 py-1 rounded text-[10px] uppercase font-bold tracking-wider">QC E-SERVICES</span>
-              <span className="text-slate-200 text-xs sm:text-sm">QUEZON CITY REAL PROPERTY TAX</span>
-            </div>
+
+        {/* QC E-SERVICES / RPT HERO */}
+        <section className="bg-[#1D2F86] text-white border-b-2 border-[#2563EB]">
+          <div className="max-w-7xl mx-auto px-4 py-12 sm:py-14 text-center">
+            <h1 className="text-3xl sm:text-4xl font-black tracking-wide uppercase">
+              WELCOME TO REAL PROPERTY TAX
+            </h1>
+            <p className="max-w-2xl mx-auto mt-2 text-sm sm:text-base text-white/95 leading-relaxed">
+              This portal is one of our digital Gov Serve initiatives catering to
+              property owners and taxpayers in accessing their Real Property Tax
+              services.
+            </p>
           </div>
-        </div>
+        </section>
+
+        {/* RPT SERVICE HUB */}
         <main className="flex-1">
-          <div className="max-w-5xl mx-auto px-4 py-10 sm:py-14">
-            <div className="text-center mb-9">
-              <span className="inline-flex items-center bg-sky-100 text-[#0B3B60] border border-sky-200 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">Real Property Tax Services</span>
-              <h1 className="mt-4 text-3xl sm:text-5xl font-black text-[#0B3B60] tracking-tight">WELCOME TO REAL PROPERTY TAX</h1>
-              <p className="max-w-2xl mx-auto mt-3 text-sm sm:text-base text-slate-600 leading-relaxed">Access Real Property Tax services, view your property assessment, check your tax details, and pay your Real Property Tax online.</p>
-            </div>
-            <div className="max-w-3xl mx-auto bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-              <div className="h-1.5 bg-[#0B3B60]" />
-              <div className="p-7 sm:p-10 text-center">
-                <div className="mx-auto w-16 h-16 rounded-2xl bg-sky-50 border border-sky-200 flex items-center justify-center text-3xl">🏠</div>
-                <h2 className="mt-5 text-xl sm:text-2xl font-black text-[#0B3B60]">REAL PROPERTY TAX</h2>
-                <h3 className="mt-2 text-base font-bold text-slate-800">View, Manage and Pay Your Property Tax Online</h3>
-                <p className="max-w-2xl mx-auto mt-3 text-sm text-slate-500 leading-relaxed">Search for your property using your Tax Declaration Number (TDN), review your property assessment and outstanding balance, select your payment option, and securely complete your payment online.</p>
-                <div className="mt-7 grid grid-cols-1 sm:grid-cols-3 gap-4 text-left">
-                  <div className="rounded-xl bg-slate-50 border border-slate-200 p-4"><div className="text-2xl">🔎</div><h4 className="mt-2 text-xs font-black text-slate-800">SEARCH PROPERTY</h4><p className="mt-1 text-[11px] text-slate-500 leading-relaxed">Search your property using its Tax Declaration Number.</p></div>
-                  <div className="rounded-xl bg-slate-50 border border-slate-200 p-4"><div className="text-2xl">🧾</div><h4 className="mt-2 text-xs font-black text-slate-800">REVIEW ASSESSMENT</h4><p className="mt-1 text-[11px] text-slate-500 leading-relaxed">Review your tax assessment, balance, discounts and penalties.</p></div>
-                  <div className="rounded-xl bg-slate-50 border border-slate-200 p-4"><div className="text-2xl">💳</div><h4 className="mt-2 text-xs font-black text-slate-800">PAY ONLINE</h4><p className="mt-1 text-[11px] text-slate-500 leading-relaxed">Select your payment option and pay securely online.</p></div>
+          <div className="max-w-6xl mx-auto px-4 py-8 sm:py-10">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+              {/* 2026 RPT PAYMENT */}
+              <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-7 text-center">
+                <p className="text-sm font-extrabold text-[#1D2F86] uppercase tracking-wide">
+                  2026 REAL PROPERTY TAX
+                </p>
+                <h2 className="mt-2 text-lg font-black text-slate-900">
+                  Proceed and Pay Online
+                </h2>
+                <p className="max-w-xl mx-auto mt-3 text-xs sm:text-sm text-[#36527A] leading-relaxed">
+                  Search your Tax Declaration Number, view your property
+                  assessment and outstanding balance, choose a payment option,
+                  and pay your Real Property Tax securely through the portal.
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() => navigate("/citizen-rpt")}
+                  className="mt-6 inline-flex items-center justify-center bg-[#1D3F99] hover:bg-[#17357F] text-white font-black text-xs uppercase px-6 py-3 rounded-full shadow-md transition cursor-pointer"
+                >
+                  PROCEED WITH REAL PROPERTY TAX
+                </button>
+              </section>
+
+              {/* ASSESSOR SERVICES */}
+              <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-7 text-center">
+                <p className="text-sm font-extrabold text-[#1D2F86] uppercase tracking-wide">
+                  PROPERTY ASSESSOR SERVICES
+                </p>
+                <h2 className="mt-2 text-lg font-black text-slate-900">
+                  Applications and Property Records
+                </h2>
+                <p className="max-w-xl mx-auto mt-3 text-xs sm:text-sm text-[#36527A] leading-relaxed">
+                  Submit property-related service requests, check application
+                  status, and access official receipts and clearance records.
+                </p>
+
+                <div className="mt-6 flex flex-wrap justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => navigate("/citizen-rpt?view=form")}
+                    className="inline-flex items-center justify-center bg-[#1D3F99] hover:bg-[#17357F] text-white font-black text-xs uppercase px-5 py-3 rounded-full shadow-md transition cursor-pointer"
+                  >
+                    ASSESSOR SERVICES
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => navigate("/citizen-rpt?view=status")}
+                    className="inline-flex items-center justify-center bg-slate-200 hover:bg-slate-300 text-[#1D2F86] font-black text-xs uppercase px-5 py-3 rounded-full shadow-sm transition cursor-pointer"
+                  >
+                    CHECK STATUS
+                  </button>
                 </div>
-                <button type="button" onClick={() => navigate("/citizen-rpt")} className="mt-8 w-full sm:w-auto px-8 py-3.5 bg-[#0B3B60] hover:bg-[#082d49] text-white font-black text-xs uppercase tracking-wide rounded-lg shadow-md transition cursor-pointer">PROCEED WITH REAL PROPERTY TAX →</button>
-                <p className="mt-4 text-[10px] text-slate-400">You will be redirected to the Real Property Tax service portal.</p>
-              </div>
+              </section>
             </div>
+
+            {/* RPT INFORMATION / VERIFICATION */}
+            <section className="mt-5 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-7 text-center">
+              <p className="text-sm font-extrabold text-[#1D2F86] uppercase tracking-wide">
+                REAL PROPERTY TAX SERVICES
+              </p>
+              <p className="max-w-3xl mx-auto mt-2 text-xs sm:text-sm text-[#36527A] leading-relaxed">
+                Use the online portal to search your property, review tax
+                details, manage your assessment, pay your dues, and view your
+                transaction records.
+              </p>
+
+              <div className="mt-5 flex flex-wrap justify-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => navigate("/citizen-rpt")}
+                  className="inline-flex items-center justify-center bg-[#1D3F99] hover:bg-[#17357F] text-white font-black text-xs uppercase px-5 py-3 rounded-full shadow-md transition cursor-pointer"
+                >
+                  RPT PAYMENT (AMILYAR)
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => navigate("/citizen-rpt?view=summary")}
+                  className="inline-flex items-center justify-center bg-[#1D3F99] hover:bg-[#17357F] text-white font-black text-xs uppercase px-5 py-3 rounded-full shadow-md transition cursor-pointer"
+                >
+                  OFFICIAL RECEIPTS &amp; CLEARANCE
+                </button>
+              </div>
+            </section>
           </div>
         </main>
+
         <UnifiedFooter />
       </div>
     );
