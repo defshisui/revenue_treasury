@@ -15,7 +15,15 @@ import CityStallManageAccount from "./citizen-portal/city-owned-manage-account";
 import PrivateManageAccount from "./citizen-portal/private-manage-account";
 import HawkerApplication from "./citizen-portal/hawker-application";
 
-import RealPropertyApplication from "./citizen-portal/real-property-tax";
+/*
+ * Import both components from the SAME file:
+ *
+ * RealPropertyApplication = actual RPT system
+ * RealPropertyTaxHub      = RPT landing page
+ */
+import RealPropertyApplication, {
+  RealPropertyTaxHub,
+} from "./citizen-portal/real-property-tax";
 
 import BusinessTaxAssessmentView from "./citizen-portal/Business-Tax-Assessment-View";
 import MarketVendor from "./citizen-portal/Market-Vendor";
@@ -31,7 +39,11 @@ export default function App() {
           {/* =========================
               MAIN PAGES
           ========================= */}
-          <Route path="/" element={<Dashboard />} />
+
+          <Route
+            path="/"
+            element={<Dashboard />}
+          />
 
           <Route
             path="/real-property-tax"
@@ -67,6 +79,7 @@ export default function App() {
           {/* =========================
               CITIZEN PORTAL
           ========================= */}
+
           <Route
             path="/citizen-portal"
             element={<CitizenPortal />}
@@ -100,16 +113,27 @@ export default function App() {
 
           {/* =========================
               REAL PROPERTY TAX HUB
-          ========================= */}
+          =========================
+          
+          This is the landing page that should
+          look like Market & Vendors / Business Tax.
+          */}
+
           <Route
             path="/real-property-tax-hub"
-            element={<RealPropertyApplication />}
+            element={<RealPropertyTaxHub />}
           />
 
 
           {/* =========================
               ACTUAL RPT SYSTEM
-          ========================= */}
+          =========================
+          
+          This is the original RPT search,
+          payment, assessor services, QRPh,
+          receipts, etc.
+          */}
+
           <Route
             path="/citizen-rpt/*"
             element={<RealPropertyApplication />}
@@ -124,6 +148,7 @@ export default function App() {
           {/* =========================
               BUSINESS TAX
           ========================= */}
+
           <Route
             path="/business-tax-assessment"
             element={<BusinessTaxAssessmentView />}
@@ -133,6 +158,7 @@ export default function App() {
           {/* =========================
               MARKET VENDORS
           ========================= */}
+
           <Route
             path="/market-vendor-tab"
             element={<MarketVendor />}
