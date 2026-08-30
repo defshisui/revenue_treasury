@@ -1,7 +1,7 @@
 // src/citizen-portal/real-property-tax.tsx
 import { useEffect, useMemo, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../config/api";
 import { UnifiedHeader } from "./UnifiedHeader";
 import { UnifiedFooter } from "./UnifiedFooter";
@@ -136,6 +136,50 @@ function getStoredCitizenSession() {
 
 export default function RealPropertyApplication({ isCollapsed = false }: { isCollapsed?: boolean }) {
   const location = useLocation();
+  const navigate = useNavigate();
+
+  // RPT Hub: this same file handles both /real-property-tax-hub and /citizen-rpt.
+  if (location.pathname === "/real-property-tax-hub") {
+    return (
+      <div className="min-h-screen flex flex-col bg-[#F4F6F9] text-slate-800 font-sans">
+        <UnifiedHeader />
+        <div className="bg-[#0B3B60] text-white shadow-md border-b-2 border-[#D97706]">
+          <div className="max-w-7xl mx-auto px-4 py-2.5 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 font-semibold">
+              <span className="bg-[#DC2626] text-white px-2 py-1 rounded text-[10px] uppercase font-bold tracking-wider">QC E-SERVICES</span>
+              <span className="text-slate-200 text-xs sm:text-sm">QUEZON CITY REAL PROPERTY TAX</span>
+            </div>
+          </div>
+        </div>
+        <main className="flex-1">
+          <div className="max-w-5xl mx-auto px-4 py-10 sm:py-14">
+            <div className="text-center mb-9">
+              <span className="inline-flex items-center bg-sky-100 text-[#0B3B60] border border-sky-200 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">Real Property Tax Services</span>
+              <h1 className="mt-4 text-3xl sm:text-5xl font-black text-[#0B3B60] tracking-tight">WELCOME TO REAL PROPERTY TAX</h1>
+              <p className="max-w-2xl mx-auto mt-3 text-sm sm:text-base text-slate-600 leading-relaxed">Access Real Property Tax services, view your property assessment, check your tax details, and pay your Real Property Tax online.</p>
+            </div>
+            <div className="max-w-3xl mx-auto bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="h-1.5 bg-[#0B3B60]" />
+              <div className="p-7 sm:p-10 text-center">
+                <div className="mx-auto w-16 h-16 rounded-2xl bg-sky-50 border border-sky-200 flex items-center justify-center text-3xl">🏠</div>
+                <h2 className="mt-5 text-xl sm:text-2xl font-black text-[#0B3B60]">REAL PROPERTY TAX</h2>
+                <h3 className="mt-2 text-base font-bold text-slate-800">View, Manage and Pay Your Property Tax Online</h3>
+                <p className="max-w-2xl mx-auto mt-3 text-sm text-slate-500 leading-relaxed">Search for your property using your Tax Declaration Number (TDN), review your property assessment and outstanding balance, select your payment option, and securely complete your payment online.</p>
+                <div className="mt-7 grid grid-cols-1 sm:grid-cols-3 gap-4 text-left">
+                  <div className="rounded-xl bg-slate-50 border border-slate-200 p-4"><div className="text-2xl">🔎</div><h4 className="mt-2 text-xs font-black text-slate-800">SEARCH PROPERTY</h4><p className="mt-1 text-[11px] text-slate-500 leading-relaxed">Search your property using its Tax Declaration Number.</p></div>
+                  <div className="rounded-xl bg-slate-50 border border-slate-200 p-4"><div className="text-2xl">🧾</div><h4 className="mt-2 text-xs font-black text-slate-800">REVIEW ASSESSMENT</h4><p className="mt-1 text-[11px] text-slate-500 leading-relaxed">Review your tax assessment, balance, discounts and penalties.</p></div>
+                  <div className="rounded-xl bg-slate-50 border border-slate-200 p-4"><div className="text-2xl">💳</div><h4 className="mt-2 text-xs font-black text-slate-800">PAY ONLINE</h4><p className="mt-1 text-[11px] text-slate-500 leading-relaxed">Select your payment option and pay securely online.</p></div>
+                </div>
+                <button type="button" onClick={() => navigate("/citizen-rpt")} className="mt-8 w-full sm:w-auto px-8 py-3.5 bg-[#0B3B60] hover:bg-[#082d49] text-white font-black text-xs uppercase tracking-wide rounded-lg shadow-md transition cursor-pointer">PROCEED WITH REAL PROPERTY TAX →</button>
+                <p className="mt-4 text-[10px] text-slate-400">You will be redirected to the Real Property Tax service portal.</p>
+              </div>
+            </div>
+          </div>
+        </main>
+        <UnifiedFooter />
+      </div>
+    );
+  }
 
   // --- Active Tab / Sub-View ---
   // "search" (Step 1-4 QC Flow) | "application" (Form) | "status" (Tracker) | "summary" (Receipts & History)
@@ -195,6 +239,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
   const [rptQrPaymentIntentId, setRptQrPaymentIntentId] = useState<string>("");
   const [rptQrSecondsRemaining, setRptQrSecondsRemaining] = useState<number>(300);
   const [rptQrPaid, setRptQrPaid] = useState<boolean>(false);
+  const [rptPaymentSuccessCountdown, setRptPaymentSuccessCountdown] = useState<number>(5);
   const [rptQrError, setRptQrError] = useState<string>("");
 
   // --- Applications Queue (Assessor Request Form) ---
@@ -560,6 +605,24 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
     setRptQrPaid(false);
     setRptQrSecondsRemaining(300);
   };
+
+  useEffect(() => {
+    if (!rptQrPaid) return;
+
+    setRptPaymentSuccessCountdown(5);
+    const timer = window.setInterval(() => {
+      setRptPaymentSuccessCountdown((seconds) => {
+        if (seconds <= 1) {
+          window.clearInterval(timer);
+          closeRPTQrPayment();
+          return 0;
+        }
+        return seconds - 1;
+      });
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [rptQrPaid]);
 
   useEffect(() => {
     if (!isQrPaymentOpen || !rptQrCodeUrl || rptQrPaid) return;
@@ -1992,9 +2055,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                           <p className="text-xs text-emerald-700 mt-1">Your RPT payment has been recorded and your property records are being updated.</p>
                         </div>
                         <button type="button" onClick={closeRPTQrPayment} className="mt-6 w-full rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 font-black text-sm transition-all shadow-lg shadow-emerald-200">View My RPT Records →</button>
-                        <p className="text-[11px] text-slate-400 mt-3">
-  Your payment has been successfully recorded.
-</p>
+                        <p className="text-[11px] text-slate-400 mt-3">This window will close automatically in <span className="font-black text-emerald-600">{rptPaymentSuccessCountdown}</span> seconds.</p>
                       </div>
                     </div>
                   </div>
