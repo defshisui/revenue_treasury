@@ -242,11 +242,7 @@ export function RealPropertyTaxHub() {
   );
 }
 
-export default function RealPropertyApplication({
-  isCollapsed = false
-}: {
-  isCollapsed?: boolean
-}) {
+export default function RealPropertyApplication({ isCollapsed = false }: { isCollapsed?: boolean }) {
   const location = useLocation();
 
   // --- Active Tab / Sub-View ---
