@@ -4,6 +4,7 @@ import { UnifiedHeader } from './UnifiedHeader';
 import { UnifiedFooter } from './UnifiedFooter';
 
 export default function CitizenPortalLanding() {
+
   const [user, setUser] = useState<{ firstName: string } | null>(null);
 
   useEffect(() => {
@@ -47,7 +48,8 @@ export default function CitizenPortalLanding() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-800 pt-0 transition-all duration-300 box-border flex flex-col justify-between font-['Segoe_UI',Tahoma,Geneva,Verdana,sans-serif]">
+    <div className="min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-100 pt-0 transition-all duration-300 box-border flex flex-col justify-between font-['Segoe_UI',Tahoma,Geneva,Verdana,sans-serif]">
+
       <div>
         <UnifiedHeader />
 
@@ -65,6 +67,7 @@ export default function CitizenPortalLanding() {
             </div>
 
             <div className="relative z-10 flex flex-col items-start space-y-4 max-w-2xl">
+
               <span className="bg-blue-500/30 text-blue-200 text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full border border-blue-400/30">
                 CITIZEN PORTAL DASHBOARD
               </span>
@@ -77,6 +80,7 @@ export default function CitizenPortalLanding() {
                 Manage your applications, check local business registrations,
                 pay dues, and access government support services quickly and securely.
               </p>
+
             </div>
           </div>
 
@@ -84,13 +88,15 @@ export default function CitizenPortalLanding() {
           <div className="space-y-4">
 
             <div className="flex justify-between items-center">
-              <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">
+
+              <h2 className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">
                 Available Online Services
               </h2>
 
-              <span className="text-xs font-bold text-blue-700 cursor-pointer hover:underline">
+              <span className="text-xs font-bold text-blue-700 dark:text-blue-400 cursor-pointer hover:underline">
                 View All &rarr;
               </span>
+
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -100,9 +106,10 @@ export default function CitizenPortalLanding() {
                 onClick={() => {
                   window.location.href = '/market-vendor-tab';
                 }}
-                className="bg-white hover:bg-slate-50 p-6 rounded-2xl border border-slate-200 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between space-y-4 group"
+                className="bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between space-y-4 group"
               >
-                <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-700 border border-blue-100 flex items-center justify-center group-hover:scale-105 transition-transform">
+
+                <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400 border border-blue-100 dark:border-blue-900 flex items-center justify-center group-hover:scale-105 transition-transform">
                   <svg
                     className="w-6 h-6"
                     fill="none"
@@ -124,19 +131,20 @@ export default function CitizenPortalLanding() {
                 </div>
 
                 <div>
-                  <h3 className="font-extrabold text-base text-slate-900 group-hover:text-blue-900">
+                  <h3 className="font-extrabold text-base text-slate-900 dark:text-white group-hover:text-blue-900 dark:group-hover:text-blue-300">
                     Market &amp; Vendors Hub
                   </h3>
 
-                  <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
                     Access public/private market stalls, hawker registrations,
                     and market operator guidelines.
                   </p>
                 </div>
 
-                <div className="text-xs font-bold text-blue-700 flex items-center gap-1 pt-2">
+                <div className="text-xs font-bold text-blue-700 dark:text-blue-400 flex items-center gap-1 pt-2">
                   Launch Service &rarr;
                 </div>
+
               </div>
 
 
@@ -145,9 +153,10 @@ export default function CitizenPortalLanding() {
                 onClick={() => {
                   window.location.href = '/real-property-tax-hub';
                 }}
-                className="bg-white hover:bg-slate-50 p-6 rounded-2xl border border-slate-200 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between space-y-4 group"
+                className="bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between space-y-4 group"
               >
-                <div className="w-12 h-12 rounded-xl bg-teal-50 text-teal-700 border border-teal-100 flex items-center justify-center group-hover:scale-105 transition-transform">
+
+                <div className="w-12 h-12 rounded-xl bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-400 border border-teal-100 dark:border-teal-900 flex items-center justify-center group-hover:scale-105 transition-transform">
                   <svg
                     className="w-6 h-6"
                     fill="none"
@@ -164,19 +173,20 @@ export default function CitizenPortalLanding() {
                 </div>
 
                 <div>
-                  <h3 className="font-extrabold text-base text-slate-900 group-hover:text-teal-900">
+                  <h3 className="font-extrabold text-base text-slate-900 dark:text-white group-hover:text-teal-900 dark:group-hover:text-teal-300">
                     Real Property Tax
                   </h3>
 
-                  <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
                     View property evaluations, file tax details, pay statements,
                     and track assessment requests.
                   </p>
                 </div>
 
-                <div className="text-xs font-bold text-teal-700 flex items-center gap-1 pt-2">
+                <div className="text-xs font-bold text-teal-700 dark:text-teal-400 flex items-center gap-1 pt-2">
                   Launch Service &rarr;
                 </div>
+
               </div>
 
 
@@ -185,9 +195,10 @@ export default function CitizenPortalLanding() {
                 onClick={() => {
                   window.location.href = '/business-tax-assessment';
                 }}
-                className="bg-white hover:bg-slate-50 p-6 rounded-2xl border border-slate-200 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between space-y-4 group"
+                className="bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between space-y-4 group"
               >
-                <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-700 border border-purple-100 flex items-center justify-center group-hover:scale-105 transition-transform">
+
+                <div className="w-12 h-12 rounded-xl bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-400 border border-purple-100 dark:border-purple-900 flex items-center justify-center group-hover:scale-105 transition-transform">
                   <svg
                     className="w-6 h-6"
                     fill="none"
@@ -204,27 +215,30 @@ export default function CitizenPortalLanding() {
                 </div>
 
                 <div>
-                  <h3 className="font-extrabold text-base text-slate-900 group-hover:text-purple-900">
+                  <h3 className="font-extrabold text-base text-slate-900 dark:text-white group-hover:text-purple-900 dark:group-hover:text-purple-300">
                     Business Tax Assessment
                   </h3>
 
-                  <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
                     Compute assessments, review business gross receipts,
                     and process local business taxes.
                   </p>
                 </div>
 
-                <div className="text-xs font-bold text-purple-700 flex items-center gap-1 pt-2">
+                <div className="text-xs font-bold text-purple-700 dark:text-purple-400 flex items-center gap-1 pt-2">
                   Launch Service &rarr;
                 </div>
+
               </div>
 
             </div>
           </div>
+
         </main>
       </div>
 
       <UnifiedFooter />
+
     </div>
   );
 }
