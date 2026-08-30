@@ -48,9 +48,46 @@ export default function Profile() {
   /*
    * ROLE
    */
-  const activeRole =
-    (location.state as ProfileLocationState | null)?.activeRole ??
-    "Administrator";
+  const rawSession =
+  localStorage.getItem("currentUser") ||
+  localStorage.getItem("user") ||
+  sessionStorage.getItem("currentUser") ||
+  sessionStorage.getItem("user");
+
+let sessionRole = "";
+
+if (rawSession) {
+  try {
+    const parsed = JSON.parse(rawSession);
+
+    const target =
+      parsed.user &&
+      typeof parsed.user === "object"
+        ? parsed.user
+        : parsed;
+
+    sessionRole =
+      target.role ||
+      target.userRole ||
+      target.accountType ||
+      "";
+  } catch (error) {
+    console.error(
+      "Failed to read user role:",
+      error
+    );
+  }
+}
+
+const activeRole =
+  (location.state as ProfileLocationState | null)
+    ?.activeRole ||
+  sessionRole ||
+  "Administrator";
+
+const isCitizen =
+  String(activeRole).toLowerCase() === "citizen" ||
+  String(activeRole).toLowerCase() === "taxpayer";
 
   const canCreateRPT = [
     "Administrator",
@@ -379,12 +416,19 @@ export default function Profile() {
 
           {/* BACK TO DASHBOARD */}
           <Link
-            to="/legacy-treasury"
-            className={`text-sm font-medium transition-colors ${isDarkMode ? "text-slate-300 hover:text-blue-400" : "text-slate-600 hover:text-blue-800"
-              }`}
-          >
-            Back to Dashboard &rarr;
-          </Link>
+  to={
+    isCitizen
+      ? "/citizen-portal"
+      : "/legacy-treasury"
+  }
+  className={`text-sm font-medium transition-colors ${
+    isDarkMode
+      ? "text-slate-300 hover:text-blue-400"
+      : "text-slate-600 hover:text-blue-800"
+  }`}
+>
+  Back to Dashboard &rarr;
+</Link>
         </div>
 
         {/* =====================================================
