@@ -1111,17 +1111,15 @@ export default function MarketStallApplication() {
                             </div>
 
                             <button
-                                type="button"
-                                onClick={() => {
-                                    setIsPaymentSuccess(false);
-                                    setActiveStall(null);
-                                    setPaymentLeaseId("");
-                                }}
-                                className="relative mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-emerald-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-emerald-700 active:translate-y-0"
-                            >
-                                View My Leases
-                                <span className="text-lg">→</span>
-                            </button>
+    type="button"
+    onClick={() => {
+        window.location.href = "/citizen-portal-stall-manage-account";
+    }}
+    className="relative mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-emerald-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-emerald-700 active:translate-y-0"
+>
+    View My Leases
+    <span className="text-lg">→</span>
+</button>
 
                             <p className="relative mt-3 text-center text-[11px] text-slate-400">
     Your payment has been successfully recorded.
