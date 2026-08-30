@@ -160,7 +160,6 @@ export default function MarketStallApplication() {
 
     // Payment success animation / confirmation modal
     const [isPaymentSuccess, setIsPaymentSuccess] = useState<boolean>(false);
-    const [paymentSuccessCountdown, setPaymentSuccessCountdown] = useState<number>(5);
 
     // Close dropdown on outside click
     useEffect(() => {
@@ -381,7 +380,6 @@ export default function MarketStallApplication() {
                     setQrGenerationError("");
 
                     // Show the animated payment-success screen instead of a plain alert.
-                    setPaymentSuccessCountdown(5);
                     setIsPaymentSuccess(true);
                 }
             } catch (error) {
@@ -400,26 +398,6 @@ export default function MarketStallApplication() {
             window.clearInterval(interval);
         };
     }, [isPaymentStep, paymentIntentId, isGeneratingQr]);
-
-    // Automatically close the success screen after 5 seconds.
-    useEffect(() => {
-        if (!isPaymentSuccess) return;
-
-        const timer = window.setInterval(() => {
-            setPaymentSuccessCountdown((previous) => {
-                if (previous <= 1) {
-                    window.clearInterval(timer);
-                    setIsPaymentSuccess(false);
-                    setActiveStall(null);
-                    setPaymentLeaseId("");
-                    return 0;
-                }
-                return previous - 1;
-            });
-        }, 1000);
-
-        return () => window.clearInterval(timer);
-    }, [isPaymentSuccess]);
 
     const formatQrTime = (seconds: number) => {
         const minutes = Math.floor(seconds / 60);
@@ -1146,8 +1124,8 @@ export default function MarketStallApplication() {
                             </button>
 
                             <p className="relative mt-3 text-center text-[11px] text-slate-400">
-                                This confirmation will close automatically in <span className="font-bold text-emerald-600">{paymentSuccessCountdown}</span> seconds.
-                            </p>
+    Your payment has been successfully recorded.
+</p>
                         </div>
                     </div>
 

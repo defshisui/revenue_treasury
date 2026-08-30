@@ -195,22 +195,11 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
   };
 
   useEffect(() => {
-    if (!qrPaymentPaid) return;
+  if (!qrPaymentPaid) return;
 
-    setPaymentSuccessCountdown(5);
-    const timer = window.setInterval(() => {
-      setPaymentSuccessCountdown((seconds) => {
-        if (seconds <= 1) {
-          window.clearInterval(timer);
-          closeBusinessTaxPayment();
-          return 0;
-        }
-        return seconds - 1;
-      });
-    }, 1000);
-
-    return () => window.clearInterval(timer);
-  }, [qrPaymentPaid]);
+  // Keep the payment success screen open.
+  setPaymentSuccessCountdown(0);
+}, [qrPaymentPaid]);
   const [taxBillForm, setTaxBillForm] = useState({ permitNo: '', taxBillNo: '', tin: '' });
   const [orForm, setOrForm] = useState({ permitNo: '', orNo: '', tin: '' });
   const [salesForm, setSalesForm] = useState({

@@ -195,7 +195,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
   const [rptQrPaymentIntentId, setRptQrPaymentIntentId] = useState<string>("");
   const [rptQrSecondsRemaining, setRptQrSecondsRemaining] = useState<number>(300);
   const [rptQrPaid, setRptQrPaid] = useState<boolean>(false);
-  const [rptPaymentSuccessCountdown, setRptPaymentSuccessCountdown] = useState<number>(5);
   const [rptQrError, setRptQrError] = useState<string>("");
 
   // --- Applications Queue (Assessor Request Form) ---
@@ -561,24 +560,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
     setRptQrPaid(false);
     setRptQrSecondsRemaining(300);
   };
-
-  useEffect(() => {
-    if (!rptQrPaid) return;
-
-    setRptPaymentSuccessCountdown(5);
-    const timer = window.setInterval(() => {
-      setRptPaymentSuccessCountdown((seconds) => {
-        if (seconds <= 1) {
-          window.clearInterval(timer);
-          closeRPTQrPayment();
-          return 0;
-        }
-        return seconds - 1;
-      });
-    }, 1000);
-
-    return () => window.clearInterval(timer);
-  }, [rptQrPaid]);
 
   useEffect(() => {
     if (!isQrPaymentOpen || !rptQrCodeUrl || rptQrPaid) return;
@@ -2011,7 +1992,9 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                           <p className="text-xs text-emerald-700 mt-1">Your RPT payment has been recorded and your property records are being updated.</p>
                         </div>
                         <button type="button" onClick={closeRPTQrPayment} className="mt-6 w-full rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 font-black text-sm transition-all shadow-lg shadow-emerald-200">View My RPT Records →</button>
-                        <p className="text-[11px] text-slate-400 mt-3">This window will close automatically in <span className="font-black text-emerald-600">{rptPaymentSuccessCountdown}</span> seconds.</p>
+                        <p className="text-[11px] text-slate-400 mt-3">
+  Your payment has been successfully recorded.
+</p>
                       </div>
                     </div>
                   </div>
