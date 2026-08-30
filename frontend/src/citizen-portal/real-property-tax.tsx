@@ -133,36 +133,42 @@ function getStoredCitizenSession() {
     return null;
   }
 }
-
 export function RealPropertyTaxHub() {
   const navigate = useNavigate();
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F4F6F9] text-slate-800 font-sans">
+
       <UnifiedHeader />
 
-      {/* RPT HERO */}
-      <section className="bg-[#1D2F86] text-white border-b-2 border-[#2563EB]">
+      {/* HERO */}
+      <section className="bg-[#1D2F86] text-white border-b-2 border-[#2563EB] bg-[radial-gradient(#3152B5_1px,transparent_1px)] [background-size:16px_16px]">
+
         <div className="max-w-7xl mx-auto px-4 py-12 sm:py-14 text-center">
+
           <h1 className="text-3xl sm:text-4xl font-black tracking-wide uppercase">
             WELCOME TO REAL PROPERTY TAX
           </h1>
 
           <p className="max-w-2xl mx-auto mt-2 text-sm sm:text-base text-white/95 leading-relaxed">
-            This portal is one of our digital Gov Serve initiatives catering to
-            property owners and taxpayers in accessing their Real Property Tax
-            services.
+            This portal is one of our digital Gov Serve initiatives catering
+            to property owners and taxpayers in accessing their Real Property
+            Tax services.
           </p>
+
         </div>
+
       </section>
 
-      {/* RPT SERVICE HUB */}
+
+      {/* SERVICES */}
       <main className="flex-1">
+
         <div className="max-w-6xl mx-auto px-4 py-8 sm:py-10">
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
-            {/* 2026 RPT PAYMENT */}
+            {/* REAL PROPERTY TAX */}
             <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-7 text-center">
 
               <p className="text-sm font-extrabold text-[#1D2F86] uppercase tracking-wide">
@@ -181,7 +187,7 @@ export function RealPropertyTaxHub() {
 
               <button
                 type="button"
-                onClick={() => navigate("/citizen-rpt")}
+                onClick={() => navigate('/citizen-rpt')}
                 className="mt-6 inline-flex items-center justify-center bg-[#1D3F99] hover:bg-[#17357F] text-white font-black text-xs uppercase px-6 py-3 rounded-full shadow-md transition cursor-pointer"
               >
                 PROCEED WITH REAL PROPERTY TAX
@@ -190,7 +196,7 @@ export function RealPropertyTaxHub() {
             </section>
 
 
-            {/* PROPERTY ASSESSOR SERVICES */}
+            {/* PROPERTY ASSESSOR */}
             <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-7 text-center">
 
               <p className="text-sm font-extrabold text-[#1D2F86] uppercase tracking-wide">
@@ -206,26 +212,26 @@ export function RealPropertyTaxHub() {
                 status, and access official receipts and clearance records.
               </p>
 
-              <div className="mt-6 flex flex-wrap justify-center gap-2">
-
-                <button
-                  type="button"
-                  onClick={() => navigate("/citizen-rpt?view=form")}
-                  className="inline-flex items-center justify-center bg-[#1D3F99] hover:bg-[#17357F] text-white font-black text-xs uppercase px-5 py-3 rounded-full shadow-md transition cursor-pointer"
-                >
-                  ASSESSOR SERVICES
-                </button>
-
-              </div>
+              <button
+                type="button"
+                onClick={() =>
+                  navigate('/citizen-rpt?view=form')
+                }
+                className="mt-6 inline-flex items-center justify-center bg-[#1D3F99] hover:bg-[#17357F] text-white font-black text-xs uppercase px-6 py-3 rounded-full shadow-md transition cursor-pointer"
+              >
+                ASSESSOR SERVICES
+              </button>
 
             </section>
 
           </div>
 
         </div>
+
       </main>
 
       <UnifiedFooter />
+
     </div>
   );
 }
