@@ -828,7 +828,6 @@ export async function getQrPaymentStatus(
     }
 
     const attributes = data.data?.attributes || {};
-
     const status = attributes.status;
     const paid = status === 'succeeded';
     const metadata = attributes.metadata || {};
@@ -841,7 +840,63 @@ export async function getQrPaymentStatus(
     });
 
     // =========================================================
-    // PAYMENT SUCCESS
+    // BUSINESS TAX PAYMENT
+    // =========================================================
+    if (
+      paid &&
+      metadata.type === 'BUSINESS_TAX' &&
+      metadata.businessTrackingNumber
+    ) {
+      console.log(
+        `🏢 QR payment succeeded for business tax ${metadata.businessTrackingNumber}`
+      );
+
+      const officialReceiptNumber =
+        `OR-PM-${new Date().getFullYear()}-${Math.floor(
+          100000 + Math.random() * 900000
+        )}`;
+
+      const businessResult = await pool.query(
+        `
+        UPDATE business_assessments
+        SET
+          status = 'APPROVED',
+          remarks = $1
+        WHERE tracking_number = $2
+           OR id::text = $2
+        RETURNING *
+        `,
+        [
+          `Paid via PayMongo (QR Ph) - OR: ${officialReceiptNumber}`,
+          metadata.businessTrackingNumber,
+        ]
+      );
+
+      if (businessResult.rows.length > 0) {
+        console.log(
+          `✅ Business Tax ${metadata.businessTrackingNumber} marked as PAID.`
+        );
+      } else {
+        console.warn(
+          `⚠️ Business Tax record not found: ${metadata.businessTrackingNumber}`
+        );
+      }
+
+      await recordAudit(
+        req,
+        'AUD-PAYMONGO-QR',
+        metadata.customerEmail || 'citizen@gov.ph',
+        'Citizen',
+        'ePayment Gateway',
+        'PAYMENT_QR_SUCCESS',
+        'INFO',
+        null,
+        `Business tax payment confirmed via PayMongo QR Ph. Tracking #${metadata.businessTrackingNumber}. Amount ₱${(Number(attributes.amount || 0) / 100).toFixed(2)}. O.R. ${officialReceiptNumber}.`
+      );
+    }
+
+    // =========================================================
+    // MARKET STALL PAYMENT
     // =========================================================
     if (
       paid &&
@@ -877,6 +932,44 @@ export async function getQrPaymentStatus(
       }
     }
 
+    // =========================================================
+    // REAL PROPERTY TAX PAYMENT
+    // =========================================================
+    if (
+      paid &&
+      metadata.type === 'RPT' &&
+      metadata.taxDeclarationNumber
+    ) {
+      const tdns = String(metadata.taxDeclarationNumber)
+        .split(',')
+        .map((value: string) => value.trim())
+        .filter(Boolean);
+
+      for (const tdn of tdns) {
+        const rptResult = await pool.query(
+          `
+          UPDATE lgu_rpt_records
+          SET
+            balance = 0,
+            amountPaid = totalAssessment,
+            status = 'Paid',
+            paymentStatus = 'Paid',
+            paymentMethod = 'PayMongo (QR Ph)',
+            paymentDate = NOW()
+          WHERE taxDeclarationNumber ILIKE $1
+          RETURNING *
+          `,
+          [tdn]
+        );
+
+        if (rptResult.rows.length > 0) {
+          console.log(`✅ RPT ${tdn} marked as PAID.`);
+        } else {
+          console.warn(`⚠️ RPT record not found: ${tdn}`);
+        }
+      }
+    }
+
     res.status(200).json({
       success: true,
       paymentIntentId,
@@ -885,7 +978,6 @@ export async function getQrPaymentStatus(
       amount: Number(attributes.amount || 0) / 100,
       metadata,
     });
-
   } catch (err: any) {
     console.error(
       '❌ QR payment status error:',
