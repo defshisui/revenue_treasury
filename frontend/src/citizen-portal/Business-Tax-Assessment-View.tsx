@@ -1213,12 +1213,104 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
             )}
           </p>
 
+          {/* COMPUTED LOCAL GOVERNMENT STATUTORY FEES */}
+          <div className="mt-6 rounded-2xl border border-blue-200 bg-blue-50/60 p-5">
+
+            <p className="text-xs font-black uppercase tracking-wide text-blue-900 mb-3">
+              Computed Local Government Statutory Fees (RA 7160)
+            </p>
+
+            <div className="space-y-0 text-sm">
+
+              {/* LOCAL BUSINESS TAX */}
+              <div className="flex justify-between items-center gap-4 py-2 border-b border-blue-200">
+                <span className="text-slate-600">
+                  Local Business Tax (LBT)
+                </span>
+                <span className="font-bold text-slate-900 whitespace-nowrap">
+                  ₱{Number(paymentAssessment.computedFees?.lbt || 0).toLocaleString("en-PH", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </span>
+              </div>
+
+              {/* MAYOR'S PERMIT */}
+              <div className="flex justify-between items-center gap-4 py-2 border-b border-blue-200">
+                <span className="text-slate-600">
+                  Mayor's Permit Fee
+                </span>
+                <span className="font-bold text-slate-900 whitespace-nowrap">
+                  ₱{Number(paymentAssessment.computedFees?.mayorsPermit || 0).toLocaleString("en-PH", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </span>
+              </div>
+
+              {/* SANITARY INSPECTION */}
+              <div className="flex justify-between items-center gap-4 py-2 border-b border-blue-200">
+                <span className="text-slate-600">
+                  Sanitary Inspection Fee
+                </span>
+                <span className="font-bold text-slate-900 whitespace-nowrap">
+                  ₱{Number(paymentAssessment.computedFees?.sanitaryFee || 0).toLocaleString("en-PH", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </span>
+              </div>
+
+              {/* GARBAGE FEE */}
+              <div className="flex justify-between items-center gap-4 py-2 border-b border-blue-200">
+                <span className="text-slate-600">
+                  Garbage Fee
+                </span>
+                <span className="font-bold text-slate-900 whitespace-nowrap">
+                  ₱{Number(paymentAssessment.computedFees?.garbageFee || 0).toLocaleString("en-PH", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </span>
+              </div>
+
+              {/* FIRE SAFETY INSPECTION */}
+              <div className="flex justify-between items-center gap-4 py-2">
+                <span className="text-slate-600">
+                  Fire Safety Inspection Fee (10% BFP share)
+                </span>
+                <span className="font-bold text-slate-900 whitespace-nowrap ml-3">
+                  ₱{Number(paymentAssessment.computedFees?.fireSafetyFee || 0).toLocaleString("en-PH", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </span>
+              </div>
+
+            </div>
+
+            {/* TOTAL PAYABLE ASSESSMENT */}
+            <div className="flex justify-between items-center gap-4 mt-3 pt-3 border-t border-blue-300">
+              <span className="font-black text-blue-800">
+                Total Payable Assessment
+              </span>
+
+              <span className="font-black text-lg text-blue-700 whitespace-nowrap">
+                ₱{Number(paymentAssessment.computedFees?.total || 0).toLocaleString("en-PH", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+              </span>
+            </div>
+
+          </div>
+
+          {/* PAYMENT TOTAL */}
           <div className="mt-6 pt-5 border-t border-slate-200">
 
             {/* LARGE AMOUNT */}
             <p className="text-4xl sm:text-5xl font-black text-emerald-600">
-              ₱
-              {Number(paymentAssessment.computedFees?.total || 0).toLocaleString("en-PH", {
+              ₱{Number(paymentAssessment.computedFees?.total || 0).toLocaleString("en-PH", {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
               })}
@@ -1231,18 +1323,17 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
               </span>
 
               <span className="font-bold text-slate-900">
-                ₱
-                {Number(paymentAssessment.computedFees?.total || 0).toLocaleString("en-PH", {
+                ₱{Number(paymentAssessment.computedFees?.total || 0).toLocaleString("en-PH", {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
                 })}
               </span>
             </div>
 
-            {/* FEES */}
+            {/* PAYMENT FEES */}
             <div className="flex justify-between items-center mt-4 text-sm">
               <span className="text-slate-600">
-                Fees
+                Payment Fees
               </span>
 
               <span className="font-semibold text-slate-900">
@@ -1250,15 +1341,14 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
               </span>
             </div>
 
-            {/* TOTAL */}
+            {/* TOTAL DUE */}
             <div className="flex justify-between items-center mt-5 pt-5 border-t border-slate-200">
               <span className="font-black text-slate-900">
                 Total Due
               </span>
 
               <span className="font-black text-lg text-slate-900">
-                ₱
-                {Number(paymentAssessment.computedFees?.total || 0).toLocaleString("en-PH", {
+                ₱{Number(paymentAssessment.computedFees?.total || 0).toLocaleString("en-PH", {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
                 })}
