@@ -1218,10 +1218,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
             {/* LARGE AMOUNT */}
             <p className="text-4xl sm:text-5xl font-black text-emerald-600">
               ₱
-              {(Number(paymentAssessment.grossSales || 0) > 0
-                ? Math.max(Number(paymentAssessment.grossSales || 0) * 0.02, 500)
-                : 1500
-              ).toLocaleString("en-PH", {
+              {Number(paymentAssessment.computedFees?.total || 0).toLocaleString("en-PH", {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
               })}
@@ -1235,10 +1232,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
 
               <span className="font-bold text-slate-900">
                 ₱
-                {(Number(paymentAssessment.grossSales || 0) > 0
-                  ? Math.max(Number(paymentAssessment.grossSales || 0) * 0.02, 500)
-                  : 1500
-                ).toLocaleString("en-PH", {
+                {Number(paymentAssessment.computedFees?.total || 0).toLocaleString("en-PH", {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
                 })}
@@ -1264,10 +1258,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
 
               <span className="font-black text-lg text-slate-900">
                 ₱
-                {(Number(paymentAssessment.grossSales || 0) > 0
-                  ? Math.max(Number(paymentAssessment.grossSales || 0) * 0.02, 500)
-                  : 1500
-                ).toLocaleString("en-PH", {
+                {Number(paymentAssessment.computedFees?.total || 0).toLocaleString("en-PH", {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
                 })}
