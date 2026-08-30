@@ -149,11 +149,11 @@ export const UnifiedHeader: FC = () => {
                                 Market &amp; Vendors Hub
                             </button>
                             <button
-                                onClick={() => window.location.href = '/citizen-rpt'}
-                                className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors cursor-pointer"
-                            >
-                                Real Property Tax Hub
-                            </button>
+    onClick={() => window.location.href = '/real-property-tax-hub'}
+    className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors cursor-pointer"
+>
+    Real Property Tax Hub
+</button>
                             <button
                                 onClick={() => window.location.href = '/business-tax-assessment'}
                                 className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors cursor-pointer"
