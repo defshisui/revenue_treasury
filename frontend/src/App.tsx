@@ -15,12 +15,6 @@ import CityStallManageAccount from "./citizen-portal/city-owned-manage-account";
 import PrivateManageAccount from "./citizen-portal/private-manage-account";
 import HawkerApplication from "./citizen-portal/hawker-application";
 
-/*
- * Import both components from the SAME file:
- *
- * RealPropertyApplication = actual RPT system
- * RealPropertyTaxHub      = RPT landing page
- */
 import RealPropertyApplication, {
   RealPropertyTaxHub,
 } from "./citizen-portal/real-property-tax";
@@ -65,8 +59,24 @@ export default function App() {
             element={<MarketRental />}
           />
 
+          {/* EXISTING PROFILE PAGE */}
           <Route
             path="/profile"
+            element={<Profile />}
+          />
+
+          {/* 
+             FIX:
+             Citizen Edit Profile currently goes to
+             /edit-profile.
+
+             This route simply opens the EXISTING
+             Profile page.
+
+             Profile.tsx is NOT changed.
+          */}
+          <Route
+            path="/edit-profile"
             element={<Profile />}
           />
 
@@ -113,11 +123,7 @@ export default function App() {
 
           {/* =========================
               REAL PROPERTY TAX HUB
-          =========================
-          
-          This is the landing page that should
-          look like Market & Vendors / Business Tax.
-          */}
+          ========================= */}
 
           <Route
             path="/real-property-tax-hub"
@@ -127,12 +133,7 @@ export default function App() {
 
           {/* =========================
               ACTUAL RPT SYSTEM
-          =========================
-          
-          This is the original RPT search,
-          payment, assessor services, QRPh,
-          receipts, etc.
-          */}
+          ========================= */}
 
           <Route
             path="/citizen-rpt/*"
