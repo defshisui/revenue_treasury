@@ -27,49 +27,17 @@ export default function App() {
     <ThemeProvider>
       <BrowserRouter>
         <Routes>
-          {/* Main Admin / Treasury Pages */}
           <Route path="/" element={<Dashboard />} />
 
-          <Route
-            path="/real-property-tax"
-            element={<RealPropertyTax />}
-          />
+          <Route path="/real-property-tax" element={<RealPropertyTax />} />
+          <Route path="/business-tax" element={<BusinessTax />} />
+          <Route path="/regulatory-fees" element={<RegulatoryFees />} />
+          <Route path="/market-rental" element={<MarketRental />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/legacy-treasury" element={<LegacyTreasuryApp />} />
 
-          <Route
-            path="/business-tax"
-            element={<BusinessTax />}
-          />
-
-          <Route
-            path="/regulatory-fees"
-            element={<RegulatoryFees />}
-          />
-
-          <Route
-            path="/market-rental"
-            element={<MarketRental />}
-          />
-
-          <Route
-            path="/profile"
-            element={<Profile />}
-          />
-
-          <Route
-            path="/legacy-treasury"
-            element={<LegacyTreasuryApp />}
-          />
-
-          {/* Citizen Portal */}
-          <Route
-            path="/citizen-portal"
-            element={<CitizenPortal />}
-          />
-
-          <Route
-            path="/citizen-portal-stall"
-            element={<StallApplication />}
-          />
+          <Route path="/citizen-portal" element={<CitizenPortal />} />
+          <Route path="/citizen-portal-stall" element={<StallApplication />} />
 
           <Route
             path="/citizen-portal-stall-status"
@@ -91,40 +59,20 @@ export default function App() {
             element={<HawkerApplication />}
           />
 
-          {/* =========================================================
-              REAL PROPERTY TAX
-              ========================================================= */}
-
-          {/* RPT Landing / Hub */}
-          <Route
-            path="/real-property-tax-hub"
-            element={<RealPropertyApplication />}
-          />
-
-          {/* Actual RPT Citizen Service */}
           <Route
             path="/citizen-rpt/*"
             element={<RealPropertyApplication />}
           />
 
-          {/* Existing RPT Application Route */}
           <Route
             path="/real-property-application"
             element={<RealPropertyApplication />}
           />
 
-          {/* =========================================================
-              BUSINESS TAX
-              ========================================================= */}
-
           <Route
             path="/business-tax-assessment"
             element={<BusinessTaxAssessmentView />}
           />
-
-          {/* =========================================================
-              MARKET / VENDORS
-              ========================================================= */}
 
           <Route
             path="/market-vendor-tab"
