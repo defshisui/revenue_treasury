@@ -421,12 +421,12 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
   };
   return (
     <div
-      style={{
-        marginLeft: isCollapsed ? "80px" : "0px",
-        width: isCollapsed ? "calc(100% - 80px)" : "100%",
-      }}
-      className="min-h-screen bg-slate-100 text-slate-800 pt-0 transition-all duration-300 box-border flex flex-col justify-between"
-    >
+  style={{
+    marginLeft: isCollapsed ? "80px" : "0px",
+    width: isCollapsed ? "calc(100% - 80px)" : "100%",
+  }}
+  className="min-h-screen bg-slate-100 text-slate-800 pt-0 transition-all duration-300 box-border flex flex-col justify-between"
+>
       <div>
         <UnifiedHeader />
         <div className="relative w-full bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 h-36 sm:h-48 overflow-hidden flex items-center justify-center border-b-4 border-blue-600">
