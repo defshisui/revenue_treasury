@@ -1,16 +1,19 @@
 // src/middleware/upload.ts
-// Using memory storage so uploaded files are available as Buffer objects
-// in req.file.buffer / req.files[n].buffer — no filesystem writes needed.
-// This is required for Railway (and other ephemeral-filesystem platforms)
-// where writable directories are not guaranteed to persist across deploys.
 import multer from 'multer';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-const storage = multer.memoryStorage();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-export const upload = multer({
-  storage,
-  limits: {
-    fileSize: 10 * 1024 * 1024, // 10 MB per file
-    files: 10,                  // max 10 files per request
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    cb(null, path.join(__dirname, '../../uploads'));
+  },
+  filename: (_req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    cb(null, uniqueSuffix + '-' + file.originalname);
   },
 });
+
+export const upload = multer({ storage });
