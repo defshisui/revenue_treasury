@@ -896,172 +896,198 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
         marginLeft: isCollapsed ? "80px" : "0px",
         width: isCollapsed ? "calc(100% - 80px)" : "100%",
       }}
-      className="rpt-terminal min-h-screen flex flex-col justify-between bg-black text-white font-mono transition-all duration-300"
+      className="rpt-portal min-h-screen flex flex-col bg-[#F4F6F9] text-slate-800 font-sans transition-all duration-300"
     >
       <style>{`
-        .rpt-terminal {
-          --rpt-bg: #000000;
-          --rpt-panel: #202020;
-          --rpt-line: #f5f5f5;
-          --rpt-text: #ffffff;
-          --rpt-muted: #d6d6d6;
-          --rpt-blue: #8ec5ff;
-          font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
-        }
-        .rpt-terminal * {
+        .rpt-portal {
+          --rpt-blue: #1D3F99;
+          --rpt-blue-dark: #17357F;
+          --rpt-navy: #0B3B60;
+          --rpt-border: #E2E8F0;
+          --rpt-bg: #F4F6F9;
           font-family: inherit;
         }
-        .rpt-terminal .rpt-main-shell {
-          background: var(--rpt-panel) !important;
-          border: 1px solid var(--rpt-line) !important;
-          border-radius: 24px !important;
-          box-shadow: none !important;
-          color: var(--rpt-text) !important;
+
+        .rpt-portal .rpt-main-shell {
+          background: #ffffff !important;
+          border: 1px solid #E2E8F0 !important;
+          border-radius: 16px !important;
+          box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08) !important;
+          color: #1E293B !important;
         }
-        .rpt-terminal .rpt-nav-row {
-          border-bottom: 1px solid var(--rpt-line) !important;
+
+        .rpt-portal .rpt-nav-row {
+          border-bottom: 1px solid #E2E8F0 !important;
         }
-        .rpt-terminal .rpt-nav-button {
-          color: var(--rpt-text) !important;
-          background: transparent !important;
-          border: 0 !important;
-          border-radius: 0 !important;
-          box-shadow: none !important;
-          padding: 6px 0 !important;
+
+        .rpt-portal .rpt-nav-button {
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          min-height: 36px !important;
+          padding: 0 14px !important;
+          color: #ffffff !important;
+          background: #1D3F99 !important;
+          border: 1px solid #1D3F99 !important;
+          border-radius: 6px !important;
+          box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08) !important;
+          font-family: inherit !important;
           font-size: 11px !important;
           font-weight: 800 !important;
-          letter-spacing: .02em;
+          letter-spacing: .01em !important;
+          text-transform: uppercase !important;
+          transition: background .15s ease, border-color .15s ease !important;
         }
-        .rpt-terminal .rpt-nav-button:hover {
-          color: var(--rpt-blue) !important;
-          text-decoration: underline;
+
+        .rpt-portal .rpt-nav-button:hover {
+          color: #ffffff !important;
+          background: #17357F !important;
+          border-color: #17357F !important;
+          text-decoration: none !important;
         }
-        .rpt-terminal .rpt-back {
-          color: var(--rpt-text) !important;
-          font-size: 11px !important;
-          font-weight: 800 !important;
+
+        .rpt-portal .rpt-back {
+          color: #2563EB !important;
+          font-family: inherit !important;
+          font-size: 12px !important;
+          font-weight: 700 !important;
         }
-        .rpt-terminal .rpt-title {
-          color: var(--rpt-text) !important;
+
+        .rpt-portal .rpt-back:hover {
+          color: #1D4ED8 !important;
+          text-decoration: underline !important;
+        }
+
+        .rpt-portal .rpt-title {
+          color: #0B3B60 !important;
+          font-family: inherit !important;
           font-size: 13px !important;
           font-weight: 900 !important;
-          letter-spacing: .02em;
+          letter-spacing: .02em !important;
         }
-        .rpt-terminal .rpt-label {
-          color: var(--rpt-text) !important;
-          font-size: 11px !important;
-          font-weight: 800 !important;
-        }
-        .rpt-terminal .rpt-field {
-          height: 32px !important;
-          border: 1px solid var(--rpt-line) !important;
-          border-radius: 0 !important;
-          background: #202020 !important;
-          color: var(--rpt-text) !important;
+
+        .rpt-portal .rpt-label {
+          color: #0B3B60 !important;
+          font-family: inherit !important;
           font-size: 11px !important;
           font-weight: 700 !important;
+        }
+
+        .rpt-portal .rpt-field {
+          height: 36px !important;
+          border: 1px solid #CBD5E1 !important;
+          border-radius: 6px !important;
+          background: #ffffff !important;
+          color: #1E293B !important;
+          font-family: inherit !important;
+          font-size: 12px !important;
+          font-weight: 500 !important;
           box-shadow: none !important;
           outline: none !important;
         }
-        .rpt-terminal .rpt-field::placeholder {
-          color: #bdbdbd !important;
+
+        .rpt-portal .rpt-field:focus {
+          border-color: #2563EB !important;
+          box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.10) !important;
         }
-        .rpt-terminal .rpt-action {
-          height: 32px !important;
-          border: 1px solid var(--rpt-line) !important;
-          border-radius: 0 !important;
-          background: #202020 !important;
-          color: var(--rpt-text) !important;
+
+        .rpt-portal .rpt-field::placeholder {
+          color: #94A3B8 !important;
+        }
+
+        .rpt-portal .rpt-action {
+          height: 36px !important;
+          border: 1px solid #1D3F99 !important;
+          border-radius: 6px !important;
+          background: #1D3F99 !important;
+          color: #ffffff !important;
+          font-family: inherit !important;
           font-size: 11px !important;
-          font-weight: 900 !important;
-          box-shadow: none !important;
+          font-weight: 800 !important;
+          box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08) !important;
         }
-        .rpt-terminal .rpt-action:hover {
-          background: #2d2d2d !important;
-          color: var(--rpt-blue) !important;
+
+        .rpt-portal .rpt-action:hover {
+          background: #17357F !important;
+          border-color: #17357F !important;
+          color: #ffffff !important;
         }
-        .rpt-terminal .rpt-table {
-          border-color: var(--rpt-line) !important;
-          border-radius: 0 !important;
-          background: transparent !important;
+
+        .rpt-portal .rpt-table {
+          border-color: #E2E8F0 !important;
+          border-radius: 8px !important;
+          background: #ffffff !important;
         }
-        .rpt-terminal .rpt-table th,
-        .rpt-terminal .rpt-table td {
-          border-color: var(--rpt-line) !important;
-          color: var(--rpt-text) !important;
-          background: transparent !important;
-          font-size: 10px !important;
-          padding: 8px 10px !important;
+
+        .rpt-portal .rpt-table th,
+        .rpt-portal .rpt-table td {
+          border-color: #E2E8F0 !important;
+          color: #334155 !important;
+          background: #ffffff !important;
+          font-family: inherit !important;
+          font-size: 11px !important;
+          padding: 10px 12px !important;
         }
-        .rpt-terminal .rpt-table th {
-          font-weight: 900 !important;
-          text-transform: uppercase;
+
+        .rpt-portal .rpt-table th {
+          color: #ffffff !important;
+          background: #2846A0 !important;
+          font-weight: 800 !important;
+          text-transform: uppercase !important;
+          white-space: nowrap !important;
         }
-        .rpt-terminal .rpt-table tr:hover td {
-          background: #292929 !important;
+
+        .rpt-portal .rpt-table tbody tr:hover td {
+          background: #F8FAFC !important;
         }
-        .rpt-terminal .rpt-history {
-          border: 1px solid var(--rpt-line) !important;
-          border-radius: 0 !important;
-          background: transparent !important;
-          color: var(--rpt-text) !important;
+
+        .rpt-portal .rpt-history {
+          border: 1px solid #E2E8F0 !important;
+          border-radius: 10px !important;
+          background: #ffffff !important;
+          color: #334155 !important;
         }
-        .rpt-terminal .rpt-history button {
-          color: var(--rpt-text) !important;
-          background: transparent !important;
+
+        .rpt-portal .rpt-history button {
+          color: #0B3B60 !important;
+          background: #ffffff !important;
           border: 0 !important;
-          border-radius: 0 !important;
+          border-radius: 10px !important;
+          font-family: inherit !important;
           font-size: 11px !important;
-          font-weight: 900 !important;
+          font-weight: 800 !important;
         }
-        .rpt-terminal .rpt-empty {
-          color: var(--rpt-muted) !important;
-          font-size: 10px !important;
+
+        .rpt-portal .rpt-history button:hover {
+          background: #F8FAFC !important;
         }
-        .rpt-terminal .rpt-link {
-          color: var(--rpt-text) !important;
-          font-weight: 900 !important;
+
+        .rpt-portal .rpt-empty {
+          color: #94A3B8 !important;
+          font-family: inherit !important;
+          font-size: 11px !important;
+        }
+
+        .rpt-portal .rpt-link {
+          color: #2563EB !important;
+          font-family: inherit !important;
+          font-weight: 800 !important;
           text-decoration: none !important;
         }
-        .rpt-terminal .rpt-link:hover {
-          color: var(--rpt-blue) !important;
+
+        .rpt-portal .rpt-link:hover {
+          color: #1D4ED8 !important;
           text-decoration: underline !important;
         }
-        .rpt-terminal .rpt-divider {
-          border-color: var(--rpt-line) !important;
+
+        .rpt-portal .rpt-divider {
+          border-color: #E2E8F0 !important;
         }
-        .rpt-terminal > div > .w-full > * {
-          color: var(--rpt-text);
-        }
-        .rpt-terminal .rpt-main-shell input,
-        .rpt-terminal .rpt-main-shell select,
-        .rpt-terminal .rpt-main-shell textarea {
-          background: #202020 !important;
-          color: #ffffff !important;
-          border-color: #f5f5f5 !important;
-          border-radius: 0 !important;
-          box-shadow: none !important;
-        }
-        .rpt-terminal .rpt-main-shell label,
-        .rpt-terminal .rpt-main-shell h2,
-        .rpt-terminal .rpt-main-shell h3,
-        .rpt-terminal .rpt-main-shell p,
-        .rpt-terminal .rpt-main-shell span {
-          color: #ffffff;
-        }
-        .rpt-terminal .rpt-main-shell button:not(.rpt-nav-button):not(.rpt-action):not(.rpt-link) {
-          border-radius: 0 !important;
-          box-shadow: none !important;
-          border: 1px solid #f5f5f5 !important;
-          background: #202020 !important;
-          color: #ffffff !important;
-        }
-        .rpt-terminal .rpt-main-shell .bg-slate-50,
-        .rpt-terminal .rpt-main-shell .bg-white,
-        .rpt-terminal .rpt-main-shell .bg-sky-50,
-        .rpt-terminal .rpt-main-shell .bg-emerald-50,
-        .rpt-terminal .rpt-main-shell .bg-rose-50 {
-          background: #202020 !important;
+
+        .rpt-portal .rpt-main-shell input,
+        .rpt-portal .rpt-main-shell select,
+        .rpt-portal .rpt-main-shell textarea {
+          font-family: inherit;
         }
       `}</style>
       <div>
@@ -1085,7 +1111,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
         )}
 
         {/* Main Content Area */}
-        <div className="w-full max-w-[760px] mx-auto px-4 py-8">
+        <div className="w-full max-w-[1120px] mx-auto px-4 py-8 sm:py-10">
           {/* VIEW: RPT SEARCH & PAYMENT */}
           {activePortalTab === "search" && (
             <div className="space-y-6">
@@ -2579,6 +2605,8 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
           </div>
         </div>
       )}
+
+      <UnifiedFooter />
     </div>
   );
 }
