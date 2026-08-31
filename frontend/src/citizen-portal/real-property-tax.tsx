@@ -954,25 +954,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                         </div>
                       </div>
                     </form>
-
-                    {/* Sample TDN shortcuts */}
-                    <div className="flex flex-wrap items-center gap-2 mt-4 text-[10px]">
-                      <span className="text-slate-400 font-semibold">Sample QC TDNs:</span>
-                      {['F-021-01491', 'G-021-01164', 'E-015-08832'].map((tdn) => (
-                        <button
-                          key={tdn}
-                          type="button"
-                          onClick={() => setSearchTdnInput(tdn)}
-                          className="bg-slate-100 hover:bg-slate-200 text-[#0B3B60] px-2.5 py-1 rounded-md font-mono font-bold cursor-pointer transition"
-                        >
-                          {tdn}
-                        </button>
-                      ))}
-                      <span className="ml-auto text-[10px] font-bold text-rose-600 uppercase">
-                        {dailySearchQuota}/20 searches remaining today
-                      </span>
-                    </div>
-
                     {/* RESULTS TABLE */}
                     <div className="overflow-x-auto rounded-lg border border-slate-200 mt-5">
                       <table className="w-full min-w-[950px] text-left text-xs border-collapse">
