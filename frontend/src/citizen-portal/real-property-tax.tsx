@@ -171,18 +171,13 @@ export function RealPropertyTaxHub() {
             {/* REAL PROPERTY TAX */}
             <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-7 text-center">
 
-              <p className="text-sm font-extrabold text-[#1D2F86] uppercase tracking-wide">
-                2026 REAL PROPERTY TAX
-              </p>
-
               <h2 className="mt-2 text-lg font-black text-slate-900">
                 Proceed and Pay Online
               </h2>
 
               <p className="max-w-xl mx-auto mt-3 text-xs sm:text-sm text-[#36527A] leading-relaxed">
                 Search your Tax Declaration Number, view your property
-                assessment and outstanding balance, choose a payment option,
-                and pay your Real Property Tax securely through the portal.
+                assessment and outstanding balance and pay your Real Property Tax Online.
               </p>
 
               <button
@@ -208,8 +203,7 @@ export function RealPropertyTaxHub() {
               </h2>
 
               <p className="max-w-xl mx-auto mt-3 text-xs sm:text-sm text-[#36527A] leading-relaxed">
-                Submit property-related service requests, check application
-                status, and access official receipts and clearance records.
+                Submit property-related service requests.
               </p>
 
               <button
