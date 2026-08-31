@@ -98,6 +98,19 @@ export interface ElectronicReceipt {
   }>;
 }
 
+interface RPTPaymentHistoryItem {
+  id: string;
+  tdn: string;
+  ownerName: string;
+  location: string;
+  year: number;
+  assessedValue: number;
+  taxDue: number;
+  paymentDate: string;
+  officialReceiptNumber: string;
+  paymentMethod: string;
+}
+
 const services = [
   "Transfer of Ownership",
   "Consolidation / Segregation",
@@ -288,7 +301,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
   const [isQrPaymentOpen, setIsQrPaymentOpen] = useState<boolean>(false);
   const [isGeneratingQr, setIsGeneratingQr] = useState<boolean>(false);
   const [rptQrCodeUrl, setRptQrCodeUrl] = useState<string>("");
-  const [, setRptQrReferenceNumber] = useState<string>("");
+  const [rptQrReferenceNumber, setRptQrReferenceNumber] = useState<string>("");
   const [rptQrPaymentIntentId, setRptQrPaymentIntentId] = useState<string>("");
   const [rptQrSecondsRemaining, setRptQrSecondsRemaining] = useState<number>(300);
   const [rptQrPaid, setRptQrPaid] = useState<boolean>(false);
@@ -328,6 +341,8 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
   // User & Toast
   const [currentUser, setCurrentUser] = useState<{ fullname: string; email: string } | null>(null);
   const [toastMessage, setToastMessage] = useState<{ text: string; type: "success" | "error" | "info" } | null>(null);
+  const [rptPaymentHistory, setRptPaymentHistory] = useState<RPTPaymentHistoryItem[]>([]);
+  const [isPaymentHistoryOpen, setIsPaymentHistoryOpen] = useState(false);
 
   const showToast = (text: string, type: "success" | "error" | "info" = "info") => {
     setToastMessage({ text, type });
@@ -352,6 +367,16 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
     if (viewParam === "status") setActivePortalTab("status");
     else if (viewParam === "form") setActivePortalTab("application");
     else if (viewParam === "summary") setActivePortalTab("summary");
+
+    try {
+      const storedHistory = localStorage.getItem("rptPaymentHistory");
+      if (storedHistory) {
+        const parsedHistory = JSON.parse(storedHistory);
+        if (Array.isArray(parsedHistory)) setRptPaymentHistory(parsedHistory);
+      }
+    } catch {
+      // Ignore malformed local payment history.
+    }
 
     // Dynamic QR Ph payments are confirmed through the backend webhook/status endpoint.
   }, [location.search]);
@@ -699,6 +724,12 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
           setRptQrPaid(true);
           setRptQrSecondsRemaining(0);
           setRptQrCodeUrl("");
+          addRPTPaymentHistory(
+            cart,
+            new Date().toISOString(),
+            rptQrReferenceNumber || "QRPH-PAYMENT",
+            "PayMongo QR Ph"
+          );
           await loadApplications();
           showToast("Real Property Tax payment confirmed!", "success");
         }
@@ -708,6 +739,31 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
     }, 3000);
     return () => window.clearInterval(poll);
   }, [isQrPaymentOpen, rptQrPaymentIntentId, rptQrPaid]);
+
+  const addRPTPaymentHistory = (items: CartItem[], paymentDate: string, officialReceiptNumber: string, paymentMethod: string) => {
+    const historyItems: RPTPaymentHistoryItem[] = items.map((item) => ({
+      id: `${Date.now()}-${item.tdn}`,
+      tdn: item.tdn,
+      ownerName: item.ownerName,
+      location: item.rawProperty.propertyLocation || item.rawProperty.barangay || "—",
+      year: item.rawProperty.billingYear || new Date().getFullYear(),
+      assessedValue: item.rawProperty.assessedValue || 0,
+      taxDue: item.totalPayable,
+      paymentDate,
+      officialReceiptNumber,
+      paymentMethod,
+    }));
+
+    setRptPaymentHistory((previous) => {
+      const next = [...historyItems, ...previous].slice(0, 50);
+      try {
+        localStorage.setItem("rptPaymentHistory", JSON.stringify(next));
+      } catch {
+        // Local storage may be unavailable; keep the in-memory history.
+      }
+      return next;
+    });
+  };
 
   const handleExecuteGroupCheckout = async (method: "PayMongo" | "DirectSimulated") => {
     if (cart.length === 0) return;
@@ -747,6 +803,13 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
         totalAmount: result.totalAmount,
         items: result.items || [],
       });
+
+      addRPTPaymentHistory(
+        cart,
+        result.paymentDate,
+        result.groupOfficialReceipt,
+        "Electronic LGU Payment Gateway"
+      );
 
       setCart([]);
       setIsCartOpen(false);
@@ -833,10 +896,175 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
         marginLeft: isCollapsed ? "80px" : "0px",
         width: isCollapsed ? "calc(100% - 80px)" : "100%",
       }}
-      className="min-h-screen flex flex-col justify-between bg-[#F4F6F9] text-slate-800 font-sans transition-all duration-300"
+      className="rpt-terminal min-h-screen flex flex-col justify-between bg-black text-white font-mono transition-all duration-300"
     >
+      <style>{`
+        .rpt-terminal {
+          --rpt-bg: #000000;
+          --rpt-panel: #202020;
+          --rpt-line: #f5f5f5;
+          --rpt-text: #ffffff;
+          --rpt-muted: #d6d6d6;
+          --rpt-blue: #8ec5ff;
+          font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+        }
+        .rpt-terminal * {
+          font-family: inherit;
+        }
+        .rpt-terminal .rpt-main-shell {
+          background: var(--rpt-panel) !important;
+          border: 1px solid var(--rpt-line) !important;
+          border-radius: 24px !important;
+          box-shadow: none !important;
+          color: var(--rpt-text) !important;
+        }
+        .rpt-terminal .rpt-nav-row {
+          border-bottom: 1px solid var(--rpt-line) !important;
+        }
+        .rpt-terminal .rpt-nav-button {
+          color: var(--rpt-text) !important;
+          background: transparent !important;
+          border: 0 !important;
+          border-radius: 0 !important;
+          box-shadow: none !important;
+          padding: 6px 0 !important;
+          font-size: 11px !important;
+          font-weight: 800 !important;
+          letter-spacing: .02em;
+        }
+        .rpt-terminal .rpt-nav-button:hover {
+          color: var(--rpt-blue) !important;
+          text-decoration: underline;
+        }
+        .rpt-terminal .rpt-back {
+          color: var(--rpt-text) !important;
+          font-size: 11px !important;
+          font-weight: 800 !important;
+        }
+        .rpt-terminal .rpt-title {
+          color: var(--rpt-text) !important;
+          font-size: 13px !important;
+          font-weight: 900 !important;
+          letter-spacing: .02em;
+        }
+        .rpt-terminal .rpt-label {
+          color: var(--rpt-text) !important;
+          font-size: 11px !important;
+          font-weight: 800 !important;
+        }
+        .rpt-terminal .rpt-field {
+          height: 32px !important;
+          border: 1px solid var(--rpt-line) !important;
+          border-radius: 0 !important;
+          background: #202020 !important;
+          color: var(--rpt-text) !important;
+          font-size: 11px !important;
+          font-weight: 700 !important;
+          box-shadow: none !important;
+          outline: none !important;
+        }
+        .rpt-terminal .rpt-field::placeholder {
+          color: #bdbdbd !important;
+        }
+        .rpt-terminal .rpt-action {
+          height: 32px !important;
+          border: 1px solid var(--rpt-line) !important;
+          border-radius: 0 !important;
+          background: #202020 !important;
+          color: var(--rpt-text) !important;
+          font-size: 11px !important;
+          font-weight: 900 !important;
+          box-shadow: none !important;
+        }
+        .rpt-terminal .rpt-action:hover {
+          background: #2d2d2d !important;
+          color: var(--rpt-blue) !important;
+        }
+        .rpt-terminal .rpt-table {
+          border-color: var(--rpt-line) !important;
+          border-radius: 0 !important;
+          background: transparent !important;
+        }
+        .rpt-terminal .rpt-table th,
+        .rpt-terminal .rpt-table td {
+          border-color: var(--rpt-line) !important;
+          color: var(--rpt-text) !important;
+          background: transparent !important;
+          font-size: 10px !important;
+          padding: 8px 10px !important;
+        }
+        .rpt-terminal .rpt-table th {
+          font-weight: 900 !important;
+          text-transform: uppercase;
+        }
+        .rpt-terminal .rpt-table tr:hover td {
+          background: #292929 !important;
+        }
+        .rpt-terminal .rpt-history {
+          border: 1px solid var(--rpt-line) !important;
+          border-radius: 0 !important;
+          background: transparent !important;
+          color: var(--rpt-text) !important;
+        }
+        .rpt-terminal .rpt-history button {
+          color: var(--rpt-text) !important;
+          background: transparent !important;
+          border: 0 !important;
+          border-radius: 0 !important;
+          font-size: 11px !important;
+          font-weight: 900 !important;
+        }
+        .rpt-terminal .rpt-empty {
+          color: var(--rpt-muted) !important;
+          font-size: 10px !important;
+        }
+        .rpt-terminal .rpt-link {
+          color: var(--rpt-text) !important;
+          font-weight: 900 !important;
+          text-decoration: none !important;
+        }
+        .rpt-terminal .rpt-link:hover {
+          color: var(--rpt-blue) !important;
+          text-decoration: underline !important;
+        }
+        .rpt-terminal .rpt-divider {
+          border-color: var(--rpt-line) !important;
+        }
+        .rpt-terminal > div > .w-full > * {
+          color: var(--rpt-text);
+        }
+        .rpt-terminal .rpt-main-shell input,
+        .rpt-terminal .rpt-main-shell select,
+        .rpt-terminal .rpt-main-shell textarea {
+          background: #202020 !important;
+          color: #ffffff !important;
+          border-color: #f5f5f5 !important;
+          border-radius: 0 !important;
+          box-shadow: none !important;
+        }
+        .rpt-terminal .rpt-main-shell label,
+        .rpt-terminal .rpt-main-shell h2,
+        .rpt-terminal .rpt-main-shell h3,
+        .rpt-terminal .rpt-main-shell p,
+        .rpt-terminal .rpt-main-shell span {
+          color: #ffffff;
+        }
+        .rpt-terminal .rpt-main-shell button:not(.rpt-nav-button):not(.rpt-action):not(.rpt-link) {
+          border-radius: 0 !important;
+          box-shadow: none !important;
+          border: 1px solid #f5f5f5 !important;
+          background: #202020 !important;
+          color: #ffffff !important;
+        }
+        .rpt-terminal .rpt-main-shell .bg-slate-50,
+        .rpt-terminal .rpt-main-shell .bg-white,
+        .rpt-terminal .rpt-main-shell .bg-sky-50,
+        .rpt-terminal .rpt-main-shell .bg-emerald-50,
+        .rpt-terminal .rpt-main-shell .bg-rose-50 {
+          background: #202020 !important;
+        }
+      `}</style>
       <div>
-        <UnifiedHeader />
 
         {/* Global Toast Alert */}
         {toastMessage && (
@@ -857,7 +1085,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
         )}
 
         {/* Main Content Area */}
-        <div className="max-w-7xl mx-auto px-4 py-6 w-full">
+        <div className="w-full max-w-[760px] mx-auto px-4 py-8">
           {/* VIEW: RPT SEARCH & PAYMENT */}
           {activePortalTab === "search" && (
             <div className="space-y-6">
@@ -865,84 +1093,99 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
               {rptSearchStep === 1 && (
                 <>
                   {/* SEARCH / RESULTS CARD */}
-                  <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-7 mt-6">
+                  <div className="rpt-main-shell p-5 sm:p-6 mt-2">
                     <div className="mb-5">
                       <button
                         type="button"
                         onClick={() => window.history.back()}
-                        className="text-xs font-bold text-blue-600 hover:text-blue-800 cursor-pointer"
+                        className="rpt-back cursor-pointer"
                       >
                         ← Back to Home
                       </button>
                     </div>
 
-                    <div className="border-b border-slate-200 pb-4">
-  <button
-    type="button"
-    onClick={() => {
-      window.history.pushState({}, "", "/citizen-rpt?view=form");
-      window.dispatchEvent(new PopStateEvent("popstate"));
-    }}
-    className="inline-flex items-center justify-center bg-[#243F9A] hover:bg-[#1D347F] text-white px-4 py-2.5 rounded-md shadow-sm text-xs font-black uppercase tracking-wide transition cursor-pointer"
-  >
-    SUBMIT RTP
-  </button>
-</div>
+                    <div className="rpt-nav-row border-b pb-4 flex items-center gap-6">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          window.history.pushState({}, "", "/citizen-rpt?view=form");
+                          window.dispatchEvent(new PopStateEvent("popstate"));
+                        }}
+                        className="rpt-nav-button cursor-pointer"
+                      >
+                        [ SUBMIT RPT ]
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          window.history.pushState({}, "", "/citizen-rpt?view=status");
+                          window.dispatchEvent(new PopStateEvent("popstate"));
+                        }}
+                        className="rpt-nav-button cursor-pointer"
+                      >
+                        [ MY APPLICATIONS ]
+                      </button>
+                    </div>
+
+                    <div className="rpt-divider border-b pb-5 pt-5">
+                      <p className="rpt-title uppercase">RPT PAYMENT / AMILYAR</p>
+                    </div>
 
                     {searchError && (
-                      <div className="mt-4 p-3 bg-rose-50 border border-rose-200 rounded-lg text-rose-800 text-xs font-bold">
+                      <div className="mt-4 p-3 border border-white text-white text-[10px] font-bold">
                         {searchError}
                       </div>
                     )}
 
                     {/* SEARCH FILTERS - Business Tax style */}
                     <form onSubmit={handleExecuteTdnSearch} className="mt-5">
-                      <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.4fr_auto_1fr] gap-3 items-end">
+                      <div className="grid grid-cols-1 sm:grid-cols-[1fr_1.2fr_auto_1fr] gap-x-6 gap-y-4 items-end">
                         <div>
-                          <label className="block text-[11px] font-bold text-slate-600 mb-1.5">
+                          <label className="rpt-label block mb-1.5">
                             Search By:
                           </label>
                           <select
                             value={searchType}
                             onChange={(e) => setSearchType(e.target.value)}
-                            className="w-full h-10 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                            className="rpt-field w-full px-3 outline-none"
                           >
-                            <option>Tax Declaration No. (TDN)</option>
-                            <option>Property Owner</option>
-                            <option>Property Identification No. (PIN)</option>
+                            <option value="Tax Declaration No. (TDN)">TDN</option>
+                            <option value="Property Owner">Owner</option>
+                            <option value="Property Identification No. (PIN)">PIN</option>
                           </select>
                         </div>
 
                         <div>
-                          <label className="block text-[11px] font-bold text-slate-600 mb-1.5">
-                            Tax Declaration Number:
+                          <label className="rpt-label block mb-1.5">
+                            TDN:
                           </label>
                           <input
                             type="text"
                             required
                             value={searchTdnInput}
                             onChange={(e) => setSearchTdnInput(e.target.value.toUpperCase())}
-                            placeholder="Enter Tax Declaration No. (TDN)"
-                            className="w-full h-10 rounded-md border border-slate-300 px-3 text-xs font-mono font-bold text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 uppercase"
+                            placeholder="____________"
+                            className="rpt-field w-full px-3 uppercase"
                           />
                         </div>
 
                         <button
                           type="submit"
                           disabled={isSearchingTdn}
-                          className="h-10 px-5 rounded-md bg-[#1D3F99] hover:bg-[#17357F] disabled:opacity-50 text-white text-xs font-black cursor-pointer transition shadow-sm"
+                          className="rpt-action px-4 disabled:opacity-50 cursor-pointer"
                         >
                           {isSearchingTdn ? "Searching..." : "Search"}
                         </button>
 
                         <div>
-                          <label className="block text-[11px] font-bold text-slate-600 mb-1.5">
-                            Assessment Year:
+                          <label className="rpt-label block mb-1.5">
+                            Year:
                           </label>
                           <select
                             value={assessmentYear}
                             onChange={(e) => setAssessmentYear(e.target.value)}
-                            className="w-full h-10 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                            className="rpt-field w-full px-3 outline-none"
                           >
                             <option>All Years</option>
                             <option>2026</option>
@@ -954,18 +1197,17 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                       </div>
                     </form>
                     {/* RESULTS TABLE */}
-                    <div className="overflow-x-auto rounded-lg border border-slate-200 mt-5">
-                      <table className="w-full min-w-[950px] text-left text-xs border-collapse">
-                        <thead className="bg-[#243F9A] text-white font-bold uppercase">
+                    <div className="overflow-x-auto border border-white mt-6 rpt-table">
+                      <table className="w-full min-w-[760px] text-left border-collapse rpt-table">
+                        <thead className="text-white font-black uppercase">
                           <tr>
-                            <th className="px-3 py-3">Tax Declaration No. (TDN) ↑</th>
-                            <th className="px-3 py-3">Owner Name</th>
-                            <th className="px-3 py-3">Property Location</th>
-                            <th className="px-3 py-3">Assessment Year</th>
-                            <th className="px-3 py-3">Assessed Value</th>
-                            <th className="px-3 py-3">Tax Due</th>
-                            <th className="px-3 py-3">Status</th>
-                            <th className="px-3 py-3">Action</th>
+                            <th>TDN</th>
+                            <th>OWNER</th>
+                            <th>LOCATION</th>
+                            <th>YEAR</th>
+                            <th>ASSESSED</th>
+                            <th>TAX DUE</th>
+                            <th>VIEW</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
@@ -973,48 +1215,24 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                             associatedProperties
                               .filter((property) => assessmentYear === "All Years" || String(property.billingYear) === assessmentYear)
                               .map((property) => {
-                                const status = String(property.paymentStatus || property.status || "UNPAID").toUpperCase();
                                 return (
                                   <tr key={property.taxDeclarationNumber} className="hover:bg-slate-50 transition">
-                                    <td className="px-3 py-3 font-mono font-semibold text-[#0B3B60]">
-                                      {property.taxDeclarationNumber}
-                                    </td>
-                                    <td className="px-3 py-3 text-slate-700 font-medium">
-                                      {property.ownerName}
-                                    </td>
-                                    <td className="px-3 py-3 text-slate-700">
-                                      {property.propertyLocation || property.barangay || "—"}
-                                    </td>
-                                    <td className="px-3 py-3 text-slate-700">
-                                      {property.billingYear || "—"}
-                                    </td>
-                                    <td className="px-3 py-3 text-slate-700 font-semibold">
-                                      {formatCurrency(property.assessedValue)}
-                                    </td>
-                                    <td className="px-3 py-3 text-slate-700 font-semibold">
-                                      {formatCurrency(property.balance || property.totalAssessment)}
-                                    </td>
-                                    <td className="px-3 py-3">
-                                      <span className={`inline-flex px-2 py-1 rounded-full text-[9px] font-black ${
-                                        status.includes("PAID") && !status.includes("UNPAID")
-                                          ? "bg-emerald-100 text-emerald-700"
-                                          : status.includes("PARTIAL")
-                                          ? "bg-amber-100 text-amber-700"
-                                          : "bg-rose-100 text-rose-700"
-                                      }`}>
-                                        {status}
-                                      </span>
-                                    </td>
-                                    <td className="px-3 py-3">
+                                    <td className="font-mono font-black">{property.taxDeclarationNumber}</td>
+                                    <td className="font-bold">{property.ownerName}</td>
+                                    <td>{property.propertyLocation || property.barangay || "—"}</td>
+                                    <td>{property.billingYear || "—"}</td>
+                                    <td className="font-bold">{formatCurrency(property.assessedValue)}</td>
+                                    <td className="font-bold">{formatCurrency(property.balance || property.totalAssessment)}</td>
+                                    <td>
                                       <button
                                         type="button"
                                         onClick={() => {
                                           setSelectedTdnIds(new Set([property.taxDeclarationNumber]));
                                           setRptSearchStep(2);
                                         }}
-                                        className="text-blue-600 hover:text-blue-800 font-bold cursor-pointer"
+                                        className="rpt-link cursor-pointer"
                                       >
-                                        View
+                                        VIEW
                                       </button>
                                     </td>
                                   </tr>
@@ -1022,7 +1240,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                               })
                           ) : (
                             <tr>
-                              <td colSpan={8} className="px-4 py-10 text-center text-slate-400 italic">
+                              <td colSpan={7} className="px-4 py-10 text-center rpt-empty italic">
                                 Search for a Tax Declaration Number to view real property tax records.
                               </td>
                             </tr>
@@ -1031,7 +1249,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                       </table>
                     </div>
 
-                    <div className="flex items-center justify-between mt-4 text-xs text-slate-500">
+                    <div className="hidden">
                       <span>Page 1 of 1</span>
                       <div className="flex gap-2">
                         <button type="button" disabled className="px-3 py-1.5 rounded-md border border-slate-200 text-slate-300">
@@ -1044,7 +1262,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                     </div>
 
                     {/* How to search */}
-                    <div className="mt-4 bg-slate-50 border border-slate-100 rounded-xl p-4 sm:p-5 text-xs text-slate-600 leading-relaxed">
+                    <div className="hidden">
                       <p className="font-bold text-[#0B3B60] mb-2 flex items-center gap-2">
                         <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 text-blue-600">i</span>
                         How to search:
@@ -1056,13 +1274,62 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                         <li>Click View to continue to the property assessment, payment options, and official receipt records.</li>
                       </ol>
                     </div>
+
+                    <div className="rpt-history mt-6">
+                      <button
+                        type="button"
+                        onClick={() => setIsPaymentHistoryOpen((open) => !open)}
+                        className="w-full px-4 py-4 flex items-center justify-between cursor-pointer"
+                      >
+                        <span>[ MY RPT PAYMENT HISTORY ]</span>
+                        <span>{isPaymentHistoryOpen ? "[-]" : "[+]"}</span>
+                      </button>
+
+                      {isPaymentHistoryOpen && (
+                        <div className="border-t border-white overflow-x-auto">
+                          {rptPaymentHistory.length === 0 ? (
+                            <div className="rpt-empty px-4 py-6">
+                              No RPT payment history available.
+                            </div>
+                          ) : (
+                            <table className="rpt-table w-full min-w-[760px] text-left border-collapse">
+                              <thead>
+                                <tr>
+                                  <th>TDN</th>
+                                  <th>OWNER</th>
+                                  <th>LOCATION</th>
+                                  <th>YEAR</th>
+                                  <th>TAX DUE</th>
+                                  <th>OR NO.</th>
+                                  <th>DATE</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {rptPaymentHistory.map((payment) => (
+                                  <tr key={payment.id}>
+                                    <td className="font-bold">{payment.tdn}</td>
+                                    <td>{payment.ownerName}</td>
+                                    <td>{payment.location}</td>
+                                    <td>{payment.year}</td>
+                                    <td className="font-bold">{formatCurrency(payment.taxDue)}</td>
+                                    <td>{payment.officialReceiptNumber}</td>
+                                    <td>{new Date(payment.paymentDate).toLocaleDateString("en-PH")}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
                   </div>
                 </>
               )}
 
               {/* --- STEP 2: POSSIBLE PROPERTIES YOU MIGHT OWN --- */}
               {rptSearchStep === 2 && (
-                <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
+                <div className="rpt-main-shell p-6 sm:p-8 space-y-6">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
                     <div>
                       <button
@@ -1160,7 +1427,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
 
               {/* --- STEP 3: SELECTED TDN LIST & CONFIGURE PAYMENT OPTION --- */}
               {rptSearchStep === 3 && (
-                <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
+                <div className="rpt-main-shell p-6 sm:p-8 space-y-6">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
                     <div>
                       <button
@@ -1263,7 +1530,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
 
           {/* VIEW: ASSESSOR APPLICATIONS FORM */}
           {activePortalTab === "application" && (
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-10 space-y-8">
+            <div className="rpt-main-shell p-6 sm:p-8 space-y-8">
               <div className="border-b border-slate-200 pb-4">
                 <p className="text-[11px] font-bold uppercase tracking-wider text-[#0284C7]">OFFICE OF THE CITY ASSESSOR</p>
                 <h2 className="text-2xl font-extrabold text-[#0B3B60]">Real Property Tax Service Request</h2>
@@ -1494,7 +1761,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
 
           {/* VIEW: APPLICATION STATUS TRACKER */}
           {activePortalTab === "status" && (
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
+            <div className="rpt-main-shell p-6 sm:p-8 space-y-6">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
                 <div>
                   <h2 className="text-xl font-extrabold text-[#0B3B60]">Real Property Applications Status</h2>
@@ -1568,7 +1835,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
 
           {/* VIEW: OFFICIAL RECEIPTS & SUMMARY */}
           {activePortalTab === "summary" && (
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
+            <div className="rpt-main-shell p-6 sm:p-8 space-y-6">
               <div className="border-b border-slate-200 pb-4">
                 <h2 className="text-xl font-extrabold text-[#0B3B60]">Real Property Tax Clearance &amp; Electronic Receipts</h2>
                 <p className="text-xs text-slate-500 mt-1">
@@ -1608,7 +1875,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
         </div>
       </div>
 
-      <UnifiedFooter />
+      <div className="hidden"><UnifiedFooter /></div>
 
       {/* MODAL 1: OWNER VERIFICATION POP-UP */}
       {isOwnerModalOpen && (
