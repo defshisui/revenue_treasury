@@ -249,7 +249,8 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
 
   // Search Step 1 State
   const [searchTdnInput, setSearchTdnInput] = useState<string>("F-021-01491");
-  const [isCaptchaVerified, setIsCaptchaVerified] = useState<boolean>(false);
+  const [searchType, setSearchType] = useState<string>("Tax Declaration No. (TDN)");
+  const [assessmentYear, setAssessmentYear] = useState<string>("All Years");
   const [dailySearchQuota, setDailySearchQuota] = useState<number>(20);
   const [isSearchingTdn, setIsSearchingTdn] = useState<boolean>(false);
   const [searchError, setSearchError] = useState<string>("");
@@ -384,11 +385,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
 
     if (!searchTdnInput.trim()) {
       setSearchError("Please enter a valid Tax Declaration Number.");
-      return;
-    }
-
-    if (!isCaptchaVerified) {
-      setSearchError("Please check the 'I am not a robot' verification box before searching.");
       return;
     }
 
@@ -873,119 +869,227 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
             <div className="space-y-6">
               {/* --- STEP 1: REAL PROPERTY TAX SEARCH --- */}
               {rptSearchStep === 1 && (
-                <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-10 space-y-8">
-                  <div className="border-b border-slate-200 pb-4">
-                    <h2 className="text-xl font-extrabold text-[#0B3B60] uppercase tracking-wide">
-                      REAL PROPERTY TAX SEARCH
-                    </h2>
-                    <p className="text-xs text-slate-500 mt-1">
-                      Search by Tax Declaration Number (TDN) to view property assessment, verify ownership, and calculate quarterly or full-year payments.
-                    </p>
-                  </div>
-
-                  {searchError && (
-                    <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl text-rose-800 text-xs font-bold flex items-center gap-2">
-                      <span>⚠️</span>
-                      <span>{searchError}</span>
-                    </div>
-                  )}
-
-                  {/* Form Box Matching Screenshot 1 */}
-                  <form onSubmit={handleExecuteTdnSearch} className="max-w-2xl mx-auto space-y-6 text-center">
-                    <div className="space-y-2">
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-700">
-                        ENTER TAX DECLARATION NUMBER
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          required
-                          value={searchTdnInput}
-                          onChange={(e) => setSearchTdnInput(e.target.value)}
-                          placeholder="e.g. F-021-01491"
-                          className="w-full text-center text-lg font-mono font-bold text-slate-900 border-2 border-slate-300 focus:border-[#0284C7] focus:ring-4 focus:ring-sky-100 rounded-2xl py-3.5 px-4 outline-none transition uppercase"
-                        />
-                      </div>
-                      <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
-                        <span className="text-[11px] text-slate-400 font-semibold">Sample QC TDNs:</span>
-                        <button
-                          type="button"
-                          onClick={() => setSearchTdnInput("F-021-01491")}
-                          className="text-[11px] bg-slate-100 hover:bg-slate-200 text-[#0B3B60] px-2.5 py-1 rounded-lg font-mono font-bold cursor-pointer transition"
-                        >
-                          F-021-01491 (Commercial Land)
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setSearchTdnInput("G-021-01164")}
-                          className="text-[11px] bg-slate-100 hover:bg-slate-200 text-[#0B3B60] px-2.5 py-1 rounded-lg font-mono font-bold cursor-pointer transition"
-                        >
-                          G-021-01164 (Building)
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setSearchTdnInput("E-015-08832")}
-                          className="text-[11px] bg-slate-100 hover:bg-slate-200 text-[#0B3B60] px-2.5 py-1 rounded-lg font-mono font-bold cursor-pointer transition"
-                        >
-                          E-015-08832 (Residential)
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Interactive reCAPTCHA Box */}
-                    <div className="flex justify-center">
-                      <div className="flex items-center justify-between w-72 bg-slate-50 border border-slate-300 rounded-xl p-3.5 shadow-xs">
-                        <label className="flex items-center gap-3 cursor-pointer select-none">
-                          <input
-                            type="checkbox"
-                            checked={isCaptchaVerified}
-                            onChange={(e) => setIsCaptchaVerified(e.target.checked)}
-                            className="size-6 accent-[#0284C7] rounded cursor-pointer"
-                          />
-                          <span className="text-xs font-semibold text-slate-700">I'm not a robot</span>
-                        </label>
-                        <div className="flex flex-col items-center">
-                          <span className="text-[9px] font-bold text-slate-400">reCAPTCHA</span>
-                          <span className="text-[8px] text-slate-400">Privacy - Terms</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Daily Search Limit Display */}
-                    <div className="text-center">
-                      <p className="text-xs font-bold text-rose-600 uppercase tracking-wide">
-                        YOU HAVE {dailySearchQuota}/20 SEARCH FOR THIS DAY
+                <>
+                  {/* HERO - styled like the Business Tax citizen page */}
+                  <section className="-mx-4 sm:-mx-6 lg:-mx-8 -mt-6 bg-[#1D2F86] text-white border-b-2 border-[#2563EB] bg-[radial-gradient(#3152B5_1px,transparent_1px)] [background-size:16px_16px]">
+                    <div className="max-w-7xl mx-auto px-4 py-10 sm:py-12 text-center">
+                      <h1 className="text-3xl sm:text-4xl font-black tracking-wide uppercase">
+                        REAL PROPERTY TAX SEARCH
+                      </h1>
+                      <p className="max-w-3xl mx-auto mt-2 text-sm sm:text-base text-white/95 leading-relaxed">
+                        Search and view real property tax assessments, payment status, and tax records.
                       </p>
                     </div>
+                  </section>
 
-                    {/* Search Button */}
-                    <div>
+                  {/* SEARCH / RESULTS CARD */}
+                  <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-7 mt-6">
+                    <div className="mb-5">
                       <button
-                        type="submit"
-                        disabled={isSearchingTdn}
-                        className="w-full sm:w-64 bg-[#0B3B60] hover:bg-[#082944] disabled:opacity-50 text-white font-black py-3.5 px-8 rounded-2xl text-sm uppercase tracking-wider transition shadow-md cursor-pointer"
+                        type="button"
+                        onClick={() => window.history.back()}
+                        className="text-xs font-bold text-blue-600 hover:text-blue-800 cursor-pointer"
                       >
-                        {isSearchingTdn ? "Searching City DB..." : "SEARCH"}
+                        ← Back to Home
                       </button>
                     </div>
-                  </form>
 
-                  {/* Step-by-Step Instructions Legend */}
-                  <div className="border-t border-slate-100 pt-6 max-w-2xl mx-auto space-y-2 text-xs text-slate-600 leading-relaxed bg-slate-50 p-5 rounded-2xl border">
-                    <p>
-                      <strong className="text-slate-900">1.</strong> Type and search for the Tax Declaration Number of your property.
-                    </p>
-                    <p>
-                      <strong className="text-slate-900">2.</strong> Click on the box to the left of the "I'm not a robot" message.
-                    </p>
-                    <p>
-                      <strong className="text-slate-900">3.</strong> This section displays your daily search limit.
-                    </p>
-                    <p>
-                      <strong className="text-slate-900">4.</strong> Click on the 'Search' button.
-                    </p>
+                    <div className="border-b border-slate-200 pb-4">
+                      <div className="inline-flex items-center bg-[#1D3F99] text-white px-4 py-2 rounded-md shadow-sm">
+                        <span className="text-xs sm:text-sm font-black uppercase tracking-wide">
+                          SEARCH REAL PROPERTY TAX RECORD
+                        </span>
+                      </div>
+                    </div>
+
+                    {searchError && (
+                      <div className="mt-4 p-3 bg-rose-50 border border-rose-200 rounded-lg text-rose-800 text-xs font-bold">
+                        {searchError}
+                      </div>
+                    )}
+
+                    {/* SEARCH FILTERS - Business Tax style */}
+                    <form onSubmit={handleExecuteTdnSearch} className="mt-5">
+                      <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.4fr_auto_1fr] gap-3 items-end">
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-600 mb-1.5">
+                            Search By:
+                          </label>
+                          <select
+                            value={searchType}
+                            onChange={(e) => setSearchType(e.target.value)}
+                            className="w-full h-10 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                          >
+                            <option>Tax Declaration No. (TDN)</option>
+                            <option>Property Owner</option>
+                            <option>Property Identification No. (PIN)</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-600 mb-1.5">
+                            Tax Declaration Number:
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={searchTdnInput}
+                            onChange={(e) => setSearchTdnInput(e.target.value.toUpperCase())}
+                            placeholder="Enter Tax Declaration No. (TDN)"
+                            className="w-full h-10 rounded-md border border-slate-300 px-3 text-xs font-mono font-bold text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 uppercase"
+                          />
+                        </div>
+
+                        <button
+                          type="submit"
+                          disabled={isSearchingTdn}
+                          className="h-10 px-5 rounded-md bg-[#1D3F99] hover:bg-[#17357F] disabled:opacity-50 text-white text-xs font-black cursor-pointer transition shadow-sm"
+                        >
+                          {isSearchingTdn ? "Searching..." : "Search"}
+                        </button>
+
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-600 mb-1.5">
+                            Assessment Year:
+                          </label>
+                          <select
+                            value={assessmentYear}
+                            onChange={(e) => setAssessmentYear(e.target.value)}
+                            className="w-full h-10 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                          >
+                            <option>All Years</option>
+                            <option>2026</option>
+                            <option>2025</option>
+                            <option>2024</option>
+                            <option>2023</option>
+                          </select>
+                        </div>
+                      </div>
+                    </form>
+
+                    {/* Sample TDN shortcuts */}
+                    <div className="flex flex-wrap items-center gap-2 mt-4 text-[10px]">
+                      <span className="text-slate-400 font-semibold">Sample QC TDNs:</span>
+                      {['F-021-01491', 'G-021-01164', 'E-015-08832'].map((tdn) => (
+                        <button
+                          key={tdn}
+                          type="button"
+                          onClick={() => setSearchTdnInput(tdn)}
+                          className="bg-slate-100 hover:bg-slate-200 text-[#0B3B60] px-2.5 py-1 rounded-md font-mono font-bold cursor-pointer transition"
+                        >
+                          {tdn}
+                        </button>
+                      ))}
+                      <span className="ml-auto text-[10px] font-bold text-rose-600 uppercase">
+                        {dailySearchQuota}/20 searches remaining today
+                      </span>
+                    </div>
+
+                    {/* RESULTS TABLE */}
+                    <div className="overflow-x-auto rounded-lg border border-slate-200 mt-5">
+                      <table className="w-full min-w-[950px] text-left text-xs border-collapse">
+                        <thead className="bg-[#243F9A] text-white font-bold uppercase">
+                          <tr>
+                            <th className="px-3 py-3">Tax Declaration No. (TDN) ↑</th>
+                            <th className="px-3 py-3">Owner Name</th>
+                            <th className="px-3 py-3">Property Location</th>
+                            <th className="px-3 py-3">Assessment Year</th>
+                            <th className="px-3 py-3">Assessed Value</th>
+                            <th className="px-3 py-3">Tax Due</th>
+                            <th className="px-3 py-3">Status</th>
+                            <th className="px-3 py-3">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {associatedProperties.length > 0 ? (
+                            associatedProperties
+                              .filter((property) => assessmentYear === "All Years" || String(property.billingYear) === assessmentYear)
+                              .map((property) => {
+                                const status = String(property.paymentStatus || property.status || "UNPAID").toUpperCase();
+                                return (
+                                  <tr key={property.taxDeclarationNumber} className="hover:bg-slate-50 transition">
+                                    <td className="px-3 py-3 font-mono font-semibold text-[#0B3B60]">
+                                      {property.taxDeclarationNumber}
+                                    </td>
+                                    <td className="px-3 py-3 text-slate-700 font-medium">
+                                      {property.ownerName}
+                                    </td>
+                                    <td className="px-3 py-3 text-slate-700">
+                                      {property.propertyLocation || property.barangay || "—"}
+                                    </td>
+                                    <td className="px-3 py-3 text-slate-700">
+                                      {property.billingYear || "—"}
+                                    </td>
+                                    <td className="px-3 py-3 text-slate-700 font-semibold">
+                                      {formatCurrency(property.assessedValue)}
+                                    </td>
+                                    <td className="px-3 py-3 text-slate-700 font-semibold">
+                                      {formatCurrency(property.balance || property.totalAssessment)}
+                                    </td>
+                                    <td className="px-3 py-3">
+                                      <span className={`inline-flex px-2 py-1 rounded-full text-[9px] font-black ${
+                                        status.includes("PAID") && !status.includes("UNPAID")
+                                          ? "bg-emerald-100 text-emerald-700"
+                                          : status.includes("PARTIAL")
+                                          ? "bg-amber-100 text-amber-700"
+                                          : "bg-rose-100 text-rose-700"
+                                      }`}>
+                                        {status}
+                                      </span>
+                                    </td>
+                                    <td className="px-3 py-3">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setSelectedTdnIds(new Set([property.taxDeclarationNumber]));
+                                          setRptSearchStep(2);
+                                        }}
+                                        className="text-blue-600 hover:text-blue-800 font-bold cursor-pointer"
+                                      >
+                                        View
+                                      </button>
+                                    </td>
+                                  </tr>
+                                );
+                              })
+                          ) : (
+                            <tr>
+                              <td colSpan={8} className="px-4 py-10 text-center text-slate-400 italic">
+                                Search for a Tax Declaration Number to view real property tax records.
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div className="flex items-center justify-between mt-4 text-xs text-slate-500">
+                      <span>Page 1 of 1</span>
+                      <div className="flex gap-2">
+                        <button type="button" disabled className="px-3 py-1.5 rounded-md border border-slate-200 text-slate-300">
+                          Previous
+                        </button>
+                        <button type="button" disabled className="px-3 py-1.5 rounded-md border border-slate-200 text-slate-300">
+                          Next
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* How to search */}
+                    <div className="mt-4 bg-slate-50 border border-slate-100 rounded-xl p-4 sm:p-5 text-xs text-slate-600 leading-relaxed">
+                      <p className="font-bold text-[#0B3B60] mb-2 flex items-center gap-2">
+                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 text-blue-600">i</span>
+                        How to search:
+                      </p>
+                      <ol className="list-decimal ml-5 space-y-1">
+                        <li>Select a search type and enter the Tax Declaration Number (TDN) of your property.</li>
+                        <li>Choose the assessment year or leave it as All Years to filter results.</li>
+                        <li>Click the Search button to query the real property tax records.</li>
+                        <li>Click View to continue to the property assessment, payment options, and official receipt records.</li>
+                      </ol>
+                    </div>
                   </div>
-                </div>
+                </>
               )}
 
               {/* --- STEP 2: POSSIBLE PROPERTIES YOU MIGHT OWN --- */}
