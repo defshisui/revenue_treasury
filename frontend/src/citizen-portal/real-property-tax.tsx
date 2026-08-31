@@ -1105,17 +1105,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                       <button
                         type="button"
                         onClick={() => {
-                          window.history.pushState({}, "", "/citizen-rpt?view=form");
-                          window.dispatchEvent(new PopStateEvent("popstate"));
-                        }}
-                        className="rpt-nav-button cursor-pointer"
-                      >
-                        [ SUBMIT RPT ]
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
                           window.history.pushState({}, "", "/citizen-rpt?view=status");
                           window.dispatchEvent(new PopStateEvent("popstate"));
                         }}
