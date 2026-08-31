@@ -6,6 +6,7 @@ import {
   getRPTApplications,
   getLguMasterRptRecords,
   createLguMasterRptRecord,
+  updateRptApplicationStatus,
   updateLguMasterRptRecord,
   deleteLguMasterRptRecord,
   type RPTApplicationRecord
@@ -416,31 +417,48 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     setPreviewDocUrl(targetUrl);
   };
 
-  const handleUpdateStatus = (newStatus: ExtendedStatusType) => {
+  const handleUpdateStatus = async (newStatus: ExtendedStatusType) => {
     if (!currentApp) return;
-    const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 16);
 
-    const updatedList = applications.map((app) => {
-      if (app.id === currentApp.id) {
-        return {
-          ...app,
-          status: newStatus,
-          auditLogs: [
-            {
-              id: `LOG-${Date.now()}`,
-              timestamp,
-              officer: app.assignedOfficer || 'City Assessor',
-              action: `Status advanced to "${newStatus}".`,
-            },
-            ...(app.auditLogs || []),
-          ],
-        };
-      }
-      return app;
-    });
+    // Keep the admin UI and backend/database in sync.
+    try {
+      const result = await updateRptApplicationStatus(
+        String(currentApp.id),
+        newStatus
+      );
 
-    setApplications(updatedList);
-    triggerToast(`Application workflow advanced to "${newStatus}".`, 'success');
+      const serverRecord = result?.record;
+      const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 16);
+
+      setApplications((prev) =>
+        prev.map((app) => {
+          if (app.id !== currentApp.id) return app;
+
+          return {
+            ...app,
+            ...(serverRecord || {}),
+            status: serverRecord?.status || newStatus,
+            auditLogs: [
+              {
+                id: `LOG-${Date.now()}`,
+                timestamp,
+                officer: app.assignedOfficer || 'City Assessor',
+                action: `Status advanced to "${newStatus}".`,
+              },
+              ...(app.auditLogs || []),
+            ],
+          };
+        })
+      );
+
+      triggerToast(`Application workflow advanced to "${newStatus}".`, 'success');
+    } catch (error: any) {
+      console.error('Failed to persist RPT application status:', error);
+      triggerToast(
+        error?.message || 'Failed to save the application status. Please try again.',
+        'error'
+      );
+    }
   };
 
   const handleDigitalRelease = () => {
@@ -794,7 +812,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                 <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2">
                   <span className="text-[10px] font-bold uppercase text-slate-400 block">Advance Assessor Workflow:</span>
                   <div className="flex flex-wrap gap-2">
-                    {(['Under Evaluation', 'Field Inspection Scheduled', 'Technical Plotting (GIS)', 'Ready for Release', 'Rejected'] as ExtendedStatusType[]).map((st) => (
+                    {(['For Review', 'Under Evaluation', 'For Compliance', 'Processing', 'Approved', 'Ready for Release', 'Rejected'] as ExtendedStatusType[]).map((st) => (
                       <button
                         key={st}
                         onClick={() => handleUpdateStatus(st)}
