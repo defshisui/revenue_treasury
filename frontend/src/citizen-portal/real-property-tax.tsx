@@ -203,34 +203,6 @@ export function RealPropertyTaxHub() {
 
             </section>
 
-
-            {/* PROPERTY ASSESSOR */}
-            <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-7 text-center">
-
-              <p className="text-sm font-extrabold text-[#1D2F86] uppercase tracking-wide">
-                PROPERTY ASSESSOR SERVICES
-              </p>
-
-              <h2 className="mt-2 text-lg font-black text-slate-900">
-                Applications and Property Records
-              </h2>
-
-              <p className="max-w-xl mx-auto mt-3 text-xs sm:text-sm text-[#36527A] leading-relaxed">
-                Submit property-related service requests.
-              </p>
-
-              <button
-                type="button"
-                onClick={() =>
-                  navigate('/citizen-rpt?view=form')
-                }
-                className="mt-6 inline-flex items-center justify-center bg-[#1D3F99] hover:bg-[#17357F] text-white font-black text-xs uppercase px-6 py-3 rounded-full shadow-md transition cursor-pointer"
-              >
-                ASSESSOR SERVICES
-              </button>
-
-            </section>
-
           </div>
 
         </div>
