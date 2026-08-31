@@ -171,13 +171,18 @@ export function RealPropertyTaxHub() {
             {/* REAL PROPERTY TAX */}
             <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-7 text-center">
 
+              <p className="text-sm font-extrabold text-[#1D2F86] uppercase tracking-wide">
+                2026 REAL PROPERTY TAX
+              </p>
+
               <h2 className="mt-2 text-lg font-black text-slate-900">
                 Proceed and Pay Online
               </h2>
 
               <p className="max-w-xl mx-auto mt-3 text-xs sm:text-sm text-[#36527A] leading-relaxed">
                 Search your Tax Declaration Number, view your property
-                assessment and outstanding balance and pay your Real Property Tax Online.
+                assessment and outstanding balance, choose a payment option,
+                and pay your Real Property Tax securely through the portal.
               </p>
 
               <button
@@ -203,7 +208,8 @@ export function RealPropertyTaxHub() {
               </h2>
 
               <p className="max-w-xl mx-auto mt-3 text-xs sm:text-sm text-[#36527A] leading-relaxed">
-                Submit property-related service requests.
+                Submit property-related service requests, check application
+                status, and access official receipts and clearance records.
               </p>
 
               <button
@@ -864,6 +870,18 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
               {/* --- STEP 1: REAL PROPERTY TAX SEARCH --- */}
               {rptSearchStep === 1 && (
                 <>
+                  {/* HERO - styled like the Business Tax citizen page */}
+                  <section className="-mx-4 sm:-mx-6 lg:-mx-8 -mt-6 bg-[#1D2F86] text-white border-b-2 border-[#2563EB] bg-[radial-gradient(#3152B5_1px,transparent_1px)] [background-size:16px_16px]">
+                    <div className="max-w-7xl mx-auto px-4 py-10 sm:py-12 text-center">
+                      <h1 className="text-3xl sm:text-4xl font-black tracking-wide uppercase">
+                        REAL PROPERTY TAX SEARCH
+                      </h1>
+                      <p className="max-w-3xl mx-auto mt-2 text-sm sm:text-base text-white/95 leading-relaxed">
+                        Search and view real property tax assessments, payment status, and tax records.
+                      </p>
+                    </div>
+                  </section>
+
                   {/* SEARCH / RESULTS CARD */}
                   <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-7 mt-6">
                     <div className="mb-5">
@@ -877,17 +895,12 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                     </div>
 
                     <div className="border-b border-slate-200 pb-4">
-  <button
-    type="button"
-    onClick={() => {
-      window.history.pushState({}, "", "/citizen-rpt?view=form");
-      window.dispatchEvent(new PopStateEvent("popstate"));
-    }}
-    className="inline-flex items-center justify-center bg-[#243F9A] hover:bg-[#1D347F] text-white px-4 py-2.5 rounded-md shadow-sm text-xs font-black uppercase tracking-wide transition cursor-pointer"
-  >
-    SUBMIT RTP
-  </button>
-</div>
+                      <div className="inline-flex items-center bg-[#1D3F99] text-white px-4 py-2 rounded-md shadow-sm">
+                        <span className="text-xs sm:text-sm font-black uppercase tracking-wide">
+                          SEARCH REAL PROPERTY TAX RECORD
+                        </span>
+                      </div>
+                    </div>
 
                     {searchError && (
                       <div className="mt-4 p-3 bg-rose-50 border border-rose-200 rounded-lg text-rose-800 text-xs font-bold">
@@ -953,6 +966,25 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                         </div>
                       </div>
                     </form>
+
+                    {/* Sample TDN shortcuts */}
+                    <div className="flex flex-wrap items-center gap-2 mt-4 text-[10px]">
+                      <span className="text-slate-400 font-semibold">Sample QC TDNs:</span>
+                      {['F-021-01491', 'G-021-01164', 'E-015-08832'].map((tdn) => (
+                        <button
+                          key={tdn}
+                          type="button"
+                          onClick={() => setSearchTdnInput(tdn)}
+                          className="bg-slate-100 hover:bg-slate-200 text-[#0B3B60] px-2.5 py-1 rounded-md font-mono font-bold cursor-pointer transition"
+                        >
+                          {tdn}
+                        </button>
+                      ))}
+                      <span className="ml-auto text-[10px] font-bold text-rose-600 uppercase">
+                        {dailySearchQuota}/20 searches remaining today
+                      </span>
+                    </div>
+
                     {/* RESULTS TABLE */}
                     <div className="overflow-x-auto rounded-lg border border-slate-200 mt-5">
                       <table className="w-full min-w-[950px] text-left text-xs border-collapse">
