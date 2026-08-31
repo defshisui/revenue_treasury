@@ -1605,10 +1605,18 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                       <label className="font-bold text-slate-700">Mobile Number (PH) *</label>
                       <input
                         type="tel"
+                        inputMode="numeric"
                         required
+                        maxLength={11}
+                        pattern="[0-9]{11}"
                         placeholder="09171234567"
                         value={appForm.mobileNumber}
-                        onChange={(e) => setAppForm({ ...appForm, mobileNumber: e.target.value })}
+                        onChange={(e) =>
+                          setAppForm({
+                            ...appForm,
+                            mobileNumber: e.target.value.replace(/\D/g, "").slice(0, 11),
+                          })
+                        }
                         className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
                       />
                     </div>
@@ -1616,9 +1624,17 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                       <label className="font-bold text-slate-700">TIN Number</label>
                       <input
                         type="text"
-                        placeholder="000-000-000"
+                        inputMode="numeric"
+                        maxLength={14}
+                        pattern="[0-9]{9,14}"
+                        placeholder="00000000000000"
                         value={appForm.tin}
-                        onChange={(e) => setAppForm({ ...appForm, tin: e.target.value })}
+                        onChange={(e) =>
+                          setAppForm({
+                            ...appForm,
+                            tin: e.target.value.replace(/\D/g, "").slice(0, 14),
+                          })
+                        }
                         className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
                       />
                     </div>
