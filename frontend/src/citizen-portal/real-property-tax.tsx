@@ -870,18 +870,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
               {/* --- STEP 1: REAL PROPERTY TAX SEARCH --- */}
               {rptSearchStep === 1 && (
                 <>
-                  {/* HERO - styled like the Business Tax citizen page */}
-                  <section className="-mx-4 sm:-mx-6 lg:-mx-8 -mt-6 bg-[#1D2F86] text-white border-b-2 border-[#2563EB] bg-[radial-gradient(#3152B5_1px,transparent_1px)] [background-size:16px_16px]">
-                    <div className="max-w-7xl mx-auto px-4 py-10 sm:py-12 text-center">
-                      <h1 className="text-3xl sm:text-4xl font-black tracking-wide uppercase">
-                        REAL PROPERTY TAX SEARCH
-                      </h1>
-                      <p className="max-w-3xl mx-auto mt-2 text-sm sm:text-base text-white/95 leading-relaxed">
-                        Search and view real property tax assessments, payment status, and tax records.
-                      </p>
-                    </div>
-                  </section>
-
                   {/* SEARCH / RESULTS CARD */}
                   <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-7 mt-6">
                     <div className="mb-5">
