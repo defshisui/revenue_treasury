@@ -175,39 +175,36 @@ export function RealPropertyTaxHub() {
 
 
       {/* SERVICES */}
-      <main className="flex-1">
+<main className="flex-1">
+  <div className="max-w-6xl mx-auto px-4 py-8 sm:py-10">
 
-        <div className="max-w-6xl mx-auto px-4 py-8 sm:py-10">
+    {/* CENTERED REAL PROPERTY TAX CARD */}
+    <div className="flex justify-center">
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <section className="w-full max-w-[650px] bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-7 text-center">
 
-            {/* REAL PROPERTY TAX */}
-            <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-7 text-center">
+        <h2 className="mt-2 text-lg font-black text-slate-900">
+          Proceed and Pay Online
+        </h2>
 
-              <h2 className="mt-2 text-lg font-black text-slate-900">
-                Proceed and Pay Online
-              </h2>
+        <p className="max-w-xl mx-auto mt-3 text-xs sm:text-sm text-[#36527A] leading-relaxed">
+          Search your Tax Declaration Number, view your property
+          assessment and outstanding balance and pay your Real Property Tax Online.
+        </p>
 
-              <p className="max-w-xl mx-auto mt-3 text-xs sm:text-sm text-[#36527A] leading-relaxed">
-                Search your Tax Declaration Number, view your property
-                assessment and outstanding balance and pay your Real Property Tax Online.
-              </p>
+        <button
+          type="button"
+          onClick={() => navigate("/citizen-rpt")}
+          className="mt-6 inline-flex items-center justify-center bg-[#1D3F99] hover:bg-[#17357F] text-white font-black text-xs uppercase px-6 py-3 rounded-full shadow-md transition cursor-pointer"
+        >
+          PROCEED WITH REAL PROPERTY TAX
+        </button>
 
-              <button
-                type="button"
-                onClick={() => navigate('/citizen-rpt')}
-                className="mt-6 inline-flex items-center justify-center bg-[#1D3F99] hover:bg-[#17357F] text-white font-black text-xs uppercase px-6 py-3 rounded-full shadow-md transition cursor-pointer"
-              >
-                PROCEED WITH REAL PROPERTY TAX
-              </button>
+      </section>
 
-            </section>
-
-          </div>
-
-        </div>
-
-      </main>
+    </div>
+  </div>
+</main>
 
       <UnifiedFooter />
 
