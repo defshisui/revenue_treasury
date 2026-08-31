@@ -883,12 +883,17 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                     </div>
 
                     <div className="border-b border-slate-200 pb-4">
-                      <div className="inline-flex items-center bg-[#1D3F99] text-white px-4 py-2 rounded-md shadow-sm">
-                        <span className="text-xs sm:text-sm font-black uppercase tracking-wide">
-                          SEARCH REAL PROPERTY TAX RECORD
-                        </span>
-                      </div>
-                    </div>
+  <button
+    type="button"
+    onClick={() => {
+      window.history.pushState({}, "", "/citizen-rpt?view=form");
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    }}
+    className="inline-flex items-center justify-center bg-[#243F9A] hover:bg-[#1D347F] text-white px-4 py-2.5 rounded-md shadow-sm text-xs font-black uppercase tracking-wide transition cursor-pointer"
+  >
+    SUBMIT RTP
+  </button>
+</div>
 
                     {searchError && (
                       <div className="mt-4 p-3 bg-rose-50 border border-rose-200 rounded-lg text-rose-800 text-xs font-bold">
