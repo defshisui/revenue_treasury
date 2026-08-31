@@ -898,6 +898,8 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
       }}
       className="rpt-portal min-h-screen flex flex-col bg-[#F4F6F9] text-slate-800 font-sans transition-all duration-300"
     >
+      <UnifiedHeader />
+
       <style>{`
         .rpt-portal {
           --rpt-blue: #1D3F99;
