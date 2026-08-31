@@ -582,38 +582,6 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
               </select>
             </div>
 
-            <button
-              onClick={() => {
-                setEditingProperty({
-                  taxDeclarationNumber: `E-0${Math.floor(10 + Math.random() * 90)}-0${Math.floor(1000 + Math.random() * 9000)}`,
-                  newPspin: '09-021-009-166- - -',
-                  ownerName: '',
-                  ownerAddress: 'Quezon City',
-                  barangay: 'Central',
-                  location: 'Quezon City',
-                  propertyType: 'Residential',
-                  lotAreaSqm: 150,
-                  marketValue: 1500000,
-                  assessedValue: 300000,
-                  billingYear: 2025,
-                  billExpiryDate: '2025-10-31',
-                  basicTax: 4500,
-                  sefTax: 3000,
-                  shttcApplied: 0,
-                  penalty: 0,
-                  discount: 0,
-                  totalAssessment: 7500,
-                  amountPaid: 0,
-                  balance: 7500,
-                  status: 'Active',
-                  paymentStatus: 'Unpaid',
-                });
-                setIsPropertyModalOpen(true);
-              }}
-              className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition shadow-sm cursor-pointer flex items-center justify-center gap-1.5"
-            >
-              <span>+ Add New Property Assessment</span>
-            </button>
           </div>
 
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
