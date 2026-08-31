@@ -19,7 +19,7 @@ export async function createRptApplication(req: Request, res: Response): Promise
   const appData = req.body as Record<string, any>;
   const files = (req as Request & { files?: Express.Multer.File[] }).files;
 
-  // 1. Map uploaded files directly into Base64 strings or storage paths to match business tax structure[cite: 4]
+  // 1. Map uploaded files directly into Base64 strings (memory storage)
   let fileObjects: Array<{ name: string; url: string }> = [];
   if (files && files.length > 0) {
     fileObjects = files.map((f: any) => ({
@@ -28,7 +28,7 @@ export async function createRptApplication(req: Request, res: Response): Promise
     }));
   }
 
-  // 2. Fallback if physical files were not processed by multer but document names/paths were passed in body[cite: 4]
+  // 2. Fallback: if no physical files, parse base64 document objects from body
   if (fileObjects.length === 0 && appData.documents) {
     try {
       const parsed = typeof appData.documents === 'string' ? JSON.parse(appData.documents) : appData.documents;
@@ -63,11 +63,24 @@ export async function createRptApplication(req: Request, res: Response): Promise
     }
   }
 
+  // Support both camelCase (from frontend FormData) and snake_case field names
   const ownerName = appData.owner_name || appData.ownerName || '';
-  let resolvedApplicantName = appData.applicant_name || appData.applicantName || ownerName || 'Unknown Applicant';
+  const controlNumber = appData.control_number || appData.controlNumber || null;
+  const taxDeclarationNumber = appData.tax_declaration_number || appData.taxDeclarationNumber || null;
+  const applicantType = appData.applicant_type || appData.applicantType || null;
+  const mobileNumber = appData.mobile_number || appData.mobileNumber || null;
+  const service = appData.service || null;
+  const propertyLocation = appData.property_location || appData.propertyLocation || null;
+  const barangay = appData.barangay || null;
+  const propertyType = appData.property_type || appData.propertyType || null;
+  const status = appData.status || 'Submitted';
+  const filedDate = appData.filed_date || appData.filedDate || new Date().toISOString().split('T')[0];
+  const notes = appData.notes || null;
+  const email = appData.email || null;
+
+  const resolvedApplicantName = appData.applicant_name || appData.applicantName || ownerName || 'Unknown Applicant';
 
   try {
-    // Explicitly cast $16 as jsonb to match your PostgreSQL table schema column type perfectly
     const result = await pool.query(
       `INSERT INTO rpt_applications
        (id, control_number, tax_declaration_number, owner_name, applicant_name, applicant_type, email, mobile_number, service, property_location, barangay, property_type, status, filed_date, notes, documents)
@@ -75,25 +88,25 @@ export async function createRptApplication(req: Request, res: Response): Promise
        RETURNING *`,
       [
         appData.id || randomUUID(),
-        appData.control_number || null,
-        appData.tax_declaration_number || null,
+        controlNumber,
+        taxDeclarationNumber,
         ownerName,
         resolvedApplicantName,
-        appData.applicant_type || null,
-        appData.email || null,
-        appData.mobile_number || null,
-        appData.service || null,
-        appData.property_location || null,
-        appData.barangay || null,
-        appData.property_type || null,
-        appData.status || 'Submitted',
-        appData.filed_date || new Date().toISOString().split('T')[0],
-        appData.notes || null,
+        applicantType,
+        email,
+        mobileNumber,
+        service,
+        propertyLocation,
+        barangay,
+        propertyType,
+        status,
+        filedDate,
+        notes,
         JSON.stringify(fileObjects),
       ]
     );
 
-    await recordAudit(req, 'AUD-RPT-SUBMIT', appData.email || 'citizen@gov.ph', 'Citizen',
+    await recordAudit(req, 'AUD-RPT-SUBMIT', email || 'citizen@gov.ph', 'Citizen',
       'RPT Module', 'RPT_APPLICATION_SUBMITTED', 'INFO', null,
       `Submitted RPT application for applicant: ${resolvedApplicantName}`);
 

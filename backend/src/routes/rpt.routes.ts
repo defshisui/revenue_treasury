@@ -1,5 +1,7 @@
 // src/routes/rpt.routes.ts
 import { Router } from 'express';
+import type { Request, Response, NextFunction } from 'express';
+import multer from 'multer';
 import { upload } from '../middleware/upload.js';
 import {
   getRptApplications,
@@ -18,9 +20,25 @@ import {
 
 const router = Router();
 
+// Wrap multer so upload errors (e.g. FileTooLarge) return a clean JSON 400
+// instead of an unhandled crash that sends an empty/HTML response body.
+function uploadAny(req: Request, res: Response, next: NextFunction) {
+  upload.any()(req, res, (err) => {
+    if (err instanceof multer.MulterError) {
+      res.status(400).json({ message: `File upload error: ${err.message}` });
+      return;
+    }
+    if (err) {
+      res.status(400).json({ message: `Upload failed: ${(err as Error).message || err}` });
+      return;
+    }
+    next();
+  });
+}
+
 // Citizen Applications
 router.get('/citizen-rpt-applications', getRptApplications);
-router.post('/citizen-rpt-applications', upload.any(), createRptApplication);
+router.post('/citizen-rpt-applications', uploadAny, createRptApplication);
 router.delete('/citizen-rpt-applications/:id', deleteRptApplication);
 router.patch('/citizen-rpt-applications/:id/status', updateRptApplicationStatus);
 
