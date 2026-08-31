@@ -1092,7 +1092,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
           font-family: inherit;
         }
       `}</style>
-      <div>
+      <div className="flex-1">
 
         {/* Global Toast Alert */}
         {toastMessage && (
