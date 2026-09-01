@@ -188,7 +188,7 @@ export default function Login() {
                     disabled={isLockedOut || isSubmittingLogin}
                     className="w-full bg-[#2563EB] hover:bg-blue-700 text-white font-bold py-3.5 px-4 rounded-2xl text-base shadow-md transition-all duration-200 cursor-pointer mt-4 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
-                    {isSubmittingLogin ? "Verifying Credentials..." : "Continue to Verification →"}
+                    {isSubmittingLogin ? "Verifying Credentials..." : "Login"}
                   </button>
                 </form>
 
@@ -375,7 +375,7 @@ export default function Login() {
 
                 <div className="pt-4 space-y-3">
                   <button type="submit" className="w-full bg-[#2563EB] hover:bg-blue-700 text-white font-bold py-3.5 px-6 rounded-2xl text-base shadow-md transition-all duration-200 cursor-pointer">
-                    Next: Personal Details →
+                    Continue
                   </button>
                   <button type="button" onClick={handleWorkerClick} className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 px-6 rounded-2xl text-xs transition-all duration-200 cursor-pointer">
                     Register as Worker
@@ -434,7 +434,7 @@ export default function Login() {
                     ← Back
                   </button>
                   <button type="submit" className="w-2/3 bg-[#2563EB] hover:bg-blue-700 text-white font-bold py-3.5 px-6 rounded-2xl text-base shadow-md transition-all cursor-pointer">
-                    Next: Address →
+                    Continue
                   </button>
                 </div>
               </form>
@@ -480,7 +480,7 @@ export default function Login() {
                     ← Back
                   </button>
                   <button type="submit" className="w-2/3 bg-[#2563EB] hover:bg-blue-700 text-white font-bold py-3.5 px-6 rounded-2xl text-base shadow-md transition-all cursor-pointer">
-                    Review Information →
+                    Review
                   </button>
                 </div>
               </form>
@@ -538,7 +538,7 @@ export default function Login() {
                     onClick={handleFinalRegisterSubmit}
                     className="w-full sm:w-1/2 bg-[#2563EB] hover:bg-blue-700 disabled:opacity-50 text-white font-extrabold py-4 px-4 rounded-2xl text-base shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2"
                   >
-                    {isSubmittingInit ? "Sending OTP..." : "Send Verification Code →"}
+                    {isSubmittingInit ? "Sending OTP..." : "Send OTP"}
                   </button>
                 </div>
               </div>
