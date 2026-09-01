@@ -6,7 +6,7 @@ import { initCitizenSecurity, getEncryptedItem } from './citizenSecurity';
 import SessionInactivityModal from '../components/SessionInactivityModal';
 
 export const UnifiedHeader: FC = () => {
-    const [user, setUser] = useState<{ fullname: string; email: string; initials: string; firstName: string } | null>(null);
+    const [user, setUser] = useState<{ fullname: string; email: string; initials: string; firstName: string; avatar?: string | null } | null>(null);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -20,6 +20,7 @@ export const UnifiedHeader: FC = () => {
             if (encData && typeof encData === 'object') {
                 const target = (encData as any).user && typeof (encData as any).user === 'object' ? (encData as any).user : encData;
                 const fullName = target.fullname || target.name || target.fullName || target.firstName || target.email;
+                const avatar = target.avatar || null;
                 if (fullName) {
                     const email = target.email || "";
                     const nameParts = String(fullName).trim().split(" ");
@@ -27,7 +28,7 @@ export const UnifiedHeader: FC = () => {
                     const initials = nameParts.length > 1
                         ? (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase()
                         : nameParts[0].slice(0, 2).toUpperCase();
-                    return { fullname: String(fullName), email, firstName, initials };
+                    return { fullname: String(fullName), email, firstName, initials, avatar };
                 }
             }
 
@@ -40,6 +41,7 @@ export const UnifiedHeader: FC = () => {
                 const parsed = JSON.parse(rawData);
                 const target = parsed.user && typeof parsed.user === 'object' ? parsed.user : parsed;
                 const fullName = target.fullname || target.name || target.fullName || target.firstName || target.email;
+                const avatar = target.avatar || null;
                 if (!fullName) return null;
                 const email = target.email || "";
                 const nameParts = String(fullName).trim().split(" ");
@@ -47,12 +49,16 @@ export const UnifiedHeader: FC = () => {
                 const initials = nameParts.length > 1
                     ? (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase()
                     : nameParts[0].slice(0, 2).toUpperCase();
-                return { fullname: String(fullName), email, firstName, initials };
+                return { fullname: String(fullName), email, firstName, initials, avatar };
             } catch {
                 return null;
             }
         };
         setUser(checkUserSession());
+
+        // Re-read session when profile is updated (e.g. after avatar/name change)
+        const handleProfileUpdated = () => setUser(checkUserSession());
+        window.addEventListener('profileUpdated', handleProfileUpdated);
 
         const handleClickOutside = (event: MouseEvent) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -62,6 +68,7 @@ export const UnifiedHeader: FC = () => {
         document.addEventListener("mousedown", handleClickOutside);
         return () => {
             document.removeEventListener("mousedown", handleClickOutside);
+            window.removeEventListener('profileUpdated', handleProfileUpdated);
             cleanupSecurity();
         };
     }, []);
@@ -168,8 +175,11 @@ export const UnifiedHeader: FC = () => {
                                     <span className="text-xs font-extrabold text-slate-800 tracking-tight">
                                         Hi, {user.firstName}
                                     </span>
-                                    <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-[10px] shadow-sm tracking-wider">
-                                        {user.initials}
+                                    <div className="w-7 h-7 rounded-lg overflow-hidden bg-blue-600 text-white flex items-center justify-center font-bold text-[10px] shadow-sm tracking-wider">
+                                        {user.avatar
+                                            ? <img src={user.avatar} alt="avatar" className="w-full h-full object-cover" />
+                                            : user.initials
+                                        }
                                     </div>
                                 </button>
                                 {isDropdownOpen && (
