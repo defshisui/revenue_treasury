@@ -350,15 +350,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
     else if (viewParam === "form") setActivePortalTab("application");
     else if (viewParam === "summary") setActivePortalTab("summary");
 
-    try {
-      const storedHistory = localStorage.getItem("rptPaymentHistory");
-      if (storedHistory) {
-        const parsedHistory = JSON.parse(storedHistory);
-        if (Array.isArray(parsedHistory)) setRptPaymentHistory(parsedHistory);
-      }
-    } catch {
-      // Ignore malformed local payment history.
-    }
 
     // Dynamic QR Ph payments are confirmed through the backend webhook/status endpoint.
 
@@ -766,15 +757,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
       paymentMethod,
     }));
 
-    setRptPaymentHistory((previous) => {
-      const next = [...historyItems, ...previous].slice(0, 50);
-      try {
-        localStorage.setItem("rptPaymentHistory", JSON.stringify(next));
-      } catch {
-        // Local storage may be unavailable; keep the in-memory history.
-      }
-      return next;
-    });
   };
 
   const handleExecuteGroupCheckout = async (method: "PayMongo" | "DirectSimulated") => {
