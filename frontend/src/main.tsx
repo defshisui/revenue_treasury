@@ -5,6 +5,7 @@ import "./legacy-styles.css";
 import App from "./App.tsx";
 
 import { ThemeProvider } from "./components/ThemeContext";
+import { API_BASE_URL } from "./config/api";
 
 // ============================================================
 // Global fetch interceptor — automatically attaches the JWT
@@ -14,7 +15,7 @@ import { ThemeProvider } from "./components/ThemeContext";
 // A 401 response clears storage and redirects to the login page.
 // ============================================================
 const _originalFetch = window.fetch.bind(window);
-const API_ORIGIN = (import.meta.env.VITE_API_URL || "http://localhost:3000").replace(/\/+$/, "");
+const API_ORIGIN = API_BASE_URL;
 
 window.fetch = async function (input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   const url = typeof input === "string" ? input : input instanceof URL ? input.href : (input as Request).url;
