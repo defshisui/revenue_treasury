@@ -126,6 +126,9 @@ const isCitizen =
       const fullName = target.fullname || target.name || target.fullName || target.firstName || "";
       const email = target.email || "";
       const avatar = target.avatar || target.profile_picture || null;
+      const phone = target.phone || "";
+      const address = target.address || "";
+      const department = target.department || "";
 
       let initials = activeRole.charAt(0);
       if (fullName) {
@@ -135,7 +138,7 @@ const isCitizen =
           : nameParts[0].slice(0, 2).toUpperCase();
       }
 
-      return { fullName, email, initials, avatar };
+      return { fullName, email, initials, avatar, phone, address, department };
     } catch (e) {
       console.error("Failed to parse admin session", e);
       return null;
@@ -147,15 +150,59 @@ const isCitizen =
   /*
    * PROFILE DATA
    */
-  const { profileData, handleProfileChange } = useProfileForm({
+  const { profileData, setProfileData, handleProfileChange } = useProfileForm({
     fullName: initialUser?.fullName || "",
     email: initialUser?.email || "",
-    phone: "+63",
-    address: "",
+    phone: initialUser?.phone || "+63",
+    address: initialUser?.address || "",
     employeeId: "",
-    department: "",
+    department: initialUser?.department || "",
     position: activeRole,
   });
+
+  // Fetch full profile from DB on mount so fields like phone/address/department
+  // are populated correctly after a page refresh.
+  useEffect(() => {
+    const email = initialUser?.email;
+    if (!email) return;
+    const token = localStorage.getItem('token');
+    fetch(`${API_BASE_URL}/admin/profile?email=${encodeURIComponent(email)}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (!data) return;
+        setProfileData((prev) => ({
+          ...prev,
+          fullName: data.name || prev.fullName,
+          email: data.email || prev.email,
+          phone: data.phone || prev.phone,
+          address: data.address || prev.address,
+          department: data.department || prev.department,
+          employeeId: data.employee_id || data.employeeId || prev.employeeId,
+        }));
+        // Hydrate avatar from DB if present
+        if (data.avatar) {
+          setAvatarUrl(resolveAvatarUrl(data.avatar));
+          // Sync to localStorage so other components see it
+          const storageKey = localStorage.getItem('currentUser') ? 'currentUser' : 'user';
+          const raw = localStorage.getItem(storageKey);
+          if (raw) {
+            try {
+              const parsed = JSON.parse(raw);
+              if (parsed.user && typeof parsed.user === 'object') {
+                parsed.user.avatar = data.avatar;
+              } else {
+                parsed.avatar = data.avatar;
+              }
+              localStorage.setItem(storageKey, JSON.stringify(parsed));
+            } catch { /* ignore */ }
+          }
+        }
+      })
+      .catch(() => { /* silently ignore — localStorage fallback is already shown */ });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /*
    * AVATAR
@@ -295,16 +342,16 @@ const isCitizen =
       // Update local storage so the header/nav reflects the new name/email immediately
       if (parsedData.user && typeof parsedData.user === 'object') {
         parsedData.user.fullname = profileData.fullName;
-        parsedData.user.email = profileData.email;
-        if (profileData.phone) parsedData.user.phone = profileData.phone;
-        if (profileData.department) parsedData.user.department = profileData.department;
-        if (profileData.address) parsedData.user.address = profileData.address;
+        parsedData.user.email    = profileData.email;
+        parsedData.user.phone    = profileData.phone;
+        parsedData.user.department = profileData.department;
+        parsedData.user.address  = profileData.address;
       } else {
-        parsedData.fullname = profileData.fullName;
-        parsedData.email = profileData.email;
-        if (profileData.phone) parsedData.phone = profileData.phone;
-        if (profileData.department) parsedData.department = profileData.department;
-        if (profileData.address) parsedData.address = profileData.address;
+        parsedData.fullname    = profileData.fullName;
+        parsedData.email       = profileData.email;
+        parsedData.phone       = profileData.phone;
+        parsedData.department  = profileData.department;
+        parsedData.address     = profileData.address;
       }
 
       localStorage.setItem(storageKey, JSON.stringify(parsedData));
