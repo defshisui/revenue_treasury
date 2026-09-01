@@ -153,24 +153,23 @@ export async function changeAdminPassword(req: Request, res: Response): Promise<
 }
 
 // ------------------------------------------------------------------
-// POST /admin/upload-avatar
-// Multipart: file field "avatar", query/body: email
+// PATCH /admin/avatar
+// Body: { email, avatar }   (avatar is a base64 data-URL string)
 // ------------------------------------------------------------------
-export async function uploadAdminAvatar(req: Request, res: Response): Promise<void> {
-  const email = (req.body?.email as string) || (req.query.email as string);
+export async function updateAdminAvatar(req: Request, res: Response): Promise<void> {
+  const { email, avatar } = req.body as { email?: string; avatar?: string };
 
-  if (!req.file) { res.status(400).json({ message: 'No file uploaded.' }); return; }
-  if (!email) { res.status(400).json({ message: 'email is required.' }); return; }
+  if (!email || !avatar) {
+    res.status(400).json({ message: 'email and avatar (base64) are required.' });
+    return;
+  }
 
   try {
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT`);
-
-    const avatarUrl = `/uploads/${req.file.filename}`;
-    await pool.query('UPDATE users SET avatar = $1 WHERE email ILIKE $2', [avatarUrl, email.trim()]);
-
-    res.json({ message: 'Avatar uploaded successfully.', avatarUrl });
+    await pool.query('UPDATE users SET avatar = $1 WHERE email ILIKE $2', [avatar, email.trim()]);
+    res.json({ message: 'Avatar updated successfully.' });
   } catch (err) {
-    console.error('[uploadAdminAvatar]', err);
-    res.status(500).json({ message: 'Server error uploading avatar.' });
+    console.error('[updateAdminAvatar]', err);
+    res.status(500).json({ message: 'Server error updating avatar.' });
   }
 }

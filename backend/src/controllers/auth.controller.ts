@@ -212,6 +212,7 @@ export async function verifyLoginOtp(req: Request, res: Response): Promise<void>
         email: user.email,
         role: user.role,
         fullname: user.name,
+        avatar: user.avatar || null,
       },
     });
   } catch (error: any) {

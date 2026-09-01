@@ -223,18 +223,22 @@ const isCitizen =
 
       window.dispatchEvent(new Event('profileUpdated'));
 
-      // Also attempt a background upload to the server (non-blocking, best-effort)
+      // Also persist the avatar to the server DB (as base64) so it survives across sessions
       try {
-        const formData = new FormData();
-        formData.append('avatar', file);
-        formData.append('email', userEmail);
         const avatarToken = localStorage.getItem('token');
-        await fetch(`${API_BASE_URL}/admin/upload-avatar`, {
-          method: 'POST',
-          headers: avatarToken ? { Authorization: `Bearer ${avatarToken}` } : {},
-          body: formData,
+        const resp = await fetch(`${API_BASE_URL}/admin/avatar`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(avatarToken ? { Authorization: `Bearer ${avatarToken}` } : {}),
+          },
+          body: JSON.stringify({ email: userEmail, avatar: base64String }),
         });
-        setStatusMessage('✅ Profile picture updated.');
+        if (resp.ok) {
+          setStatusMessage('✅ Profile picture updated.');
+        } else {
+          setStatusMessage('✅ Profile picture updated locally.');
+        }
       } catch {
         setStatusMessage('✅ Profile picture updated locally.');
       }

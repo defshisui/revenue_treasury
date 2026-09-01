@@ -4,9 +4,8 @@ import {
   getAdminProfile,
   updateAdminProfile,
   changeAdminPassword,
-  uploadAdminAvatar,
+  updateAdminAvatar,
 } from '../controllers/admin.controller.js';
-import { upload } from '../middleware/upload.js';
 import { authenticateToken } from '../middleware/auth.js';
 
 const router = Router();
@@ -20,7 +19,7 @@ router.patch('/admin/profile', authenticateToken, updateAdminProfile);
 // Change admin password (requires current + new password)
 router.patch('/admin/change-password', authenticateToken, changeAdminPassword);
 
-// Upload avatar photo
-router.post('/admin/upload-avatar', authenticateToken, upload.single('avatar'), uploadAdminAvatar);
+// Update avatar (base64 stored in DB)
+router.patch('/admin/avatar', authenticateToken, updateAdminAvatar);
 
 export default router;
