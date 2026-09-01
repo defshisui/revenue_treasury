@@ -1527,6 +1527,17 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
           {/* VIEW: ASSESSOR APPLICATIONS FORM */}
           {activePortalTab === "application" && (
             <div className="rpt-main-shell p-6 sm:p-8 space-y-8">
+              {/* Back Home button row */}
+              <div className="mb-1">
+                <button
+                  type="button"
+                  onClick={() => setActivePortalTab("search")}
+                  className="rpt-back cursor-pointer"
+                >
+                  ← Back to Home
+                </button>
+              </div>
+
               <div className="border-b border-slate-200 pb-4">
                 <p className="text-[11px] font-bold uppercase tracking-wider text-[#0284C7]">OFFICE OF THE CITY ASSESSOR</p>
                 <h2 className="text-2xl font-extrabold text-[#0B3B60]">Real Property Tax Service Request</h2>
