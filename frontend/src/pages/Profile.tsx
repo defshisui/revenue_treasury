@@ -228,7 +228,12 @@ const isCitizen =
         const formData = new FormData();
         formData.append('avatar', file);
         formData.append('email', userEmail);
-        await fetch(`${API_BASE_URL}/admin/upload-avatar`, { method: 'POST', body: formData });
+        const avatarToken = localStorage.getItem('token');
+        await fetch(`${API_BASE_URL}/admin/upload-avatar`, {
+          method: 'POST',
+          headers: avatarToken ? { Authorization: `Bearer ${avatarToken}` } : {},
+          body: formData,
+        });
         setStatusMessage('✅ Profile picture updated.');
       } catch {
         setStatusMessage('✅ Profile picture updated locally.');
@@ -261,9 +266,13 @@ const isCitizen =
       const currentEmail = userObj.email || profileData.email;
 
       // Attempt DB Update
+      const token = localStorage.getItem('token');
       const response = await fetch(`${API_BASE_URL}/admin/profile`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           currentEmail,
           fullname: profileData.fullName,
@@ -334,9 +343,13 @@ const isCitizen =
       const userObj = parsedData.user && typeof parsedData.user === 'object' ? parsedData.user : parsedData;
       const userEmail = userObj.email || profileData.email;
 
+      const pwToken = localStorage.getItem('token');
       const response = await fetch(`${API_BASE_URL}/admin/change-password`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(pwToken ? { Authorization: `Bearer ${pwToken}` } : {}),
+        },
         body: JSON.stringify({
           email: userEmail,
           currentPassword: passwordData.currentPassword,

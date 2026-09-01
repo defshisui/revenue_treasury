@@ -271,8 +271,8 @@ export default function Login() {
                       {isResendingOtp
                         ? "Sending..."
                         : resendCooldown > 0
-                        ? `Resend in ${resendCooldown}s`
-                        : "Resend Code"}
+                          ? `Resend in ${resendCooldown}s`
+                          : "Resend Code"}
                     </button>
                   </div>
 
@@ -289,7 +289,7 @@ export default function Login() {
                     onClick={handleCancelOtp}
                     className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 px-4 rounded-2xl text-xs transition cursor-pointer"
                   >
-                    ← Back to Sign In
+                    Back to Sign In
                   </button>
                 </form>
               </div>
@@ -306,10 +306,10 @@ export default function Login() {
                 <p className="text-xs text-slate-500 mt-0.5">
                   Step {regStep} of 5: {
                     regStep === 1 ? "Account Info" :
-                    regStep === 2 ? "Personal Details" :
-                    regStep === 3 ? "Address & Contact" :
-                    regStep === 4 ? "Review Info" :
-                    "Verify Email (OTP)"
+                      regStep === 2 ? "Personal Details" :
+                        regStep === 3 ? "Address & Contact" :
+                          regStep === 4 ? "Review Info" :
+                            "Verify Email (OTP)"
                   }
                 </p>
               </div>
@@ -431,7 +431,7 @@ export default function Login() {
 
                 <div className="flex gap-3 pt-4">
                   <button type="button" onClick={handlePrevStep} className="w-1/3 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-3.5 px-4 rounded-2xl text-sm transition-all cursor-pointer">
-                    ← Back
+                    Back
                   </button>
                   <button type="submit" className="w-2/3 bg-[#2563EB] hover:bg-blue-700 text-white font-bold py-3.5 px-6 rounded-2xl text-base shadow-md transition-all cursor-pointer">
                     Continue
@@ -477,7 +477,7 @@ export default function Login() {
 
                 <div className="flex gap-3 pt-4">
                   <button type="button" onClick={handlePrevStep} className="w-1/3 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-3.5 px-4 rounded-2xl text-sm transition-all cursor-pointer">
-                    ← Back
+                    Back
                   </button>
                   <button type="submit" className="w-2/3 bg-[#2563EB] hover:bg-blue-700 text-white font-bold py-3.5 px-6 rounded-2xl text-base shadow-md transition-all cursor-pointer">
                     Review
@@ -530,7 +530,7 @@ export default function Login() {
                     onClick={handlePrevStep}
                     className="w-full sm:w-1/2 bg-slate-200 hover:bg-slate-300 text-slate-900 font-extrabold py-4 px-4 rounded-2xl text-base transition-all cursor-pointer"
                   >
-                    ← Edit Details
+                    Edit Details
                   </button>
                   <button
                     type="button"
@@ -591,8 +591,8 @@ export default function Login() {
                       {isResendingRegOtp
                         ? "Sending..."
                         : regResendCooldown > 0
-                        ? `Resend in ${regResendCooldown}s`
-                        : "Resend Code"}
+                          ? `Resend in ${regResendCooldown}s`
+                          : "Resend Code"}
                     </button>
                   </div>
 
@@ -602,7 +602,7 @@ export default function Login() {
                       onClick={() => setRegStep(4)}
                       className="w-full sm:w-1/3 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-3.5 px-4 rounded-2xl text-sm transition cursor-pointer"
                     >
-                      ← Back
+                      Back
                     </button>
                     <button
                       type="submit"
