@@ -6,6 +6,7 @@ import BusinessTax from "./pages/BusinessTax";
 import RegulatoryFees from "./pages/RegulatoryFees";
 import MarketRental from "./pages/MarketRental";
 import Profile from "./pages/Profile";
+import CitizenProfile from "./citizen-portal/CitizenProfile";
 import LegacyTreasuryApp from "./LegacyTreasuryApp";
 
 import CitizenPortal from "./citizen-portal/market-stall";
@@ -65,19 +66,10 @@ export default function App() {
             element={<Profile />}
           />
 
-          {/* 
-             FIX:
-             Citizen Edit Profile currently goes to
-             /edit-profile.
-
-             This route simply opens the EXISTING
-             Profile page.
-
-             Profile.tsx is NOT changed.
-          */}
+          {/* CITIZEN EDIT PROFILE */}
           <Route
             path="/edit-profile"
-            element={<Profile />}
+            element={<CitizenProfile />}
           />
 
           <Route
