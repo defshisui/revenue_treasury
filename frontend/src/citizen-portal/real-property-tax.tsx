@@ -1117,10 +1117,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                     <div className="rpt-nav-row border-b pb-4 flex items-center gap-6">
                       <button
                         type="button"
-                        onClick={() => {
-                          window.history.pushState({}, "", "/citizen-rpt?view=status");
-                          window.dispatchEvent(new PopStateEvent("popstate"));
-                        }}
+                        onClick={() => setActivePortalTab("status")}
                         className="rpt-nav-button cursor-pointer"
                       >
                         [ MY APPLICATIONS ]
@@ -1780,13 +1777,11 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
               {/* Back Home button row */}
               <div className="mb-1">
                 <button
+                  type="button"
                   onClick={() => setActivePortalTab("search")}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#0B3B60] hover:text-sky-600 transition-colors group cursor-pointer"
+                  className="rpt-back cursor-pointer"
                 >
-                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 group-hover:bg-sky-100 transition-colors text-sm">
-                    ←
-                  </span>
-                  Back to Home
+                  ← Back to Home
                 </button>
               </div>
 
