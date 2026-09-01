@@ -5,6 +5,29 @@ import pool from '../db.js';
 import { recordAudit } from './audit.controller.js';
 import type { RptPaymentBody } from '../types/index.js';
 
+const RPT_SERVICES = [
+  'Transfer of Ownership',
+  'Consolidation / Segregation',
+  'New Assessment / Reassessment / Reclassification',
+  'Correction / Updating / Revision',
+  'Declaration of New / Undeclared Land',
+  'Cancellation of Assessment Records',
+] as const;
+
+const RPT_STATUS_FLOW: Record<string, string[]> = {
+  'Transfer of Ownership': ['Submitted', 'For Review', 'Under Evaluation', 'For Compliance', 'For Payment', 'Processing', 'Approved', 'Ready for Release', 'Completed'],
+  'Consolidation / Segregation': ['Submitted', 'For Review', 'Under Evaluation', 'For Compliance', 'Processing', 'Approved', 'Ready for Release', 'Completed'],
+  'New Assessment / Reassessment / Reclassification': ['Submitted', 'For Review', 'Under Evaluation', 'For Compliance', 'Processing', 'Approved', 'Ready for Release', 'Completed'],
+  'Correction / Updating / Revision': ['Submitted', 'For Review', 'Under Evaluation', 'For Compliance', 'Processing', 'Approved', 'Ready for Release', 'Completed'],
+  'Declaration of New / Undeclared Land': ['Submitted', 'For Review', 'Under Evaluation', 'For Compliance', 'Processing', 'Approved', 'Ready for Release', 'Completed'],
+  'Cancellation of Assessment Records': ['Submitted', 'For Review', 'Under Evaluation', 'For Compliance', 'Processing', 'Approved', 'Ready for Release', 'Completed'],
+};
+
+function normaliseService(service: unknown): string {
+  const value = String(service || '').trim();
+  return (RPT_SERVICES as readonly string[]).includes(value) ? value : '';
+}
+
 export async function getRptApplications(_req: Request, res: Response): Promise<void> {
   try {
     const result = await pool.query('SELECT * FROM rpt_applications ORDER BY created_at DESC');
@@ -65,6 +88,22 @@ export async function createRptApplication(req: Request, res: Response): Promise
 
   const ownerName = appData.owner_name || appData.ownerName || '';
   let resolvedApplicantName = appData.applicant_name || appData.applicantName || ownerName || 'Unknown Applicant';
+  const service = normaliseService(appData.service);
+  if (!service) {
+    res.status(400).json({ message: 'Please select a valid Quezon City Real Property Assessor service.' });
+    return;
+  }
+  if (!ownerName || !resolvedApplicantName || !appData.email || !appData.mobile_number && !appData.mobileNumber) {
+    res.status(400).json({ message: 'Applicant name, owner name, email, and mobile number are required.' });
+    return;
+  }
+  if (appData.applicant_type === 'Authorized Representative') {
+    const hasAuthorization = fileObjects.some((doc) => /authorization|special power|spa/i.test(doc.name || ''));
+    if (!hasAuthorization) {
+      res.status(400).json({ message: 'Authorized representatives must submit an authorization document or Special Power of Attorney.' });
+      return;
+    }
+  }
 
   try {
     // Explicitly cast $16 as jsonb to match your PostgreSQL table schema column type perfectly
@@ -82,7 +121,7 @@ export async function createRptApplication(req: Request, res: Response): Promise
         appData.applicant_type || null,
         appData.email || null,
         appData.mobile_number || null,
-        appData.service || null,
+        service,
         appData.property_location || null,
         appData.barangay || null,
         appData.property_type || null,
@@ -128,19 +167,33 @@ export async function deleteRptApplication(req: Request, res: Response): Promise
 
 export async function updateRptApplicationStatus(req: Request, res: Response): Promise<void> {
   const { id } = req.params;
-  const { status, notes, assignedOfficer, paymentAmount, paymentStatus, paymentDueDate } = req.body;
+  const { status, notes, assignedOfficer, paymentAmount, paymentStatus, paymentDueDate, workflowStage, complianceRemarks, transferTaxStatus, transferTaxAmount, officialReceiptNumber, paymentReference, paymentMethod, paymentDate } = req.body;
 
-  const numericPaymentAmount =
-    paymentAmount === undefined || paymentAmount === null || paymentAmount === ''
-      ? null
-      : Number(paymentAmount);
-
+  const numericPaymentAmount = paymentAmount === undefined || paymentAmount === null || paymentAmount === '' ? null : Number(paymentAmount);
+  const numericTransferTaxAmount = transferTaxAmount === undefined || transferTaxAmount === null || transferTaxAmount === '' ? null : Number(transferTaxAmount);
   if (numericPaymentAmount !== null && (!Number.isFinite(numericPaymentAmount) || numericPaymentAmount < 0)) {
-    res.status(400).json({ message: 'Payment amount must be a valid non-negative number.' });
-    return;
+    res.status(400).json({ message: 'Payment amount must be a valid non-negative number.' }); return;
+  }
+  if (numericTransferTaxAmount !== null && (!Number.isFinite(numericTransferTaxAmount) || numericTransferTaxAmount <= 0)) {
+    res.status(400).json({ message: 'Transfer Tax amount must be greater than zero.' }); return;
   }
 
   try {
+    const current = await pool.query('SELECT * FROM rpt_applications WHERE id = $1 LIMIT 1', [id]);
+    if (current.rowCount === 0) { res.status(404).json({ message: 'RPT application not found' }); return; }
+    const currentRow = current.rows[0];
+    const service = normaliseService(currentRow.service);
+    const allowed = RPT_STATUS_FLOW[service] || RPT_STATUS_FLOW['Transfer of Ownership'];
+    if (status && status !== 'Rejected' && status !== 'Archived' && status !== 'Digital Certificate Issued' && !allowed.includes(status)) {
+      res.status(400).json({ message: `Invalid workflow status for ${service}.` }); return;
+    }
+    if (status === 'For Payment' && service !== 'Transfer of Ownership') {
+      res.status(400).json({ message: 'For Payment is only used for the Transfer of Ownership Transfer Tax assessment.' }); return;
+    }
+    if (status === 'For Payment' && (numericPaymentAmount === null || numericPaymentAmount <= 0) && Number(currentRow.payment_amount || 0) <= 0) {
+      res.status(400).json({ message: 'Assess the Transfer Tax amount before moving the application to For Payment.' }); return;
+    }
+
     const result = await pool.query(
       `UPDATE rpt_applications
        SET status = COALESCE($1, status),
@@ -148,21 +201,21 @@ export async function updateRptApplicationStatus(req: Request, res: Response): P
            assigned_officer = COALESCE($3, assigned_officer),
            payment_amount = COALESCE($4, payment_amount),
            payment_status = COALESCE($5, payment_status),
-           payment_due_date = COALESCE($6, payment_due_date)
-       WHERE id = $7
+           payment_due_date = COALESCE($6, payment_due_date),
+           workflow_stage = COALESCE($7, workflow_stage),
+           compliance_remarks = COALESCE($8, compliance_remarks),
+           transfer_tax_status = COALESCE($9, transfer_tax_status),
+           transfer_tax_amount = COALESCE($10, transfer_tax_amount),
+           official_receipt_number = COALESCE($11, official_receipt_number),
+           payment_reference = COALESCE($12, payment_reference),
+           payment_method = COALESCE($13, payment_method),
+           payment_date = COALESCE($14, payment_date)
+       WHERE id = $15
        RETURNING *`,
-      [status, notes, assignedOfficer, numericPaymentAmount, paymentStatus, paymentDueDate || null, id]
+      [status, notes, assignedOfficer, numericPaymentAmount, paymentStatus, paymentDueDate || null, workflowStage || status || null, complianceRemarks || null, transferTaxStatus || (status === 'For Payment' ? 'For Payment' : null), numericTransferTaxAmount, officialReceiptNumber || null, paymentReference || null, paymentMethod || null, paymentDate || null, id]
     );
 
-    if (result.rowCount === 0) {
-      res.status(404).json({ message: 'RPT application not found' });
-      return;
-    }
-
-    await recordAudit(req, 'AUD-RPT-STATUS', 'admin@gov.ph', 'Admin',
-      'RPT Module', 'RPT_STATUS_UPDATED', 'INFO', null,
-      `Updated RPT application ${id} status to ${status}`);
-
+    await recordAudit(req, 'AUD-RPT-STATUS', 'admin@gov.ph', 'Admin', 'RPT Module', 'RPT_STATUS_UPDATED', 'INFO', null, `Updated RPT application ${id} status to ${status || result.rows[0].status}`);
     res.json({ success: true, message: 'Status updated successfully', record: result.rows[0] });
   } catch (err) {
     console.error('Error updating RPT application status:', err);
@@ -460,88 +513,58 @@ export async function createRptPayment(req: Request, res: Response): Promise<voi
 }
 
 export async function createGroupRptPayment(req: Request, res: Response): Promise<void> {
-  const {
-    items, customerName, customerEmail, paymentMethod, paymongoSessionId
-  } = req.body;
+  const { items, customerName, customerEmail, paymentMethod, paymongoSessionId } = req.body;
+  if (!Array.isArray(items) || items.length === 0) { res.status(400).json({ message: 'No items provided for group payment.' }); return; }
 
-  if (!Array.isArray(items) || items.length === 0) {
-    res.status(400).json({ message: 'No items provided for group payment.' });
-    return;
-  }
-
+  const client = await pool.connect();
   const generatedGroupOR = `eOR-QC-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
   const groupPaymentRef = `GRP-PAY-${Date.now().toString().slice(-8)}`;
-
   try {
+    await client.query('BEGIN');
     let totalPaid = 0;
     const processedItems = [];
 
     for (const item of items) {
-      const itemAmount = parseFloat(item.totalAmount || item.amount || 0);
+      const tdn = String(item.taxDeclarationNumber || '').trim();
+      if (!tdn) throw new Error('Each payment item must contain a Tax Declaration Number.');
+      const recordResult = await client.query(`SELECT * FROM lgu_rpt_records WHERE LOWER(REPLACE(taxDeclarationNumber, ' ', '')) = LOWER(REPLACE($1, ' ', '')) FOR UPDATE`, [tdn]);
+      if (recordResult.rowCount === 0) throw new Error(`RPT record not found for TDN ${tdn}.`);
+      const record = recordResult.rows[0];
+      const balance = Number(record.balance || record.amountDue || 0);
+      const option = String(item.selectedOption || 'Full');
+      const coverage = String(item.billCoverage || 'Q1-Q4');
+      let itemAmount = Number(item.totalAmount || 0);
+      if (!Number.isFinite(itemAmount) || itemAmount <= 0) throw new Error(`Invalid payment amount for TDN ${tdn}.`);
+
+      if (option.toLowerCase().startsWith('quarter')) {
+        const q: Record<string, any> = (record.quarterly_amounts && typeof record.quarterly_amounts === 'object') ? record.quarterly_amounts : {};
+        const selected: string[] = String(coverage).match(/Q[1-4]/gi) || [];
+        if (selected.length) {
+          const expected = selected.reduce((sum: number, key: string) => sum + Number(q[key.toLowerCase()] || 0), 0);
+          if (expected > 0) itemAmount = expected;
+        }
+      } else {
+        itemAmount = Math.min(itemAmount, balance);
+      }
+      if (itemAmount <= 0 || itemAmount > balance + 0.01) throw new Error(`Payment amount exceeds the current balance for TDN ${tdn}.`);
+
       totalPaid += itemAmount;
-
-      const itemOR = `${generatedGroupOR}-${item.taxDeclarationNumber}`;
-      const itemRef = `${groupPaymentRef}-${item.taxDeclarationNumber}`;
-
-      await pool.query(
-        `INSERT INTO citizen_rpt_payments
-         (rpt_record_id, tax_declaration_number, owner_name, amount, payment_method, payment_reference, official_receipt_number, payment_date, payment_option, quarter_coverage, paymongo_session_id)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,NOW(),$8,$9,$10)`,
-        [
-          item.id || null,
-          item.taxDeclarationNumber,
-          item.ownerName || customerName || 'Property Owner',
-          itemAmount,
-          paymentMethod || 'Online Gateway',
-          itemRef,
-          itemOR,
-          item.selectedOption || 'Full Payment',
-          item.billCoverage || '2025(Q1) - 2025(Q4)',
-          paymongoSessionId || null
-        ]
-      );
-
-      // Update database status for this TDN
-      await pool.query(
-        `UPDATE lgu_rpt_records
-         SET amountPaid = amountPaid + $1,
-             balance = GREATEST(0, balance - $1),
-             status = CASE WHEN balance - $1 <= 0 THEN 'Paid' ELSE 'Partially Paid' END,
-             paymentStatus = CASE WHEN balance - $1 <= 0 THEN 'Paid' ELSE 'Partially Paid' END,
-             paymentMethod = $2,
-             officialReceiptNumber = $3,
-             paymentReference = $4,
-             paymentDate = NOW()
-         WHERE LOWER(REPLACE(taxDeclarationNumber, ' ', '')) = LOWER(REPLACE($5, ' ', ''))`,
-        [itemAmount, paymentMethod, itemOR, itemRef, item.taxDeclarationNumber]
-      );
-
-      processedItems.push({
-        taxDeclarationNumber: item.taxDeclarationNumber,
-        ownerName: item.ownerName,
-        amount: itemAmount,
-        officialReceiptNumber: itemOR,
-        paymentOption: item.selectedOption
-      });
+      const itemOR = `${generatedGroupOR}-${tdn}`;
+      const itemRef = `${groupPaymentRef}-${tdn}`;
+      await client.query(`INSERT INTO citizen_rpt_payments (rpt_record_id, tax_declaration_number, owner_name, amount, payment_method, payment_reference, official_receipt_number, payment_date, payment_option, quarter_coverage, paymongo_session_id) VALUES ($1,$2,$3,$4,$5,$6,$7,NOW(),$8,$9,$10)`, [record.id, tdn, item.ownerName || record.ownername || customerName || 'Property Owner', itemAmount, paymentMethod || 'Online Gateway', itemRef, itemOR, option, coverage, paymongoSessionId || null]);
+      const newBalance = Math.max(0, balance - itemAmount);
+      await client.query(`UPDATE lgu_rpt_records SET amountPaid = amountPaid + $1, balance = $2, status = CASE WHEN $2 <= 0 THEN 'Paid' ELSE 'Partially Paid' END, paymentStatus = CASE WHEN $2 <= 0 THEN 'Paid' ELSE 'Partially Paid' END, paymentMethod = $3, officialReceiptNumber = $4, paymentReference = $5, paymentDate = NOW() WHERE id = $6`, [itemAmount, newBalance, paymentMethod || 'Online Gateway', itemOR, itemRef, record.id]);
+      processedItems.push({ taxDeclarationNumber: tdn, ownerName: item.ownerName || record.ownername || customerName, amount: itemAmount, officialReceiptNumber: itemOR, paymentOption: option });
     }
 
-    await recordAudit(req, 'AUD-RPT-GROUP-PAY', customerEmail || customerName || 'Citizen', 'Citizen',
-      'RPT Module', 'RPT_GROUP_PAYMENT_COMPLETED', 'INFO', null,
-      `Settled Group Bill Set (${items.length} TDNs) total ₱${totalPaid} via ${paymentMethod} (eOR: ${generatedGroupOR})`);
-
-    res.status(201).json({
-      success: true,
-      message: 'Group bill payment processed successfully.',
-      groupOfficialReceipt: generatedGroupOR,
-      groupReferenceNumber: groupPaymentRef,
-      totalAmount: totalPaid,
-      items: processedItems,
-      paymentDate: new Date().toISOString()
-    });
-  } catch (err) {
+    await client.query('COMMIT');
+    await recordAudit(req, 'AUD-RPT-GROUP-PAY', customerEmail || customerName || 'Citizen', 'Citizen', 'RPT Module', 'RPT_GROUP_PAYMENT_COMPLETED', 'INFO', null, `Settled Group Bill Set (${items.length} TDNs) total ₱${totalPaid.toFixed(2)} via ${paymentMethod} (eOR: ${generatedGroupOR})`);
+    res.status(201).json({ success: true, message: 'Group bill payment processed successfully.', groupOfficialReceipt: generatedGroupOR, groupReferenceNumber: groupPaymentRef, totalAmount: totalPaid, items: processedItems, paymentDate: new Date().toISOString() });
+  } catch (err: any) {
+    await client.query('ROLLBACK');
     console.error('Error processing group RPT payment:', err);
-    res.status(500).json({ message: 'Failed to complete group payment.' });
-  }
+    res.status(400).json({ message: err.message || 'Failed to complete group payment.' });
+  } finally { client.release(); }
 }
 
 export async function getRptPayments(_req: Request, res: Response): Promise<void> {

@@ -156,10 +156,10 @@ export async function initializeDatabase(): Promise<void> {
           barangay VARCHAR(100),
           propertyType VARCHAR(50),
 
-          billingYear INT DEFAULT 2025,
+          billingYear INT DEFAULT EXTRACT(YEAR FROM CURRENT_DATE)::INT,
           quarter VARCHAR(20) DEFAULT 'Q1-Q4',
 
-          bill_expiry_date VARCHAR(50) DEFAULT '2025-10-31',
+          bill_expiry_date VARCHAR(50),
 
           lot_area_sqm NUMERIC(12, 2) DEFAULT 0,
           market_value NUMERIC(12, 2) DEFAULT 0,
@@ -352,6 +352,14 @@ export async function initializeDatabase(): Promise<void> {
       ALTER TABLE rpt_applications
       ADD COLUMN IF NOT EXISTS payment_due_date DATE;
 
+      ALTER TABLE rpt_applications ADD COLUMN IF NOT EXISTS workflow_stage VARCHAR(80);
+      ALTER TABLE rpt_applications ADD COLUMN IF NOT EXISTS compliance_remarks TEXT;
+      ALTER TABLE rpt_applications ADD COLUMN IF NOT EXISTS transfer_tax_amount NUMERIC(12,2) DEFAULT 0;
+      ALTER TABLE rpt_applications ADD COLUMN IF NOT EXISTS transfer_tax_status VARCHAR(50) DEFAULT 'Not Assessed';
+      ALTER TABLE rpt_applications ADD COLUMN IF NOT EXISTS tin VARCHAR(50);
+      ALTER TABLE rpt_applications ADD COLUMN IF NOT EXISTS tax_declaration_issued BOOLEAN DEFAULT FALSE;
+
+
       ALTER TABLE rpt_applications
       ADD COLUMN IF NOT EXISTS paymongo_session_id VARCHAR(255);
 
@@ -404,6 +412,13 @@ export async function initializeDatabase(): Promise<void> {
 
       ALTER TABLE citizen_rpt_payments
       ADD COLUMN IF NOT EXISTS quarter_coverage VARCHAR(50);
+    `);
+
+    await pool.query(`
+      UPDATE rpt_applications
+      SET workflow_stage = COALESCE(workflow_stage, status),
+          transfer_tax_status = COALESCE(transfer_tax_status, CASE WHEN service = 'Transfer of Ownership' AND payment_status IN ('Paid','Payment Completed') THEN 'Paid' ELSE 'Not Assessed' END)
+      WHERE workflow_stage IS NULL OR transfer_tax_status IS NULL;
     `);
 
     // ============================================================
