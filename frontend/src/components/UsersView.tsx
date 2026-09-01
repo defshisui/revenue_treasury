@@ -131,26 +131,6 @@ export default function UsersView({
     }
   };
 
-  const handleDeleteUser = async (id: string) => {
-    if (!window.confirm("WARNING: Are you sure you want to permanently delete this user account?")) return;
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/users/${id}`, {
-        method: 'DELETE',
-      });
-
-      if (response.ok) {
-        setRecords(prevRecords => prevRecords.filter(record => record.id !== id));
-      } else {
-        alert("Failed to delete user account on the server.");
-      }
-    } catch (error) {
-      console.error("Error deleting user:", error);
-
-      setRecords(prevRecords => prevRecords.filter(record => record.id !== id));
-    }
-  };
-
   const getRoleBadgeStyle = (role: string) => {
     switch (role.toLowerCase()) {
       case "admin":
