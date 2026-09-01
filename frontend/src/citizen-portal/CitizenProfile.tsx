@@ -239,7 +239,7 @@ export default function CitizenProfile() {
             onClick={() => navigate("/citizen-portal")}
             className="text-xs font-bold text-slate-600 hover:text-blue-700 bg-white border border-slate-200 px-4 py-2 rounded-xl shadow-xs transition cursor-pointer"
           >
-            ← Back to Portal
+            Back to Portal
           </button>
         </div>
 
