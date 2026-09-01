@@ -230,7 +230,7 @@ export function useRegister(onSuccess: () => void) {
   const handleWorkerClick = () => {
     setIsWorkerNotice(true);
     setRegSuccess(false);
-    setRegMessage("To register as a worker you must contact leonkennedy@gmail.com");
+    setRegMessage("To register as a worker you must contact jomelbaisac15@gmail.com");
   };
 
   return {
