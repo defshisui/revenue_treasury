@@ -204,7 +204,9 @@ export default function TreasuryDashboardView({
   const activeMetrics: TreasuryMetrics = (() => {
     const totalEpayments = filteredTxsByTab.length;
     const totalEORs = filteredTxsByTab.filter(t => t?.status === 'Posted' || !t?.status).length;
-    const totalAmount = filteredTxsByTab.reduce((sum, t) => sum + Number(t?.amount || 0), 0);
+    const totalAmount = filteredTxsByTab
+      .filter(t => t?.status === 'Posted' || t?.status === 'Verified')
+      .reduce((sum, t) => sum + Number(t?.amount || 0), 0);
 
     const billersSet = new Set(filteredTxsByTab.map(t => t?.collector || 'Municipal Treasury'));
     const optionsSet = new Set(filteredTxsByTab.map(t => t?.paymentMethod || 'Cash / Direct'));
