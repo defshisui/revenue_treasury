@@ -300,35 +300,19 @@ export default function UsersView({
                       <td className="p-4 text-right">
                         <div className="flex justify-end gap-2">
                           {mainTab === 'Active' ? (
-                            <>
-                              <button
+                            <button
                                 onClick={() => handleArchiveUser(record.id, record.fullname)}
                                 className="text-xs px-3 py-1.5 bg-slate-50 dark:bg-slate-800/50 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg font-semibold cursor-pointer transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
                               >
                                 Archive
                               </button>
-                              <button
-                                onClick={() => handleDeleteUser(record.id)}
-                                className="text-xs px-3 py-1.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-500/30 rounded-lg font-semibold transition-colors cursor-pointer"
-                              >
-                                Delete
-                              </button>
-                            </>
                           ) : (
-                            <>
-                              <button
+                            <button
                                 onClick={() => handleRestoreUser(record.id, record.fullname)}
                                 className="text-xs px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60 rounded-lg font-semibold cursor-pointer transition-colors hover:bg-emerald-100 dark:hover:bg-emerald-900/60"
                               >
                                 Restore
                               </button>
-                              <button
-                                onClick={() => handleDeleteUser(record.id)}
-                                className="text-xs px-3 py-1.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-500/30 rounded-lg font-semibold transition-colors cursor-pointer"
-                              >
-                                Delete (Final)
-                              </button>
-                            </>
                           )}
                         </div>
                       </td>
