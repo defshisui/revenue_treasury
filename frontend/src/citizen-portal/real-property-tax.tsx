@@ -16,6 +16,7 @@ import {
   getRPTApplications,
   saveRPTApplication,
   createTransferTaxCheckout,
+  verifyTransferTaxPayment,
   type RPTApplicationRecord
 } from "../services/realpropertytaxService";
 
@@ -26,9 +27,9 @@ export type RPTApplicationStatus =
   | "For Review"
   | "Under Evaluation"
   | "For Compliance"
-  | "For Payment"
-  | "Field Inspection Scheduled"
   | "Processing"
+  | "For Payment"
+  | "Payment Completed"
   | "Approved"
   | "Ready for Release"
   | "Completed"
@@ -123,62 +124,6 @@ const services = [
   "Cancellation of Assessment Records",
 ];
 
-const serviceDocumentRequirements: Record<string, { key: string; label: string; help: string; required: boolean }[]> = {
-  "Transfer of Ownership": [
-    { key: "ownershipProof", label: "New TCT / CCT or proof of ownership", help: "Certified true/electronic copy of the new TCT/CCT or accepted proof of transfer.", required: true },
-    { key: "deedOfConveyance", label: "Notarized Deed of Conveyance", help: "Deed of Sale/Donation, EJS, Conditional Sale, Exchange, or other accepted deed.", required: true },
-    { key: "validId", label: "Government-issued ID", help: "Valid ID of the owner/applicant.", required: true },
-    { key: "taxRecord", label: "Current / Updated RPT Payment", help: "Latest RPT receipt, tax bill, or current realty tax record.", required: true },
-    { key: "transferTaxReceipt", label: "Transfer Tax Receipt and Tax Bill", help: "Transfer tax payment proof issued by the City Treasurer's Office.", required: true },
-    { key: "eCAR", label: "BIR eCAR", help: "Electronic Certificate Authorizing Registration, when applicable.", required: true },
-    { key: "propertyPhoto", label: "Property Photo", help: "Colored frontage/facade photo showing the property/improvement.", required: true },
-    { key: "authorization", label: "Authorization / SPA", help: "Required when filing through an authorized representative.", required: false },
-  ],
-  "Consolidation / Segregation": [
-    { key: "ownershipProof", label: "Title / Ownership Documents", help: "Current title and supporting ownership documents.", required: true },
-    { key: "propertySketch", label: "Subdivision / Consolidation Plan", help: "Approved plan or technical document supporting the requested lot change.", required: true },
-    { key: "validId", label: "Government-issued ID", help: "Valid ID of the owner/applicant.", required: true },
-    { key: "taxRecord", label: "Current RPT Record", help: "Latest RPT receipt/tax declaration or assessment record.", required: true },
-    { key: "propertyPhoto", label: "Property Photo", help: "Current property frontage/facade photo.", required: true },
-    { key: "authorization", label: "Authorization / SPA", help: "Required for an authorized representative.", required: false },
-  ],
-  "New Assessment / Reassessment / Reclassification": [
-    { key: "validId", label: "Government-issued ID", help: "Valid ID of the owner/applicant.", required: true },
-    { key: "taxRecord", label: "Existing Tax Record", help: "Existing tax declaration/receipt if the property is already declared.", required: true },
-    { key: "propertyPhoto", label: "Property Photo", help: "Photo showing the building/improvement or property use.", required: true },
-    { key: "propertySketch", label: "Assessment Supporting Document", help: "Plans, permits, or other documents supporting the new assessment/reassessment.", required: true },
-    { key: "authorization", label: "Authorization / SPA", help: "Required for an authorized representative.", required: false },
-  ],
-  "Correction / Updating / Revision": [
-    { key: "validId", label: "Government-issued ID", help: "Valid ID of the owner/applicant.", required: true },
-    { key: "taxRecord", label: "Existing Tax Record", help: "Tax declaration/assessment record to be corrected or updated.", required: true },
-    { key: "correctionSupportingDocument", label: "Correction Supporting Document", help: "Document proving the correct information, entry, ownership, or value.", required: true },
-    { key: "authorization", label: "Authorization / SPA", help: "Required for an authorized representative.", required: false },
-  ],
-  "Declaration of New / Undeclared Land": [
-    { key: "ownershipProof", label: "Title / Ownership Document", help: "Current title or other accepted ownership document.", required: true },
-    { key: "validId", label: "Government-issued ID", help: "Valid ID of the owner/applicant.", required: true },
-    { key: "propertyPhoto", label: "Property Photo", help: "Current photo of the property.", required: true },
-    { key: "propertySketch", label: "Assessment Supporting Document", help: "Documents needed to identify and assess the titled property.", required: true },
-    { key: "authorization", label: "Authorization / SPA", help: "Required for an authorized representative.", required: false },
-  ],
-  "Cancellation of Assessment Records": [
-    { key: "validId", label: "Government-issued ID", help: "Valid ID of the owner/applicant.", required: true },
-    { key: "taxRecord", label: "Assessment Record", help: "Tax declaration or assessment record requested for cancellation.", required: true },
-    { key: "cancellationSupportingDocument", label: "Cancellation Supporting Document", help: "Document establishing the basis for cancellation.", required: true },
-    { key: "authorization", label: "Authorization / SPA", help: "Required for an authorized representative.", required: false },
-  ],
-};
-
-const serviceGuideText: Record<string, string> = {
-  "Transfer of Ownership": "QC requires complete transfer documents before the Assessor begins processing; incomplete submissions are not processed.",
-  "Consolidation / Segregation": "The Assessor validates the lot consolidation or segregation documents before issuing updated assessment records.",
-  "New Assessment / Reassessment / Reclassification": "The Assessor evaluates the property use, improvements, and supporting documents before establishing the assessment.",
-  "Correction / Updating / Revision": "The Assessor reviews the existing record against the supporting proof before correcting or revising the entry.",
-  "Declaration of New / Undeclared Land": "The Assessor validates the title/property details and establishes the assessment record before issuance.",
-  "Cancellation of Assessment Records": "Cancellation is subject to Assessor validation and supporting proof before the assessment record is closed.",
-};
-
 function formatCurrency(val: number): string {
   return new Intl.NumberFormat("en-PH", {
     style: "currency",
@@ -234,67 +179,36 @@ export function RealPropertyTaxHub() {
 
 
       {/* SERVICES */}
-      <main className="flex-1">
+<main className="flex-1">
+  <div className="max-w-6xl mx-auto px-4 py-8 sm:py-10">
 
-        <div className="max-w-6xl mx-auto px-4 py-8 sm:py-10">
+    {/* CENTERED REAL PROPERTY TAX CARD */}
+    <div className="flex justify-center">
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <section className="w-full max-w-[650px] bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-7 text-center">
 
-            {/* REAL PROPERTY TAX */}
-            <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-7 text-center">
+        <h2 className="mt-2 text-lg font-black text-slate-900">
+          Proceed and Pay Online
+        </h2>
 
-              <h2 className="mt-2 text-lg font-black text-slate-900">
-                Proceed and Pay Online
-              </h2>
+        <p className="max-w-xl mx-auto mt-3 text-xs sm:text-sm text-[#36527A] leading-relaxed">
+          Search your Tax Declaration Number, view your property
+          assessment and outstanding balance and pay your Real Property Tax Online.
+        </p>
 
-              <p className="max-w-xl mx-auto mt-3 text-xs sm:text-sm text-[#36527A] leading-relaxed">
-                Search your Tax Declaration Number, view your property
-                assessment and outstanding balance and pay your Real Property Tax Online.
-              </p>
+        <button
+          type="button"
+          onClick={() => navigate("/citizen-rpt")}
+          className="mt-6 inline-flex items-center justify-center bg-[#1D3F99] hover:bg-[#17357F] text-white font-black text-xs uppercase px-6 py-3 rounded-full shadow-md transition cursor-pointer"
+        >
+          PROCEED WITH REAL PROPERTY TAX
+        </button>
 
-              <button
-                type="button"
-                onClick={() => navigate('/citizen-rpt')}
-                className="mt-6 inline-flex items-center justify-center bg-[#1D3F99] hover:bg-[#17357F] text-white font-black text-xs uppercase px-6 py-3 rounded-full shadow-md transition cursor-pointer"
-              >
-                PROCEED WITH REAL PROPERTY TAX
-              </button>
+      </section>
 
-            </section>
-
-
-            {/* PROPERTY ASSESSOR */}
-            <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-7 text-center">
-
-              <p className="text-sm font-extrabold text-[#1D2F86] uppercase tracking-wide">
-                PROPERTY ASSESSOR SERVICES
-              </p>
-
-              <h2 className="mt-2 text-lg font-black text-slate-900">
-                Applications and Property Records
-              </h2>
-
-              <p className="max-w-xl mx-auto mt-3 text-xs sm:text-sm text-[#36527A] leading-relaxed">
-                Submit property-related service requests.
-              </p>
-
-              <button
-                type="button"
-                onClick={() =>
-                  navigate('/citizen-rpt?view=form')
-                }
-                className="mt-6 inline-flex items-center justify-center bg-[#1D3F99] hover:bg-[#17357F] text-white font-black text-xs uppercase px-6 py-3 rounded-full shadow-md transition cursor-pointer"
-              >
-                ASSESSOR SERVICES
-              </button>
-
-            </section>
-
-          </div>
-
-        </div>
-
-      </main>
+    </div>
+  </div>
+</main>
 
       <UnifiedFooter />
 
@@ -385,20 +299,24 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
   });
   const [appDocuments, setAppDocuments] = useState<{ [key: string]: { name: string; url: string } }>({
     ownershipProof: { name: "", url: "" },
-    deedOfConveyance: { name: "", url: "" },
     validId: { name: "", url: "" },
     taxRecord: { name: "", url: "" },
-    transferTaxReceipt: { name: "", url: "" },
-    eCAR: { name: "", url: "" },
-    propertyPhoto: { name: "", url: "" },
     propertySketch: { name: "", url: "" },
-    correctionSupportingDocument: { name: "", url: "" },
-    cancellationSupportingDocument: { name: "", url: "" },
     authorization: { name: "", url: "" },
+  });
+  // Track raw File objects for multipart upload (separate from preview base64)
+  const [appRawFiles, setAppRawFiles] = useState<{ [key: string]: File | null }>({
+    ownershipProof: null,
+    validId: null,
+    taxRecord: null,
+    propertySketch: null,
+    authorization: null,
   });
   const [isSubmittingApp, setIsSubmittingApp] = useState(false);
   const [appNotice, setAppNotice] = useState("");
   const [selectedAppDetail, setSelectedAppDetail] = useState<RPTApplicationRecord | null>(null);
+  const [isTransferTaxPaying, setIsTransferTaxPaying] = useState(false);
+  const [transferTaxPaymentNotice, setTransferTaxPaymentNotice] = useState("");
 
   // --- Step-by-Step Guide Lightbox Modal ---
   const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
@@ -444,6 +362,36 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
     }
 
     // Dynamic QR Ph payments are confirmed through the backend webhook/status endpoint.
+
+    const paymentType = params.get("type");
+    const sessionId = params.get("session_id");
+    const paymentResult = params.get("payment");
+    if (paymentType === "TRANSFER_TAX" && sessionId && paymentResult === "success") {
+      void (async () => {
+        try {
+          const result = await verifyTransferTaxPayment(sessionId);
+          if (result?.paid) {
+            showToast(
+              `Transfer Tax payment confirmed. O.R. ${result.officialReceiptNumber || "issued"}.`,
+              "success"
+            );
+            setTransferTaxPaymentNotice(
+              `Payment confirmed. Official Receipt: ${result.officialReceiptNumber || "Pending issuance"}`
+            );
+            await loadApplications();
+            window.history.replaceState({}, "", "/citizen-rpt?view=status");
+          } else {
+            showToast("Transfer Tax payment is not yet confirmed.", "info");
+          }
+        } catch (error: any) {
+          console.error("Transfer Tax payment verification failed:", error);
+          showToast(error?.message || "Unable to verify the Transfer Tax payment.", "error");
+        }
+      })();
+    } else if (paymentType === "TRANSFER_TAX" && paymentResult === "cancelled") {
+      showToast("Transfer Tax payment was cancelled. No payment was recorded.", "info");
+      window.history.replaceState({}, "", "/citizen-rpt?view=status");
+    }
   }, [location.search]);
 
   // Load existing applications
@@ -898,36 +846,35 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (uploadEvent) => {
-      const base64Url = (uploadEvent.target?.result as string) || "";
-      setAppDocuments((prev) => ({
-        ...prev,
-        [field]: { name: file.name, url: base64Url },
-      }));
-    };
-    reader.readAsDataURL(file);
+    // Store the raw File object for multipart upload
+    setAppRawFiles((prev) => ({ ...prev, [field]: file }));
+
+    // Store only name + a local object URL for preview (not a huge base64 string)
+    const previewUrl = URL.createObjectURL(file);
+    setAppDocuments((prev) => ({
+      ...prev,
+      [field]: { name: file.name, url: previewUrl },
+    }));
   };
 
   const handleAppSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setAppNotice("");
 
-    const requirements = serviceDocumentRequirements[appForm.service] || [];
-    const missing = requirements
-      .filter((req) => req.required || (req.key === "authorization" && appForm.applicantType === "Authorized Representative"))
-      .filter((req) => !appDocuments[req.key]?.name)
-      .map((req) => req.label);
-    if (missing.length > 0) {
-      setAppNotice(`⚠️ Please attach the required document(s): ${missing.join(", ")}.`);
+    if (!appDocuments.ownershipProof.name || !appDocuments.validId.name) {
+      setAppNotice("⚠️ Please attach Proof of Ownership and a Valid Government ID.");
       return;
     }
 
     setIsSubmittingApp(true);
 
-    const attachedList = (Object.values(appDocuments) as { name: string; url: string }[])
-      .filter((d) => d.name)
-      .map((d) => ({ name: d.name, url: d.url }));
+    // Build metadata list with ONLY file names (no base64/blob URLs) to keep DB payload small
+    const attachedList = Object.entries(appDocuments)
+      .filter(([, d]) => d.name)
+      .map(([, d]) => ({ name: d.name, url: "" }));
+
+    // Collect the actual raw File objects to send as multipart form fields
+    const rawFiles: File[] = Object.values(appRawFiles).filter(Boolean) as File[];
 
     const payload: Partial<RPTApplicationRecord> = {
       controlNumber: `RPT-QC-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`,
@@ -938,12 +885,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
       email: appForm.email,
       mobileNumber: appForm.mobileNumber,
       service: appForm.service,
-      tin: appForm.tin,
-      workflowStage: "Submitted",
-      complianceRemarks: "",
-      transferTaxStatus: appForm.service === "Transfer of Ownership" ? "Not Assessed" : "Not Applicable",
-      transferTaxAmount: 0,
-      taxDeclarationIssued: false,
       propertyLocation: appForm.propertyLocation,
       barangay: appForm.barangay,
       propertyType: appForm.propertyType,
@@ -954,7 +895,8 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
     };
 
     try {
-      await saveRPTApplication(payload);
+      // Pass raw files separately so saveRPTApplication sends them as multipart/form-data
+      await saveRPTApplication(payload, rawFiles);
       showToast("Application submitted successfully to the City Assessor's Office!", "success");
       setAppNotice(`Application created with Control No: ${payload.controlNumber}`);
       loadApplications();
@@ -966,25 +908,32 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
     }
   };
 
-  const handleTransferTaxPayment = async (app: RPTApplicationRecord) => {
-    const amount = Number((app as any).transferTaxAmount || (app as any).paymentAmount || 0);
-    if (app.service !== "Transfer of Ownership") return;
-    if (app.status !== "For Payment" || amount <= 0) {
-      showToast("The City Assessor has not posted a Transfer Tax bill for payment yet.", "info");
+  const handleTransferTaxPayment = async (application: RPTApplicationRecord) => {
+    const amount = Number(application.paymentAmount || 0);
+    if (!amount || amount <= 0) {
+      showToast("The City Assessor has not posted a Transfer Tax amount yet.", "info");
       return;
     }
+    if (!application.email) {
+      showToast("A valid email address is required before online payment.", "error");
+      return;
+    }
+
+    setIsTransferTaxPaying(true);
     try {
-      const result = await createTransferTaxCheckout({
-        applicationId: String(app.id),
+      const checkout = await createTransferTaxCheckout({
+        applicationId: String(application.id),
         amount,
-        customerName: currentUser?.fullname || app.ownerName || app.applicantName,
-        customerEmail: currentUser?.email || app.email || "citizen@gov.ph",
-        customerPhone: app.mobileNumber,
-        description: `Quezon City Transfer Tax - ${app.controlNumber}`,
+        customerName: application.applicantName || application.ownerName || "Taxpayer",
+        customerEmail: application.email,
+        customerPhone: application.mobileNumber,
+        description: `Transfer Tax - ${application.controlNumber || application.taxDeclarationNumber || "RPT Application"}`,
       });
-      window.location.href = result.checkoutUrl;
+      window.location.assign(checkout.checkoutUrl);
     } catch (error: any) {
-      showToast(error?.message || "Unable to open Transfer Tax payment.", "error");
+      showToast(error?.message || "Unable to start Transfer Tax payment.", "error");
+    } finally {
+      setIsTransferTaxPaying(false);
     }
   };
 
@@ -996,6 +945,8 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
       }}
       className="rpt-portal min-h-screen flex flex-col bg-[#F4F6F9] text-slate-800 font-sans transition-all duration-300"
     >
+      <UnifiedHeader />
+
       <style>{`
         .rpt-portal {
           --rpt-blue: #1D3F99;
@@ -1188,7 +1139,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
           font-family: inherit;
         }
       `}</style>
-      <div>
+      <div className="flex-1">
 
         {/* Global Toast Alert */}
         {toastMessage && (
@@ -1231,21 +1182,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                     <div className="rpt-nav-row border-b pb-4 flex items-center gap-6">
                       <button
                         type="button"
-                        onClick={() => {
-                          window.history.pushState({}, "", "/citizen-rpt?view=form");
-                          window.dispatchEvent(new PopStateEvent("popstate"));
-                        }}
-                        className="rpt-nav-button cursor-pointer"
-                      >
-                        [ SUBMIT RPT ]
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          window.history.pushState({}, "", "/citizen-rpt?view=status");
-                          window.dispatchEvent(new PopStateEvent("popstate"));
-                        }}
+                        onClick={() => setActivePortalTab("status")}
                         className="rpt-nav-button cursor-pointer"
                       >
                         [ MY APPLICATIONS ]
@@ -1655,6 +1592,17 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
           {/* VIEW: ASSESSOR APPLICATIONS FORM */}
           {activePortalTab === "application" && (
             <div className="rpt-main-shell p-6 sm:p-8 space-y-8">
+              {/* Back Home button row */}
+              <div className="mb-1">
+                <button
+                  type="button"
+                  onClick={() => setActivePortalTab("search")}
+                  className="rpt-back cursor-pointer"
+                >
+                  ← Back to Home
+                </button>
+              </div>
+
               <div className="border-b border-slate-200 pb-4">
                 <p className="text-[11px] font-bold uppercase tracking-wider text-[#0284C7]">OFFICE OF THE CITY ASSESSOR</p>
                 <h2 className="text-2xl font-extrabold text-[#0B3B60]">Real Property Tax Service Request</h2>
@@ -1687,7 +1635,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                           <option key={s} value={s}>{s}</option>
                         ))}
                       </select>
-                      <p className="text-[10px] leading-4 text-slate-500 mt-2">{serviceGuideText[appForm.service]}</p>
                     </div>
                     <div className="space-y-1.5">
                       <label className="font-bold text-slate-700">Applying As *</label>
@@ -1744,10 +1691,18 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                       <label className="font-bold text-slate-700">Mobile Number (PH) *</label>
                       <input
                         type="tel"
+                        inputMode="numeric"
                         required
+                        maxLength={11}
+                        pattern="[0-9]{11}"
                         placeholder="09171234567"
                         value={appForm.mobileNumber}
-                        onChange={(e) => setAppForm({ ...appForm, mobileNumber: e.target.value })}
+                        onChange={(e) =>
+                          setAppForm({
+                            ...appForm,
+                            mobileNumber: e.target.value.replace(/\D/g, "").slice(0, 11),
+                          })
+                        }
                         className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
                       />
                     </div>
@@ -1755,9 +1710,17 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                       <label className="font-bold text-slate-700">TIN Number</label>
                       <input
                         type="text"
-                        placeholder="000-000-000"
+                        inputMode="numeric"
+                        maxLength={14}
+                        pattern="[0-9]{9,14}"
+                        placeholder="00000000000000"
                         value={appForm.tin}
-                        onChange={(e) => setAppForm({ ...appForm, tin: e.target.value })}
+                        onChange={(e) =>
+                          setAppForm({
+                            ...appForm,
+                            tin: e.target.value.replace(/\D/g, "").slice(0, 14),
+                          })
+                        }
                         className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
                       />
                     </div>
@@ -1824,24 +1787,50 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                   <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-800 border-b border-slate-100 pb-2 mb-4">
                     4. Documentary Requirements (PDF / Images)
                   </h3>
-                  <p className="text-[11px] text-slate-500 mb-4">The checklist changes according to the selected City Assessor service. Submit complete documents so the application can enter evaluation.</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
-                    {(serviceDocumentRequirements[appForm.service] || []).map((req) => (
-                      <div key={req.key} className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
-                        <span className="font-bold text-slate-800 block">{req.label} {(req.required || (req.key === "authorization" && appForm.applicantType === "Authorized Representative")) && <span className="text-rose-600">*</span>}</span>
-                        <p className="text-[10px] text-slate-500">{req.help}</p>
-                        <input
-                          type="file"
-                          required={req.required || (req.key === "authorization" && appForm.applicantType === "Authorized Representative")}
-                          accept="image/*,.pdf"
-                          onChange={(e) => handleAppFileChange(e, req.key)}
-                          className="text-xs file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#0B3B60] file:text-white cursor-pointer"
-                        />
-                        {appDocuments[req.key]?.name && (
-                          <p className="text-[11px] font-mono text-emerald-700 font-bold">✓ {appDocuments[req.key].name}</p>
-                        )}
-                      </div>
-                    ))}
+                    <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+                      <span className="font-bold text-slate-800 block">Proof of Ownership *</span>
+                      <p className="text-[10px] text-slate-500">Deed of Absolute Sale, Transfer Certificate of Title (TCT)</p>
+                      <input
+                        type="file"
+                        required
+                        accept="image/*,.pdf"
+                        onChange={(e) => handleAppFileChange(e, "ownershipProof")}
+                        className="text-xs file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#0B3B60] file:text-white cursor-pointer"
+                      />
+                      {appDocuments.ownershipProof.name && (
+                        <p className="text-[11px] font-mono text-emerald-700 font-bold">✓ {appDocuments.ownershipProof.name}</p>
+                      )}
+                    </div>
+
+                    <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+                      <span className="font-bold text-slate-800 block">Valid Government ID *</span>
+                      <p className="text-[10px] text-slate-500">Passport, UMID, Driver's License of Owner/Applicant</p>
+                      <input
+                        type="file"
+                        required
+                        accept="image/*,.pdf"
+                        onChange={(e) => handleAppFileChange(e, "validId")}
+                        className="text-xs file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#0B3B60] file:text-white cursor-pointer"
+                      />
+                      {appDocuments.validId.name && (
+                        <p className="text-[11px] font-mono text-emerald-700 font-bold">✓ {appDocuments.validId.name}</p>
+                      )}
+                    </div>
+
+                    <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+                      <span className="font-bold text-slate-800 block">Latest Tax Receipt / Tax Dec</span>
+                      <p className="text-[10px] text-slate-500">Official Receipt or Copy of Previous Assessment</p>
+                      <input
+                        type="file"
+                        accept="image/*,.pdf"
+                        onChange={(e) => handleAppFileChange(e, "taxRecord")}
+                        className="text-xs file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#0B3B60] file:text-white cursor-pointer"
+                      />
+                      {appDocuments.taxRecord.name && (
+                        <p className="text-[11px] font-mono text-emerald-700 font-bold">✓ {appDocuments.taxRecord.name}</p>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -1861,6 +1850,17 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
           {/* VIEW: APPLICATION STATUS TRACKER */}
           {activePortalTab === "status" && (
             <div className="rpt-main-shell p-6 sm:p-8 space-y-6">
+              {/* Back Home button row */}
+              <div className="mb-1">
+                <button
+                  type="button"
+                  onClick={() => setActivePortalTab("search")}
+                  className="rpt-back cursor-pointer"
+                >
+                  ← Back to Home
+                </button>
+              </div>
+
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
                 <div>
                   <h2 className="text-xl font-extrabold text-[#0B3B60]">Real Property Applications Status</h2>
@@ -1876,6 +1876,12 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                 </button>
               </div>
 
+              {transferTaxPaymentNotice && (
+                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-emerald-800 font-semibold">
+                  ✓ {transferTaxPaymentNotice}
+                </div>
+              )}
+
               {applications.length === 0 ? (
                 <div className="p-12 text-center text-slate-400 text-xs italic bg-slate-50 rounded-2xl border border-dashed">
                   No submitted applications found. Click "+ New Service Request" to submit one.
@@ -1890,6 +1896,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                         <th className="p-4">Owner / Applicant</th>
                         <th className="p-4">Location</th>
                         <th className="p-4">Status</th>
+                        <th className="p-4">Payment</th>
                         <th className="p-4">Filed Date</th>
                         <th className="p-4 text-right">Action</th>
                       </tr>
@@ -1904,15 +1911,26 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                           <td className="p-4">
                             <span
                               className={`px-3 py-1 rounded-full text-[10px] font-bold ${
-                                app.status === "Approved" || app.status === "Ready for Release"
+                                app.status === "Approved" || app.status === "Ready for Release" || app.status === "Payment Completed"
                                   ? "bg-emerald-100 text-emerald-800"
                                   : app.status === "Rejected"
                                   ? "bg-rose-100 text-rose-800"
+                                  : app.status === "For Payment"
+                                  ? "bg-blue-100 text-blue-800"
                                   : "bg-amber-100 text-amber-800"
                               }`}
                             >
                               {app.status}
                             </span>
+                          </td>
+                          <td className="p-4">
+                            {app.service === "Transfer of Ownership" && Number(app.paymentAmount || 0) > 0 ? (
+                              <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${app.paymentStatus === "Paid" ? "bg-emerald-100 text-emerald-800" : "bg-blue-100 text-blue-800"}`}>
+                                {app.paymentStatus === "Paid" ? "PAID" : `₱${Number(app.paymentAmount).toLocaleString("en-PH", { minimumFractionDigits: 2 })} DUE`}
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-slate-400">Not assessed</span>
+                            )}
                           </td>
                           <td className="p-4 font-mono text-slate-500">{app.filedDate}</td>
                           <td className="p-4 text-right">
@@ -2620,26 +2638,35 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
               </div>
             </div>
 
-            {selectedAppDetail.service === "Transfer of Ownership" && Number((selectedAppDetail as any).paymentAmount || 0) > 0 && (
-              <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 space-y-3">
+            {selectedAppDetail.service === "Transfer of Ownership" && Number(selectedAppDetail.paymentAmount || 0) > 0 && (
+              <div className="p-4 rounded-2xl border border-blue-200 bg-blue-50 space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-blue-700">Transfer Tax Bill</p>
-                    <p className="text-lg font-black text-[#0B3B60]">{formatCurrency(Number((selectedAppDetail as any).paymentAmount || 0))}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-blue-700">Transfer Tax Assessment</p>
+                    <p className="text-xl font-black text-[#0B3B60]">{formatCurrency(Number(selectedAppDetail.paymentAmount))}</p>
                   </div>
-                  <span className="text-[10px] font-bold px-2 py-1 rounded-lg bg-white border border-blue-200 text-blue-700">{(selectedAppDetail as any).paymentStatus || "Pending"}</span>
+                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${selectedAppDetail.paymentStatus === "Paid" ? "bg-emerald-100 text-emerald-800" : "bg-white text-blue-800 border border-blue-200"}`}>
+                    {selectedAppDetail.paymentStatus === "Paid" ? "PAID" : "FOR PAYMENT"}
+                  </span>
                 </div>
-                {selectedAppDetail.status === "For Payment" && (selectedAppDetail as any).paymentStatus !== "Paid" && (
+                <p className="text-[11px] text-blue-800 leading-relaxed">
+                  The City Assessor has completed the assessment. Pay the posted Transfer Tax online to continue the ownership-transfer process.
+                </p>
+                {selectedAppDetail.paymentStatus === "Paid" ? (
+                  <div className="space-y-1 text-[11px] text-emerald-800 font-semibold">
+                    <p>✓ Payment confirmed</p>
+                    {selectedAppDetail.officialReceiptNumber && <p>Official Receipt: <span className="font-mono">{selectedAppDetail.officialReceiptNumber}</span></p>}
+                    {selectedAppDetail.paymentReference && <p>Reference: <span className="font-mono">{selectedAppDetail.paymentReference}</span></p>}
+                  </div>
+                ) : (
                   <button
                     type="button"
+                    disabled={isTransferTaxPaying}
                     onClick={() => void handleTransferTaxPayment(selectedAppDetail)}
-                    className="w-full bg-[#1D3F99] hover:bg-[#17357F] text-white font-extrabold py-3 rounded-xl text-xs transition cursor-pointer"
+                    className="w-full bg-[#1D3F99] hover:bg-[#17357F] disabled:opacity-50 text-white font-extrabold py-3 rounded-xl text-xs uppercase tracking-wide shadow-sm transition"
                   >
-                    Pay Transfer Tax Online →
+                    {isTransferTaxPaying ? "Opening Secure Payment..." : "Pay Transfer Tax →"}
                   </button>
-                )}
-                {(selectedAppDetail as any).officialReceiptNumber && (
-                  <p className="text-[10px] text-slate-600">Official Receipt: <strong className="font-mono">{(selectedAppDetail as any).officialReceiptNumber}</strong></p>
                 )}
               </div>
             )}

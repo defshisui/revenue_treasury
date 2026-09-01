@@ -9,26 +9,11 @@ import {
   updateRptApplicationStatus,
   updateLguMasterRptRecord,
   deleteLguMasterRptRecord,
-  type RPTApplicationRecord,
-  getRPTServiceRequirements
+  type RPTApplicationRecord
 } from '../services/realpropertytaxService';
 import { API_BASE_URL } from '../config/api';
 
-type ExtendedStatusType =
-  | StatusType
-  | 'Submitted'
-  | 'For Review'
-  | 'Under Evaluation'
-  | 'For Compliance'
-  | 'For Payment'
-  | 'Field Inspection Scheduled'
-  | 'Processing'
-  | 'Approved'
-  | 'Ready for Release'
-  | 'Completed'
-  | 'Rejected'
-  | 'Digital Certificate Issued'
-  | 'Archived';
+type ExtendedStatusType = StatusType | 'Archived';
 
 export interface LguMasterProperty {
   id: number | string;
@@ -467,19 +452,6 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
   const handleUpdateStatus = async (newStatus: ExtendedStatusType) => {
     if (!currentApp) return;
 
-    if (newStatus === 'Ready for Release' || newStatus === 'Approved') {
-      const docs = currentApp.documents || [];
-      const pendingDocs = docs.filter((doc) => doc.status !== 'Verified');
-      if (pendingDocs.length > 0) {
-        triggerToast('Verify all submitted documents before approval/release.', 'warning');
-        return;
-      }
-      if (currentApp.category === 'Transfer of Ownership' && currentApp.paymentStatus !== 'Paid') {
-        triggerToast('Transfer Tax must be paid before the transfer can be approved for release.', 'warning');
-        return;
-      }
-    }
-
     // Keep the admin UI and backend/database in sync.
     try {
       const result = await updateRptApplicationStatus(
@@ -539,9 +511,6 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
           paymentAmount: amount,
           paymentStatus: 'Pending',
           paymentDueDate: currentApp.paymentDueDate,
-          transferTaxAmount: amount,
-          transferTaxStatus: 'For Payment',
-          workflowStage: 'For Payment',
         }
       );
 
@@ -561,14 +530,6 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
 
   const handleDigitalRelease = async () => {
     if (!currentApp) return;
-    if (currentApp.status !== 'Approved' && currentApp.status !== 'Ready for Release') {
-      triggerToast('Approve the application before issuing the digital certificate.', 'warning');
-      return;
-    }
-    if (currentApp.category === 'Transfer of Ownership' && currentApp.paymentStatus !== 'Paid') {
-      triggerToast('Transfer Tax must be paid before issuing the new Tax Declaration / certificate.', 'warning');
-      return;
-    }
     const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 16);
     const qrCode = `QC-RPT-${currentApp.referenceNumber}-${Date.now()}`;
 
@@ -589,7 +550,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
 
     // Persist the final status to the database so it survives a page refresh
     try {
-      await updateRptApplicationStatus(String(currentApp.id), 'Digital Certificate Issued', 'Digital certificate issued after completed assessment workflow.', { workflowStage: 'Completed', transferTaxStatus: currentApp.category === 'Transfer of Ownership' ? 'Paid' : 'Not Applicable' });
+      await updateRptApplicationStatus(String(currentApp.id), 'Digital Certificate Issued');
     } catch (err) {
       console.error('Failed to persist Digital Certificate Issued status:', err);
     }
@@ -846,7 +807,6 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                   <option value="New Assessment / Reassessment / Reclassification">New Assessment</option>
                   <option value="Correction / Updating / Revision">Correction</option>
                   <option value="Declaration of New / Undeclared Land">Undeclared Land</option>
-                  <option value="Cancellation of Assessment Records">Cancellation of Assessment</option>
                 </select>
                 <select
                   value={selectedStatusFilter}
@@ -985,16 +945,6 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                     )}
                   </div>
                 )}
-
-                <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800">
-                  <h3 className="text-xs font-black uppercase tracking-wide text-slate-700 dark:text-slate-300">Service Checklist</h3>
-                  <p className="text-[11px] text-slate-500 mt-1">{getRPTServiceRequirements(currentApp.category).description}</p>
-                  <div className="flex flex-wrap gap-2 mt-3">
-                    {getRPTServiceRequirements(currentApp.category).required.map((key) => (
-                      <span key={key} className="px-2 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[10px] font-bold text-slate-600 dark:text-slate-300">{key}</span>
-                    ))}
-                  </div>
-                </div>
 
                 <div className="space-y-3">
                   <h3 className="text-xs font-bold uppercase text-slate-700 dark:text-slate-300">

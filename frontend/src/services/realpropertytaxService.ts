@@ -7,12 +7,6 @@ export interface RPTApplicationRecord {
   email?: string;
   mobileNumber?: string;
   service?: string;
-  tin?: string;
-  workflowStage?: string;
-  complianceRemarks?: string;
-  transferTaxAmount?: number;
-  transferTaxStatus?: 'Not Applicable' | 'Not Assessed' | 'For Payment' | 'Paid';
-  taxDeclarationIssued?: boolean;
   filedDate?: string;
   status: string;
   penalty?: number;
@@ -63,37 +57,6 @@ export interface RPTApplicationRecord {
 }
 
 import { API_BASE_URL } from '../config/api';
-export const RPT_SERVICE_REQUIREMENTS: Record<string, { required: string[]; description: string }> = {
-  "Transfer of Ownership": {
-    required: ["titleTransfer", "deedOfConveyance", "validId", "taxRecord", "transferTaxReceipt", "eCAR", "propertyPhoto"],
-    description: "Transfer of an existing property to a new owner based on the new TCT/CCT and supporting transfer documents."
-  },
-  "Consolidation / Segregation": {
-    required: ["titleTransfer", "subdivisionConsolidationPlan", "validId", "taxRecord", "propertyPhoto"],
-    description: "Consolidation or subdivision/segregation of real property records."
-  },
-  "New Assessment / Reassessment / Reclassification": {
-    required: ["validId", "taxRecord", "propertyPhoto", "assessmentSupportingDocument"],
-    description: "New assessment, reassessment, or reclassification based on the property's actual use and supporting documents."
-  },
-  "Correction / Updating / Revision": {
-    required: ["validId", "taxRecord", "correctionSupportingDocument"],
-    description: "Correction or updating of assessment records and property information."
-  },
-  "Declaration of New / Undeclared Land": {
-    required: ["titleTransfer", "validId", "propertyPhoto", "assessmentSupportingDocument"],
-    description: "Declaration of a titled but previously undeclared property."
-  },
-  "Cancellation of Assessment Records": {
-    required: ["validId", "taxRecord", "cancellationSupportingDocument"],
-    description: "Request to cancel an assessment record subject to Assessor validation."
-  }
-};
-
-export function getRPTServiceRequirements(service?: string) {
-  return RPT_SERVICE_REQUIREMENTS[service || "Transfer of Ownership"] || RPT_SERVICE_REQUIREMENTS["Transfer of Ownership"];
-}
-
 
 export const getRPTApplications = async (): Promise<RPTApplicationRecord[]> => {
   try {
@@ -111,12 +74,6 @@ export const getRPTApplications = async (): Promise<RPTApplicationRecord[]> => {
       email: row.email,
       mobileNumber: row.mobile_number || row.mobileNumber,
       service: row.service,
-      tin: row.tin || '',
-      workflowStage: row.workflow_stage || row.workflowStage || row.status || '',
-      complianceRemarks: row.compliance_remarks || row.complianceRemarks || '',
-      transferTaxAmount: Number(row.transfer_tax_amount ?? row.transferTaxAmount ?? 0),
-      transferTaxStatus: row.transfer_tax_status || row.transferTaxStatus || 'Not Assessed',
-      taxDeclarationIssued: Boolean(row.tax_declaration_issued ?? row.taxDeclarationIssued ?? false),
       filedDate: row.filed_date || row.filedDate,
       status: row.status || 'Pending',
       penalty: row.penalty ? parseFloat(row.penalty) : 0,
@@ -288,7 +245,7 @@ export const updateRptApplicationStatus = async (
   id: string,
   status: string,
   notes?: string,
-  options?: { paymentAmount?: number; paymentStatus?: string; paymentDueDate?: string; assignedOfficer?: string; workflowStage?: string; complianceRemarks?: string; transferTaxStatus?: string; transferTaxAmount?: number; officialReceiptNumber?: string; paymentReference?: string; paymentMethod?: string; paymentDate?: string }
+  options?: { paymentAmount?: number; paymentStatus?: string; paymentDueDate?: string; assignedOfficer?: string }
 ): Promise<any> => {
   const response = await fetch(`${API_BASE_URL}/citizen-rpt-applications/${id}/status`, {
     method: 'PATCH',
