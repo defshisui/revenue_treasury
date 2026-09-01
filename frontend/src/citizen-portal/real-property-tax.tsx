@@ -1777,6 +1777,19 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
           {/* VIEW: APPLICATION STATUS TRACKER */}
           {activePortalTab === "status" && (
             <div className="rpt-main-shell p-6 sm:p-8 space-y-6">
+              {/* Back Home button row */}
+              <div className="mb-1">
+                <button
+                  onClick={() => setActivePortalTab("search")}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#0B3B60] hover:text-sky-600 transition-colors group cursor-pointer"
+                >
+                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 group-hover:bg-sky-100 transition-colors text-sm">
+                    ←
+                  </span>
+                  Back to Home
+                </button>
+              </div>
+
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
                 <div>
                   <h2 className="text-xl font-extrabold text-[#0B3B60]">Real Property Applications Status</h2>
