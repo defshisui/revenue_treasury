@@ -130,7 +130,15 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
   isCollapsed
 }) => {
 
-  const [mainViewTab, setMainViewTab] = useState<'master' | 'queue' | 'payments' | 'citizenAudit'>('master');
+  const [mainViewTab, setMainViewTab] = useState<'master' | 'queue' | 'payments' | 'citizenAudit'>(
+    () => (localStorage.getItem('rpt_admin_tab') as 'master' | 'queue' | 'payments' | 'citizenAudit') || 'master'
+  );
+
+  // Persist active tab across refreshes
+  const switchMainViewTab = (tab: 'master' | 'queue' | 'payments' | 'citizenAudit') => {
+    setMainViewTab(tab);
+    localStorage.setItem('rpt_admin_tab', tab);
+  };
   const [queueTab, setQueueTab] = useState<'Active' | 'Archived'>('Active');
 
   const [masterProperties, setMasterProperties] = useState<LguMasterProperty[]>([]);
@@ -228,6 +236,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     }
   };
 
+  const AUDIT_STATUSES = ['Digital Certificate Issued', 'Completed', 'Archived'];
+
   const loadApplications = async () => {
     try {
       const data = await getRPTApplications();
@@ -300,9 +310,16 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
           notificationLogs: item.notificationLogs || [],
         };
       });
-      setApplications(mapped);
-      if (mapped.length > 0) {
-        setSelectedAppId(mapped[0].id);
+
+      // Split by status: completed/issued apps go to audit trail, others stay in queue
+      const auditApps = mapped.filter((a) => AUDIT_STATUSES.includes(a.status as string));
+      const activeApps = mapped.filter((a) => !AUDIT_STATUSES.includes(a.status as string));
+
+      setApplications(activeApps);
+      setCitizenAuditTrail(auditApps);
+
+      if (activeApps.length > 0) {
+        setSelectedAppId(activeApps[0].id);
       }
     } catch (err) {
       console.error('Failed to load RPT applications:', err);
@@ -461,7 +478,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     }
   };
 
-  const handleDigitalRelease = () => {
+  const handleDigitalRelease = async () => {
     if (!currentApp) return;
     const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 16);
     const qrCode = `QC-RPT-${currentApp.referenceNumber}-${Date.now()}`;
@@ -481,9 +498,16 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
       },
     };
 
+    // Persist the final status to the database so it survives a page refresh
+    try {
+      await updateRptApplicationStatus(String(currentApp.id), 'Digital Certificate Issued');
+    } catch (err) {
+      console.error('Failed to persist Digital Certificate Issued status:', err);
+    }
+
     setApplications((prev) => prev.filter((a) => a.id !== currentApp.id));
     setCitizenAuditTrail((prev) => [releasedApp, ...prev]);
-    setMainViewTab('citizenAudit');
+    switchMainViewTab('citizenAudit');
     triggerToast(`Digital Tax Certificate issued for ${currentApp.referenceNumber}. Transferred to Audit Trail.`, 'success');
   };
 
@@ -529,7 +553,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
 
         <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-950 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-x-auto">
           <button
-            onClick={() => setMainViewTab('master')}
+            onClick={() => switchMainViewTab('master')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${mainViewTab === 'master'
                 ? 'bg-blue-600 text-white shadow-md'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -538,7 +562,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
             <span>Master Database ({masterProperties.length})</span>
           </button>
           <button
-            onClick={() => setMainViewTab('queue')}
+            onClick={() => switchMainViewTab('queue')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${mainViewTab === 'queue'
                 ? 'bg-blue-600 text-white shadow-md'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -547,7 +571,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
             <span>Citizen Applications ({applications.length})</span>
           </button>
           <button
-            onClick={() => setMainViewTab('payments')}
+            onClick={() => switchMainViewTab('payments')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${mainViewTab === 'payments'
                 ? 'bg-blue-600 text-white shadow-md'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -556,7 +580,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
             <span>Payment Ledger ({paymentsLedger.length})</span>
           </button>
           <button
-            onClick={() => setMainViewTab('citizenAudit')}
+            onClick={() => switchMainViewTab('citizenAudit')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${mainViewTab === 'citizenAudit'
                 ? 'bg-blue-600 text-white shadow-md'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
