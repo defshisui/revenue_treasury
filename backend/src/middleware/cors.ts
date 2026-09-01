@@ -1,4 +1,4 @@
-// src/middleware/cors.ts
+﻿// src/middleware/cors.ts
 import cors from 'cors';
 
 const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173')
@@ -18,7 +18,7 @@ export const corsMiddleware = cors({
     ) {
       return callback(null, true);
     }
-    return callback(null, true); // Permissive — customize for strict isolation
+    return callback(null, true); // Permissive customize for strict isolation
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],

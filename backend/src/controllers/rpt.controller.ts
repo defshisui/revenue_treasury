@@ -1,4 +1,4 @@
-// src/controllers/rpt.controller.ts
+﻿// src/controllers/rpt.controller.ts
 import type { Request, Response } from 'express';
 import { randomUUID } from 'crypto';
 import pool from '../db.js';
@@ -450,7 +450,7 @@ export async function createRptPayment(req: Request, res: Response): Promise<voi
 
     await recordAudit(req, 'AUD-RPT-PAY', ownerName, 'Citizen',
       'RPT Module', 'RPT_PAYMENT_PROCESSED', 'INFO', null,
-      `Paid ₱${amount} for TDN ${taxDeclarationNumber} via ${paymentMethod} (OR: ${officialReceiptNumber})`);
+      `Paid ${amount} for TDN ${taxDeclarationNumber} via ${paymentMethod} (OR: ${officialReceiptNumber})`);
 
     res.status(201).json({ success: true, message: 'Payment recorded successfully', officialReceiptNumber, paymentReference });
   } catch (err) {
@@ -527,7 +527,7 @@ export async function createGroupRptPayment(req: Request, res: Response): Promis
 
     await recordAudit(req, 'AUD-RPT-GROUP-PAY', customerEmail || customerName || 'Citizen', 'Citizen',
       'RPT Module', 'RPT_GROUP_PAYMENT_COMPLETED', 'INFO', null,
-      `Settled Group Bill Set (${items.length} TDNs) total ₱${totalPaid} via ${paymentMethod} (eOR: ${generatedGroupOR})`);
+      `Settled Group Bill Set (${items.length} TDNs) total ${totalPaid} via ${paymentMethod} (eOR: ${generatedGroupOR})`);
 
     res.status(201).json({
       success: true,

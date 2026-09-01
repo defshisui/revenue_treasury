@@ -1,4 +1,4 @@
-// src/routes/business.routes.ts
+﻿// src/routes/business.routes.ts
 import { Router } from 'express';
 import multer from 'multer';
 import {
@@ -11,7 +11,7 @@ import {
     createAppointment,
     getAppointments,
     updateAppointmentStatus,
-    deleteAppointment // 👈 Ensure this is imported from your controller
+    deleteAppointment // Ensure this is imported from your controller
 } from '../controllers/business.controller.js';
 
 // Use memoryStorage so file.buffer can be converted to base64 for previews[cite: 17]
@@ -42,6 +42,6 @@ router.post('/appointments', createAppointment);
 router.get('/appointments', getAppointments);
 router.get('/admin/appointments', getAppointments);
 router.patch('/admin/appointments/:id/status', updateAppointmentStatus);
-router.delete('/admin/appointments/:id', deleteAppointment); // 👈 Admin Delete Appointment Endpoint
+router.delete('/admin/appointments/:id', deleteAppointment); // Admin Delete Appointment Endpoint
 
 export default router;

@@ -1,4 +1,4 @@
-// src/services/paymongo.service.ts
+﻿// src/services/paymongo.service.ts
 import crypto from 'crypto';
 import { AntiFraudService } from './antiFraud.service.js';
 
@@ -50,7 +50,7 @@ export class PayMongoService {
     amount: number;
     raw: any;
   }> {
-    // PayMongo QR Ph minimum is ₱1.00.
+    // PayMongo QR Ph minimum is PHP 1.00.
     // PHP amounts are converted to centavos.
     const amountInCentavos = Math.round(params.amount * 100);
 
@@ -92,7 +92,7 @@ export class PayMongoService {
         'Failed to create PayMongo Payment Intent';
 
       console.error(
-        '❌ PayMongo Payment Intent Error:',
+        'PayMongo Payment Intent Error:',
         data
       );
 
@@ -267,7 +267,7 @@ export class PayMongoService {
     }
     // ---------------------------
 
-    // PayMongo PHP minimum is ₱1.00.
+    // PayMongo PHP minimum is PHP 1.00.
     // Convert PHP to centavos.
     const amountInCentavos = Math.round(amount * 100);
 
@@ -348,7 +348,7 @@ export class PayMongoService {
         'Failed to create PayMongo Checkout Session';
 
       console.error(
-        '❌ PayMongo Checkout Session Error:',
+        'PayMongo Checkout Session Error:',
         data
       );
 

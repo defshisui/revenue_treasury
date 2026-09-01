@@ -1,4 +1,4 @@
-// src/init-db.ts
+﻿// src/init-db.ts
 // Initializes all database tables and seeds default admin account
 
 import bcrypt from 'bcryptjs';
@@ -8,7 +8,7 @@ export async function initializeDatabase(): Promise<void> {
   try {
     const client = await pool.connect();
 
-    console.log('✅ Successfully connected to the PostgreSQL database.');
+    console.log(' Successfully connected to the PostgreSQL database.');
 
     client.release();
 
@@ -521,9 +521,9 @@ export async function initializeDatabase(): Promise<void> {
       [hashedRealAdminPassword]
     );
 
-    console.log('✅ Database tables checked/initialized successfully.');
+    console.log(' Database tables checked/initialized successfully.');
   } catch (err) {
     const error = err as Error;
-    console.error('❌ Error initializing database tables:', error.message || error);
+    console.error(' Error initializing database tables:', error.message || error);
   }
 }

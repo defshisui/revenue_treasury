@@ -1,4 +1,4 @@
-// src/controllers/admin.controller.ts
+﻿// src/controllers/admin.controller.ts
 import type { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import path from 'path';
@@ -9,14 +9,14 @@ import { recordAudit } from './audit.controller.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Helper – get client IP
+// Helper  get client IP
 function getIP(req: Request): string {
   const fwd = req.headers['x-forwarded-for'];
   return typeof fwd === 'string' ? fwd.split(',')[0].trim() : req.socket?.remoteAddress || '127.0.0.1';
 }
 
 // ------------------------------------------------------------------
-// GET /admin/profile  – fetch current profile by email
+// GET /admin/profile   fetch current profile by email
 // Body: { email }
 // ------------------------------------------------------------------
 export async function getAdminProfile(req: Request, res: Response): Promise<void> {
@@ -37,7 +37,7 @@ export async function getAdminProfile(req: Request, res: Response): Promise<void
 }
 
 // ------------------------------------------------------------------
-// PATCH /admin/profile  – update name, email, phone, department, address
+// PATCH /admin/profile   update name, email, phone, department, address
 // Body: { currentEmail, fullname, email, phone, department, address }
 // ------------------------------------------------------------------
 export async function updateAdminProfile(req: Request, res: Response): Promise<void> {

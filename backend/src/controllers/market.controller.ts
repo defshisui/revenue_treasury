@@ -1,4 +1,4 @@
-// src/controllers/market.controller.ts
+﻿// src/controllers/market.controller.ts
 import type { Request, Response } from 'express';
 import pool from '../db.js';
 import { recordAudit } from './audit.controller.js';
@@ -292,7 +292,7 @@ export async function fraudScan(req: Request, res: Response): Promise<void> {
     // 2. Financial threshold heuristic
     if (amountDue > 50000) {
       riskScore += 25;
-      flags.push(`High financial exposure detected: ₱${amountDue.toLocaleString()} exceeds standard median threshold.`);
+      flags.push(`High financial exposure detected: ${amountDue.toLocaleString()} exceeds standard median threshold.`);
     }
 
     // 3. Multi-stall collision detection

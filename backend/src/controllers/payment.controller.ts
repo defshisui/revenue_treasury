@@ -1,4 +1,4 @@
-// src/controllers/payment.controller.ts
+﻿// src/controllers/payment.controller.ts
 import type { Request, Response } from 'express';
 import pool from '../db.js';
 import { PayMongoService } from '../services/paymongo.service.js';
@@ -60,7 +60,7 @@ export async function createCheckoutSession(req: Request, res: Response): Promis
   const randomSuffix = Math.floor(100000 + Math.random() * 900000);
 
   let referenceNumber = `PAY-${dateCode}-${randomSuffix}`;
-  let paymentDescription = description || `Municipal Payment - ₱${numericAmount.toFixed(2)}`;
+  let paymentDescription = description || `Municipal Payment - ${numericAmount.toFixed(2)}`;
   let successRedirectUrl = `${cleanFrontendOrigin}/citizen-rpt?payment=success&session_id={CHECKOUT_SESSION_ID}`;
   let cancelRedirectUrl = `${cleanFrontendOrigin}/citizen-rpt?payment=cancelled`;
 
@@ -113,7 +113,7 @@ export async function createCheckoutSession(req: Request, res: Response): Promis
       'PAYMONGO_CHECKOUT_CREATED',
       'INFO',
       null,
-      `Created PayMongo checkout session ${session.id} for ${referenceNumber} (₱${numericAmount.toFixed(2)})`
+      `Created PayMongo checkout session ${session.id} for ${referenceNumber} (${numericAmount.toFixed(2)})`
     );
 
     res.status(200).json({
@@ -242,7 +242,7 @@ export async function verifySession(req: Request, res: Response): Promise<void> 
       'PAYMENT_VERIFIED_SUCCESS',
       'INFO',
       null,
-      `Verified PayMongo payment session ${sessionId}. Issued O.R. ${officialReceiptNumber} for ₱${session.amount.toFixed(2)}`
+      `Verified PayMongo payment session ${sessionId}. Issued O.R. ${officialReceiptNumber} for ${session.amount.toFixed(2)}`
     );
 
     res.status(200).json({
@@ -286,7 +286,7 @@ export async function handlePayMongoWebhook(
 
     if (!isValid) {
       console.warn(
-        '⚠️ Rejected PayMongo webhook with invalid signature.'
+        ' Rejected PayMongo webhook with invalid signature.'
       );
 
       res.status(401).json({
@@ -307,11 +307,11 @@ export async function handlePayMongoWebhook(
     const eventType = eventAttributes?.type;
     const eventData = eventAttributes?.data;
 
-    console.log(`🔔 PayMongo Webhook received: ${eventType}`);
+    console.log(` PayMongo Webhook received: ${eventType}`);
 
     // We only process successful payment events here.
     if (eventType !== 'payment.paid') {
-      console.log(`ℹ️ Ignoring PayMongo event: ${eventType}`);
+      console.log(` Ignoring PayMongo event: ${eventType}`);
 
       res.status(200).json({
         received: true,
@@ -339,7 +339,7 @@ export async function handlePayMongoWebhook(
     const sourceType =
       paymentAttributes.source?.type || 'unknown';
 
-    console.log('💰 Payment paid:', {
+    console.log(' Payment paid:', {
       paymentId,
       paymentIntentId,
       paymentStatus,
@@ -359,7 +359,7 @@ export async function handlePayMongoWebhook(
 
     if (!paymentIntentId) {
       console.error(
-        '❌ payment.paid event does not contain payment_intent_id.'
+        ' payment.paid event does not contain payment_intent_id.'
       );
 
       res.status(400).json({
@@ -398,7 +398,7 @@ export async function handlePayMongoWebhook(
 
     if (!intentResponse.ok) {
       console.error(
-        '❌ Failed to retrieve PayMongo Payment Intent:',
+        ' Failed to retrieve PayMongo Payment Intent:',
         intentData
       );
 
@@ -417,7 +417,7 @@ export async function handlePayMongoWebhook(
     const metadata =
       intentAttributes.metadata || {};
 
-    console.log('🔎 Payment Intent metadata:', {
+    console.log(' Payment Intent metadata:', {
       paymentIntentId,
       intentStatus,
       metadata,
@@ -427,7 +427,7 @@ export async function handlePayMongoWebhook(
     // our database.
     if (intentStatus !== 'succeeded') {
       console.warn(
-        `⚠️ Payment Intent ${paymentIntentId} is not succeeded. Current status: ${intentStatus}`
+        ` Payment Intent ${paymentIntentId} is not succeeded. Current status: ${intentStatus}`
       );
 
       res.status(200).json({
@@ -489,7 +489,7 @@ export async function handlePayMongoWebhook(
         'PAYMENT_WEBHOOK_SUCCESS',
         'INFO',
         null,
-        `RPT payment confirmed via ${formattedPaymentMethod}. TDN(s) ${tdns.join(', ')}. Reference ${paymentReference}. Amount ₱${amountPhp.toFixed(2)}. O.R. ${officialReceiptNumber}.`
+        `RPT payment confirmed via ${formattedPaymentMethod}. TDN(s) ${tdns.join(', ')}. Reference ${paymentReference}. Amount ${amountPhp.toFixed(2)}. O.R. ${officialReceiptNumber}.`
       );
 
       res.status(200).json({
@@ -515,7 +515,7 @@ export async function handlePayMongoWebhook(
       metadata.leaseId
     ) {
       console.log(
-        `🏪 Processing market stall payment for lease ${metadata.leaseId}`
+        ` Processing market stall payment for lease ${metadata.leaseId}`
       );
 
       // Check whether the lease is already marked as paid.
@@ -532,14 +532,14 @@ export async function handlePayMongoWebhook(
 
       if (existingLease.rows.length === 0) {
         console.warn(
-          `⚠️ No market lease found for leaseId ${metadata.leaseId}`
+          ` No market lease found for leaseId ${metadata.leaseId}`
         );
       } else if (
         String(existingLease.rows[0].payment_status).toLowerCase() ===
         'paid'
       ) {
         console.log(
-          `ℹ️ Market lease ${metadata.leaseId} is already Paid.`
+          ` Market lease ${metadata.leaseId} is already Paid.`
         );
       } else {
         const leaseResult = await pool.query(
@@ -561,7 +561,7 @@ export async function handlePayMongoWebhook(
 
         if (leaseResult.rows.length > 0) {
           console.log(
-            `✅ Market lease ${metadata.leaseId} marked as PAID.`
+            ` Market lease ${metadata.leaseId} marked as PAID.`
           );
         }
       }
@@ -575,7 +575,7 @@ export async function handlePayMongoWebhook(
         'PAYMENT_WEBHOOK_SUCCESS',
         'INFO',
         null,
-        `Market stall payment confirmed via ${formattedPaymentMethod}. Lease ${metadata.leaseId}. Reference ${paymentReference}. Amount ₱${amountPhp.toFixed(2)}. O.R. ${officialReceiptNumber}.`
+        `Market stall payment confirmed via ${formattedPaymentMethod}. Lease ${metadata.leaseId}. Reference ${paymentReference}. Amount ${amountPhp.toFixed(2)}. O.R. ${officialReceiptNumber}.`
       );
 
       res.status(200).json({
@@ -666,7 +666,7 @@ export async function handlePayMongoWebhook(
         'PAYMENT_WEBHOOK_SUCCESS',
         'INFO',
         null,
-        `RPT payment confirmed via ${formattedPaymentMethod}. TD# ${metadata.taxDeclarationNumber}. Reference ${paymentReference}. Amount ₱${amountPhp.toFixed(2)}. O.R. ${officialReceiptNumber}.`
+        `RPT payment confirmed via ${formattedPaymentMethod}. TD# ${metadata.taxDeclarationNumber}. Reference ${paymentReference}. Amount ${amountPhp.toFixed(2)}. O.R. ${officialReceiptNumber}.`
       );
 
       res.status(200).json({
@@ -712,7 +712,7 @@ export async function handlePayMongoWebhook(
         'PAYMENT_WEBHOOK_SUCCESS',
         'INFO',
         null,
-        `Business tax payment confirmed via ${formattedPaymentMethod}. Tracking #${metadata.businessTrackingNumber}. Reference ${paymentReference}. Amount ₱${amountPhp.toFixed(2)}. O.R. ${officialReceiptNumber}.`
+        `Business tax payment confirmed via ${formattedPaymentMethod}. Tracking #${metadata.businessTrackingNumber}. Reference ${paymentReference}. Amount ${amountPhp.toFixed(2)}. O.R. ${officialReceiptNumber}.`
       );
 
       res.status(200).json({
@@ -735,7 +735,7 @@ export async function handlePayMongoWebhook(
     // PAYMENT RECEIVED BUT NO KNOWN RECORD TYPE
     // =========================================================
     console.warn(
-      '⚠️ PayMongo payment was successful but no recognized metadata was found.',
+      ' PayMongo payment was successful but no recognized metadata was found.',
       {
         paymentId,
         paymentIntentId,
@@ -752,7 +752,7 @@ export async function handlePayMongoWebhook(
       'PAYMENT_WEBHOOK_RECEIVED',
       'INFO',
       null,
-      `PayMongo payment ${paymentId || paymentIntentId} was received successfully, but no recognized record type was found. Reference ${paymentReference}. Amount ₱${amountPhp.toFixed(2)}.`
+      `PayMongo payment ${paymentId || paymentIntentId} was received successfully, but no recognized record type was found. Reference ${paymentReference}. Amount ${amountPhp.toFixed(2)}.`
     );
 
     res.status(200).json({
@@ -767,7 +767,7 @@ export async function handlePayMongoWebhook(
     });
   } catch (err: any) {
     console.error(
-      '❌ Error handling PayMongo webhook:',
+      ' Error handling PayMongo webhook:',
       err
     );
 
@@ -832,7 +832,7 @@ export async function getQrPaymentStatus(
     const paid = status === 'succeeded';
     const metadata = attributes.metadata || {};
 
-    console.log('🔎 QR Payment Status:', {
+    console.log(' QR Payment Status:', {
       paymentIntentId,
       status,
       paid,
@@ -848,7 +848,7 @@ export async function getQrPaymentStatus(
       metadata.businessTrackingNumber
     ) {
       console.log(
-        `🏢 QR payment succeeded for business tax ${metadata.businessTrackingNumber}`
+        QR payment succeeded for business tax ${metadata.businessTrackingNumber}`
       );
 
       const officialReceiptNumber =
@@ -874,11 +874,11 @@ export async function getQrPaymentStatus(
 
       if (businessResult.rows.length > 0) {
         console.log(
-          `✅ Business Tax ${metadata.businessTrackingNumber} marked as PAID.`
+          ` Business Tax ${metadata.businessTrackingNumber} marked as PAID.`
         );
       } else {
         console.warn(
-          `⚠️ Business Tax record not found: ${metadata.businessTrackingNumber}`
+          ` Business Tax record not found: ${metadata.businessTrackingNumber}`
         );
       }
 
@@ -891,7 +891,7 @@ export async function getQrPaymentStatus(
         'PAYMENT_QR_SUCCESS',
         'INFO',
         null,
-        `Business tax payment confirmed via PayMongo QR Ph. Tracking #${metadata.businessTrackingNumber}. Amount ₱${(Number(attributes.amount || 0) / 100).toFixed(2)}. O.R. ${officialReceiptNumber}.`
+        `Business tax payment confirmed via PayMongo QR Ph. Tracking #${metadata.businessTrackingNumber}. Amount ${(Number(attributes.amount || 0) / 100).toFixed(2)}. O.R. ${officialReceiptNumber}.`
       );
     }
 
@@ -904,7 +904,7 @@ export async function getQrPaymentStatus(
       metadata.leaseId
     ) {
       console.log(
-        `🏪 QR payment succeeded for lease ${metadata.leaseId}`
+        QR payment succeeded for lease ${metadata.leaseId}`
       );
 
       const leaseResult = await pool.query(
@@ -923,11 +923,11 @@ export async function getQrPaymentStatus(
 
       if (leaseResult.rows.length > 0) {
         console.log(
-          `✅ Market lease ${metadata.leaseId} marked as PAID.`
+          ` Market lease ${metadata.leaseId} marked as PAID.`
         );
       } else {
         console.warn(
-          `⚠️ Market lease not found: ${metadata.leaseId}`
+          ` Market lease not found: ${metadata.leaseId}`
         );
       }
     }
@@ -963,9 +963,9 @@ export async function getQrPaymentStatus(
         );
 
         if (rptResult.rows.length > 0) {
-          console.log(`✅ RPT ${tdn} marked as PAID.`);
+          console.log(` RPT ${tdn} marked as PAID.`);
         } else {
-          console.warn(`⚠️ RPT record not found: ${tdn}`);
+          console.warn(` RPT record not found: ${tdn}`);
         }
       }
     }
@@ -980,7 +980,7 @@ export async function getQrPaymentStatus(
     });
   } catch (err: any) {
     console.error(
-      '❌ QR payment status error:',
+      ' QR payment status error:',
       err
     );
 
@@ -1068,7 +1068,7 @@ export async function createQrPaymentIntent(
     });
   } catch (err: any) {
     console.error(
-      '❌ QR Ph Payment Intent error:',
+      ' QR Ph Payment Intent error:',
       err
     );
 

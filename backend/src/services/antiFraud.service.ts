@@ -1,4 +1,4 @@
-export interface FraudCheckParams {
+﻿export interface FraudCheckParams {
   ip?: string;
   email?: string;
   username?: string;
@@ -21,7 +21,7 @@ export class AntiFraudService {
 
   /**
    * Hard-block threshold: score must meet/exceed this AND FraudLabs status must be REJECT.
-   * Raised from 70 → 90 to prevent false positives on legitimate government service users.
+   * Raised from 70 to 90 to prevent false positives on legitimate government service users.
    * Override via env: ANTI_FRAUD_SCORE_THRESHOLD
    */
   private static getThreshold(): number {
@@ -66,7 +66,7 @@ export class AntiFraudService {
     const reviewThreshold = this.getReviewThreshold();
 
     if (!apiKey) {
-      console.warn('⚠️ No ANTI_FRAUD_API_KEY provided. Anti-fraud checks are bypassed.');
+      console.warn('No ANTI_FRAUD_API_KEY provided. Anti-fraud checks are bypassed.');
       return {
         score: 0,
         isFraud: false,
@@ -102,7 +102,7 @@ export class AntiFraudService {
 
       if (data?.fraudlabspro_error_code) {
         console.error('FraudLabs Pro error:', data.fraudlabspro_error_code, data.fraudlabspro_message);
-        // API errors → fail open (do not block legitimate users due to API issues)
+        // API errors - fail open (do not block legitimate users due to API issues)
         return { score: 0, isFraud: false, isReview: false, reason: `API Error: ${data.fraudlabspro_message}`, raw: data };
       }
 
@@ -117,13 +117,13 @@ export class AntiFraudService {
       // Dual-condition to minimize false positives on government service citizens.
       const isFraud = score >= threshold && status === 'REJECT';
 
-      // Soft-flag: medium risk — log but allow through
+      // Soft-flag: medium risk - log but allow through
       const isReview = !isFraud && (score >= reviewThreshold || status === 'REVIEW');
 
       if (isFraud) {
-        console.warn(`[AntiFraud] BLOCKED — score=${score}, status=${status}`);
+        console.warn(`[AntiFraud] BLOCKED - score=${score}, status=${status}`);
       } else if (isReview) {
-        console.warn(`[AntiFraud] REVIEW FLAG — score=${score}, status=${status} (allowed through)`);
+        console.warn(`[AntiFraud] REVIEW FLAG - score=${score}, status=${status} (allowed through)`);
       }
 
       return {
@@ -133,13 +133,13 @@ export class AntiFraudService {
         reason: isFraud
           ? `Risk score ${score} exceeds block threshold ${threshold} with status REJECT`
           : isReview
-          ? `Risk score ${score} flagged for review (status: ${status}) — allowed through`
+          ? `Risk score ${score} flagged for review (status: ${status}) - allowed through`
           : `Risk score ${score} is within acceptable range (status: ${status})`,
         raw: data,
       };
     } catch (error: any) {
       console.error('Anti-fraud check failed:', error.message);
-      // Fail open if API is unreachable — do not block legitimate users
+      // Fail open if API is unreachable - do not block legitimate users
       return {
         score: 0,
         isFraud: false,

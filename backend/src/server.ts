@@ -1,4 +1,4 @@
-// src/server.ts
+﻿// src/server.ts
 import dns from 'dns';
 import express from 'express';
 import path from 'path';
@@ -36,13 +36,13 @@ app.set('trust proxy', true);
 app.use(corsMiddleware);
 
 // ==========================================
-// 🚨 FIX: INCREASE PAYLOAD LIMITS FOR BASE64 IMAGES 🚨
+//  FIX: INCREASE PAYLOAD LIMITS FOR BASE64 IMAGES 
 // ==========================================
 app.use(express.json({ limit: '200mb' }));
 app.use(express.urlencoded({ limit: '200mb', extended: true }));
 app.use(express.text({ limit: '200mb' })); // For navigator.sendBeacon (text/plain payloads)
 
-console.log("✅ REAL Express JSON limit successfully set to 200MB!");
+console.log(" REAL Express JSON limit successfully set to 200MB!");
 
 // Static file serving for uploaded documents
 app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
@@ -56,7 +56,7 @@ app.get(['/', '/health'], (_req, res) => {
   });
 });
 
-// ⚠️ TEMPORARY: One-time admin account setup endpoint
+//  TEMPORARY: One-time admin account setup endpoint
 // Call: GET /setup-admin?secret=treasury-setup-2026
 app.get('/setup-admin', async (req, res) => {
   if (req.query.secret !== 'treasury-setup-2026') {
@@ -93,7 +93,7 @@ EmailService.verifyConnection().catch((err: Error) =>
 
 // Start server
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Municipal Treasury Backend running on http://0.0.0.0:${PORT}`);
+  console.log(` Municipal Treasury Backend running on http://0.0.0.0:${PORT}`);
 });
 
 export default app;

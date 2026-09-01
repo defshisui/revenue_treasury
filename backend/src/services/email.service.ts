@@ -1,4 +1,4 @@
-import dns from 'dns';
+﻿import dns from 'dns';
 import nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
 
@@ -219,33 +219,33 @@ export class EmailService {
     const sendgridKey = process.env.SENDGRID_API_KEY?.trim();
 
     if (brevoKey) {
-      console.log('✅ EmailService: Configured with Brevo HTTPS API (Port 443, Railway-ready).');
+      console.log('EmailService: Configured with Brevo HTTPS API (Port 443, Railway-ready).');
       return true;
     }
 
     if (resendKey) {
-      console.log('✅ EmailService: Configured with Resend HTTPS API (Port 443, Railway-ready).');
+      console.log('EmailService: Configured with Resend HTTPS API (Port 443, Railway-ready).');
       return true;
     }
 
     if (sendgridKey) {
-      console.log('✅ EmailService: Configured with SendGrid HTTPS API (Port 443, Railway-ready).');
+      console.log('EmailService: Configured with SendGrid HTTPS API (Port 443, Railway-ready).');
       return true;
     }
 
     if (process.env.DEV_OTP_CONSOLE === 'true' || process.env.BYPASS_EMAIL === 'true') {
-      console.log('⚡ EmailService: DEV_OTP_CONSOLE mode is ACTIVE. OTPs will be printed in server logs.');
+      console.log('EmailService: DEV_OTP_CONSOLE mode is ACTIVE. OTPs will be printed in server logs.');
       return true;
     }
 
     try {
       const transporter = this.getTransporter();
       await transporter.verify();
-      console.log('✅ Nodemailer SMTP verification successful.');
+      console.log('Nodemailer SMTP verification successful.');
       return true;
     } catch (error: any) {
       console.warn(
-        `⚠️ SMTP verification failed (${error?.message || error}). Note: Railway blocks outbound SMTP ports 25, 465, and 587. If running on Railway, add BREVO_API_KEY or RESEND_API_KEY in Railway Variables.`
+        ` SMTP verification failed (${error?.message || error}). Note: Railway blocks outbound SMTP ports 25, 465, and 587. If running on Railway, add BREVO_API_KEY or RESEND_API_KEY in Railway Variables.`
       );
       return false;
     }
@@ -274,7 +274,7 @@ export class EmailService {
     // 1. Check for Development Console Mode (Instant bypass for development/testing)
     if (process.env.DEV_OTP_CONSOLE === 'true' || process.env.BYPASS_EMAIL === 'true') {
       console.log(`\n======================================================`);
-      console.log(`🔑 [DEV_OTP_CONSOLE] ${purpose} OTP for ${toEmail}: ${otp}`);
+      console.log(` [DEV_OTP_CONSOLE] ${purpose} OTP for ${toEmail}: ${otp}`);
       console.log(`======================================================\n`);
       return { success: true, messageId: `dev-console-${Date.now()}` };
     }
@@ -348,7 +348,7 @@ export class EmailService {
                   margin-top:6px;
                 "
               >
-                Republic of the Philippines • Local Government Unit
+                Republic of the Philippines - Local Government Unit
               </div>
             </td>
           </tr>
@@ -439,7 +439,7 @@ export class EmailService {
                         color:#991b1b;
                       "
                     >
-                      ⏱️ This code expires in 5 minutes.
+                       This code expires in 5 minutes.
                     </div>
                     <div
                       style="

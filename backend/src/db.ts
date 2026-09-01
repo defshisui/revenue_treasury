@@ -1,4 +1,4 @@
-// src/db.ts
+﻿// src/db.ts
 import pg from 'pg';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -44,7 +44,7 @@ const poolConfig: pg.PoolConfig = dbConnectionString
 const pool = new Pool(poolConfig);
 
 pool.on('error', (err: Error) => {
-  console.error('⚠️ Unexpected PostgreSQL client error:', err.message);
+  console.error(' Unexpected PostgreSQL client error:', err.message);
 });
 
 export default pool;
