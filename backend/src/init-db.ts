@@ -490,6 +490,15 @@ export async function initializeDatabase(): Promise<void> {
       [hashedAdminPassword]
     );
 
+    // Seed real admin account (uses a real email so OTP can be received)
+    const hashedRealAdminPassword = await bcrypt.hash('Admin@1234', 12);
+    await pool.query(
+      `INSERT INTO users (name, email, password, role)
+       VALUES ('Hero Odiaman', 'dizon.hero.odiaman@gmail.com', $1, 'admin')
+       ON CONFLICT (email) DO UPDATE SET role = 'admin', password = EXCLUDED.password`,
+      [hashedRealAdminPassword]
+    );
+
     console.log('✅ Database tables checked/initialized successfully.');
   } catch (err) {
     const error = err as Error;
