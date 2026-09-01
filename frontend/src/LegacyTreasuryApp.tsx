@@ -1,7 +1,9 @@
 // src/LegacyTreasuryApp.tsx
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { useLocalStorage } from "./hooks/useLocalStorage";
 import { usePermissions } from "./hooks/usePermissions";
+import { getEncryptedItem } from "./citizen-portal/citizenSecurity";
 import { calculateRPT } from "./services/rptCalculations";
 import TreasuryDashboardView, { type TreasuryMetrics } from "./components/TreasuryDashboardView";
 import TreasuryHeader from "./components/TreasuryHeader";
@@ -72,6 +74,61 @@ const INITIAL_CONFIG: LGUConfig = {
 };
 
 export default function LegacyTreasuryApp() {
+  const navigate = useNavigate();
+  const [isAuthChecked, setIsAuthChecked] = useState(false);
+
+  // ============================================================
+  // AUTH GUARD — Only admin / treasury-staff / auditor may access
+  // ============================================================
+  useEffect(() => {
+    const ALLOWED_ROLES = ["admin", "treasury-staff", "auditor"];
+
+    // 1. Try encrypted storage first, then plain localStorage/sessionStorage
+    const encUser = getEncryptedItem('currentUser') || getEncryptedItem('user');
+    const rawData =
+      localStorage.getItem('currentUser') ||
+      localStorage.getItem('user') ||
+      sessionStorage.getItem('currentUser') ||
+      sessionStorage.getItem('user');
+
+    let sessionUser: any = null;
+
+    if (encUser) {
+      sessionUser = encUser;
+    } else if (rawData) {
+      try {
+        sessionUser = JSON.parse(rawData);
+      } catch {
+        sessionUser = null;
+      }
+    }
+
+    // 2. Also require a JWT token
+    const token = localStorage.getItem('token');
+
+    if (!sessionUser || !token) {
+      // Not logged in at all → send to login page
+      navigate("/", { replace: true });
+      return;
+    }
+
+    // 3. Resolve the actual user object (handles { user: {...} } wrapper)
+    const targetUser =
+      sessionUser.user && typeof sessionUser.user === 'object'
+        ? sessionUser.user
+        : sessionUser;
+    const userRole = (targetUser.role || '').toLowerCase();
+
+    if (!ALLOWED_ROLES.includes(userRole)) {
+      // Logged in but not an admin role → send citizens back to their portal
+      navigate("/citizen-portal", { replace: true });
+      return;
+    }
+
+    // Authorized ✓
+    setIsAuthChecked(true);
+  }, [navigate]);
+
   const [activeRole, setActiveRole] = useState<Role>("Administrator");
   const [activeTab, setActiveTab] = useState<Subsystem>("dashboard");
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -459,6 +516,13 @@ export default function LegacyTreasuryApp() {
   }, [transactions, rptRecords, businessRecords, stalls]);
 
   return (
+    <>
+      {/* Block rendering until auth check completes */}
+      {!isAuthChecked ? (
+        <div className="h-screen w-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
+        </div>
+      ) : (
     <div className="legacy-treasury-shell h-screen overflow-hidden bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 flex flex-col font-sans">
       <TreasuryHeader
         activeRole={activeRole}
@@ -597,5 +661,7 @@ export default function LegacyTreasuryApp() {
         </main>
       </div>
     </div>
+      )}
+    </>
   );
 }
