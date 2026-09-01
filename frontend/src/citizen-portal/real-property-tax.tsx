@@ -324,8 +324,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
   // User & Toast
   const [currentUser, setCurrentUser] = useState<{ fullname: string; email: string } | null>(null);
   const [toastMessage, setToastMessage] = useState<{ text: string; type: "success" | "error" | "info" } | null>(null);
-  const [rptPaymentHistory, setRptPaymentHistory] = useState<RPTPaymentHistoryItem[]>([]);
-  const [isPaymentHistoryOpen, setIsPaymentHistoryOpen] = useState(false);
+
 
   const showToast = (text: string, type: "success" | "error" | "info" = "info") => {
     setToastMessage({ text, type });
