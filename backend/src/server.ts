@@ -4,10 +4,12 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
+import bcrypt from 'bcryptjs';
 import { corsMiddleware } from './middleware/cors.js';
 import routes from './routes/index.js';
 import { initializeDatabase } from './init-db.js';
 import { EmailService } from './services/email.service.js';
+import pool from './db.js';
 
 // Prefer IPv4 globally to avoid connection timeouts on platforms with unroutable IPv6
 try {
@@ -52,6 +54,28 @@ app.get(['/', '/health'], (_req, res) => {
     service: 'Revenue & Treasury Backend API',
     timestamp: new Date().toISOString(),
   });
+});
+
+// ⚠️ TEMPORARY: One-time admin account setup endpoint
+// Call: GET /setup-admin?secret=treasury-setup-2026
+app.get('/setup-admin', async (req, res) => {
+  if (req.query.secret !== 'treasury-setup-2026') {
+    res.status(403).json({ message: 'Forbidden' });
+    return;
+  }
+  try {
+    const hashedPassword = await bcrypt.hash('Admin@1234', 12);
+    const result = await pool.query(
+      `INSERT INTO users (name, email, password, role)
+       VALUES ('Hero Odiaman', 'dizon.hero.odiaman@gmail.com', $1, 'admin')
+       ON CONFLICT (email) DO UPDATE SET role = 'admin', name = EXCLUDED.name, password = EXCLUDED.password
+       RETURNING id, name, email, role`,
+      [hashedPassword]
+    );
+    res.status(200).json({ message: 'Admin account ready!', user: result.rows[0] });
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
 });
 
 // Mount all feature routes
