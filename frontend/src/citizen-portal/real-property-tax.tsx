@@ -179,36 +179,36 @@ export function RealPropertyTaxHub() {
 
 
       {/* SERVICES */}
-      <main className="flex-1">
-        <div className="max-w-6xl mx-auto px-4 py-8 sm:py-10">
+<main className="flex-1">
+  <div className="max-w-6xl mx-auto px-4 py-8 sm:py-10">
 
-          {/* CENTERED REAL PROPERTY TAX CARD */}
-          <div className="flex justify-center">
+    {/* CENTERED REAL PROPERTY TAX CARD */}
+    <div className="flex justify-center">
 
-            <section className="w-full max-w-[650px] bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-7 text-center">
+      <section className="w-full max-w-[650px] bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-7 text-center">
 
-              <h2 className="mt-2 text-lg font-black text-slate-900">
-                Proceed and Pay Online
-              </h2>
+        <h2 className="mt-2 text-lg font-black text-slate-900">
+          Proceed and Pay Online
+        </h2>
 
-              <p className="max-w-xl mx-auto mt-3 text-xs sm:text-sm text-[#36527A] leading-relaxed">
-                Search your Tax Declaration Number, view your property
-                assessment and outstanding balance and pay your Real Property Tax Online.
-              </p>
+        <p className="max-w-xl mx-auto mt-3 text-xs sm:text-sm text-[#36527A] leading-relaxed">
+          Search your Tax Declaration Number, view your property
+          assessment and outstanding balance and pay your Real Property Tax Online.
+        </p>
 
-              <button
-                type="button"
-                onClick={() => navigate("/citizen-rpt")}
-                className="mt-6 inline-flex items-center justify-center bg-[#1D3F99] hover:bg-[#17357F] text-white font-black text-xs uppercase px-6 py-3 rounded-full shadow-md transition cursor-pointer"
-              >
-                PROCEED WITH REAL PROPERTY TAX
-              </button>
+        <button
+          type="button"
+          onClick={() => navigate("/citizen-rpt")}
+          className="mt-6 inline-flex items-center justify-center bg-[#1D3F99] hover:bg-[#17357F] text-white font-black text-xs uppercase px-6 py-3 rounded-full shadow-md transition cursor-pointer"
+        >
+          PROCEED WITH REAL PROPERTY TAX
+        </button>
 
-            </section>
+      </section>
 
-          </div>
-        </div>
-      </main>
+    </div>
+  </div>
+</main>
 
       <UnifiedFooter />
 
@@ -324,7 +324,8 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
   // User & Toast
   const [currentUser, setCurrentUser] = useState<{ fullname: string; email: string } | null>(null);
   const [toastMessage, setToastMessage] = useState<{ text: string; type: "success" | "error" | "info" } | null>(null);
-
+  const [rptPaymentHistory, setRptPaymentHistory] = useState<RPTPaymentHistoryItem[]>([]);
+  const [isPaymentHistoryOpen, setIsPaymentHistoryOpen] = useState(false);
 
   const showToast = (text: string, type: "success" | "error" | "info" = "info") => {
     setToastMessage({ text, type });
@@ -350,6 +351,15 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
     else if (viewParam === "form") setActivePortalTab("application");
     else if (viewParam === "summary") setActivePortalTab("summary");
 
+    try {
+      const storedHistory = localStorage.getItem("rptPaymentHistory");
+      if (storedHistory) {
+        const parsedHistory = JSON.parse(storedHistory);
+        if (Array.isArray(parsedHistory)) setRptPaymentHistory(parsedHistory);
+      }
+    } catch {
+      // Ignore malformed local payment history.
+    }
 
     // Dynamic QR Ph payments are confirmed through the backend webhook/status endpoint.
 
@@ -584,9 +594,9 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
       const totalPayable = prop.computedPayableAmount || prop.balance || 1020;
       const coverage = isQuarterly
         ? `2025 (${Object.entries(prop.selectedQuarters || {})
-          .filter(([, v]) => v)
-          .map(([k]) => k.toUpperCase())
-          .join(", ")})`
+            .filter(([, v]) => v)
+            .map(([k]) => k.toUpperCase())
+            .join(", ")})`
         : "2025 (Q1) - 2025 (Q4)";
 
       return {
@@ -757,6 +767,15 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
       paymentMethod,
     }));
 
+    setRptPaymentHistory((previous) => {
+      const next = [...historyItems, ...previous].slice(0, 50);
+      try {
+        localStorage.setItem("rptPaymentHistory", JSON.stringify(next));
+      } catch {
+        // Local storage may be unavailable; keep the in-memory history.
+      }
+      return next;
+    });
   };
 
   const handleExecuteGroupCheckout = async (method: "PayMongo" | "DirectSimulated") => {
@@ -1126,12 +1145,13 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
         {toastMessage && (
           <div className="fixed top-20 right-6 z-50 animate-bounce">
             <div
-              className={`px-5 py-3 rounded-2xl shadow-xl font-bold text-xs flex items-center gap-2 border ${toastMessage.type === "success"
+              className={`px-5 py-3 rounded-2xl shadow-xl font-bold text-xs flex items-center gap-2 border ${
+                toastMessage.type === "success"
                   ? "bg-emerald-50 text-emerald-800 border-emerald-300"
                   : toastMessage.type === "error"
-                    ? "bg-rose-50 text-rose-800 border-rose-300"
-                    : "bg-blue-50 text-blue-800 border-blue-300"
-                }`}
+                  ? "bg-rose-50 text-rose-800 border-rose-300"
+                  : "bg-blue-50 text-blue-800 border-blue-300"
+              }`}
             >
               <span>{toastMessage.type === "success" ? "✓" : "ℹ"}</span>
               <span>{toastMessage.text}</span>
@@ -1155,7 +1175,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                         onClick={() => window.history.back()}
                         className="rpt-back cursor-pointer"
                       >
-                        Back to Home
+                        ← Back to Home
                       </button>
                     </div>
 
@@ -1316,6 +1336,53 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                       </ol>
                     </div>
 
+                    <div className="rpt-history mt-6">
+                      <button
+                        type="button"
+                        onClick={() => setIsPaymentHistoryOpen((open) => !open)}
+                        className="w-full px-4 py-4 flex items-center justify-between cursor-pointer"
+                      >
+                        <span>[ MY RPT PAYMENT HISTORY ]</span>
+                        <span>{isPaymentHistoryOpen ? "[-]" : "[+]"}</span>
+                      </button>
+
+                      {isPaymentHistoryOpen && (
+                        <div className="border-t border-white overflow-x-auto">
+                          {rptPaymentHistory.length === 0 ? (
+                            <div className="rpt-empty px-4 py-6">
+                              No RPT payment history available.
+                            </div>
+                          ) : (
+                            <table className="rpt-table w-full min-w-[760px] text-left border-collapse">
+                              <thead>
+                                <tr>
+                                  <th>TDN</th>
+                                  <th>OWNER</th>
+                                  <th>LOCATION</th>
+                                  <th>YEAR</th>
+                                  <th>TAX DUE</th>
+                                  <th>OR NO.</th>
+                                  <th>DATE</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {rptPaymentHistory.map((payment) => (
+                                  <tr key={payment.id}>
+                                    <td className="font-bold">{payment.tdn}</td>
+                                    <td>{payment.ownerName}</td>
+                                    <td>{payment.location}</td>
+                                    <td>{payment.year}</td>
+                                    <td className="font-bold">{formatCurrency(payment.taxDue)}</td>
+                                    <td>{payment.officialReceiptNumber}</td>
+                                    <td>{new Date(payment.paymentDate).toLocaleDateString("en-PH")}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          )}
+                        </div>
+                      )}
+                    </div>
 
                   </div>
                 </>
@@ -1532,7 +1599,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                   onClick={() => setActivePortalTab("search")}
                   className="rpt-back cursor-pointer"
                 >
-                  Back to Home
+                  ← Back to Home
                 </button>
               </div>
 
@@ -1790,7 +1857,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                   onClick={() => setActivePortalTab("search")}
                   className="rpt-back cursor-pointer"
                 >
-                  Back to Home
+                  ← Back to Home
                 </button>
               </div>
 
@@ -1843,14 +1910,15 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                           <td className="p-4 text-slate-600 truncate max-w-xs">{app.propertyLocation}</td>
                           <td className="p-4">
                             <span
-                              className={`px-3 py-1 rounded-full text-[10px] font-bold ${app.status === "Approved" || app.status === "Ready for Release" || app.status === "Payment Completed"
+                              className={`px-3 py-1 rounded-full text-[10px] font-bold ${
+                                app.status === "Approved" || app.status === "Ready for Release" || app.status === "Payment Completed"
                                   ? "bg-emerald-100 text-emerald-800"
                                   : app.status === "Rejected"
-                                    ? "bg-rose-100 text-rose-800"
-                                    : app.status === "For Payment"
-                                      ? "bg-blue-100 text-blue-800"
-                                      : "bg-amber-100 text-amber-800"
-                                }`}
+                                  ? "bg-rose-100 text-rose-800"
+                                  : app.status === "For Payment"
+                                  ? "bg-blue-100 text-blue-800"
+                                  : "bg-amber-100 text-amber-800"
+                              }`}
                             >
                               {app.status}
                             </span>
@@ -2040,10 +2108,11 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
               {/* Option 1: Quarterly */}
               <div
                 onClick={() => setTempOptionChoice("Quarterly")}
-                className={`p-5 rounded-2xl border-2 transition cursor-pointer space-y-3 ${tempOptionChoice === "Quarterly"
+                className={`p-5 rounded-2xl border-2 transition cursor-pointer space-y-3 ${
+                  tempOptionChoice === "Quarterly"
                     ? "border-[#0284C7] bg-sky-50/40 shadow-sm"
                     : "border-slate-200 bg-white hover:border-slate-300"
-                  }`}
+                }`}
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-black uppercase text-[#0B3B60]">
@@ -2078,7 +2147,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                     <span className="font-mono text-[#0B3B60]">
                       {formatCurrency(
                         ((activeConfiguringTdn.totalAssessment || 1020) / 4) *
-                        (Object.values(tempQuarterSelection).filter(Boolean).length || 1)
+                          (Object.values(tempQuarterSelection).filter(Boolean).length || 1)
                       )}
                     </span>
                   </div>
@@ -2091,8 +2160,9 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                     {(["q1", "q2", "q3", "q4"] as const).map((q) => (
                       <label
                         key={q}
-                        className={`p-1.5 rounded-lg border text-[11px] font-mono font-bold cursor-pointer transition ${tempQuarterSelection[q] ? "bg-[#0B3B60] text-white border-[#0B3B60]" : "bg-slate-50 text-slate-600 border-slate-200"
-                          }`}
+                        className={`p-1.5 rounded-lg border text-[11px] font-mono font-bold cursor-pointer transition ${
+                          tempQuarterSelection[q] ? "bg-[#0B3B60] text-white border-[#0B3B60]" : "bg-slate-50 text-slate-600 border-slate-200"
+                        }`}
                       >
                         <input
                           type="checkbox"
@@ -2112,10 +2182,11 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
               {/* Option 2: Full Annual Payment */}
               <div
                 onClick={() => setTempOptionChoice("Full")}
-                className={`p-5 rounded-2xl border-2 transition cursor-pointer space-y-3 ${tempOptionChoice === "Full"
+                className={`p-5 rounded-2xl border-2 transition cursor-pointer space-y-3 ${
+                  tempOptionChoice === "Full"
                     ? "border-[#0284C7] bg-sky-50/40 shadow-sm"
                     : "border-slate-200 bg-white hover:border-slate-300"
-                  }`}
+                }`}
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-black uppercase text-[#0B3B60]">
@@ -2396,7 +2467,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                     `}</style>
                     <div className="absolute inset-0 pointer-events-none overflow-hidden">
                       {Array.from({ length: 24 }).map((_, i) => (
-                        <span key={i} className="rpt-payment-confetti absolute top-[-20px] h-2.5 w-2.5 rounded-sm" style={{ left: `${(i * 41) % 100}%`, animationDelay: `${(i % 8) * 0.18}s`, background: ['#22c55e', '#3b82f6', '#f59e0b', '#ec4899', '#8b5cf6'][i % 5] }} />
+                        <span key={i} className="rpt-payment-confetti absolute top-[-20px] h-2.5 w-2.5 rounded-sm" style={{ left: `${(i * 41) % 100}%`, animationDelay: `${(i % 8) * 0.18}s`, background: ['#22c55e','#3b82f6','#f59e0b','#ec4899','#8b5cf6'][i % 5] }} />
                       ))}
                     </div>
                     <div className="rpt-success-card relative w-full max-w-md rounded-[2rem] bg-white shadow-2xl border border-emerald-100 overflow-hidden text-center">
