@@ -300,6 +300,14 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
     propertySketch: { name: "", url: "" },
     authorization: { name: "", url: "" },
   });
+  // Track raw File objects for multipart upload (separate from preview base64)
+  const [appRawFiles, setAppRawFiles] = useState<{ [key: string]: File | null }>({
+    ownershipProof: null,
+    validId: null,
+    taxRecord: null,
+    propertySketch: null,
+    authorization: null,
+  });
   const [isSubmittingApp, setIsSubmittingApp] = useState(false);
   const [appNotice, setAppNotice] = useState("");
   const [selectedAppDetail, setSelectedAppDetail] = useState<RPTApplicationRecord | null>(null);
@@ -802,15 +810,15 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (uploadEvent) => {
-      const base64Url = (uploadEvent.target?.result as string) || "";
-      setAppDocuments((prev) => ({
-        ...prev,
-        [field]: { name: file.name, url: base64Url },
-      }));
-    };
-    reader.readAsDataURL(file);
+    // Store the raw File object for multipart upload
+    setAppRawFiles((prev) => ({ ...prev, [field]: file }));
+
+    // Store only name + a local object URL for preview (not a huge base64 string)
+    const previewUrl = URL.createObjectURL(file);
+    setAppDocuments((prev) => ({
+      ...prev,
+      [field]: { name: file.name, url: previewUrl },
+    }));
   };
 
   const handleAppSubmit = async (e: FormEvent) => {
@@ -824,9 +832,13 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
 
     setIsSubmittingApp(true);
 
-    const attachedList = Object.values(appDocuments)
-      .filter((d) => d.name)
-      .map((d) => ({ name: d.name, url: d.url }));
+    // Build metadata list with ONLY file names (no base64/blob URLs) to keep DB payload small
+    const attachedList = Object.entries(appDocuments)
+      .filter(([, d]) => d.name)
+      .map(([, d]) => ({ name: d.name, url: "" }));
+
+    // Collect the actual raw File objects to send as multipart form fields
+    const rawFiles: File[] = Object.values(appRawFiles).filter(Boolean) as File[];
 
     const payload: Partial<RPTApplicationRecord> = {
       controlNumber: `RPT-QC-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`,
@@ -847,7 +859,8 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
     };
 
     try {
-      await saveRPTApplication(payload);
+      // Pass raw files separately so saveRPTApplication sends them as multipart/form-data
+      await saveRPTApplication(payload, rawFiles);
       showToast("Application submitted successfully to the City Assessor's Office!", "success");
       setAppNotice(`Application created with Control No: ${payload.controlNumber}`);
       loadApplications();
