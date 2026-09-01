@@ -15,6 +15,8 @@ import {
   processGroupRPTPayment,
   getRPTApplications,
   saveRPTApplication,
+  createTransferTaxCheckout,
+  verifyTransferTaxPayment,
   type RPTApplicationRecord
 } from "../services/realpropertytaxService";
 
@@ -26,6 +28,8 @@ export type RPTApplicationStatus =
   | "Under Evaluation"
   | "For Compliance"
   | "Processing"
+  | "For Payment"
+  | "Payment Completed"
   | "Approved"
   | "Ready for Release"
   | "Completed"
@@ -311,6 +315,8 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
   const [isSubmittingApp, setIsSubmittingApp] = useState(false);
   const [appNotice, setAppNotice] = useState("");
   const [selectedAppDetail, setSelectedAppDetail] = useState<RPTApplicationRecord | null>(null);
+  const [isTransferTaxPaying, setIsTransferTaxPaying] = useState(false);
+  const [transferTaxPaymentNotice, setTransferTaxPaymentNotice] = useState("");
 
   // --- Step-by-Step Guide Lightbox Modal ---
   const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
@@ -356,6 +362,36 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
     }
 
     // Dynamic QR Ph payments are confirmed through the backend webhook/status endpoint.
+
+    const paymentType = params.get("type");
+    const sessionId = params.get("session_id");
+    const paymentResult = params.get("payment");
+    if (paymentType === "TRANSFER_TAX" && sessionId && paymentResult === "success") {
+      void (async () => {
+        try {
+          const result = await verifyTransferTaxPayment(sessionId);
+          if (result?.paid) {
+            showToast(
+              `Transfer Tax payment confirmed. O.R. ${result.officialReceiptNumber || "issued"}.`,
+              "success"
+            );
+            setTransferTaxPaymentNotice(
+              `Payment confirmed. Official Receipt: ${result.officialReceiptNumber || "Pending issuance"}`
+            );
+            await loadApplications();
+            window.history.replaceState({}, "", "/citizen-rpt?view=status");
+          } else {
+            showToast("Transfer Tax payment is not yet confirmed.", "info");
+          }
+        } catch (error: any) {
+          console.error("Transfer Tax payment verification failed:", error);
+          showToast(error?.message || "Unable to verify the Transfer Tax payment.", "error");
+        }
+      })();
+    } else if (paymentType === "TRANSFER_TAX" && paymentResult === "cancelled") {
+      showToast("Transfer Tax payment was cancelled. No payment was recorded.", "info");
+      window.history.replaceState({}, "", "/citizen-rpt?view=status");
+    }
   }, [location.search]);
 
   // Load existing applications
@@ -869,6 +905,35 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
       setAppNotice("Failed to submit application: " + err.message);
     } finally {
       setIsSubmittingApp(false);
+    }
+  };
+
+  const handleTransferTaxPayment = async (application: RPTApplicationRecord) => {
+    const amount = Number(application.paymentAmount || 0);
+    if (!amount || amount <= 0) {
+      showToast("The City Assessor has not posted a Transfer Tax amount yet.", "info");
+      return;
+    }
+    if (!application.email) {
+      showToast("A valid email address is required before online payment.", "error");
+      return;
+    }
+
+    setIsTransferTaxPaying(true);
+    try {
+      const checkout = await createTransferTaxCheckout({
+        applicationId: String(application.id),
+        amount,
+        customerName: application.applicantName || application.ownerName || "Taxpayer",
+        customerEmail: application.email,
+        customerPhone: application.mobileNumber,
+        description: `Transfer Tax - ${application.controlNumber || application.taxDeclarationNumber || "RPT Application"}`,
+      });
+      window.location.assign(checkout.checkoutUrl);
+    } catch (error: any) {
+      showToast(error?.message || "Unable to start Transfer Tax payment.", "error");
+    } finally {
+      setIsTransferTaxPaying(false);
     }
   };
 
@@ -1811,6 +1876,12 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                 </button>
               </div>
 
+              {transferTaxPaymentNotice && (
+                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-emerald-800 font-semibold">
+                  ✓ {transferTaxPaymentNotice}
+                </div>
+              )}
+
               {applications.length === 0 ? (
                 <div className="p-12 text-center text-slate-400 text-xs italic bg-slate-50 rounded-2xl border border-dashed">
                   No submitted applications found. Click "+ New Service Request" to submit one.
@@ -1825,6 +1896,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                         <th className="p-4">Owner / Applicant</th>
                         <th className="p-4">Location</th>
                         <th className="p-4">Status</th>
+                        <th className="p-4">Payment</th>
                         <th className="p-4">Filed Date</th>
                         <th className="p-4 text-right">Action</th>
                       </tr>
@@ -1839,15 +1911,26 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                           <td className="p-4">
                             <span
                               className={`px-3 py-1 rounded-full text-[10px] font-bold ${
-                                app.status === "Approved" || app.status === "Ready for Release"
+                                app.status === "Approved" || app.status === "Ready for Release" || app.status === "Payment Completed"
                                   ? "bg-emerald-100 text-emerald-800"
                                   : app.status === "Rejected"
                                   ? "bg-rose-100 text-rose-800"
+                                  : app.status === "For Payment"
+                                  ? "bg-blue-100 text-blue-800"
                                   : "bg-amber-100 text-amber-800"
                               }`}
                             >
                               {app.status}
                             </span>
+                          </td>
+                          <td className="p-4">
+                            {app.service === "Transfer of Ownership" && Number(app.paymentAmount || 0) > 0 ? (
+                              <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${app.paymentStatus === "Paid" ? "bg-emerald-100 text-emerald-800" : "bg-blue-100 text-blue-800"}`}>
+                                {app.paymentStatus === "Paid" ? "PAID" : `₱${Number(app.paymentAmount).toLocaleString("en-PH", { minimumFractionDigits: 2 })} DUE`}
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-slate-400">Not assessed</span>
+                            )}
                           </td>
                           <td className="p-4 font-mono text-slate-500">{app.filedDate}</td>
                           <td className="p-4 text-right">
@@ -2554,6 +2637,39 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                 <span className="font-mono">{selectedAppDetail.filedDate}</span>
               </div>
             </div>
+
+            {selectedAppDetail.service === "Transfer of Ownership" && Number(selectedAppDetail.paymentAmount || 0) > 0 && (
+              <div className="p-4 rounded-2xl border border-blue-200 bg-blue-50 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-blue-700">Transfer Tax Assessment</p>
+                    <p className="text-xl font-black text-[#0B3B60]">{formatCurrency(Number(selectedAppDetail.paymentAmount))}</p>
+                  </div>
+                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${selectedAppDetail.paymentStatus === "Paid" ? "bg-emerald-100 text-emerald-800" : "bg-white text-blue-800 border border-blue-200"}`}>
+                    {selectedAppDetail.paymentStatus === "Paid" ? "PAID" : "FOR PAYMENT"}
+                  </span>
+                </div>
+                <p className="text-[11px] text-blue-800 leading-relaxed">
+                  The City Assessor has completed the assessment. Pay the posted Transfer Tax online to continue the ownership-transfer process.
+                </p>
+                {selectedAppDetail.paymentStatus === "Paid" ? (
+                  <div className="space-y-1 text-[11px] text-emerald-800 font-semibold">
+                    <p>✓ Payment confirmed</p>
+                    {selectedAppDetail.officialReceiptNumber && <p>Official Receipt: <span className="font-mono">{selectedAppDetail.officialReceiptNumber}</span></p>}
+                    {selectedAppDetail.paymentReference && <p>Reference: <span className="font-mono">{selectedAppDetail.paymentReference}</span></p>}
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={isTransferTaxPaying}
+                    onClick={() => void handleTransferTaxPayment(selectedAppDetail)}
+                    className="w-full bg-[#1D3F99] hover:bg-[#17357F] disabled:opacity-50 text-white font-extrabold py-3 rounded-xl text-xs uppercase tracking-wide shadow-sm transition"
+                  >
+                    {isTransferTaxPaying ? "Opening Secure Payment..." : "Pay Transfer Tax →"}
+                  </button>
+                )}
+              </div>
+            )}
 
             <button
               onClick={() => setSelectedAppDetail(null)}

@@ -128,17 +128,30 @@ export async function deleteRptApplication(req: Request, res: Response): Promise
 
 export async function updateRptApplicationStatus(req: Request, res: Response): Promise<void> {
   const { id } = req.params;
-  const { status, notes, assignedOfficer } = req.body;
+  const { status, notes, assignedOfficer, paymentAmount, paymentStatus, paymentDueDate } = req.body;
+
+  const numericPaymentAmount =
+    paymentAmount === undefined || paymentAmount === null || paymentAmount === ''
+      ? null
+      : Number(paymentAmount);
+
+  if (numericPaymentAmount !== null && (!Number.isFinite(numericPaymentAmount) || numericPaymentAmount < 0)) {
+    res.status(400).json({ message: 'Payment amount must be a valid non-negative number.' });
+    return;
+  }
 
   try {
     const result = await pool.query(
       `UPDATE rpt_applications
        SET status = COALESCE($1, status),
            notes = COALESCE($2, notes),
-           assigned_officer = COALESCE($3, assigned_officer)
-       WHERE id = $4
+           assigned_officer = COALESCE($3, assigned_officer),
+           payment_amount = COALESCE($4, payment_amount),
+           payment_status = COALESCE($5, payment_status),
+           payment_due_date = COALESCE($6, payment_due_date)
+       WHERE id = $7
        RETURNING *`,
-      [status, notes, assignedOfficer, id]
+      [status, notes, assignedOfficer, numericPaymentAmount, paymentStatus, paymentDueDate || null, id]
     );
 
     if (result.rowCount === 0) {
@@ -539,4 +552,4 @@ export async function getRptPayments(_req: Request, res: Response): Promise<void
     console.error('Error fetching RPT payments:', err);
     res.status(500).json({ message: 'Error loading payments' });
   }
-}
+}

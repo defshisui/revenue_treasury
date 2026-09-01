@@ -333,6 +333,28 @@ export async function initializeDatabase(): Promise<void> {
       ALTER TABLE rpt_applications
       ADD COLUMN IF NOT EXISTS notes TEXT;
 
+      -- Transfer Tax / application payment fields
+      ALTER TABLE rpt_applications
+      ADD COLUMN IF NOT EXISTS payment_amount NUMERIC(12, 2) DEFAULT 0;
+
+      ALTER TABLE rpt_applications
+      ADD COLUMN IF NOT EXISTS payment_reference VARCHAR(100);
+
+      ALTER TABLE rpt_applications
+      ADD COLUMN IF NOT EXISTS official_receipt_number VARCHAR(100);
+
+      ALTER TABLE rpt_applications
+      ADD COLUMN IF NOT EXISTS payment_method VARCHAR(100);
+
+      ALTER TABLE rpt_applications
+      ADD COLUMN IF NOT EXISTS payment_date TIMESTAMP;
+
+      ALTER TABLE rpt_applications
+      ADD COLUMN IF NOT EXISTS payment_due_date DATE;
+
+      ALTER TABLE rpt_applications
+      ADD COLUMN IF NOT EXISTS paymongo_session_id VARCHAR(255);
+
       -- ==========================================================
       -- RPT DOCUMENTS
       -- ==========================================================

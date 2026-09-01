@@ -46,7 +46,13 @@ export interface RPTApplicationRecord {
     status: 'Delivered' | 'Pending';
   }[];
   assignedOfficer?: string;
-  paymentStatus?: 'Paid' | 'Pending' | 'Unpaid';
+  paymentStatus?: 'Paid' | 'Pending' | 'Unpaid' | 'For Payment' | 'Payment Completed';
+  paymentAmount?: number;
+  paymentReference?: string;
+  officialReceiptNumber?: string;
+  paymentMethod?: string;
+  paymentDate?: string;
+  paymentDueDate?: string;
   [key: string]: any;
 }
 
@@ -81,6 +87,12 @@ export const getRPTApplications = async (): Promise<RPTApplicationRecord[]> => {
       propertyLocation: row.property_location || row.propertyLocation,
       assignedOfficer: row.assigned_officer || row.assignedOfficer,
       paymentStatus: row.payment_status || row.paymentStatus,
+      paymentAmount: Number(row.payment_amount ?? row.paymentAmount ?? 0),
+      paymentReference: row.payment_reference || row.paymentReference || '',
+      officialReceiptNumber: row.official_receipt_number || row.officialReceiptNumber || '',
+      paymentMethod: row.payment_method || row.paymentMethod || '',
+      paymentDate: row.payment_date || row.paymentDate || '',
+      paymentDueDate: row.payment_due_date || row.paymentDueDate || '',
       documents: row.documents || []
     }));
   } catch (error) {
@@ -229,15 +241,69 @@ export const deleteLguMasterRptRecord = async (id: string | number): Promise<any
   return await response.json();
 };
 
-export const updateRptApplicationStatus = async (id: string, status: string, notes?: string): Promise<any> => {
+export const updateRptApplicationStatus = async (
+  id: string,
+  status: string,
+  notes?: string,
+  options?: { paymentAmount?: number; paymentStatus?: string; paymentDueDate?: string; assignedOfficer?: string }
+): Promise<any> => {
   const response = await fetch(`${API_BASE_URL}/citizen-rpt-applications/${id}/status`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ status, notes })
+    body: JSON.stringify({ status, notes, ...(options || {}) })
   });
   if (!response.ok) {
     const errData = await response.json().catch(() => ({}));
     throw new Error(errData.message || 'Failed to update application status');
   }
   return await response.json();
-};
+};
+
+
+export const createTransferTaxCheckout = async (payload: {
+  applicationId: string;
+  amount: number;
+  customerName: string;
+  customerEmail: string;
+  customerPhone?: string;
+  description?: string;
+}): Promise<{ checkoutUrl: string; sessionId: string; referenceNumber: string }> => {
+  const response = await fetch(`${API_BASE_URL}/api/payments/create-checkout-session`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      type: 'TRANSFER_TAX',
+      amount: payload.amount,
+      rptApplicationId: payload.applicationId,
+      customerName: payload.customerName,
+      customerEmail: payload.customerEmail,
+      customerPhone: payload.customerPhone,
+      description: payload.description || 'Quezon City Real Property Transfer Tax',
+      frontendRedirectUrl: window.location.origin,
+    }),
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.checkoutUrl) {
+    throw new Error(data.error || data.message || 'Unable to create the Transfer Tax payment checkout.');
+  }
+
+  return {
+    checkoutUrl: data.checkoutUrl,
+    sessionId: data.sessionId,
+    referenceNumber: data.referenceNumber,
+  };
+};
+
+export const verifyTransferTaxPayment = async (sessionId: string): Promise<any> => {
+  const response = await fetch(`${API_BASE_URL}/api/payments/verify-session`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionId }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.error || data.message || 'Unable to verify the Transfer Tax payment.');
+  }
+  return data;
+};
