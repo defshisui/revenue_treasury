@@ -1335,53 +1335,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                       </ol>
                     </div>
 
-                    <div className="rpt-history mt-6">
-                      <button
-                        type="button"
-                        onClick={() => setIsPaymentHistoryOpen((open) => !open)}
-                        className="w-full px-4 py-4 flex items-center justify-between cursor-pointer"
-                      >
-                        <span>[ MY RPT PAYMENT HISTORY ]</span>
-                        <span>{isPaymentHistoryOpen ? "[-]" : "[+]"}</span>
-                      </button>
-
-                      {isPaymentHistoryOpen && (
-                        <div className="border-t border-white overflow-x-auto">
-                          {rptPaymentHistory.length === 0 ? (
-                            <div className="rpt-empty px-4 py-6">
-                              No RPT payment history available.
-                            </div>
-                          ) : (
-                            <table className="rpt-table w-full min-w-[760px] text-left border-collapse">
-                              <thead>
-                                <tr>
-                                  <th>TDN</th>
-                                  <th>OWNER</th>
-                                  <th>LOCATION</th>
-                                  <th>YEAR</th>
-                                  <th>TAX DUE</th>
-                                  <th>OR NO.</th>
-                                  <th>DATE</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {rptPaymentHistory.map((payment) => (
-                                  <tr key={payment.id}>
-                                    <td className="font-bold">{payment.tdn}</td>
-                                    <td>{payment.ownerName}</td>
-                                    <td>{payment.location}</td>
-                                    <td>{payment.year}</td>
-                                    <td className="font-bold">{formatCurrency(payment.taxDue)}</td>
-                                    <td>{payment.officialReceiptNumber}</td>
-                                    <td>{new Date(payment.paymentDate).toLocaleDateString("en-PH")}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          )}
-                        </div>
-                      )}
-                    </div>
 
                   </div>
                 </>
