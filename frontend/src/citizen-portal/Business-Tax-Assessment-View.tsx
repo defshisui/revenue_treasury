@@ -74,7 +74,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
   const [isPaymentStep, setIsPaymentStep] = useState<boolean>(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState<boolean>(false);
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
-  const [, setQrReferenceNumber] = useState<string>("");
+  const [qrReferenceNumber, setQrReferenceNumber] = useState<string>("");
   const [qrPaymentIntentId, setQrPaymentIntentId] = useState<string>('');
   const [qrError, setQrError] = useState<string>('');
   const [paymentAssessment, setPaymentAssessment] = useState<AssessmentRecord | null>(null);
@@ -1391,92 +1391,45 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
           </div>
         </div>
       )}
-      {/* Animated Payment Success Screen - same flow as Market Stall */}
+      {/* Payment Success Confirmation */}
       {isPaymentSuccess && paymentAssessment && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 overflow-y-auto bg-slate-950/75 backdrop-blur-md payment-success-backdrop">
-          <div className="relative w-full max-w-lg my-6 payment-success-card">
-            {/* Floating confetti */}
-            <div className="pointer-events-none absolute inset-0 overflow-visible" aria-hidden="true">
-              {Array.from({ length: 24 }).map((_, index) => (
-                <span
-                  key={index}
-                  className={`payment-confetti payment-confetti-${index % 8}`}
-                />
-              ))}
-            </div>
-
-            {/* Success check badge */}
-            <div className="absolute left-1/2 top-0 z-20 -translate-x-1/2 -translate-y-1/2">
-              <div className="payment-success-check-ring">
-                <div className="payment-success-check-circle">
-                  <svg
-                    viewBox="0 0 52 52"
-                    className="h-14 w-14 text-white payment-checkmark"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M14 27l8 8 17-19" />
-                  </svg>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-[470px] overflow-hidden rounded-[28px] bg-white shadow-[0_25px_80px_rgba(0,0,0,0.30)] animate-[paymentSuccessCard_.35s_ease-out]">
+            <div className="px-7 pb-7 pt-7 sm:px-8 sm:pb-8">
+              <div className="flex justify-center">
+                <div className="flex h-[72px] w-[72px] items-center justify-center rounded-full bg-emerald-100">
+                  <div className="flex h-[48px] w-[48px] items-center justify-center rounded-full bg-emerald-500 shadow-sm">
+                    <svg viewBox="0 0 24 24" className="h-8 w-8 text-white" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M5 12.5l4.5 4.5L19 7" />
+                    </svg>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="relative overflow-hidden rounded-[28px] border border-white/80 bg-white px-6 pb-6 pt-14 shadow-[0_30px_100px_rgba(0,0,0,0.35)] sm:px-8">
-              <div className="pointer-events-none absolute left-1/2 top-0 h-48 w-96 -translate-x-1/2 rounded-full bg-emerald-100/70 blur-3xl" />
-
-              <div className="relative text-center">
-                <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
-                  <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
+              <div className="mt-4 text-center">
+                <span className="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-extrabold text-emerald-700">
                   PAYMENT CONFIRMED
-                </div>
-
-                <h2 className="mt-3 text-3xl font-black tracking-tight text-emerald-700 sm:text-4xl">
+                </span>
+                <h2 className="mt-4 text-[26px] font-black tracking-tight text-slate-900 sm:text-[28px]">
                   Payment Successful!
                 </h2>
-
-                <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-600 sm:text-base">
-                  Your business tax payment has been successfully confirmed through PayMongo.
+                <p className="mx-auto mt-2 max-w-sm text-[13px] leading-5 text-slate-500">
+                  Your Business Tax payment has been confirmed successfully.
                 </p>
               </div>
 
-              {/* Business Tax illustration */}
-              <div className="relative mx-auto mt-5 h-28 max-w-sm overflow-hidden rounded-2xl bg-gradient-to-b from-emerald-50 to-white">
-                <div className="absolute bottom-0 left-0 right-0 h-10 bg-emerald-100/70" />
-                <div className="absolute bottom-8 left-1/2 -translate-x-1/2">
-                  <div className="h-10 w-44 rounded-t-xl border-2 border-emerald-600 bg-white shadow-sm">
-                    <div className="flex h-full items-center justify-center gap-3 text-emerald-600">
-                      <span className="text-xl">🏛️</span>
-                      <span className="text-xs font-black tracking-widest">BUSINESS TAX</span>
-                    </div>
-                  </div>
-                  <div className="mx-auto h-7 w-36 rounded-b-lg bg-emerald-600" />
-                </div>
-                <div className="absolute bottom-7 left-10 h-9 w-1 rounded-full bg-emerald-300" />
-                <div className="absolute bottom-7 right-10 h-9 w-1 rounded-full bg-emerald-300" />
-              </div>
-
-              {/* Payment details */}
-              <div className="relative mt-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+              <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50/60 px-4 py-3.5 sm:px-5">
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between gap-4 border-b border-slate-100 pb-3">
-                    <div className="flex items-center gap-3">
-                      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">📄</span>
-                      <span className="text-sm text-slate-500">Tracking No.</span>
-                    </div>
-                    <span className="text-sm font-bold text-slate-800 text-right break-all">
-                      {paymentAssessment.trackingNumber || "—"}
+                  <div className="grid grid-cols-[105px_1fr] items-start gap-3">
+                    <span className="text-[13px] text-slate-500">Service</span>
+                    <span className="text-right text-[13px] font-bold leading-5 text-slate-800">
+                      Business Tax
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-between gap-4 border-b border-slate-100 pb-3">
-                    <div className="flex items-center gap-3">
-                      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-50 text-lg font-bold text-emerald-600">₱</span>
-                      <span className="text-sm text-slate-500">Amount Paid</span>
-                    </div>
-                    <span className="text-base font-black text-emerald-600">
+                  <div className="grid grid-cols-[105px_1fr] items-start gap-3">
+                    <span className="text-[13px] text-slate-500">Amount Paid</span>
+                    <span className="text-right text-[13px] font-black text-slate-800">
                       ₱{Number(paymentAssessment.computedFees?.total || 0).toLocaleString("en-PH", {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
@@ -1484,41 +1437,25 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-between gap-4 border-b border-slate-100 pb-3">
-                    <div className="flex items-center gap-3">
-                      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">📅</span>
-                      <span className="text-sm text-slate-500">Payment Date</span>
-                    </div>
-                    <span className="text-right text-sm font-semibold text-slate-800">
+                  <div className="grid grid-cols-[105px_1fr] items-start gap-3">
+                    <span className="text-[13px] text-slate-500">Reference</span>
+                    <span className="break-all text-right text-[12px] font-bold leading-5 text-slate-800">
+                      {qrReferenceNumber || qrPaymentIntentId || paymentAssessment.trackingNumber || "—"}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-[105px_1fr] items-start gap-3">
+                    <span className="text-[13px] text-slate-500">Date</span>
+                    <span className="text-right text-[13px] font-semibold leading-5 text-slate-800">
                       {(paymentConfirmedAt || new Date()).toLocaleString("en-PH", {
                         year: "numeric",
-                        month: "short",
+                        month: "numeric",
                         day: "numeric",
                         hour: "numeric",
                         minute: "2-digit",
                         hour12: true,
                       })}
                     </span>
-                  </div>
-
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">✓</span>
-                      <span className="text-sm text-slate-500">Payment Method</span>
-                    </div>
-                    <span className="text-sm font-bold text-slate-800">PayMongo (QR Ph)</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="relative mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
-                <div className="flex items-start gap-3">
-                  <span className="text-2xl">🎉</span>
-                  <div>
-                    <p className="font-extrabold text-emerald-700">Thank you!</p>
-                    <p className="mt-1 text-xs leading-5 text-emerald-800/80 sm:text-sm">
-                      Your payment has been recorded and this Business Tax assessment is now marked as paid.
-                    </p>
                   </div>
                 </div>
               </div>
@@ -1530,110 +1467,22 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                   setPaymentAssessment(null);
                   setQrPaymentPaid(false);
                   setPaymentConfirmedAt(null);
+                  setQrReferenceNumber("");
+                  setQrPaymentIntentId("");
                   setCurrentScreen('assessment-list');
                   setCurrentPage(1);
                 }}
-                className="relative mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-emerald-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-emerald-700 active:translate-y-0"
+                className="mt-5 w-full rounded-xl bg-[#2447a8] px-5 py-3 text-sm font-extrabold text-white shadow-sm transition-colors hover:bg-[#1d3d91]"
               >
-                View My Assessments
-                <span className="text-lg">→</span>
+                Done
               </button>
-
-              <p className="relative mt-3 text-center text-[11px] text-slate-400">
-                This confirmation will remain on screen until you choose an action.
-              </p>
             </div>
           </div>
 
           <style>{`
-            @keyframes paymentSuccessBackdrop {
-              from { opacity: 0; }
-              to { opacity: 1; }
-            }
-
             @keyframes paymentSuccessCard {
-              0% { opacity: 0; transform: translateY(24px) scale(.94); }
-              70% { transform: translateY(-4px) scale(1.015); }
-              100% { opacity: 1; transform: translateY(0) scale(1); }
-            }
-
-            @keyframes paymentSuccessCheck {
-              0% { transform: scale(0) rotate(-20deg); opacity: 0; }
-              70% { transform: scale(1.12) rotate(4deg); opacity: 1; }
-              100% { transform: scale(1) rotate(0deg); opacity: 1; }
-            }
-
-            @keyframes paymentSuccessRing {
-              0% { transform: scale(.65); opacity: 0; }
-              70% { transform: scale(1.08); opacity: 1; }
-              100% { transform: scale(1); opacity: 1; }
-            }
-
-            @keyframes paymentConfetti {
-              0% { opacity: 0; transform: translateY(20px) rotate(0deg) scale(.5); }
-              15% { opacity: 1; }
-              100% { opacity: 0; transform: translateY(190px) rotate(540deg) scale(1); }
-            }
-
-            .payment-success-backdrop {
-              animation: paymentSuccessBackdrop .25s ease-out both;
-            }
-
-            .payment-success-card {
-              animation: paymentSuccessCard .55s cubic-bezier(.2,.8,.2,1) both;
-            }
-
-            .payment-success-check-ring {
-              width: 104px;
-              height: 104px;
-              display: grid;
-              place-items: center;
-              border-radius: 9999px;
-              background: rgba(74, 222, 128, .28);
-              box-shadow: 0 0 0 12px rgba(74, 222, 128, .08), 0 15px 45px rgba(16, 185, 129, .28);
-              animation: paymentSuccessRing .65s cubic-bezier(.2,.8,.2,1) both;
-            }
-
-            .payment-success-check-circle {
-              width: 76px;
-              height: 76px;
-              display: grid;
-              place-items: center;
-              border-radius: 9999px;
-              background: linear-gradient(145deg, #22c55e, #059669);
-              box-shadow: inset 0 2px 0 rgba(255,255,255,.35), 0 10px 25px rgba(5,150,105,.25);
-              animation: paymentSuccessCheck .65s .08s cubic-bezier(.2,.8,.2,1) both;
-            }
-
-            .payment-checkmark {
-              animation: paymentSuccessCheck .45s .28s ease-out both;
-            }
-
-            .payment-confetti {
-              position: absolute;
-              top: 30px;
-              width: 8px;
-              height: 14px;
-              border-radius: 2px;
-              opacity: 0;
-              animation: paymentConfetti 1.8s ease-out infinite;
-            }
-
-            .payment-confetti-0 { left: 8%; animation-delay: .05s; transform: rotate(12deg); }
-            .payment-confetti-1 { left: 18%; animation-delay: .32s; transform: rotate(45deg); }
-            .payment-confetti-2 { left: 30%; animation-delay: .12s; transform: rotate(78deg); }
-            .payment-confetti-3 { left: 42%; animation-delay: .45s; transform: rotate(20deg); }
-            .payment-confetti-4 { left: 56%; animation-delay: .18s; transform: rotate(65deg); }
-            .payment-confetti-5 { left: 68%; animation-delay: .38s; transform: rotate(35deg); }
-            .payment-confetti-6 { left: 80%; animation-delay: .08s; transform: rotate(82deg); }
-            .payment-confetti-7 { left: 91%; animation-delay: .52s; transform: rotate(28deg); }
-
-            .payment-confetti:nth-child(odd) {
-              background: #34d399;
-            }
-
-            .payment-confetti:nth-child(even) {
-              background: #60a5fa;
+              from { opacity: 0; transform: translateY(12px) scale(.98); }
+              to { opacity: 1; transform: translateY(0) scale(1); }
             }
           `}</style>
         </div>
