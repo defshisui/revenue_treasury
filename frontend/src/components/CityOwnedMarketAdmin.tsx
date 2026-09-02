@@ -432,9 +432,6 @@ export default function CityOwnedMarketAdmin({
             <i className={`fa-solid ${activeTab === "Active" ? "fa-list-check text-blue-600" : "fa-box-archive text-slate-500"} text-sm`}></i>
             {activeTab === "Active" ? "Admin Market Lease Control Panel" : "Archived Leases"}
           </h3>
-          <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700">
-            Due Date: 08/20/2026
-          </span>
         </div>
 
         <div className="p-5 bg-slate-50/50 dark:bg-slate-950/50 rounded-2xl border border-slate-200/80 dark:border-slate-800 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
