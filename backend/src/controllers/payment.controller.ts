@@ -1193,6 +1193,81 @@ export async function getQrPaymentStatus(
     }
 
     // =========================================================
+    // RPT CITIZEN'S CHARTER SERVICE PAYMENT
+    // =========================================================
+    // QR-status polling must perform the same database settlement as the
+    // webhook. Otherwise PayMongo can report `succeeded` while the citizen's
+    // rpt_applications row remains `For Payment`, allowing a second payment.
+    if (
+      paid &&
+      metadata.type === 'RPT_SERVICE' &&
+      metadata.rptApplicationId
+    ) {
+      const applicationResult = await pool.query(
+        `SELECT * FROM rpt_applications WHERE id = $1 LIMIT 1`,
+        [metadata.rptApplicationId]
+      );
+
+      if (applicationResult.rows.length > 0) {
+        const application = applicationResult.rows[0];
+        const assessedAmount = Number(application.payment_amount || 0);
+        const paidAmount = Number(attributes.amount || 0) / 100;
+
+        if (
+          Number.isFinite(assessedAmount) &&
+          assessedAmount > 0 &&
+          Math.abs(paidAmount - assessedAmount) <= 0.01
+        ) {
+          if (String(application.payment_status || '').toLowerCase() !== 'paid') {
+            const officialReceiptNumber =
+              `OR-PM-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
+            const paymentReference =
+              metadata.referenceNumber ||
+              attributes.external_reference_number ||
+              `REF-${paymentIntentId.slice(-8)}`;
+
+            await pool.query(
+              `UPDATE rpt_applications
+               SET status = 'Payment Completed',
+                   payment_status = 'Paid',
+                   payment_reference = $1,
+                   official_receipt_number = $2,
+                   payment_method = $3,
+                   payment_date = NOW()
+               WHERE id = $4`,
+              [
+                paymentReference,
+                officialReceiptNumber,
+                'PayMongo (QR Ph)',
+                metadata.rptApplicationId,
+              ]
+            );
+
+            await recordAudit(
+              req,
+              'AUD-PAYMONGO-QR',
+              metadata.customerEmail || application.email || 'citizen@gov.ph',
+              'Citizen',
+              'RPT Module',
+              'RPT_SERVICE_PAYMENT_QR_SUCCESS',
+              'INFO',
+              null,
+              `RPT service payment confirmed via QR Ph. Application ${metadata.rptApplicationId}. Reference ${paymentReference}. Amount ${assessedAmount.toFixed(2)}. O.R. ${officialReceiptNumber}.`
+            );
+          }
+        } else {
+          console.warn(
+            `RPT service QR payment amount mismatch or missing assessment for application ${metadata.rptApplicationId}. Expected ${assessedAmount}, received ${paidAmount}.`
+          );
+        }
+      } else {
+        console.warn(
+          `RPT service application not found: ${metadata.rptApplicationId}`
+        );
+      }
+    }
+
+    // =========================================================
     // REAL PROPERTY TAX PAYMENT
     // =========================================================
     if (

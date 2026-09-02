@@ -1030,6 +1030,30 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
       return;
     }
 
+    // Always verify the latest server-side payment status before creating
+    // another PayMongo QR. This prevents a stale browser row from showing
+    // a second PAY button after the payment was already confirmed.
+    try {
+      const latestApplications = await getRPTApplications();
+      const latestApplication = latestApplications.find(
+        (item) => String(item.id) === String(application.id)
+      );
+
+      if (latestApplication?.paymentStatus && String(latestApplication.paymentStatus).toLowerCase() === "paid") {
+        setApplications(latestApplications);
+        setSelectedAppDetail({ ...application, ...latestApplication });
+        showToast("This RPT service application has already been paid.", "info");
+        return;
+      }
+
+      if (latestApplication) {
+        application = { ...application, ...latestApplication };
+      }
+    } catch (error) {
+      console.error("Failed to refresh RPT service payment status:", error);
+      // Keep the existing local status check below as a fallback.
+    }
+
     if (String(application.paymentStatus || "").toLowerCase() === "paid") {
       showToast("This RPT service application has already been paid.", "info");
       return;
