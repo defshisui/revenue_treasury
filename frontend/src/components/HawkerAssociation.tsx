@@ -508,12 +508,6 @@ export default function HawkerAssociation({
 
         <div className="flex flex-wrap items-center gap-2.5">
           <button
-            onClick={() => setIsRegisterOpen(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-4 py-2.5 rounded-xl transition-all shadow-sm cursor-pointer flex items-center gap-2"
-          >
-            <i className="fa-solid fa-plus text-[10px]"></i>New Guild Registration
-          </button>
-          <button
             onClick={fetchApplications}
             className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs px-4 py-2.5 rounded-xl transition-all border border-slate-200 dark:border-slate-700 cursor-pointer flex items-center gap-2"
           >
