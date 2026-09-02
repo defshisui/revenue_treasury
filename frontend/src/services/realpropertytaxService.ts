@@ -260,32 +260,34 @@ export const updateRptApplicationStatus = async (
 };
 
 
-export const createTransferTaxCheckout = async (payload: {
+export const createRPTServiceCheckout = async (payload: {
   applicationId: string;
   amount: number;
   customerName: string;
   customerEmail: string;
   customerPhone?: string;
+  service: string;
   description?: string;
 }): Promise<{ checkoutUrl: string; sessionId: string; referenceNumber: string }> => {
   const response = await fetch(`${API_BASE_URL}/api/payments/create-checkout-session`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      type: 'TRANSFER_TAX',
+      type: 'RPT_SERVICE',
       amount: payload.amount,
       rptApplicationId: payload.applicationId,
+      rptService: payload.service,
       customerName: payload.customerName,
       customerEmail: payload.customerEmail,
       customerPhone: payload.customerPhone,
-      description: payload.description || 'Quezon City Real Property Transfer Tax',
+      description: payload.description || `${payload.service} - RPT Service Application`,
       frontendRedirectUrl: window.location.origin,
     }),
   });
 
   const data = await response.json().catch(() => ({}));
   if (!response.ok || !data.checkoutUrl) {
-    throw new Error(data.error || data.message || 'Unable to create the Transfer Tax payment checkout.');
+    throw new Error(data.error || data.message || 'Unable to create the RPT service payment checkout.');
   }
 
   return {
@@ -295,15 +297,22 @@ export const createTransferTaxCheckout = async (payload: {
   };
 };
 
-export const verifyTransferTaxPayment = async (sessionId: string): Promise<any> => {
+export const verifyRPTServicePayment = async (sessionId: string): Promise<any> => {
   const response = await fetch(`${API_BASE_URL}/api/payments/verify-session`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ sessionId }),
   });
+
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(data.error || data.message || 'Unable to verify the Transfer Tax payment.');
+    throw new Error(data.error || data.message || 'Unable to verify the RPT service payment.');
   }
+
   return data;
 };
+
+// Backward-compatible aliases for existing Transfer of Ownership code.
+export const createTransferTaxCheckout = createRPTServiceCheckout;
+export const verifyTransferTaxPayment = verifyRPTServicePayment;
+

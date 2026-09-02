@@ -39,6 +39,8 @@ export async function createCheckoutSession(req: Request, res: Response): Promis
     rptRecordId,
     leaseId,
     businessTrackingNumber,
+    rptApplicationId,
+    rptService,
     customerName,
     customerEmail,
     customerPhone,
@@ -46,12 +48,49 @@ export async function createCheckoutSession(req: Request, res: Response): Promis
     frontendRedirectUrl,
   } = req.body;
 
-  if (!amount || Number(amount) <= 0) {
+  if (type !== 'RPT_SERVICE' && (!amount || Number(amount) <= 0)) {
     res.status(400).json({ error: 'A valid payment amount is required.' });
     return;
   }
 
-  const numericAmount = Number(amount);
+  let numericAmount = Number(amount);
+
+  // RPT Citizen's Charter service payments must use the amount
+  // posted by the City Assessor in PostgreSQL. Never trust the
+  // amount supplied by the citizen's browser.
+  if (type === 'RPT_SERVICE') {
+    if (!rptApplicationId) {
+      res.status(400).json({ error: 'rptApplicationId is required for RPT service payments.' });
+      return;
+    }
+
+    const applicationResult = await pool.query(
+      `SELECT id, service, payment_amount, payment_status, status, email, applicant_name, owner_name, control_number, tax_declaration_number
+       FROM rpt_applications
+       WHERE id = $1`,
+      [rptApplicationId]
+    );
+
+    if (applicationResult.rows.length === 0) {
+      res.status(404).json({ error: 'RPT service application not found.' });
+      return;
+    }
+
+    const application = applicationResult.rows[0];
+    const assessedAmount = Number(application.payment_amount || 0);
+
+    if (!Number.isFinite(assessedAmount) || assessedAmount <= 0) {
+      res.status(400).json({ error: 'The City Assessor has not posted an assessed service fee yet.' });
+      return;
+    }
+
+    if (String(application.payment_status || '').toLowerCase() === 'paid') {
+      res.status(409).json({ error: 'This RPT service application has already been paid.' });
+      return;
+    }
+
+    numericAmount = assessedAmount;
+  }
   const frontendOrigin =
     frontendRedirectUrl || process.env.FRONTEND_URL || 'http://localhost:5173';
   const cleanFrontendOrigin = String(frontendOrigin).replace(/\/+$/, '');
@@ -80,6 +119,12 @@ export async function createCheckoutSession(req: Request, res: Response): Promis
     successRedirectUrl = `${cleanFrontendOrigin}/business-tax-assessment?payment=success&session_id={CHECKOUT_SESSION_ID}&type=BUSINESS`;
     cancelRedirectUrl = `${cleanFrontendOrigin}/business-tax-assessment?payment=cancelled&type=BUSINESS`;
   }
+ else if (type === 'RPT_SERVICE') {
+    referenceNumber = `RPT-SVC-${rptApplicationId || dateCode}-${randomSuffix}`;
+    paymentDescription = `${rptService || 'RPT Service'} Payment`;
+    successRedirectUrl = `${cleanFrontendOrigin}/citizen-rpt?payment=success&session_id={CHECKOUT_SESSION_ID}&type=RPT_SERVICE`;
+    cancelRedirectUrl = `${cleanFrontendOrigin}/citizen-rpt?payment=cancelled&type=RPT_SERVICE`;
+  }
 
   try {
     const session = await PayMongoService.createCheckoutSession({
@@ -99,6 +144,8 @@ export async function createCheckoutSession(req: Request, res: Response): Promis
         taxDeclarationNumber,
         leaseId,
         businessTrackingNumber,
+        rptApplicationId,
+        rptService: rptService || null,
         customerName,
         customerEmail,
       },
@@ -163,6 +210,112 @@ export async function verifySession(req: Request, res: Response): Promise<void> 
     const officialReceiptNumber = `OR-PM-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
 
     let recordResult: any = null;
+
+    // =========================================================
+    // RPT CITIZEN'S CHARTER SERVICE PAYMENT
+    // =========================================================
+    if (type === 'RPT_SERVICE' && metadata.rptApplicationId) {
+      const applicationResult = await pool.query(
+        `SELECT * FROM rpt_applications WHERE id = $1`,
+        [metadata.rptApplicationId]
+      );
+
+      if (applicationResult.rows.length === 0) {
+        res.status(404).json({
+          success: false,
+          paid: false,
+          error: 'RPT service application not found.',
+        });
+        return;
+      }
+
+      const application = applicationResult.rows[0];
+      const assessedAmount = Number(application.payment_amount || 0);
+
+      if (!Number.isFinite(assessedAmount) || assessedAmount <= 0) {
+        res.status(409).json({
+          success: false,
+          paid: false,
+          error: 'No assessed RPT service fee exists for this application.',
+        });
+        return;
+      }
+
+      if (Math.abs(Number(session.amount) - assessedAmount) > 0.01) {
+        res.status(409).json({
+          success: false,
+          paid: false,
+          error: 'Payment amount does not match the assessed RPT service fee.',
+        });
+        return;
+      }
+
+      if (String(application.payment_status || '').toLowerCase() === 'paid') {
+        res.status(200).json({
+          success: true,
+          paid: true,
+          alreadyRecorded: true,
+          officialReceiptNumber: application.official_receipt_number,
+          paymentReference: application.payment_reference,
+          amount: application.payment_amount,
+          paymentMethod: application.payment_method,
+          paymentDate: application.payment_date,
+          service: application.service,
+          applicationId: application.id,
+        });
+        return;
+      }
+
+      await pool.query(
+        `UPDATE rpt_applications
+         SET status = 'Payment Completed',
+             payment_status = 'Paid',
+             payment_reference = $1,
+             official_receipt_number = $2,
+             payment_method = $3,
+             payment_date = NOW()
+         WHERE id = $4`,
+        [
+          paymentReference,
+          officialReceiptNumber,
+          `PayMongo (${formattedPaymentMethod})`,
+          metadata.rptApplicationId,
+        ]
+      );
+
+      recordResult = await pool.query(
+        `SELECT * FROM rpt_applications WHERE id = $1`,
+        [metadata.rptApplicationId]
+      );
+
+      await recordAudit(
+        req,
+        'AUD-PAYMONGO-RPT-SERVICE',
+        metadata.customerEmail || application.email || 'citizen@gov.ph',
+        'Citizen',
+        'RPT Module',
+        'RPT_SERVICE_PAYMENT_VERIFIED',
+        'INFO',
+        null,
+        `RPT service payment confirmed for ${application.service || metadata.rptService || 'RPT Service'}. Application ${metadata.rptApplicationId}. Reference ${paymentReference}. Amount ${assessedAmount.toFixed(2)}. O.R. ${officialReceiptNumber}.`
+      );
+
+      res.status(200).json({
+        success: true,
+        paid: true,
+        alreadyRecorded: false,
+        officialReceiptNumber,
+        paymentReference,
+        amount: assessedAmount,
+        paymentMethod: `PayMongo (${formattedPaymentMethod})`,
+        paymentDate: new Date().toISOString(),
+        service: application.service || metadata.rptService,
+        applicationId: application.id,
+        controlNumber: application.control_number,
+        record: recordResult.rows[0],
+      });
+      return;
+    }
 
     if (type === 'RPT' && metadata.taxDeclarationNumber) {
       const existingPayment = await pool.query(
@@ -454,6 +607,113 @@ export async function handlePayMongoWebhook(
       sourceType === 'qrph'
         ? 'PayMongo (QR Ph)'
         : `PayMongo (${String(sourceType).toUpperCase()})`;
+
+    // =========================================================
+    // RPT CITIZEN'S CHARTER SERVICE PAYMENT
+    // =========================================================
+    if (metadata.type === 'RPT_SERVICE' && metadata.rptApplicationId) {
+      const applicationResult = await pool.query(
+        `SELECT * FROM rpt_applications WHERE id = $1`,
+        [metadata.rptApplicationId]
+      );
+
+      if (applicationResult.rows.length === 0) {
+        console.warn(
+          `No RPT service application found for ${metadata.rptApplicationId}`
+        );
+        res.status(200).json({
+          received: true,
+          success: false,
+          reason: 'RPT service application not found',
+        });
+        return;
+      }
+
+      const application = applicationResult.rows[0];
+      const assessedAmount = Number(application.payment_amount || 0);
+
+      if (!Number.isFinite(assessedAmount) || assessedAmount <= 0) {
+        console.warn(
+          `RPT service application ${metadata.rptApplicationId} has no assessed fee.`
+        );
+        res.status(200).json({
+          received: true,
+          success: false,
+          reason: 'No assessed RPT service fee',
+        });
+        return;
+      }
+
+      if (Math.abs(amountPhp - assessedAmount) > 0.01) {
+        console.error(
+          `RPT service payment amount mismatch. Expected ${assessedAmount}, received ${amountPhp}.`
+        );
+        res.status(200).json({
+          received: true,
+          success: false,
+          reason: 'Payment amount does not match assessed service fee',
+        });
+        return;
+      }
+
+      if (String(application.payment_status || '').toLowerCase() === 'paid') {
+        res.status(200).json({
+          received: true,
+          success: true,
+          alreadyRecorded: true,
+          paymentId,
+          paymentIntentId,
+          amount: amountPhp,
+          paymentReference: application.payment_reference,
+          officialReceiptNumber: application.official_receipt_number,
+          applicationId: application.id,
+        });
+        return;
+      }
+
+      await pool.query(
+        `UPDATE rpt_applications
+         SET status = 'Payment Completed',
+             payment_status = 'Paid',
+             payment_reference = $1,
+             official_receipt_number = $2,
+             payment_method = $3,
+             payment_date = NOW()
+         WHERE id = $4`,
+        [
+          paymentReference,
+          officialReceiptNumber,
+          formattedPaymentMethod,
+          metadata.rptApplicationId,
+        ]
+      );
+
+      await recordAudit(
+        req,
+        'AUD-PAYMONGO-WEBHOOK',
+        metadata.customerEmail || application.email || 'citizen@gov.ph',
+        'Citizen',
+        'RPT Module',
+        'RPT_SERVICE_PAYMENT_WEBHOOK_SUCCESS',
+        'INFO',
+        null,
+        `RPT service payment confirmed via webhook. Service: ${application.service || metadata.rptService || 'RPT Service'}. Application: ${metadata.rptApplicationId}. Reference ${paymentReference}. Amount ${amountPhp.toFixed(2)}. O.R. ${officialReceiptNumber}.`
+      );
+
+      res.status(200).json({
+        received: true,
+        success: true,
+        paymentId,
+        paymentIntentId,
+        amount: amountPhp,
+        paymentMethod: formattedPaymentMethod,
+        paymentReference,
+        officialReceiptNumber,
+        applicationId: metadata.rptApplicationId,
+        service: application.service || metadata.rptService,
+      });
+      return;
+    }
 
     // =========================================================
     // REAL PROPERTY TAX PAYMENT
@@ -848,7 +1108,7 @@ export async function getQrPaymentStatus(
       metadata.businessTrackingNumber
     ) {
       console.log(
-        QR payment succeeded for business tax ${metadata.businessTrackingNumber}`
+        `QR payment succeeded for business tax ${metadata.businessTrackingNumber}`
       );
 
       const officialReceiptNumber =
@@ -904,7 +1164,7 @@ export async function getQrPaymentStatus(
       metadata.leaseId
     ) {
       console.log(
-        QR payment succeeded for lease ${metadata.leaseId}`
+        `QR payment succeeded for lease ${metadata.leaseId}`
       );
 
       const leaseResult = await pool.query(
@@ -1004,6 +1264,8 @@ export async function createQrPaymentIntent(
     taxDeclarationNumber,
     rptRecordId,
     businessTrackingNumber,
+    rptApplicationId,
+    rptService,
     customerName,
     customerEmail,
     description,

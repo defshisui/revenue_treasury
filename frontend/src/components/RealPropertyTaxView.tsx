@@ -163,7 +163,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('ALL');
-  const [transferTaxAmountInput, setTransferTaxAmountInput] = useState<string>('');
+  const [rptServiceAmountInput, setRptServiceAmountInput] = useState<string>('');
 
   const [previewDocUrl, setPreviewDocUrl] = useState<string | null>(null);
   const [previewDocTitle, setPreviewDocTitle] = useState<string>('');
@@ -344,12 +344,10 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
   }, [applications, selectedAppId]);
 
   useEffect(() => {
-    setTransferTaxAmountInput(
-      currentApp && currentApp.category === 'Transfer of Ownership'
-        ? String(currentApp.paymentAmount || '')
-        : ''
+    setRptServiceAmountInput(
+      currentApp ? String(currentApp.paymentAmount || '') : ''
     );
-  }, [currentApp?.id, currentApp?.paymentAmount, currentApp?.category]);
+  }, [currentApp?.id, currentApp?.paymentAmount]);
 
   const filteredMasterProperties = useMemo(() => {
     return masterProperties.filter((p) => {
@@ -493,12 +491,17 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     }
   };
 
-  const handleSetTransferTaxForPayment = async () => {
-    if (!currentApp || currentApp.category !== 'Transfer of Ownership') return;
+  const handleSetRPTServiceForPayment = async () => {
+    if (!currentApp) return;
 
-    const amount = Number(transferTaxAmountInput);
+    const amount = Number(rptServiceAmountInput);
+    const serviceName = currentApp.category || currentApp.service || 'RPT Service';
+
     if (!Number.isFinite(amount) || amount <= 0) {
-      triggerToast('Enter the assessed Transfer Tax amount before sending the application for payment.', 'warning');
+      triggerToast(
+        `Enter the assessed ${serviceName} fee before sending the application for payment.`,
+        'warning'
+      );
       return;
     }
 
@@ -506,7 +509,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
       const result = await updateRptApplicationStatus(
         String(currentApp.id),
         'For Payment',
-        'Transfer Tax assessed and tax bill posted for citizen payment.',
+        `${serviceName} fee assessed and payment bill posted for citizen payment.`,
         {
           paymentAmount: amount,
           paymentStatus: 'Pending',
@@ -518,15 +521,30 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
       setApplications((prev) =>
         prev.map((app) =>
           app.id === currentApp.id
-            ? { ...app, ...(serverRecord || {}), status: serverRecord?.status || 'For Payment', paymentAmount: amount, paymentStatus: serverRecord?.payment_status || 'Pending' }
+            ? {
+                ...app,
+                ...(serverRecord || {}),
+                status: serverRecord?.status || 'For Payment',
+                paymentAmount: amount,
+                paymentStatus:
+                  serverRecord?.payment_status || 'Pending',
+              }
             : app
         )
       );
-      triggerToast(`Transfer Tax assessment posted: ${formatCurrency(amount)}. Citizen can now pay online.`, 'success');
+
+      triggerToast(
+        `${serviceName} assessment posted: ${formatCurrency(amount)}. Citizen can now pay online.`,
+        'success'
+      );
     } catch (error: any) {
-      triggerToast(error?.message || 'Failed to post the Transfer Tax assessment.', 'error');
+      triggerToast(
+        error?.message || `Failed to post the ${serviceName} assessment.`,
+        'error'
+      );
     }
   };
+
 
   const handleDigitalRelease = async () => {
     if (!currentApp) return;
@@ -903,48 +921,74 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                   </div>
                 </div>
 
-                {currentApp.category === 'Transfer of Ownership' && (
-                  <div className="p-4 bg-blue-50 dark:bg-blue-950/30 rounded-2xl border border-blue-200 dark:border-blue-900 space-y-3">
-                    <div>
-                      <h3 className="text-xs font-black uppercase tracking-wide text-blue-900 dark:text-blue-200">Transfer Tax Assessment / Tax Bill</h3>
-                      <p className="text-[11px] text-blue-700 dark:text-blue-300 mt-1">
-                        Enter the assessed Transfer Tax after document verification. This posts the amount to the citizen's application so the citizen can pay online, matching the QC assessment → tax bill → payment → receipt sequence.
-                      </p>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-end">
-                      <div>
-                        <label className="block text-[10px] font-bold uppercase text-slate-600 dark:text-slate-300 mb-1">Assessed Transfer Tax</label>
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">₱</span>
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={transferTaxAmountInput}
-                            onChange={(e) => setTransferTaxAmountInput(e.target.value)}
-                            placeholder="0.00"
-                            className="w-full bg-white dark:bg-slate-900 border border-blue-200 dark:border-slate-700 rounded-xl pl-7 pr-3 py-2.5 text-sm font-black outline-none focus:ring-2 focus:ring-blue-400"
-                          />
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => void handleSetTransferTaxForPayment()}
-                        className="bg-[#1D3F99] hover:bg-[#17357F] text-white font-extrabold text-xs px-5 py-2.5 rounded-xl shadow-sm transition"
-                      >
-                        {currentApp.paymentStatus === 'Paid' ? 'Payment Recorded' : 'Post Tax Bill / For Payment'}
-                      </button>
-                    </div>
-                    {Number(currentApp.paymentAmount || 0) > 0 && (
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px]">
-                        <div className="bg-white/80 dark:bg-slate-900/60 rounded-lg p-2"><span className="text-slate-500 block">Amount</span><strong>{formatCurrency(Number(currentApp.paymentAmount))}</strong></div>
-                        <div className="bg-white/80 dark:bg-slate-900/60 rounded-lg p-2"><span className="text-slate-500 block">Payment</span><strong>{currentApp.paymentStatus || 'Pending'}</strong></div>
-                        <div className="bg-white/80 dark:bg-slate-900/60 rounded-lg p-2"><span className="text-slate-500 block">Reference</span><strong className="font-mono">{currentApp.paymentReference || '—'}</strong></div>
-                        <div className="bg-white/80 dark:bg-slate-900/60 rounded-lg p-2"><span className="text-slate-500 block">eOR</span><strong className="font-mono">{currentApp.officialReceiptNumber || '—'}</strong></div>
-                      </div>
-                    )}
+                <div className="p-4 bg-blue-50 dark:bg-blue-950/30 rounded-2xl border border-blue-200 dark:border-blue-900 space-y-3">
+                  <div>
+                    <h3 className="text-xs font-black uppercase tracking-wide text-blue-900 dark:text-blue-200">
+                      RPT Service Assessment / Payment Bill
+                    </h3>
+                    <p className="text-[11px] text-blue-700 dark:text-blue-300 mt-1">
+                      Enter the assessed fee for the selected RPT service. Once posted, the citizen can pay the assessed amount online through PayMongo.
+                    </p>
                   </div>
-                )}
+
+                  <div className="mb-2 px-3 py-2 bg-white/70 dark:bg-slate-900/50 rounded-lg border border-blue-100 dark:border-blue-900">
+                    <span className="text-[10px] font-bold uppercase text-slate-500">RPT Service</span>
+                    <p className="text-sm font-black text-[#0B3B60] dark:text-white">
+                      {currentApp.category || currentApp.service || 'Real Property Tax Service'}
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-end">
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase text-slate-600 dark:text-slate-300 mb-1">
+                        Assessed Service Fee
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">₱</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={rptServiceAmountInput}
+                          onChange={(e) => setRptServiceAmountInput(e.target.value)}
+                          placeholder="0.00"
+                          className="w-full bg-white dark:bg-slate-900 border border-blue-200 dark:border-slate-700 rounded-xl pl-7 pr-3 py-2.5 text-sm font-black outline-none focus:ring-2 focus:ring-blue-400"
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => void handleSetRPTServiceForPayment()}
+                      className="bg-[#1D3F99] hover:bg-[#17357F] text-white font-extrabold text-xs px-5 py-2.5 rounded-xl shadow-sm transition"
+                    >
+                      {currentApp.paymentStatus === 'Paid'
+                        ? 'Payment Recorded'
+                        : 'Post Service Bill / For Payment'}
+                    </button>
+                  </div>
+
+                  {Number(currentApp.paymentAmount || 0) > 0 && (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px]">
+                      <div className="bg-white/80 dark:bg-slate-900/60 rounded-lg p-2">
+                        <span className="text-slate-500 block">Amount</span>
+                        <strong>{formatCurrency(Number(currentApp.paymentAmount))}</strong>
+                      </div>
+                      <div className="bg-white/80 dark:bg-slate-900/60 rounded-lg p-2">
+                        <span className="text-slate-500 block">Payment</span>
+                        <strong>{currentApp.paymentStatus || 'Pending'}</strong>
+                      </div>
+                      <div className="bg-white/80 dark:bg-slate-900/60 rounded-lg p-2">
+                        <span className="text-slate-500 block">Reference</span>
+                        <strong className="font-mono">{currentApp.paymentReference || '—'}</strong>
+                      </div>
+                      <div className="bg-white/80 dark:bg-slate-900/60 rounded-lg p-2">
+                        <span className="text-slate-500 block">eOR</span>
+                        <strong className="font-mono">{currentApp.officialReceiptNumber || '—'}</strong>
+                      </div>
+                    </div>
+                  )}
+                </div>
 
                 <div className="space-y-3">
                   <h3 className="text-xs font-bold uppercase text-slate-700 dark:text-slate-300">

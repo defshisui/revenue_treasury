@@ -15,8 +15,8 @@ import {
   processGroupRPTPayment,
   getRPTApplications,
   saveRPTApplication,
-  createTransferTaxCheckout,
-  verifyTransferTaxPayment,
+  createRPTServiceCheckout,
+  verifyRPTServicePayment,
   type RPTApplicationRecord
 } from "../services/realpropertytaxService";
 
@@ -315,8 +315,8 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
   const [isSubmittingApp, setIsSubmittingApp] = useState(false);
   const [appNotice, setAppNotice] = useState("");
   const [selectedAppDetail, setSelectedAppDetail] = useState<RPTApplicationRecord | null>(null);
-  const [isTransferTaxPaying, setIsTransferTaxPaying] = useState(false);
-  const [transferTaxPaymentNotice, setTransferTaxPaymentNotice] = useState("");
+  const [isRPTServicePaying, setIsRPTServicePaying] = useState(false);
+  const [rptServicePaymentNotice, setRptServicePaymentNotice] = useState("");
 
   // --- Step-by-Step Guide Lightbox Modal ---
   const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
@@ -366,30 +366,30 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
     const paymentType = params.get("type");
     const sessionId = params.get("session_id");
     const paymentResult = params.get("payment");
-    if (paymentType === "TRANSFER_TAX" && sessionId && paymentResult === "success") {
+    if ((paymentType === "TRANSFER_TAX" || paymentType === "RPT_SERVICE") && sessionId && paymentResult === "success") {
       void (async () => {
         try {
-          const result = await verifyTransferTaxPayment(sessionId);
+          const result = await verifyRPTServicePayment(sessionId);
           if (result?.paid) {
             showToast(
-              `Transfer Tax payment confirmed. O.R. ${result.officialReceiptNumber || "issued"}.`,
+              `RPT service payment confirmed. O.R. ${result.officialReceiptNumber || "issued"}.`,
               "success"
             );
-            setTransferTaxPaymentNotice(
+            setRptServicePaymentNotice(
               `Payment confirmed. Official Receipt: ${result.officialReceiptNumber || "Pending issuance"}`
             );
             await loadApplications();
             window.history.replaceState({}, "", "/citizen-rpt?view=status");
           } else {
-            showToast("Transfer Tax payment is not yet confirmed.", "info");
+            showToast("RPT service payment is not yet confirmed.", "info");
           }
         } catch (error: any) {
-          console.error("Transfer Tax payment verification failed:", error);
-          showToast(error?.message || "Unable to verify the Transfer Tax payment.", "error");
+          console.error("RPT service payment verification failed:", error);
+          showToast(error?.message || "Unable to verify the RPT service payment.", "error");
         }
       })();
-    } else if (paymentType === "TRANSFER_TAX" && paymentResult === "cancelled") {
-      showToast("Transfer Tax payment was cancelled. No payment was recorded.", "info");
+    } else if ((paymentType === "TRANSFER_TAX" || paymentType === "RPT_SERVICE") && paymentResult === "cancelled") {
+      showToast("RPT service payment was cancelled. No payment was recorded.", "info");
       window.history.replaceState({}, "", "/citizen-rpt?view=status");
     }
   }, [location.search]);
@@ -908,34 +908,45 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
     }
   };
 
-  const handleTransferTaxPayment = async (application: RPTApplicationRecord) => {
+  const handleRPTServicePayment = async (application: RPTApplicationRecord) => {
     const amount = Number(application.paymentAmount || 0);
+    const serviceName = application.service || 'Real Property Tax Service';
+
     if (!amount || amount <= 0) {
-      showToast("The City Assessor has not posted a Transfer Tax amount yet.", "info");
-      return;
-    }
-    if (!application.email) {
-      showToast("A valid email address is required before online payment.", "error");
+      showToast(`The City Assessor has not posted a ${serviceName} fee yet.`, 'info');
       return;
     }
 
-    setIsTransferTaxPaying(true);
+    if (String(application.paymentStatus || '').toLowerCase() === 'paid') {
+      showToast('This RPT service application has already been paid.', 'info');
+      return;
+    }
+
+    if (!application.email) {
+      showToast('A valid email address is required before online payment.', 'error');
+      return;
+    }
+
+    setIsRPTServicePaying(true);
     try {
-      const checkout = await createTransferTaxCheckout({
+      const checkout = await createRPTServiceCheckout({
         applicationId: String(application.id),
         amount,
-        customerName: application.applicantName || application.ownerName || "Taxpayer",
+        service: serviceName,
+        customerName: application.applicantName || application.ownerName || 'Taxpayer',
         customerEmail: application.email,
         customerPhone: application.mobileNumber,
-        description: `Transfer Tax - ${application.controlNumber || application.taxDeclarationNumber || "RPT Application"}`,
+        description: `${serviceName} - ${application.controlNumber || application.taxDeclarationNumber || 'RPT Application'}`,
       });
+
       window.location.assign(checkout.checkoutUrl);
     } catch (error: any) {
-      showToast(error?.message || "Unable to start Transfer Tax payment.", "error");
+      showToast(error?.message || `Unable to start ${serviceName} payment.`, 'error');
     } finally {
-      setIsTransferTaxPaying(false);
+      setIsRPTServicePaying(false);
     }
   };
+
 
   return (
     <div
@@ -1827,9 +1838,9 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                 </button>
               </div>
 
-              {transferTaxPaymentNotice && (
+              {rptServicePaymentNotice && (
                 <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-emerald-800 font-semibold">
-                  ✓ {transferTaxPaymentNotice}
+                  ✓ {rptServicePaymentNotice}
                 </div>
               )}
 
@@ -2589,11 +2600,11 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
               </div>
             </div>
 
-            {selectedAppDetail.service === "Transfer of Ownership" && Number(selectedAppDetail.paymentAmount || 0) > 0 && (
+            {Number(selectedAppDetail.paymentAmount || 0) > 0 && (
               <div className="p-4 rounded-2xl border border-blue-200 bg-blue-50 space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-blue-700">Transfer Tax Assessment</p>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-blue-700">RPT Service Assessment</p>
                     <p className="text-xl font-black text-[#0B3B60]">{formatCurrency(Number(selectedAppDetail.paymentAmount))}</p>
                   </div>
                   <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${selectedAppDetail.paymentStatus === "Paid" ? "bg-emerald-100 text-emerald-800" : "bg-white text-blue-800 border border-blue-200"}`}>
@@ -2601,7 +2612,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                   </span>
                 </div>
                 <p className="text-[11px] text-blue-800 leading-relaxed">
-                  The City Assessor has completed the assessment. Pay the posted Transfer Tax online to continue the ownership-transfer process.
+                  The City Assessor has completed the assessment. Pay the posted RPT service fee online to continue the application process.
                 </p>
                 {selectedAppDetail.paymentStatus === "Paid" ? (
                   <div className="space-y-1 text-[11px] text-emerald-800 font-semibold">
@@ -2612,11 +2623,11 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                 ) : (
                   <button
                     type="button"
-                    disabled={isTransferTaxPaying}
-                    onClick={() => void handleTransferTaxPayment(selectedAppDetail)}
+                    disabled={isRPTServicePaying}
+                    onClick={() => void handleRPTServicePayment(selectedAppDetail)}
                     className="w-full bg-[#1D3F99] hover:bg-[#17357F] disabled:opacity-50 text-white font-extrabold py-3 rounded-xl text-xs uppercase tracking-wide shadow-sm transition"
                   >
-                    {isTransferTaxPaying ? "Opening Secure Payment..." : "Pay Transfer Tax →"}
+                    {isRPTServicePaying ? "Opening Secure Payment..." : `Pay ${selectedAppDetail.service || "RPT Service"} →`}
                   </button>
                 )}
               </div>
