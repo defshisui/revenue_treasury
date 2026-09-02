@@ -1314,71 +1314,42 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
 
                 <div className="p-6 sm:p-8 bg-slate-50/60 flex flex-col items-center">
                   <div className="w-full text-center">
-                    <p className="text-base sm:text-lg font-black text-slate-900">
-                      Scan QR Ph code to pay
-                    </p>
-                    <p className="text-xs text-slate-500 mt-2">
-                      Use your supported banking or e-wallet app.
-                    </p>
+                    <p className="text-base sm:text-lg font-black text-slate-900">Scan QR Ph code to pay</p>
+                    <p className="text-xs text-slate-500 mt-2">Use your supported banking or e-wallet app.</p>
                   </div>
 
                   {isProcessingPayment && !qrCodeUrl && (
                     <div className="w-full max-w-sm mt-6 rounded-2xl border border-slate-200 bg-white p-10 flex flex-col items-center text-center shadow-sm">
                       <div className="h-10 w-10 border-4 border-blue-200 border-t-blue-700 rounded-full animate-spin mb-4" />
                       <p className="text-sm font-bold text-slate-800">Generating QR Ph code...</p>
-                      <p className="text-xs text-slate-500 mt-1">
-                        Please wait while PayMongo prepares your secure payment.
-                      </p>
+                      <p className="text-xs text-slate-500 mt-1">Please wait while PayMongo prepares your secure payment.</p>
                     </div>
                   )}
 
                   {!isProcessingPayment && qrError && !qrCodeUrl && (
                     <div className="w-full max-w-sm mt-6 rounded-2xl border border-rose-200 bg-rose-50 p-5 text-center">
                       <p className="text-xs font-bold text-rose-700">{qrError}</p>
-                      <button
-                        type="button"
-                        onClick={() => void handlePayMongoBusinessTaxQrPayment(paymentAssessment)}
-                        className="mt-4 px-5 py-2.5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold"
-                      >
-                        Generate QR Again
-                      </button>
+                      <button type="button" onClick={() => void handlePayMongoBusinessTaxQrPayment(paymentAssessment)} className="mt-4 px-5 py-2.5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold">Generate QR Again</button>
                     </div>
                   )}
 
                   {qrCodeUrl && !qrPaymentPaid && (
                     <div className="w-full flex flex-col items-center mt-5">
                       <div className="w-full max-w-sm rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-center mb-4">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-blue-700">
-                          QR Code Refreshes In
-                        </p>
-                        <p className={`text-2xl font-black tabular-nums ${qrSecondsRemaining <= 30 ? "text-rose-600" : "text-blue-700"}`}>
-                          {Math.floor(qrSecondsRemaining / 60)}:
-                          {String(qrSecondsRemaining % 60).padStart(2, "0")}
-                        </p>
-                        <p className="text-[10px] text-slate-500 mt-1">
-                          A new QR code will be generated automatically when the timer expires.
-                        </p>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-blue-700">QR Code Refreshes In</p>
+                        <p className="text-2xl font-black tabular-nums text-blue-700">{Math.floor(qrSecondsRemaining / 60)}:{String(qrSecondsRemaining % 60).padStart(2, "0")}</p>
+                        {qrReferenceNumber && <p className="text-[10px] font-mono text-slate-500 mt-1">Ref: {qrReferenceNumber}</p>}
                       </div>
-
                       <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-md">
-                        <img
-                          src={qrCodeUrl}
-                          alt="PayMongo Dynamic QR Ph payment code"
-                          className="w-64 h-64 sm:w-72 sm:h-72 object-contain"
-                        />
+                        <img src={qrCodeUrl} alt="PayMongo Dynamic QR Ph payment code" className="w-64 h-64 sm:w-72 sm:h-72 object-contain" />
                       </div>
-
-                      <p className="text-xs text-slate-500 text-center mt-3 max-w-sm">
-                        Waiting for payment...
-                      </p>
-
-                      <p className="text-xs text-slate-500 text-center mt-1 max-w-sm">
-                        Scan the QR code with your preferred supported payment app. Your payment will be confirmed automatically through PayMongo.
-                      </p>
+                      <p className="text-xs text-slate-500 text-center mt-3 max-w-sm">Scan the QR code with your preferred supported payment app. Your payment will be confirmed automatically through PayMongo.</p>
+                      <div className="mt-4 flex items-center gap-2 text-xs font-bold text-blue-700">
+                        <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" /> Waiting for payment...
+                      </div>
                     </div>
                   )}
-                </div>
-              </div>
+                </div>              </div>
 
               <div className="px-6 sm:px-8 py-5 border-t border-slate-200 bg-white flex justify-end">
                 <button
@@ -1394,100 +1365,24 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
           </div>
         </div>
       )}
-      {/* Payment Success Confirmation */}
+      {/* Payment Success Screen - same clean style as RPT */}
       {isPaymentSuccess && paymentAssessment && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-[470px] overflow-hidden rounded-[28px] bg-white shadow-[0_25px_80px_rgba(0,0,0,0.30)] animate-[paymentSuccessCard_.35s_ease-out]">
-            <div className="px-7 pb-7 pt-7 sm:px-8 sm:pb-8">
-              <div className="flex justify-center">
-                <div className="flex h-[72px] w-[72px] items-center justify-center rounded-full bg-emerald-100">
-                  <div className="flex h-[48px] w-[48px] items-center justify-center rounded-full bg-emerald-500 shadow-sm">
-                    <svg viewBox="0 0 24 24" className="h-8 w-8 text-white" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <path d="M5 12.5l4.5 4.5L19 7" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-4 text-center">
-                <span className="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-extrabold text-emerald-700">
-                  PAYMENT CONFIRMED
-                </span>
-                <h2 className="mt-4 text-[26px] font-black tracking-tight text-slate-900 sm:text-[28px]">
-                  Payment Successful!
-                </h2>
-                <p className="mx-auto mt-2 max-w-sm text-[13px] leading-5 text-slate-500">
-                  Your Business Tax payment has been confirmed successfully.
-                </p>
-              </div>
-
-              <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50/60 px-4 py-3.5 sm:px-5">
-                <div className="space-y-3">
-                  <div className="grid grid-cols-[105px_1fr] items-start gap-3">
-                    <span className="text-[13px] text-slate-500">Service</span>
-                    <span className="text-right text-[13px] font-bold leading-5 text-slate-800">
-                      Business Tax
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-[105px_1fr] items-start gap-3">
-                    <span className="text-[13px] text-slate-500">Amount Paid</span>
-                    <span className="text-right text-[13px] font-black text-slate-800">
-                      ₱{Number(paymentAssessment.computedFees?.total || 0).toLocaleString("en-PH", {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-[105px_1fr] items-start gap-3">
-                    <span className="text-[13px] text-slate-500">Reference</span>
-                    <span className="break-all text-right text-[12px] font-bold leading-5 text-slate-800">
-                      {qrReferenceNumber || qrPaymentIntentId || paymentAssessment.trackingNumber || "—"}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-[105px_1fr] items-start gap-3">
-                    <span className="text-[13px] text-slate-500">Date</span>
-                    <span className="text-right text-[13px] font-semibold leading-5 text-slate-800">
-                      {(paymentConfirmedAt || new Date()).toLocaleString("en-PH", {
-                        year: "numeric",
-                        month: "numeric",
-                        day: "numeric",
-                        hour: "numeric",
-                        minute: "2-digit",
-                        hour12: true,
-                      })}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setIsPaymentSuccess(false);
-                  setPaymentAssessment(null);
-                  setQrPaymentPaid(false);
-                  setPaymentConfirmedAt(null);
-                  setQrReferenceNumber("");
-                  setQrPaymentIntentId("");
-                  setCurrentScreen('assessment-list');
-                  setCurrentPage(1);
-                }}
-                className="mt-5 w-full rounded-xl bg-[#2447a8] px-5 py-3 text-sm font-extrabold text-white shadow-sm transition-colors hover:bg-[#1d3d91]"
-              >
-                Done
-              </button>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md">
+          <div className="relative w-full max-w-lg rounded-[28px] bg-white p-8 shadow-2xl text-center">
+            <div className="mx-auto mb-5 h-20 w-20 rounded-full bg-emerald-100 flex items-center justify-center">
+              <svg viewBox="0 0 52 52" className="h-12 w-12 text-emerald-600" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M14 27l8 8 17-19" /></svg>
             </div>
+            <p className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">PAYMENT CONFIRMED</p>
+            <h2 className="mt-4 text-2xl font-black text-slate-900">Payment Successful!</h2>
+            <p className="mt-2 text-sm text-slate-500">Your Business Tax payment has been confirmed.</p>
+            <div className="mt-6 rounded-2xl bg-slate-50 border border-slate-200 p-5 text-left space-y-3 text-sm">
+              <div className="flex justify-between gap-4"><span className="text-slate-500">Service</span><span className="font-bold text-right">Business Tax Assessment</span></div>
+              <div className="flex justify-between gap-4"><span className="text-slate-500">Amount Paid</span><span className="font-black">₱{Number(paymentAssessment.computedFees?.total || 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+              <div className="flex justify-between gap-4"><span className="text-slate-500">Reference</span><span className="font-mono font-bold text-right break-all">{qrReferenceNumber || paymentAssessment.trackingNumber || "Confirmed"}</span></div>
+              {paymentConfirmedAt && <div className="flex justify-between gap-4"><span className="text-slate-500">Date</span><span className="font-bold text-right">{paymentConfirmedAt.toLocaleString("en-PH")}</span></div>}
+            </div>
+            <button type="button" onClick={() => { setIsPaymentSuccess(false); setPaymentAssessment(null); setQrPaymentPaid(false); setPaymentConfirmedAt(null); setQrReferenceNumber(""); setCurrentScreen('assessment-list'); setCurrentPage(1); }} className="mt-6 w-full rounded-xl bg-[#1D3F99] hover:bg-[#17357F] text-white py-3 font-extrabold text-sm">Done</button>
           </div>
-
-          <style>{`
-            @keyframes paymentSuccessCard {
-              from { opacity: 0; transform: translateY(12px) scale(.98); }
-              to { opacity: 1; transform: translateY(0) scale(1); }
-            }
-          `}</style>
         </div>
       )}
 
