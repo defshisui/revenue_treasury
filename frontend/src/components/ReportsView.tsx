@@ -33,20 +33,26 @@ export default function ReportsView({
       setHawkerApps(hawkers || []);
 
       const derivedTransactions = activeLeases.map((lease: any, idx: number) => {
+        const paymentStatus = String(
+          lease.paymentStatus ?? lease.status ?? ""
+        ).trim();
+
+        const isPaid = paymentStatus.toLowerCase() === "paid";
+
+        // Collected revenue must use the amount actually paid.
+        // Unpaid leases are still kept in the registry, but they are
+        // excluded from the collected-revenue calculation below.
         const amountValue = Number(
-          lease.amountDue ?? 
-          lease.amountPaid ?? 
-          lease.monthlyRent ?? 
-          lease.rate ?? 
-          lease.fee ?? 
-          lease.amount ?? 
-          0
+          isPaid
+            ? (lease.amountPaid ?? lease.amount ?? lease.amountDue ?? 0)
+            : (lease.amountPaid ?? lease.amountDue ?? lease.monthlyRent ?? lease.rate ?? lease.fee ?? lease.amount ?? 0)
         );
 
         return {
           id: lease.leaseId || lease.id || `TX-MARKET-${idx + 1}`,
           transactionType: `Market Stall Collection (${lease.marketName || 'Public Market'} - Stall ${lease.stallNumber || idx + 1})`,
           amount: amountValue,
+          paymentStatus,
           date: lease.createdAt || lease.date || new Date().toISOString()
         };
       });
@@ -82,7 +88,20 @@ export default function ReportsView({
   const filteredMarketLeases = marketLeases.filter((lease: any) => matchesFiscalPeriod(lease.createdAt || lease.date || lease.timestamp));
   const filteredHawkerApps = hawkerApps.filter((app: any) => matchesFiscalPeriod(app.createdAt || app.date || app.timestamp));
 
-  const totalCollectedRevenue = filteredTransactions.reduce((sum, tx: any) => sum + (Number(tx.amount) || 0), 0);
+  // Only transactions explicitly marked PAID are counted as collected revenue.
+  // Pending/unpaid market leases must never be included in this total.
+  const paidTransactions = filteredTransactions.filter((tx: any) => {
+    const status = String(
+      tx.paymentStatus ?? tx.status ?? ""
+    ).trim().toLowerCase();
+
+    return status === "paid";
+  });
+
+  const totalCollectedRevenue = paidTransactions.reduce(
+    (sum, tx: any) => sum + (Number(tx.amount) || 0),
+    0
+  );
 
   const delinquentRecords = filteredRptRecords.filter(
     (record: any) => record.delinquentStatus || (record.balance && record.balance > 0)
@@ -129,7 +148,7 @@ Fiscal Period: ${reportPeriod}
 Generated On: ${new Date().toLocaleDateString()}
 
 [1] DAILY COLLECTION REPORT
-- Total Transactions Logged: ${filteredTransactions.length}
+- Total Transactions Logged: ${paidTransactions.length}
 - Total Collected Revenue: ₱${totalCollectedRevenue.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
 
 [2] RPT DELINQUENCY STATEMENT
@@ -388,7 +407,7 @@ Generated On: ${new Date().toLocaleDateString()}
                   {previewModalType === "hawkers" && "Hawker Association Records"}
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 m-0 mt-1">
-                  {previewModalType === "daily" && `Showing collection records derived from active market storage (${filteredTransactions.length})`}
+                  {previewModalType === "daily" && `Showing PAID collection records derived from active market storage (${paidTransactions.length})`}
                   {previewModalType === "delinquent" && `Total Flagged Entries: ${delinquentRecords.length}`}
                   {previewModalType === "market" && `Total Active Leases: ${filteredMarketLeases.length}`}
                   {previewModalType === "hawkers" && `Total Registered Associations: ${filteredHawkerApps.length}`}
@@ -497,14 +516,14 @@ Generated On: ${new Date().toLocaleDateString()}
               )}
 
               {previewModalType === "daily" && (
-                filteredTransactions.length === 0 ? (
+                paidTransactions.length === 0 ? (
                   <div className="text-center py-8 space-y-3">
                     <p className="text-slate-400">No collection records found.</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
                     <div className="flex justify-between items-center text-xs text-slate-500 pb-2 border-b border-slate-200 dark:border-slate-800">
-                      <span>Total Count: {filteredTransactions.length} items</span>
+                      <span>Total Paid Transactions: {paidTransactions.length} items</span>
                       <span>Total Collected Revenue: ₱{totalCollectedRevenue.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
                     </div>
                     <div className="overflow-x-auto rounded-xl border border-slate-200/80 dark:border-slate-800">
@@ -517,7 +536,7 @@ Generated On: ${new Date().toLocaleDateString()}
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
-                          {filteredTransactions.map((tx: any, i: number) => (
+                          {paidTransactions.map((tx: any, i: number) => (
                             <tr key={tx.id || i} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
                               <td className="py-3 px-4 font-mono font-semibold text-blue-600 dark:text-blue-400">
                                 {tx.id}
