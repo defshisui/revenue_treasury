@@ -41,11 +41,12 @@ export interface CheckoutResult {
 
 export interface CreateQrPaymentIntentParams {
   amount: number;
-  type?: 'RPT' | 'MARKET_STALL' | 'BUSINESS_TAX' | 'CUSTOM';
+  type?: 'RPT' | 'RPT_SERVICE' | 'MARKET_STALL' | 'BUSINESS_TAX' | 'CUSTOM';
   leaseId?: string;
   businessTrackingNumber?: string;
   taxDeclarationNumber?: string;
   rptRecordId?: string | number;
+  rptApplicationId?: string | number;
   customerName?: string;
   customerEmail?: string;
   description?: string;

@@ -1265,57 +1265,120 @@ export async function createQrPaymentIntent(
     rptRecordId,
     businessTrackingNumber,
     rptApplicationId,
-    rptService,
     customerName,
     customerEmail,
+    customerPhone,
+    rptService,
     description,
   } = req.body;
 
-  if (!amount || Number(amount) <= 0) {
-    res.status(400).json({
-      success: false,
-      error: 'A valid payment amount is required.',
-    });
-    return;
-  }
-
   try {
-    const numericAmount = Number(amount);
+    let numericAmount = Number(amount);
 
     const paymentType =
       type ||
-      (businessTrackingNumber
-        ? 'BUSINESS_TAX'
-        : taxDeclarationNumber
-          ? 'RPT'
-          : 'MARKET_STALL');
+      (rptApplicationId
+        ? 'RPT_SERVICE'
+        : businessTrackingNumber
+          ? 'BUSINESS_TAX'
+          : taxDeclarationNumber
+            ? 'RPT'
+            : 'MARKET_STALL');
+
+    // RPT Citizen's Charter: the assessor-posted database amount is authoritative.
+    if (paymentType === 'RPT_SERVICE') {
+      if (!rptApplicationId) {
+        res.status(400).json({
+          success: false,
+          error: 'RPT application ID is required.',
+        });
+        return;
+      }
+
+      const applicationResult = await pool.query(
+        `SELECT id, service, payment_amount, payment_status, status
+         FROM rpt_applications
+         WHERE id = $1
+         LIMIT 1`,
+        [rptApplicationId]
+      );
+
+      if (applicationResult.rows.length === 0) {
+        res.status(404).json({
+          success: false,
+          error: 'RPT service application not found.',
+        });
+        return;
+      }
+
+      const application = applicationResult.rows[0];
+      const assessedAmount = Number(application.payment_amount || 0);
+
+      if (!Number.isFinite(assessedAmount) || assessedAmount <= 0) {
+        res.status(400).json({
+          success: false,
+          error: 'The City Assessor has not posted an assessed service fee yet.',
+        });
+        return;
+      }
+
+      if (String(application.payment_status || '').toLowerCase() === 'paid') {
+        res.status(409).json({
+          success: false,
+          error: 'This RPT service application has already been paid.',
+        });
+        return;
+      }
+
+      numericAmount = assessedAmount;
+    }
+
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+      res.status(400).json({
+        success: false,
+        error: 'A valid payment amount is required.',
+      });
+      return;
+    }
+
+    const randomSuffix = Math.floor(100000 + Math.random() * 900000);
 
     const referenceNumber =
       paymentType === 'BUSINESS_TAX'
-        ? `BIZ-${businessTrackingNumber || Date.now()}-${Math.floor(100000 + Math.random() * 900000)}`
-        : paymentType === 'RPT'
-          ? `RPT-${taxDeclarationNumber || Date.now()}-${Math.floor(100000 + Math.random() * 900000)}`
-          : `MKT-${leaseId || Date.now()}-${Math.floor(100000 + Math.random() * 900000)}`;
+        ? `BIZ-${businessTrackingNumber || Date.now()}-${randomSuffix}`
+        : paymentType === 'RPT_SERVICE'
+          ? `RPT-SVC-${rptApplicationId || Date.now()}-${randomSuffix}`
+          : paymentType === 'RPT'
+            ? `RPT-${taxDeclarationNumber || Date.now()}-${randomSuffix}`
+            : `MKT-${leaseId || Date.now()}-${randomSuffix}`;
+
+    const paymentDescription =
+      description ||
+      (paymentType === 'BUSINESS_TAX'
+        ? 'Business Tax Assessment Payment'
+        : paymentType === 'RPT_SERVICE'
+          ? `RPT Service Payment (${rptService || 'RPT Service'})`
+          : paymentType === 'RPT'
+            ? 'Real Property Tax Payment'
+            : 'Market Stall Rental Payment');
 
     const result = await PayMongoService.createQrPaymentIntent({
       amount: numericAmount,
-      description:
-        description ||
-        (paymentType === 'BUSINESS_TAX'
-          ? 'Business Tax Assessment Payment'
-          : 'Market Stall Rental Payment'),
+      description: paymentDescription,
       referenceNumber,
       metadata: {
         type: paymentType,
         leaseId: paymentType === 'MARKET_STALL' ? leaseId : undefined,
         taxDeclarationNumber: paymentType === 'RPT' ? taxDeclarationNumber : undefined,
         rptRecordId: paymentType === 'RPT' ? rptRecordId : undefined,
+        rptApplicationId: paymentType === 'RPT_SERVICE' ? rptApplicationId : undefined,
         businessTrackingNumber:
           paymentType === 'BUSINESS_TAX'
             ? businessTrackingNumber
             : undefined,
         customerName,
         customerEmail,
+        customerPhone,
       },
     });
 
@@ -1329,10 +1392,7 @@ export async function createQrPaymentIntent(
       publicKey: PayMongoService.getPublicKey(),
     });
   } catch (err: any) {
-    console.error(
-      ' QR Ph Payment Intent error:',
-      err
-    );
+    console.error(' QR Ph Payment Intent error:', err);
 
     res.status(500).json({
       success: false,

@@ -15,8 +15,6 @@ import {
   processGroupRPTPayment,
   getRPTApplications,
   saveRPTApplication,
-  createRPTServiceCheckout,
-  verifyRPTServicePayment,
   type RPTApplicationRecord
 } from "../services/realpropertytaxService";
 
@@ -315,8 +313,19 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
   const [isSubmittingApp, setIsSubmittingApp] = useState(false);
   const [appNotice, setAppNotice] = useState("");
   const [selectedAppDetail, setSelectedAppDetail] = useState<RPTApplicationRecord | null>(null);
-  const [isRPTServicePaying, setIsRPTServicePaying] = useState(false);
   const [rptServicePaymentNotice, setRptServicePaymentNotice] = useState("");
+
+  // RPT Citizen's Charter QR Ph payment flow (same as Business Tax / Market Stall)
+  const [isRPTServiceQrOpen, setIsRPTServiceQrOpen] = useState(false);
+  const [isGeneratingRPTServiceQr, setIsGeneratingRPTServiceQr] = useState(false);
+  const [rptServiceQrCodeUrl, setRptServiceQrCodeUrl] = useState("");
+  const [rptServiceQrReferenceNumber, setRptServiceQrReferenceNumber] = useState("");
+  const [rptServiceQrPaymentIntentId, setRptServiceQrPaymentIntentId] = useState("");
+  const [rptServiceQrSecondsRemaining, setRptServiceQrSecondsRemaining] = useState(300);
+  const [rptServiceQrPaid, setRptServiceQrPaid] = useState(false);
+  const [rptServicePaymentSuccess, setRptServicePaymentSuccess] = useState(false);
+  const [rptServicePaymentConfirmedAt, setRptServicePaymentConfirmedAt] = useState<Date | null>(null);
+  const [rptServicePaymentApplication, setRptServicePaymentApplication] = useState<RPTApplicationRecord | null>(null);
 
   // --- Step-by-Step Guide Lightbox Modal ---
   const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
@@ -363,35 +372,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
 
     // Dynamic QR Ph payments are confirmed through the backend webhook/status endpoint.
 
-    const paymentType = params.get("type");
-    const sessionId = params.get("session_id");
-    const paymentResult = params.get("payment");
-    if ((paymentType === "TRANSFER_TAX" || paymentType === "RPT_SERVICE") && sessionId && paymentResult === "success") {
-      void (async () => {
-        try {
-          const result = await verifyRPTServicePayment(sessionId);
-          if (result?.paid) {
-            showToast(
-              `RPT service payment confirmed. O.R. ${result.officialReceiptNumber || "issued"}.`,
-              "success"
-            );
-            setRptServicePaymentNotice(
-              `Payment confirmed. Official Receipt: ${result.officialReceiptNumber || "Pending issuance"}`
-            );
-            await loadApplications();
-            window.history.replaceState({}, "", "/citizen-rpt?view=status");
-          } else {
-            showToast("RPT service payment is not yet confirmed.", "info");
-          }
-        } catch (error: any) {
-          console.error("RPT service payment verification failed:", error);
-          showToast(error?.message || "Unable to verify the RPT service payment.", "error");
-        }
-      })();
-    } else if ((paymentType === "TRANSFER_TAX" || paymentType === "RPT_SERVICE") && paymentResult === "cancelled") {
-      showToast("RPT service payment was cancelled. No payment was recorded.", "info");
-      window.history.replaceState({}, "", "/citizen-rpt?view=status");
-    }
+    // Dynamic QR Ph payments are confirmed in real time by /api/payments/qr-status.
   }, [location.search]);
 
   // Load existing applications
@@ -908,44 +889,160 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
     }
   };
 
-  const handleRPTServicePayment = async (application: RPTApplicationRecord) => {
+  const handlePayMongoRPTServiceQrPayment = async (application: RPTApplicationRecord) => {
+    setIsGeneratingRPTServiceQr(true);
+    setRptServiceQrCodeUrl("");
+    setRptServiceQrReferenceNumber("");
+    setRptServiceQrPaymentIntentId("");
+    setRptServiceQrPaid(false);
+    setRptServicePaymentConfirmedAt(null);
+
     const amount = Number(application.paymentAmount || 0);
-    const serviceName = application.service || 'Real Property Tax Service';
+    const serviceName = application.service || "Real Property Tax Service";
 
-    if (!amount || amount <= 0) {
-      showToast(`The City Assessor has not posted a ${serviceName} fee yet.`, 'info');
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setIsGeneratingRPTServiceQr(false);
+      setRptServicePaymentNotice(`The City Assessor has not posted a ${serviceName} fee yet.`);
       return;
     }
 
-    if (String(application.paymentStatus || '').toLowerCase() === 'paid') {
-      showToast('This RPT service application has already been paid.', 'info');
-      return;
-    }
-
-    if (!application.email) {
-      showToast('A valid email address is required before online payment.', 'error');
-      return;
-    }
-
-    setIsRPTServicePaying(true);
     try {
-      const checkout = await createRPTServiceCheckout({
-        applicationId: String(application.id),
+      const paymentIntent = await createPayMongoQrPaymentIntent({
         amount,
-        service: serviceName,
-        customerName: application.applicantName || application.ownerName || 'Taxpayer',
-        customerEmail: application.email,
+        type: "RPT_SERVICE",
+        rptApplicationId: String(application.id),
+        customerName: application.applicantName || application.ownerName || currentUser?.fullname || "Taxpayer",
+        customerEmail: application.email || currentUser?.email || "taxpayer@gov.ph",
         customerPhone: application.mobileNumber,
-        description: `${serviceName} - ${application.controlNumber || application.taxDeclarationNumber || 'RPT Application'}`,
-      });
+        description: `${serviceName} - ${application.controlNumber || application.taxDeclarationNumber || "RPT Application"}`,
+      } as any);
 
-      window.location.assign(checkout.checkoutUrl);
+      setRptServiceQrPaymentIntentId(paymentIntent.paymentIntentId);
+      setRptServiceQrReferenceNumber(paymentIntent.referenceNumber);
+
+      const paymentMethodId = await createQrPhPaymentMethod(paymentIntent.publicKey, 300);
+      const attachedPayment = await attachQrPhPaymentMethod(
+        paymentIntent.paymentIntentId,
+        paymentMethodId,
+        paymentIntent.clientKey,
+        paymentIntent.publicKey
+      );
+
+      const imageUrl =
+        attachedPayment?.attributes?.next_action?.code?.image_url ||
+        attachedPayment?.next_action?.code?.image_url ||
+        attachedPayment?.attributes?.next_action?.qr_code?.image_url ||
+        attachedPayment?.qr_code?.image_url ||
+        "";
+
+      if (!imageUrl) {
+        throw new Error("PayMongo did not return the QRPh code image. Please try again.");
+      }
+
+      setRptServiceQrCodeUrl(imageUrl);
+      setRptServicePaymentNotice("");
     } catch (error: any) {
-      showToast(error?.message || `Unable to start ${serviceName} payment.`, 'error');
+      console.error("PayMongo RPT Service QRPh payment error:", error);
+      setRptServicePaymentNotice(
+        error?.message || "Unable to generate the PayMongo QRPh code. Please try again."
+      );
     } finally {
-      setIsRPTServicePaying(false);
+      setIsGeneratingRPTServiceQr(false);
     }
   };
+
+  const openRPTServicePayment = (application: RPTApplicationRecord) => {
+    setRptServicePaymentApplication(application);
+    setSelectedAppDetail(null);
+    setIsRPTServiceQrOpen(true);
+    setRptServicePaymentSuccess(false);
+    void handlePayMongoRPTServiceQrPayment(application);
+  };
+
+  const closeRPTServicePayment = () => {
+    if (isGeneratingRPTServiceQr) return;
+    setIsRPTServiceQrOpen(false);
+    setRptServicePaymentApplication(null);
+    setRptServiceQrCodeUrl("");
+    setRptServiceQrReferenceNumber("");
+    setRptServiceQrPaymentIntentId("");
+    setRptServiceQrPaid(false);
+    setRptServicePaymentConfirmedAt(null);
+    setRptServicePaymentNotice("");
+    setRptServicePaymentSuccess(false);
+  };
+
+  useEffect(() => {
+    if (!isRPTServiceQrOpen || !rptServiceQrCodeUrl || rptServiceQrPaid) return;
+
+    const timer = window.setInterval(() => {
+      setRptServiceQrSecondsRemaining((seconds) => {
+        if (seconds <= 1) {
+          window.clearInterval(timer);
+          setRptServiceQrCodeUrl("");
+          if (rptServicePaymentApplication) {
+            void handlePayMongoRPTServiceQrPayment(rptServicePaymentApplication);
+          }
+          return 300;
+        }
+        return seconds - 1;
+      });
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [isRPTServiceQrOpen, rptServiceQrCodeUrl, rptServiceQrPaid, rptServicePaymentApplication]);
+
+  useEffect(() => {
+    if (!isRPTServiceQrOpen || !rptServiceQrPaymentIntentId || rptServiceQrPaid) return;
+
+    const poll = window.setInterval(async () => {
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/api/payments/qr-status/${encodeURIComponent(rptServiceQrPaymentIntentId)}`
+        );
+        if (!response.ok) return;
+
+        const data = await response.json();
+        if (data.paid) {
+          setRptServiceQrPaid(true);
+          setRptServicePaymentConfirmedAt(new Date());
+          setRptServiceQrSecondsRemaining(0);
+          setRptServiceQrCodeUrl("");
+          setIsRPTServiceQrOpen(false);
+          setRptServiceQrPaymentIntentId("");
+          setRptServicePaymentSuccess(true);
+          loadApplications();
+        }
+      } catch (error) {
+        console.error("RPT service QR payment status check failed:", error);
+      }
+    }, 3000);
+
+    return () => window.clearInterval(poll);
+  }, [isRPTServiceQrOpen, rptServiceQrPaymentIntentId, rptServiceQrPaid]);
+
+  const handleRPTServicePayment = async (application: RPTApplicationRecord) => {
+    const amount = Number(application.paymentAmount || 0);
+    const serviceName = application.service || "Real Property Tax Service";
+
+    if (!amount || amount <= 0) {
+      showToast(`The City Assessor has not posted a ${serviceName} fee yet.`, "info");
+      return;
+    }
+
+    if (String(application.paymentStatus || "").toLowerCase() === "paid") {
+      showToast("This RPT service application has already been paid.", "info");
+      return;
+    }
+
+    if (!application.email && !currentUser?.email) {
+      showToast("A valid email address is required before online payment.", "error");
+      return;
+    }
+
+    openRPTServicePayment(application);
+  };
+
 
 
   return (
@@ -2623,11 +2720,11 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                 ) : (
                   <button
                     type="button"
-                    disabled={isRPTServicePaying}
+                    disabled={isGeneratingRPTServiceQr}
                     onClick={() => void handleRPTServicePayment(selectedAppDetail)}
                     className="w-full bg-[#1D3F99] hover:bg-[#17357F] disabled:opacity-50 text-white font-extrabold py-3 rounded-xl text-xs uppercase tracking-wide shadow-sm transition"
                   >
-                    {isRPTServicePaying ? "Opening Secure Payment..." : `Pay ${selectedAppDetail.service || "RPT Service"} →`}
+                    {isGeneratingRPTServiceQr ? "Generating QR..." : `Pay ${selectedAppDetail.service || "RPT Service"} →`}
                   </button>
                 )}
               </div>
@@ -2639,6 +2736,121 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
             >
               Close
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* RPT CITIZEN'S CHARTER QR PH PAYMENT MODAL */}
+      {isRPTServiceQrOpen && rptServicePaymentApplication && (
+        <div className="fixed inset-0 z-[60] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
+          <div className="bg-white rounded-3xl w-full max-w-5xl shadow-2xl border border-slate-200 overflow-hidden my-auto">
+            <div className="grid grid-cols-1 lg:grid-cols-2">
+              <div className="p-6 sm:p-8 lg:border-r border-slate-200">
+                <h2 className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">
+                  RPT Service Payment
+                </h2>
+                <p className="text-xl sm:text-2xl font-black text-slate-900 mt-1 break-all">
+                  ({rptServicePaymentApplication.controlNumber || rptServicePaymentApplication.taxDeclarationNumber || "RPT Application"})
+                </p>
+                <p className="text-sm text-slate-500 mt-3">
+                  {rptServicePaymentApplication.service || "Real Property Tax Service"}
+                </p>
+                <p className="text-sm text-slate-600 mt-4">
+                  Billed to <span className="font-bold text-slate-900">{rptServicePaymentApplication.applicantName || rptServicePaymentApplication.ownerName || currentUser?.fullname || "Taxpayer"}</span>
+                  {(rptServicePaymentApplication.email || currentUser?.email) && <> , <span>{rptServicePaymentApplication.email || currentUser?.email}</span></>}
+                </p>
+
+                <div className="mt-6 rounded-2xl border border-blue-200 bg-blue-50/60 p-5">
+                  <p className="text-xs font-black uppercase tracking-wide text-blue-900 mb-3">RPT Service Assessment</p>
+                  <div className="flex justify-between items-center gap-4 py-3">
+                    <span className="text-slate-600">{rptServicePaymentApplication.service || "Service Fee"}</span>
+                    <span className="font-black text-slate-900 whitespace-nowrap">{formatCurrency(Number(rptServicePaymentApplication.paymentAmount || 0))}</span>
+                  </div>
+                </div>
+
+                <div className="mt-6 pt-5 border-t border-slate-200">
+                  <p className="text-4xl sm:text-5xl font-black text-emerald-600">
+                    {formatCurrency(Number(rptServicePaymentApplication.paymentAmount || 0))}
+                  </p>
+                  <div className="flex justify-between items-center mt-8 text-sm">
+                    <span className="text-slate-600">Subtotal</span>
+                    <span className="font-bold text-slate-900">{formatCurrency(Number(rptServicePaymentApplication.paymentAmount || 0))}</span>
+                  </div>
+                  <div className="flex justify-between items-center mt-4 text-sm">
+                    <span className="text-slate-600">Payment Fees</span>
+                    <span className="font-semibold text-slate-900">Free</span>
+                  </div>
+                  <div className="flex justify-between items-center mt-5 pt-5 border-t border-slate-200">
+                    <span className="font-black text-slate-900">Total Due</span>
+                    <span className="font-black text-lg text-slate-900">{formatCurrency(Number(rptServicePaymentApplication.paymentAmount || 0))}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 sm:p-8 bg-slate-50/60 flex flex-col items-center">
+                <div className="w-full text-center">
+                  <p className="text-base sm:text-lg font-black text-slate-900">Scan QR Ph code to pay</p>
+                  <p className="text-xs text-slate-500 mt-2">Use your supported banking or e-wallet app.</p>
+                </div>
+
+                {isGeneratingRPTServiceQr && !rptServiceQrCodeUrl && (
+                  <div className="w-full max-w-sm mt-6 rounded-2xl border border-slate-200 bg-white p-10 flex flex-col items-center text-center shadow-sm">
+                    <div className="h-10 w-10 border-4 border-blue-200 border-t-blue-700 rounded-full animate-spin mb-4" />
+                    <p className="text-sm font-bold text-slate-800">Generating QR Ph code...</p>
+                    <p className="text-xs text-slate-500 mt-1">Please wait while PayMongo prepares your secure payment.</p>
+                  </div>
+                )}
+
+                {!isGeneratingRPTServiceQr && rptServicePaymentNotice && !rptServiceQrCodeUrl && (
+                  <div className="w-full max-w-sm mt-6 rounded-2xl border border-rose-200 bg-rose-50 p-5 text-center">
+                    <p className="text-xs font-bold text-rose-700">{rptServicePaymentNotice}</p>
+                    <button type="button" onClick={() => void handlePayMongoRPTServiceQrPayment(rptServicePaymentApplication)} className="mt-4 px-5 py-2.5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold">Generate QR Again</button>
+                  </div>
+                )}
+
+                {rptServiceQrCodeUrl && !rptServiceQrPaid && (
+                  <div className="w-full flex flex-col items-center mt-5">
+                    <div className="w-full max-w-sm rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-center mb-4">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-blue-700">QR Code Refreshes In</p>
+                      <p className="text-2xl font-black tabular-nums text-blue-700">{Math.floor(rptServiceQrSecondsRemaining / 60)}:{String(rptServiceQrSecondsRemaining % 60).padStart(2, "0")}</p>
+                      {rptServiceQrReferenceNumber && <p className="text-[10px] font-mono text-slate-500 mt-1">Ref: {rptServiceQrReferenceNumber}</p>}
+                    </div>
+                    <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-md">
+                      <img src={rptServiceQrCodeUrl} alt="PayMongo Dynamic QR Ph payment code" className="w-64 h-64 sm:w-72 sm:h-72 object-contain" />
+                    </div>
+                    <p className="text-xs text-slate-500 text-center mt-3 max-w-sm">Scan the QR code with your preferred supported payment app. Your payment will be confirmed automatically through PayMongo.</p>
+                    <div className="mt-4 flex items-center gap-2 text-xs font-bold text-blue-700">
+                      <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" /> Waiting for payment...
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="px-6 sm:px-8 py-5 border-t border-slate-200 bg-white flex justify-end">
+              <button type="button" onClick={closeRPTServicePayment} disabled={isGeneratingRPTServiceQr} className="px-6 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 disabled:opacity-50 text-slate-700 font-bold text-sm transition-colors">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {rptServicePaymentSuccess && rptServicePaymentApplication && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md">
+          <div className="relative w-full max-w-lg rounded-[28px] bg-white p-8 shadow-2xl text-center">
+            <div className="mx-auto mb-5 h-20 w-20 rounded-full bg-emerald-100 flex items-center justify-center">
+              <svg viewBox="0 0 52 52" className="h-12 w-12 text-emerald-600" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M14 27l8 8 17-19" /></svg>
+            </div>
+            <p className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">PAYMENT CONFIRMED</p>
+            <h2 className="mt-4 text-2xl font-black text-slate-900">Payment Successful!</h2>
+            <p className="mt-2 text-sm text-slate-500">Your {rptServicePaymentApplication.service || "RPT service"} payment has been confirmed.</p>
+            <div className="mt-6 rounded-2xl bg-slate-50 border border-slate-200 p-5 text-left space-y-3 text-sm">
+              <div className="flex justify-between gap-4"><span className="text-slate-500">Service</span><span className="font-bold text-right">{rptServicePaymentApplication.service}</span></div>
+              <div className="flex justify-between gap-4"><span className="text-slate-500">Amount Paid</span><span className="font-black">{formatCurrency(Number(rptServicePaymentApplication.paymentAmount || 0))}</span></div>
+              <div className="flex justify-between gap-4"><span className="text-slate-500">Reference</span><span className="font-mono font-bold text-right">{rptServicePaymentApplication.paymentReference || rptServiceQrReferenceNumber || "Confirmed"}</span></div>
+              {rptServicePaymentApplication.officialReceiptNumber && <div className="flex justify-between gap-4"><span className="text-slate-500">Official Receipt</span><span className="font-mono font-bold">{rptServicePaymentApplication.officialReceiptNumber}</span></div>}
+              {rptServicePaymentConfirmedAt && <div className="flex justify-between gap-4"><span className="text-slate-500">Date</span><span className="font-bold">{rptServicePaymentConfirmedAt.toLocaleString("en-PH")}</span></div>}
+            </div>
+            <button type="button" onClick={() => { setRptServicePaymentSuccess(false); setRptServicePaymentApplication(null); loadApplications(); }} className="mt-6 w-full rounded-xl bg-[#1D3F99] hover:bg-[#17357F] text-white py-3 font-extrabold text-sm">Done</button>
           </div>
         </div>
       )}
