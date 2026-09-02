@@ -681,9 +681,9 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
       </div>
       <UnifiedFooter />
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
           {isModalOpen === 'appointment' && (
-            <form onSubmit={handleAppointmentSubmit} className="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-xl overflow-hidden">
+            <form onSubmit={handleAppointmentSubmit} className="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-xl max-h-[94vh] overflow-y-auto">
               <div className="flex justify-between items-center px-6 py-4 border-b border-slate-200 bg-slate-50">
                 <h3 className="font-bold text-sm text-slate-800">Schedule Municipal Appointment</h3>
                 <button type="button" onClick={closeModal} className="text-slate-400 hover:text-slate-600 font-bold text-lg cursor-pointer">✕</button>
@@ -1066,8 +1066,8 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
         </div>
       )}
       {selectedAssessmentView && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl sm:rounded-3xl max-w-lg w-full max-h-[94vh] overflow-y-auto p-4 sm:p-6 shadow-2xl border border-slate-200 space-y-4">
             <div className="flex justify-between items-center border-b border-slate-200 pb-3">
               <div>
                 <h3 className="font-bold text-slate-900 text-sm uppercase tracking-wide">
@@ -1084,7 +1084,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
               </button>
             </div>
             <div className="space-y-3 text-xs max-h-[60vh] overflow-y-auto pr-1">
-              <div className="grid grid-cols-2 gap-3 bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
                 <div>
                   <span className="block text-[10px] text-slate-400 font-bold uppercase">Business Name</span>
                   <span className="font-semibold text-slate-800">{selectedAssessmentView.businessName}</span>
@@ -1178,12 +1178,12 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
         </div>
       )}
       {isPaymentStep && paymentAssessment && (
-        <div className="fixed inset-0 z-[60] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
-          <div className="bg-white rounded-3xl w-full max-w-5xl shadow-2xl border border-slate-200 overflow-hidden my-auto">
+        <div className="fixed inset-0 z-[60] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto overscroll-contain">
+          <div className="bg-white rounded-2xl sm:rounded-3xl w-full max-w-5xl max-h-[96vh] shadow-2xl border border-slate-200 overflow-y-auto my-auto">
             <>
-              <div className="grid grid-cols-1 lg:grid-cols-2">
+              <div className="grid grid-cols-1 lg:grid-cols-2 min-w-0">
 
-                <div className="p-6 sm:p-8 lg:border-r border-slate-200">
+                <div className="p-4 sm:p-6 lg:p-8 lg:border-r border-slate-200 min-w-0">
                   <h2 className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">
                     Business Tax Payment
                   </h2>
@@ -1312,14 +1312,14 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                   </div>
                 </div>
 
-                <div className="p-6 sm:p-8 bg-slate-50/60 flex flex-col items-center">
+                <div className="p-4 sm:p-6 lg:p-8 bg-slate-50/60 flex flex-col items-center min-w-0">
                   <div className="w-full text-center">
                     <p className="text-base sm:text-lg font-black text-slate-900">Scan QR Ph code to pay</p>
                     <p className="text-xs text-slate-500 mt-2">Use your supported banking or e-wallet app.</p>
                   </div>
 
                   {isProcessingPayment && !qrCodeUrl && (
-                    <div className="w-full max-w-sm mt-6 rounded-2xl border border-slate-200 bg-white p-10 flex flex-col items-center text-center shadow-sm">
+                    <div className="w-full max-w-sm mt-5 rounded-2xl border border-slate-200 bg-white p-6 sm:p-10 flex flex-col items-center text-center shadow-sm">
                       <div className="h-10 w-10 border-4 border-blue-200 border-t-blue-700 rounded-full animate-spin mb-4" />
                       <p className="text-sm font-bold text-slate-800">Generating QR Ph code...</p>
                       <p className="text-xs text-slate-500 mt-1">Please wait while PayMongo prepares your secure payment.</p>
@@ -1327,7 +1327,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                   )}
 
                   {!isProcessingPayment && qrError && !qrCodeUrl && (
-                    <div className="w-full max-w-sm mt-6 rounded-2xl border border-rose-200 bg-rose-50 p-5 text-center">
+                    <div className="w-full max-w-sm mt-5 rounded-2xl border border-rose-200 bg-rose-50 p-4 sm:p-5 text-center">
                       <p className="text-xs font-bold text-rose-700">{qrError}</p>
                       <button type="button" onClick={() => void handlePayMongoBusinessTaxQrPayment(paymentAssessment)} className="mt-4 px-5 py-2.5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold">Generate QR Again</button>
                     </div>
@@ -1335,15 +1335,15 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
 
                   {qrCodeUrl && !qrPaymentPaid && (
                     <div className="w-full flex flex-col items-center mt-5">
-                      <div className="w-full max-w-sm rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-center mb-4">
+                      <div className="w-full max-w-sm rounded-xl border border-blue-200 bg-blue-50 px-3 sm:px-4 py-3 text-center mb-4">
                         <p className="text-[10px] font-black uppercase tracking-widest text-blue-700">QR Code Refreshes In</p>
-                        <p className="text-2xl font-black tabular-nums text-blue-700">{Math.floor(qrSecondsRemaining / 60)}:{String(qrSecondsRemaining % 60).padStart(2, "0")}</p>
+                        <p className="text-xl sm:text-2xl font-black tabular-nums text-blue-700">{Math.floor(qrSecondsRemaining / 60)}:{String(qrSecondsRemaining % 60).padStart(2, "0")}</p>
                         {qrReferenceNumber && <p className="text-[10px] font-mono text-slate-500 mt-1">Ref: {qrReferenceNumber}</p>}
                       </div>
-                      <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-md">
-                        <img src={qrCodeUrl} alt="PayMongo Dynamic QR Ph payment code" className="w-64 h-64 sm:w-72 sm:h-72 object-contain" />
+                      <div className="bg-white border border-slate-200 rounded-2xl p-3 sm:p-4 shadow-md max-w-full">
+                        <img src={qrCodeUrl} alt="PayMongo Dynamic QR Ph payment code" className="w-[min(72vw,18rem)] h-[min(72vw,18rem)] max-w-full object-contain" />
                       </div>
-                      <p className="text-xs text-slate-500 text-center mt-3 max-w-sm">Scan the QR code with your preferred supported payment app. Your payment will be confirmed automatically through PayMongo.</p>
+                      <p className="text-xs text-slate-500 text-center mt-3 max-w-sm px-2">Scan the QR code with your preferred supported payment app. Your payment will be confirmed automatically through PayMongo.</p>
                       <div className="mt-4 flex items-center gap-2 text-xs font-bold text-blue-700">
                         <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" /> Waiting for payment...
                       </div>
@@ -1351,7 +1351,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                   )}
                 </div>              </div>
 
-              <div className="px-6 sm:px-8 py-5 border-t border-slate-200 bg-white flex justify-end">
+              <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-5 border-t border-slate-200 bg-white flex justify-end sticky bottom-0">
                 <button
                   type="button"
                   onClick={closeBusinessTaxPayment}
@@ -1367,15 +1367,15 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
       )}
       {/* Payment Success Screen - same clean style as RPT */}
       {isPaymentSuccess && paymentAssessment && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md">
-          <div className="relative w-full max-w-lg rounded-[28px] bg-white p-8 shadow-2xl text-center">
-            <div className="mx-auto mb-5 h-20 w-20 rounded-full bg-emerald-100 flex items-center justify-center">
-              <svg viewBox="0 0 52 52" className="h-12 w-12 text-emerald-600" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M14 27l8 8 17-19" /></svg>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-slate-950/75 backdrop-blur-md overflow-y-auto overscroll-contain">
+          <div className="relative w-full max-w-lg max-h-[94vh] overflow-y-auto rounded-2xl sm:rounded-[28px] bg-white p-5 sm:p-8 shadow-2xl text-center">
+            <div className="mx-auto mb-4 sm:mb-5 h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-emerald-100 flex items-center justify-center">
+              <svg viewBox="0 0 52 52" className="h-10 w-10 sm:h-12 sm:w-12 text-emerald-600" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M14 27l8 8 17-19" /></svg>
             </div>
             <p className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">PAYMENT CONFIRMED</p>
-            <h2 className="mt-4 text-2xl font-black text-slate-900">Payment Successful!</h2>
+            <h2 className="mt-3 sm:mt-4 text-xl sm:text-2xl font-black text-slate-900">Payment Successful!</h2>
             <p className="mt-2 text-sm text-slate-500">Your Business Tax payment has been confirmed.</p>
-            <div className="mt-6 rounded-2xl bg-slate-50 border border-slate-200 p-5 text-left space-y-3 text-sm">
+            <div className="mt-5 rounded-2xl bg-slate-50 border border-slate-200 p-4 sm:p-5 text-left space-y-3 text-sm overflow-x-auto">
               <div className="flex justify-between gap-4"><span className="text-slate-500">Service</span><span className="font-bold text-right">Business Tax Assessment</span></div>
               <div className="flex justify-between gap-4"><span className="text-slate-500">Amount Paid</span><span className="font-black">₱{Number(paymentAssessment.computedFees?.total || 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
               <div className="flex justify-between gap-4"><span className="text-slate-500">Reference</span><span className="font-mono font-bold text-right break-all">{qrReferenceNumber || paymentAssessment.trackingNumber || "Confirmed"}</span></div>

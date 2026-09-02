@@ -141,3 +141,69 @@
 .lgu-footer {
     @apply p-5 text-center text-xs text-gray-500;
 }
+
+/* =========================
+   RESPONSIVE SAFETY
+========================= */
+
+html,
+body,
+#root {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+}
+
+button,
+input,
+select,
+textarea {
+  max-width: 100%;
+}
+
+@media (max-width: 640px) {
+  .lgu-navbar {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .lgu-header {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .lgu-dashboard-container {
+    padding: 1rem;
+  }
+
+  .lgu-dashboard-hero {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .lgu-dashboard-hero-inner {
+    padding: 1.25rem;
+    border-radius: 1.25rem;
+  }
+
+  .lgu-service-card {
+    padding: 1rem;
+  }
+
+  .payment-form-main {
+    padding: 1rem;
+  }
+}

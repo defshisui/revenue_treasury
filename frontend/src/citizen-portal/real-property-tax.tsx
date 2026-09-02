@@ -2471,7 +2471,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
       {/* PAYMONGO DYNAMIC QR PH MODAL */}
       {isQrPaymentOpen && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl w-full max-w-5xl shadow-2xl border border-slate-200 overflow-hidden my-auto">
+          <div className="bg-white rounded-2xl sm:rounded-3xl w-full max-w-5xl max-h-[96vh] shadow-2xl border border-slate-200 overflow-y-auto my-auto">
             <div className="px-6 sm:px-8 py-5 border-b border-slate-200">
               <h3 className="text-base sm:text-lg font-black text-slate-900 uppercase tracking-tight">Real Property Tax Payment</h3>
               <p className="text-xs text-slate-500 mt-1">PayMongo Secure Checkout</p>
@@ -2517,7 +2517,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                 </div>
               </div>
 
-              <div className="p-6 sm:p-8 bg-slate-50/60 flex flex-col items-center">
+              <div className="p-4 sm:p-6 lg:p-8 bg-slate-50/60 flex flex-col items-center min-w-0">
                 <div className="w-full text-center">
                   <p className="text-lg font-black text-slate-900 uppercase tracking-tight">Scan QR Ph code to pay</p>
                   <p className="text-xs text-slate-500 mt-1">Use your supported banking or e-wallet app.</p>
@@ -2587,7 +2587,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                       <p className="text-[10px] text-slate-500 mt-1">A new QR code will be generated automatically when the timer expires.</p>
                     </div>
 
-                    <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-md">
+                    <div className="bg-white border border-slate-200 rounded-2xl p-3 sm:p-4 shadow-md max-w-full">
                       <img src={rptQrCodeUrl} alt="PayMongo Dynamic QR Ph payment code" className="w-56 h-56 sm:w-64 sm:h-64 object-contain" />
                     </div>
 
@@ -2766,10 +2766,10 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
 
       {/* RPT CITIZEN'S CHARTER QR PH PAYMENT MODAL */}
       {isRPTServiceQrOpen && rptServicePaymentApplication && (
-        <div className="fixed inset-0 z-[60] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
-          <div className="bg-white rounded-3xl w-full max-w-5xl shadow-2xl border border-slate-200 overflow-hidden my-auto">
+        <div className="fixed inset-0 z-[60] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto overscroll-contain">
+          <div className="bg-white rounded-2xl sm:rounded-3xl w-full max-w-5xl max-h-[96vh] shadow-2xl border border-slate-200 overflow-y-auto my-auto">
             <div className="grid grid-cols-1 lg:grid-cols-2">
-              <div className="p-6 sm:p-8 lg:border-r border-slate-200">
+              <div className="p-4 sm:p-6 lg:p-8 lg:border-r border-slate-200 min-w-0">
                 <h2 className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">
                   RPT Service Payment
                 </h2>
@@ -2793,7 +2793,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                 </div>
 
                 <div className="mt-6 pt-5 border-t border-slate-200">
-                  <p className="text-4xl sm:text-5xl font-black text-emerald-600">
+                  <p className="text-3xl sm:text-4xl lg:text-5xl font-black text-emerald-600">
                     {formatCurrency(Number(rptServicePaymentApplication.paymentAmount || 0))}
                   </p>
                   <div className="flex justify-between items-center mt-8 text-sm">
@@ -2811,7 +2811,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                 </div>
               </div>
 
-              <div className="p-6 sm:p-8 bg-slate-50/60 flex flex-col items-center">
+              <div className="p-4 sm:p-6 lg:p-8 bg-slate-50/60 flex flex-col items-center min-w-0">
                 <div className="w-full text-center">
                   <p className="text-base sm:text-lg font-black text-slate-900">Scan QR Ph code to pay</p>
                   <p className="text-xs text-slate-500 mt-2">Use your supported banking or e-wallet app.</p>
@@ -2836,11 +2836,11 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                   <div className="w-full flex flex-col items-center mt-5">
                     <div className="w-full max-w-sm rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-center mb-4">
                       <p className="text-[10px] font-black uppercase tracking-widest text-blue-700">QR Code Refreshes In</p>
-                      <p className="text-2xl font-black tabular-nums text-blue-700">{Math.floor(rptServiceQrSecondsRemaining / 60)}:{String(rptServiceQrSecondsRemaining % 60).padStart(2, "0")}</p>
+                      <p className="text-xl sm:text-2xl font-black tabular-nums text-blue-700">{Math.floor(rptServiceQrSecondsRemaining / 60)}:{String(rptServiceQrSecondsRemaining % 60).padStart(2, "0")}</p>
                       {rptServiceQrReferenceNumber && <p className="text-[10px] font-mono text-slate-500 mt-1">Ref: {rptServiceQrReferenceNumber}</p>}
                     </div>
-                    <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-md">
-                      <img src={rptServiceQrCodeUrl} alt="PayMongo Dynamic QR Ph payment code" className="w-64 h-64 sm:w-72 sm:h-72 object-contain" />
+                    <div className="bg-white border border-slate-200 rounded-2xl p-3 sm:p-4 shadow-md max-w-full">
+                      <img src={rptServiceQrCodeUrl} alt="PayMongo Dynamic QR Ph payment code" className="w-[min(72vw,18rem)] h-[min(72vw,18rem)] max-w-full object-contain" />
                     </div>
                     <p className="text-xs text-slate-500 text-center mt-3 max-w-sm">Scan the QR code with your preferred supported payment app. Your payment will be confirmed automatically through PayMongo.</p>
                     <div className="mt-4 flex items-center gap-2 text-xs font-bold text-blue-700">
@@ -2851,7 +2851,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
               </div>
             </div>
 
-            <div className="px-6 sm:px-8 py-5 border-t border-slate-200 bg-white flex justify-end">
+            <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-5 border-t border-slate-200 bg-white flex justify-end sticky bottom-0">
               <button type="button" onClick={closeRPTServicePayment} disabled={isGeneratingRPTServiceQr} className="px-6 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 disabled:opacity-50 text-slate-700 font-bold text-sm transition-colors">Close</button>
             </div>
           </div>
@@ -2859,15 +2859,15 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
       )}
 
       {rptServicePaymentSuccess && rptServicePaymentApplication && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md">
-          <div className="relative w-full max-w-lg rounded-[28px] bg-white p-8 shadow-2xl text-center">
-            <div className="mx-auto mb-5 h-20 w-20 rounded-full bg-emerald-100 flex items-center justify-center">
-              <svg viewBox="0 0 52 52" className="h-12 w-12 text-emerald-600" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M14 27l8 8 17-19" /></svg>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-slate-950/75 backdrop-blur-md overflow-y-auto overscroll-contain">
+          <div className="relative w-full max-w-lg max-h-[94vh] overflow-y-auto rounded-2xl sm:rounded-[28px] bg-white p-5 sm:p-8 shadow-2xl text-center">
+            <div className="mx-auto mb-4 sm:mb-5 h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-emerald-100 flex items-center justify-center">
+              <svg viewBox="0 0 52 52" className="h-10 w-10 sm:h-12 sm:w-12 text-emerald-600" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M14 27l8 8 17-19" /></svg>
             </div>
             <p className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">PAYMENT CONFIRMED</p>
-            <h2 className="mt-4 text-2xl font-black text-slate-900">Payment Successful!</h2>
+            <h2 className="mt-3 sm:mt-4 text-xl sm:text-2xl font-black text-slate-900">Payment Successful!</h2>
             <p className="mt-2 text-sm text-slate-500">Your {rptServicePaymentApplication.service || "RPT service"} payment has been confirmed.</p>
-            <div className="mt-6 rounded-2xl bg-slate-50 border border-slate-200 p-5 text-left space-y-3 text-sm">
+            <div className="mt-5 rounded-2xl bg-slate-50 border border-slate-200 p-4 sm:p-5 text-left space-y-3 text-sm overflow-x-auto">
               <div className="flex justify-between gap-4"><span className="text-slate-500">Service</span><span className="font-bold text-right">{rptServicePaymentApplication.service}</span></div>
               <div className="flex justify-between gap-4"><span className="text-slate-500">Amount Paid</span><span className="font-black">{formatCurrency(Number(rptServicePaymentApplication.paymentAmount || 0))}</span></div>
               <div className="flex justify-between gap-4"><span className="text-slate-500">Reference</span><span className="font-mono font-bold text-right">{rptServicePaymentApplication.paymentReference || rptServiceQrReferenceNumber || "Confirmed"}</span></div>
