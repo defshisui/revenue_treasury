@@ -429,6 +429,30 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
     >
       <div>
         <UnifiedHeader />
+
+        {/* Hero Banner Area */}
+        <div className="relative w-full bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 h-36 sm:h-48 overflow-hidden flex items-center justify-center border-b-4 border-blue-600">
+          <div className="absolute inset-0 opacity-30 bg-[radial-gradient(#3b82f6_1px,transparent_1px)] [background-size:16px_16px]"></div>
+
+          <div className="relative z-10 text-center px-4">
+            <h1 className="text-xl sm:text-3xl font-extrabold text-white tracking-wide">
+              {currentScreen === 'home'
+                ? 'WELCOME TO BUSINESS TAX ASSESSMENT'
+                : currentScreen === 'appointments-list'
+                  ? 'MY APPOINTMENTS TRACKER'
+                  : '2026 BUSINESS TAX PAYMENT'}
+            </h1>
+
+            <p className="text-xs sm:text-sm text-slate-200 mt-1 max-w-xl mx-auto">
+              {currentScreen === 'home'
+                ? "This portal is one of our digital Gov Serv initiatives catering to the needs of business owners in securing their permits and licenses."
+                : currentScreen === 'appointments-list'
+                  ? "Monitor the review, approval, or cancellation status of your scheduled municipal appointments in real time."
+                  : "Manage your online sales declarations and monitor permit assessment status."}
+            </p>
+          </div>
+        </div>
+
         <div className="max-w-6xl mx-auto px-4 py-8">
           {currentScreen === 'home' ? (
             <div className="space-y-6">
