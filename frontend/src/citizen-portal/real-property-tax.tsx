@@ -1317,7 +1317,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                         onClick={() => setActivePortalTab("status")}
                         className="rpt-nav-button cursor-pointer"
                       >
-                        [ MY APPLICATIONS ]
+                        MY APPLICATIONS
                       </button>
                     </div>
 
