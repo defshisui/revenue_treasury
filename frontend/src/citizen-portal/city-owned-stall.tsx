@@ -1036,6 +1036,20 @@ export default function MarketStallApplication() {
                                             <p className="text-xs text-slate-500 mt-1">Use your supported banking or e-wallet app.</p>
                                         </div>
 
+                                        {qrImageUrl && !isGeneratingQr && (
+                                            <div className="w-full max-w-sm rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-center mb-4">
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-blue-700">
+                                                    QR Code Refreshes In
+                                                </p>
+                                                <p className={`mt-1 text-2xl font-black tabular-nums ${qrTimeLeft <= 30 ? "text-rose-600" : "text-blue-700"}`}>
+                                                    {formatQrTime(qrTimeLeft)}
+                                                </p>
+                                                <p className="text-[10px] text-slate-500 mt-1">
+                                                    A new QR code will be generated automatically when the timer expires.
+                                                </p>
+                                            </div>
+                                        )}
+
                                         {isGeneratingQr ? (
                                             <div className="w-64 h-64 mx-auto bg-white border border-slate-200 rounded-xl flex flex-col items-center justify-center shadow-inner">
                                                 <div className="w-10 h-10 border-4 border-slate-200 border-t-blue-700 rounded-full animate-spin mb-4"></div>
@@ -1067,27 +1081,16 @@ export default function MarketStallApplication() {
                                             </div>
                                         )}
 
-                                        <div className="mt-4">
-                                            <p className="text-xs font-bold text-slate-700">QR Ph</p>
-                                            {qrImageUrl && (
-                                                <div className={`mt-3 rounded-xl border px-4 py-3 ${qrTimeLeft <= 30 ? "border-rose-200 bg-rose-50" : "border-blue-200 bg-blue-50"}`}>
-                                                    <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-                                                        QR code refreshes in
-                                                    </p>
-                                                    <p className={`mt-1 text-2xl font-extrabold font-mono ${qrTimeLeft <= 30 ? "text-rose-600" : "text-blue-700"}`}>
-                                                        {formatQrTime(qrTimeLeft)}
-                                                    </p>
-                                                    <p className="text-[10px] text-slate-500 mt-1">
-                                                        A new QR code will be generated automatically when the timer expires.
-                                                    </p>
-                                                </div>
-                                            )}
-                                        </div>
+                                        {qrImageUrl && !isGeneratingQr && (
+                                            <p className="text-xs text-slate-500 text-center mt-3 max-w-sm">
+                                                Waiting for payment...
+                                            </p>
+                                        )}
                                     </div>
 
-                                    <p className="text-xs text-slate-500 text-center mt-5 max-w-sm">
+                                    <p className="text-xs text-slate-500 text-center mt-2 max-w-sm">
                                         {qrImageUrl
-                                            ? "Scan the QR code with your preferred supported payment app. Your payment will be confirmed through PayMongo."
+                                            ? "Scan the QR code with your preferred supported payment app. Your payment will be confirmed automatically through PayMongo."
                                             : "Your payment QR code is being prepared automatically."}
                                     </p>
                                 </div>

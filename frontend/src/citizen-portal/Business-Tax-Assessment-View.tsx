@@ -1351,7 +1351,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                         <p className="text-[10px] font-black uppercase tracking-widest text-blue-700">
                           QR Code Refreshes In
                         </p>
-                        <p className="text-2xl font-black tabular-nums text-blue-700">
+                        <p className={`text-2xl font-black tabular-nums ${qrSecondsRemaining <= 30 ? "text-rose-600" : "text-blue-700"}`}>
                           {Math.floor(qrSecondsRemaining / 60)}:
                           {String(qrSecondsRemaining % 60).padStart(2, "0")}
                         </p>
@@ -1369,8 +1369,11 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                       </div>
 
                       <p className="text-xs text-slate-500 text-center mt-3 max-w-sm">
-                        Scan the QR code with your preferred supported payment app.
-                        Your payment will be confirmed through PayMongo.
+                        Waiting for payment...
+                      </p>
+
+                      <p className="text-xs text-slate-500 text-center mt-1 max-w-sm">
+                        Scan the QR code with your preferred supported payment app. Your payment will be confirmed automatically through PayMongo.
                       </p>
                     </div>
                   )}
