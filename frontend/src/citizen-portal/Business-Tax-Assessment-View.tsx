@@ -523,7 +523,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <button
                   type="button"
-                  onClick={() => window.history.back()}
+                  onClick={() => setCurrentScreen('home')}
                   className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-xl text-xs transition-colors cursor-pointer inline-block border-0"
                 >
                   &larr; Back to Previous Page
@@ -577,7 +577,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => window.history.back()}
+                  onClick={() => setCurrentScreen('home')}
                   className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-xl text-xs transition-colors cursor-pointer inline-block border-0"
                 >
                   &larr; Back to Previous Page

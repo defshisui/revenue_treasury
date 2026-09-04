@@ -1933,11 +1933,14 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
           {/* VIEW: APPLICATION STATUS TRACKER */}
           {activePortalTab === "status" && (
             <div className="rpt-main-shell p-6 sm:p-8 space-y-6">
-              {/* Back Home button row */}
+              {/* Back to RPT Payment / Amilyar */}
               <div className="mb-1">
                 <button
                   type="button"
-                  onClick={() => window.history.back()}
+                  onClick={() => {
+                    setActivePortalTab("search");
+                    setRptSearchStep(1);
+                  }}
                   className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-xl text-xs transition-colors cursor-pointer inline-block border-0"
                 >
                   &larr; Back to Previous Page
