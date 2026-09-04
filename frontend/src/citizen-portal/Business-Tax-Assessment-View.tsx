@@ -473,7 +473,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 flex flex-col justify-between text-center">
                   <div>
-                    <h4 className="text-blue-900 font-extrabold text-xl sm:text-2xl tracking-wide uppercase mb-3">PROCEED AND PAY ONLINE</h4>
+                    <h4 className="text-blue-900 font-bold text-sm tracking-wider uppercase mb-2">PROCEED AND PAY ONLINE</h4>
                     <p className="text-xs text-slate-500 leading-relaxed mb-6">
                       You can now submit your Online Sales Declaration along with your Financial Statements and other requirements online. Assessment and settlement of payment can also be done through this portal.
                     </p>
