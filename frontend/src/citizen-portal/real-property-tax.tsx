@@ -1305,9 +1305,9 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                       <button
                         type="button"
                         onClick={() => window.history.back()}
-                        className="rpt-back cursor-pointer"
+                        className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-xl text-xs transition-colors cursor-pointer inline-block border-0"
                       >
-                        Back to Home
+                        &larr; Back to Previous Page
                       </button>
                     </div>
 
@@ -1679,10 +1679,10 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
               <div className="mb-1">
                 <button
                   type="button"
-                  onClick={() => setActivePortalTab("search")}
-                  className="rpt-back cursor-pointer"
+                  onClick={() => window.history.back()}
+                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-xl text-xs transition-colors cursor-pointer inline-block border-0"
                 >
-                  Back to Home
+                  &larr; Back to Previous Page
                 </button>
               </div>
 
@@ -1937,10 +1937,10 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
               <div className="mb-1">
                 <button
                   type="button"
-                  onClick={() => setActivePortalTab("search")}
-                  className="rpt-back cursor-pointer"
+                  onClick={() => window.history.back()}
+                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-xl text-xs transition-colors cursor-pointer inline-block border-0"
                 >
-                  Back to Home
+                  &larr; Back to Previous Page
                 </button>
               </div>
 

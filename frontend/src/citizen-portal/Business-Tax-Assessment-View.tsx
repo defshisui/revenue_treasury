@@ -521,8 +521,12 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
           ) : currentScreen === 'appointments-list' ? (
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <button onClick={() => setCurrentScreen('home')} className="text-xs text-blue-700 hover:underline font-semibold flex items-center gap-1 cursor-pointer">
-                  Back to Home
+                <button
+                  type="button"
+                  onClick={() => window.history.back()}
+                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-xl text-xs transition-colors cursor-pointer inline-block border-0"
+                >
+                  &larr; Back to Previous Page
                 </button>
                 <button onClick={() => openModal('appointment')} className="px-4 py-2 bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold rounded-md shadow-xs cursor-pointer">
                   + Request New Appointment
@@ -571,8 +575,12 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
           ) : (
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4">
               <div className="flex flex-wrap items-center gap-2">
-                <button onClick={() => setCurrentScreen('home')} className="text-xs text-blue-700 hover:underline font-semibold flex items-center gap-1 cursor-pointer">
-                  Back to Home
+                <button
+                  type="button"
+                  onClick={() => window.history.back()}
+                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-xl text-xs transition-colors cursor-pointer inline-block border-0"
+                >
+                  &larr; Back to Previous Page
                 </button>
               </div>
               <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
