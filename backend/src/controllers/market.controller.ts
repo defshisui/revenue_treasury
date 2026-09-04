@@ -13,7 +13,7 @@ function resolvePaymentMethod(body: Partial<SaveLeaseBody>): string {
 export async function getTransactions(_req: Request, res: Response): Promise<void> {
   try {
     const result = await pool.query('SELECT * FROM market_leases ORDER BY created_at DESC');
-    const formatted = result.rows.map((row: any) => {
+    const formatted = result.rows.map((row) => {
       let formattedDate = '2026-06-15';
       if (row.created_at) {
         const d = new Date(row.created_at);
@@ -34,7 +34,7 @@ export async function getTransactions(_req: Request, res: Response): Promise<voi
       };
     });
     res.json(formatted);
-  } catch (err: any) {
+  } catch (err) {
     console.error('Error fetching transactions:', err);
     res.status(500).json({ message: 'Error loading transactions' });
   }
@@ -47,7 +47,7 @@ export async function createTransaction(_req: Request, res: Response): Promise<v
 export async function getMarketLeases(_req: Request, res: Response): Promise<void> {
   try {
     const result = await pool.query('SELECT * FROM market_leases ORDER BY created_at DESC');
-    const formatted = result.rows.map((row: any) => ({
+    const formatted = result.rows.map((row) => ({
       id: row.id.toString(),
       leaseId: row.lease_id,
       firstName: row.first_name,
@@ -61,10 +61,13 @@ export async function getMarketLeases(_req: Request, res: Response): Promise<voi
       advancePaymentStatus: row.advance_payment_status,
       paymentStatus: row.payment_status,
       paymentMethod: row.payment_method || 'Cash / Direct',
+      officialReceiptNumber: row.official_receipt_number || null,
+      paymentReference: row.payment_reference || null,
+      paymentDate: row.payment_date || null,
       createdAt: row.created_at,
     }));
     res.json(formatted);
-  } catch (err: any) {
+  } catch (err) {
     console.error('Error fetching market leases:', err);
     res.status(500).json({ message: 'Error loading market leases' });
   }
@@ -143,7 +146,7 @@ export async function createMarketLease(req: Request, res: Response): Promise<vo
       ]
     );
 
-    // Audit logging must not make a successfully saved lease fail.
+    // Audit logging should not make a successfully saved lease fail.
     try {
       await recordAudit(
         req,
@@ -156,7 +159,7 @@ export async function createMarketLease(req: Request, res: Response): Promise<vo
         null,
         `Applied for Stall ${stallNumber} at ${marketName} via ${resolvedPaymentMethod} (Anti-Fraud Score: ${fraudCheck.score})`
       );
-    } catch (auditError: any) {
+    } catch (auditError) {
       console.error('Market lease saved, but audit logging failed:', auditError);
     }
 
@@ -165,14 +168,13 @@ export async function createMarketLease(req: Request, res: Response): Promise<vo
       lease: result.rows[0],
     });
   } catch (err: any) {
-  console.error('Error saving market lease:', err);
+    console.error('Error saving market lease:', err);
 
-  res.status(500).json({
-    message:
-      err?.message ||
-      'Failed to save market lease application to database.'
-  });
-}
+    res.status(500).json({
+      message: 'Failed to save market lease application to database.',
+      error: err?.message || 'Unknown database error',
+    });
+  }
 }
 
 export async function updateMarketLease(req: Request, res: Response): Promise<void> {
@@ -211,7 +213,7 @@ export async function updateMarketLease(req: Request, res: Response): Promise<vo
       `Updated lease record for Stall ${stallNumber} (${id}) with payment method: ${resolvedPaymentMethod}`);
 
     res.status(200).json({ message: 'Lease updated successfully', lease: result.rows[0] });
-  } catch (err: any) {
+  } catch (err) {
     console.error('Error updating market lease:', err);
     res.status(500).json({ message: 'Failed to update market lease in database.' });
   }
@@ -234,7 +236,7 @@ export async function deleteMarketLease(req: Request, res: Response): Promise<vo
       'Market Module', 'STALL_LEASE_DELETED', 'WARNING', `Deleted lease record ${id}`, null);
 
     res.status(200).json({ message: 'Lease deleted successfully from database', deletedLease: result.rows[0] });
-  } catch (err: any) {
+  } catch (err) {
     console.error('Error deleting market lease:', err);
     res.status(500).json({ message: 'Failed to delete market lease from database.' });
   }
@@ -292,13 +294,13 @@ export async function fraudScan(req: Request, res: Response): Promise<void> {
     // 2. Financial threshold heuristic
     if (amountDue > 50000) {
       riskScore += 25;
-      flags.push(`High financial exposure detected: ${amountDue.toLocaleString()} exceeds standard median threshold.`);
+      flags.push(`High financial exposure detected: ₱${amountDue.toLocaleString()} exceeds standard median threshold.`);
     }
 
     // 3. Multi-stall collision detection
     try {
       const allLeases = (await pool.query('SELECT * FROM market_leases')).rows;
-      const nameCollisions = allLeases.filter((l: any) =>
+      const nameCollisions = allLeases.filter((l) =>
         l.id !== lease.id &&
         String(l.first_name || '').trim().toLowerCase() === String(lease.first_name || '').trim().toLowerCase() &&
         String(l.last_name || '').trim().toLowerCase() === String(lease.last_name || '').trim().toLowerCase()
@@ -315,7 +317,7 @@ export async function fraudScan(req: Request, res: Response): Promise<void> {
     try {
       const allAudits = (await pool.query('SELECT * FROM audit_logs')).rows;
       const cleanName = applicantName.toLowerCase();
-      const suspiciousAudits = allAudits.filter((log: any) => {
+      const suspiciousAudits = allAudits.filter((log) => {
         const text = `${log.user_email || ''} ${log.previous_data || ''} ${log.new_data || ''}`.toLowerCase();
         return cleanName && text.includes(cleanName) && ['WARNING', 'CRITICAL'].includes(log.severity);
       });
@@ -347,7 +349,7 @@ export async function fraudScan(req: Request, res: Response): Promise<void> {
     }
 
     res.status(200).json({ success: true, riskScore, riskLevel, flags });
-  } catch (err: any) {
+  } catch (err) {
     console.error('Error executing database fraud scan:', err);
     res.status(500).json({ error: 'Internal server error during AI fraud analysis.' });
   }

@@ -169,6 +169,7 @@ export default function MarketLeaseSearch() {
             // Use the existing lease ID. Do NOT create another lease record.
             const intent = await createPayMongoQrPaymentIntent({
                 amount,
+                type: "MARKET_STALL",
                 leaseId: lease.leaseId,
                 customerName: `${lease.firstName} ${lease.lastName}`.trim(),
                 customerEmail: session.email || "citizen@gov.ph",

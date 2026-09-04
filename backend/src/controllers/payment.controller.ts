@@ -771,7 +771,7 @@ export async function handlePayMongoWebhook(
     // MARKET STALL PAYMENT
     // =========================================================
     if (
-      metadata.type === 'MARKET_STALL' &&
+      (metadata.type === 'MARKET_STALL' || metadata.type === 'MARKET') &&
       metadata.leaseId
     ) {
       console.log(
@@ -1173,7 +1173,7 @@ export async function getQrPaymentStatus(
 
     if (
       paid &&
-      metadata.type === 'MARKET_STALL' &&
+      (metadata.type === 'MARKET_STALL' || metadata.type === 'MARKET') &&
       metadata.leaseId
     ) {
       console.log(
@@ -1355,7 +1355,7 @@ export async function getQrPaymentStatus(
       amount: Number(attributes.amount || 0) / 100,
       metadata,
       officialReceiptNumber:
-        paid && metadata.type === 'MARKET_STALL'
+        paid && (metadata.type === 'MARKET_STALL' || metadata.type === 'MARKET')
           ? marketOfficialReceiptNumber
           : undefined,
     });
