@@ -191,12 +191,12 @@ export function RealPropertyTaxHub() {
         </p>
 
         <button
-          type="button"
-          onClick={() => navigate("/citizen-rpt")}
-          className="w-full sm:w-auto px-6 py-2.5 bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold rounded-full shadow-md transition-all cursor-pointer"
-        >
-          PROCEED WITH REAL PROPERTY TAX
-        </button>
+  type="button"
+  onClick={() => navigate("/citizen-rpt")}
+  className="mt-5 w-full sm:w-auto px-6 py-2.5 bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold rounded-full shadow-md transition-all cursor-pointer"
+>
+  PROCEED WITH REAL PROPERTY TAX
+</button>
 
       </section>
 
