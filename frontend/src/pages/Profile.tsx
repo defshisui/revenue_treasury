@@ -722,7 +722,7 @@ export default function Profile() {
             TOP CONTROLS BAR
         ====================================================== */}
         <div
-          className={`flex items-center justify-end gap-4 border-b px-12 py-4 transition-colors duration-300 ${
+          className={`flex items-center justify-end gap-3 border-b px-6 py-2.5 transition-colors duration-300 ${
             isDarkMode
               ? "border-slate-800"
               : "border-slate-200"
@@ -803,7 +803,7 @@ export default function Profile() {
             MAIN PAGE
         ====================================================== */}
         <main
-          className="min-h-[calc(100vh-73px)] px-12 py-10 transition-colors duration-300"
+          className="min-h-[calc(100vh-73px)] px-6 py-4 transition-colors duration-300"
           style={{
             backgroundColor: pageBackground,
           }}
@@ -812,18 +812,18 @@ export default function Profile() {
               PROFILE HEADER
           ==================================================== */}
           <section
-            className={`mx-auto max-w-7xl rounded-3xl border p-8 shadow-lg transition-colors duration-300 ${
+            className={`mx-auto max-w-7xl rounded-3xl border p-5 shadow-md transition-colors duration-300 ${
               isDarkMode
                 ? "border-slate-800 bg-slate-900 text-white"
                 : "border-slate-200 bg-white text-slate-900"
             }`}
           >
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-6">
+              <div className="flex items-center gap-4">
                 {/* PROFILE PHOTO */}
                 <div className="group relative">
                   <div
-                    className={`flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-4 shadow-inner ${
+                    className={`flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-4 shadow-inner ${
                       isDarkMode
                         ? "border-slate-700 bg-slate-800"
                         : "border-slate-200 bg-slate-100"
@@ -836,7 +836,7 @@ export default function Profile() {
                         className="h-full w-full object-cover"
                       />
                     ) : (
-                      <div className="flex h-24 w-24 items-center justify-center rounded-full bg-blue-600 text-3xl font-bold text-white shadow-inner">
+                      <div className="flex h-20 w-20 items-center justify-center rounded-full bg-blue-600 text-2xl font-bold text-white shadow-inner">
                         {currentInitials}
                       </div>
                     )}
@@ -874,7 +874,7 @@ export default function Profile() {
                   </p>
 
                   <h2
-                    className={`mt-1 text-3xl font-extrabold ${
+                    className={`mt-1 text-2xl font-extrabold ${
                       isDarkMode
                         ? "text-white"
                         : "text-slate-900"
@@ -899,7 +899,7 @@ export default function Profile() {
 
               {/* EMPLOYEE ID */}
               <div
-                className={`rounded-2xl px-4 py-3 text-sm ${
+                className={`rounded-xl px-3 py-2 text-xs ${
                   isDarkMode
                     ? "bg-slate-800 text-slate-300"
                     : "bg-slate-100 text-slate-700"
@@ -924,7 +924,7 @@ export default function Profile() {
               STATUS / ERROR MESSAGES
           ==================================================== */}
           {(statusMessage || errorMessage) && (
-            <div className="mx-auto mt-6 max-w-7xl">
+            <div className="mx-auto mt-3 max-w-7xl">
               {statusMessage && (
                 <div
                   className={`rounded-2xl border p-4 text-sm shadow-sm ${
@@ -954,21 +954,21 @@ export default function Profile() {
           {/* ===================================================
               MAIN CONTENT GRID
           ==================================================== */}
-          <section className="mx-auto mt-8 grid max-w-7xl grid-cols-[1.4fr_0.9fr] gap-8">
+          <section className="mx-auto mt-4 grid max-w-7xl grid-cols-[1.45fr_0.85fr] gap-4 items-start">
             {/* LEFT COLUMN */}
             <div
-              className={`rounded-3xl border p-8 shadow-lg transition-colors duration-300 ${
+              className={`rounded-3xl border p-5 shadow-md transition-colors duration-300 ${
                 isDarkMode
                   ? "border-slate-800 bg-slate-900 text-white"
                   : "border-slate-200 bg-white text-slate-900"
               }`}
             >
-              <h3 className="text-xl font-bold">
+              <h3 className="text-base font-bold">
                 Official Staff Information
               </h3>
 
               <p
-                className={`mt-2 text-sm ${
+                className={`mt-1 text-xs ${
                   isDarkMode
                     ? "text-slate-400"
                     : "text-slate-500"
@@ -981,7 +981,7 @@ export default function Profile() {
               {/* PROFILE FORM */}
               <form
                 onSubmit={handleProfileSubmit}
-                className="mt-6 grid gap-4"
+                className="mt-4 grid gap-3"
               >
                 {/* FULL NAME */}
                 <div>
@@ -1002,7 +1002,7 @@ export default function Profile() {
                     onChange={handleProfileChange}
                     placeholder="Full Name"
                     required
-                    className={`w-full rounded-xl border p-3 text-base outline-none transition-colors ${
+                    className={`w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors ${
                       isDarkMode
                         ? "border-slate-700 bg-slate-950 text-white placeholder:text-slate-500 focus:border-blue-500"
                         : "border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:border-blue-800"
@@ -1011,7 +1011,7 @@ export default function Profile() {
                 </div>
 
                 {/* EMAIL + PHONE */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label
                       className={`mb-1 block text-xs font-semibold uppercase ${
@@ -1030,7 +1030,7 @@ export default function Profile() {
                       onChange={handleProfileChange}
                       placeholder="Email Address"
                       required
-                      className={`w-full rounded-xl border p-3 text-base outline-none transition-colors ${
+                      className={`w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors ${
                         isDarkMode
                           ? "border-slate-700 bg-slate-950 text-white placeholder:text-slate-500 focus:border-blue-500"
                           : "border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:border-blue-800"
@@ -1055,7 +1055,7 @@ export default function Profile() {
                       value={profileData.phone}
                       onChange={handleProfileChange}
                       placeholder="+63 912 345 6789"
-                      className={`w-full rounded-xl border p-3 text-base outline-none transition-colors ${
+                      className={`w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors ${
                         isDarkMode
                           ? "border-slate-700 bg-slate-950 text-white placeholder:text-slate-500 focus:border-blue-500"
                           : "border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:border-blue-800"
@@ -1080,7 +1080,7 @@ export default function Profile() {
                     name="department"
                     value={profileData.department}
                     onChange={handleProfileChange}
-                    className={`w-full rounded-xl border p-3 text-base outline-none transition-colors ${
+                    className={`w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors ${
                       isDarkMode
                         ? "border-slate-700 bg-slate-950 text-white focus:border-blue-500"
                         : "border-slate-300 bg-white text-slate-900 focus:border-blue-800"
@@ -1126,7 +1126,7 @@ export default function Profile() {
                     value={profileData.address}
                     onChange={handleProfileChange}
                     placeholder="Address"
-                    className={`w-full rounded-xl border p-3 text-base outline-none transition-colors ${
+                    className={`w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors ${
                       isDarkMode
                         ? "border-slate-700 bg-slate-950 text-white placeholder:text-slate-500 focus:border-blue-500"
                         : "border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:border-blue-800"
@@ -1153,12 +1153,12 @@ export default function Profile() {
                     : "border-slate-100 bg-slate-50 text-slate-900"
                 }`}
               >
-                <h4 className="text-lg font-semibold">
+                <h4 className="text-sm font-bold">
                   Change Security Password
                 </h4>
 
                 <p
-                  className={`mt-2 text-sm ${
+                  className={`mt-1 text-xs ${
                     isDarkMode
                       ? "text-slate-400"
                       : "text-slate-500"
@@ -1170,7 +1170,7 @@ export default function Profile() {
 
                 <form
                   onSubmit={handlePasswordSubmit}
-                  className="mt-6 grid gap-4"
+                  className="mt-4 grid gap-3"
                 >
                   {/* CURRENT PASSWORD */}
                   <input
@@ -1180,7 +1180,7 @@ export default function Profile() {
                     onChange={handlePasswordChange}
                     placeholder="Current Password"
                     required
-                    className={`w-full rounded-xl border p-3 text-base outline-none transition-colors ${
+                    className={`w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors ${
                       isDarkMode
                         ? "border-slate-700 bg-slate-900 text-white placeholder:text-slate-500 focus:border-slate-400"
                         : "border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:border-slate-900"
@@ -1195,7 +1195,7 @@ export default function Profile() {
                     onChange={handlePasswordChange}
                     placeholder="New Password"
                     required
-                    className={`w-full rounded-xl border p-3 text-base outline-none transition-colors ${
+                    className={`w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors ${
                       isDarkMode
                         ? "border-slate-700 bg-slate-900 text-white placeholder:text-slate-500 focus:border-slate-400"
                         : "border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:border-slate-900"
@@ -1204,7 +1204,7 @@ export default function Profile() {
 
                   {/* PASSWORD REQUIREMENTS */}
                   <div
-                    className={`rounded-xl border p-4 text-sm ${
+                    className={`sm:col-span-3 rounded-xl border p-3 text-xs ${
                       isDarkMode
                         ? "border-slate-800 bg-slate-900"
                         : "border-slate-200 bg-white"
@@ -1220,7 +1220,7 @@ export default function Profile() {
                       Password must contain:
                     </p>
 
-                    <div className="grid gap-1">
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-x-2 gap-y-1 text-[10px] leading-tight">
                       <div
                         className={
                           passwordRequirements.minLength
@@ -1306,7 +1306,7 @@ export default function Profile() {
                     onChange={handlePasswordChange}
                     placeholder="Confirm New Password"
                     required
-                    className={`w-full rounded-xl border p-3 text-base outline-none transition-colors ${
+                    className={`w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors ${
                       isDarkMode
                         ? "border-slate-700 bg-slate-900 text-white placeholder:text-slate-500 focus:border-slate-400"
                         : "border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:border-slate-900"
@@ -1316,7 +1316,7 @@ export default function Profile() {
                   {/* UPDATE PASSWORD */}
                   <button
                     type="submit"
-                    className={`rounded-xl px-6 py-4 font-bold text-white transition cursor-pointer shadow-sm ${
+                    className={`sm:col-span-3 rounded-xl px-5 py-2.5 text-sm font-bold text-white transition cursor-pointer shadow-sm ${
                       isDarkMode
                         ? "bg-slate-700 hover:bg-slate-600"
                         : "bg-slate-800 hover:bg-slate-700"
@@ -1332,18 +1332,18 @@ export default function Profile() {
                 RIGHT COLUMN
             ================================================== */}
             <aside
-              className={`h-fit rounded-3xl border p-8 shadow-lg transition-colors duration-300 ${
+              className={`h-fit rounded-3xl border p-5 shadow-md transition-colors duration-300 ${
                 isDarkMode
                   ? "border-slate-800 bg-slate-900 text-white"
                   : "border-slate-200 bg-white text-slate-900"
               }`}
             >
-              <h3 className="text-xl font-bold">
+              <h3 className="text-base font-bold">
                 Account Overview
               </h3>
 
               <p
-                className={`mt-2 text-sm ${
+                className={`mt-1 text-xs ${
                   isDarkMode
                     ? "text-slate-400"
                     : "text-slate-500"
@@ -1355,7 +1355,7 @@ export default function Profile() {
 
               {/* STAFF CREDENTIALS */}
               <div
-                className={`mt-6 rounded-2xl border p-5 ${
+                className={`mt-4 rounded-2xl border p-4 ${
                   isDarkMode
                     ? "border-slate-800 bg-slate-950"
                     : "border-slate-200 bg-slate-50"
@@ -1365,7 +1365,7 @@ export default function Profile() {
                   Staff Credentials
                 </h4>
 
-                <div className="mt-4 space-y-3 text-sm">
+                <div className="mt-3 space-y-2 text-xs">
                   <div className="flex justify-between gap-4">
                     <span
                       className={
@@ -1437,7 +1437,7 @@ export default function Profile() {
 
               {/* SYSTEM PERMISSIONS */}
               <div
-                className={`mt-6 rounded-2xl border p-5 ${
+                className={`mt-4 rounded-2xl border p-4 ${
                   isDarkMode
                     ? "border-slate-800 bg-slate-950"
                     : "border-slate-200 bg-slate-50"
@@ -1458,7 +1458,7 @@ export default function Profile() {
                 </p>
 
                 <div
-                  className={`mt-4 space-y-3 text-sm ${
+                  className={`mt-3 space-y-2 text-xs ${
                     isDarkMode
                       ? "text-slate-300"
                       : "text-slate-700"
