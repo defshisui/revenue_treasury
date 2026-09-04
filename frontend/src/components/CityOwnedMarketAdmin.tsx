@@ -792,13 +792,44 @@ export default function CityOwnedMarketAdmin({
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Official Receipt (O.R.)</label>
-                  <input
-                    type="text"
-                    value={selectedRecord.officialReceiptNumber || "Not yet issued"}
-                    readOnly
-                    className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-slate-800 dark:text-slate-100 font-mono"
-                  />
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                    Official Receipt (O.R.) Number
+                  </label>
+
+                  <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                          Official Receipt (O.R.) Number
+                        </p>
+
+                        <p
+                          className={`mt-1 font-mono text-sm font-bold truncate ${
+                            selectedRecord.officialReceiptNumber &&
+                            String(selectedRecord.paymentStatus).toLowerCase() === "paid"
+                              ? "text-emerald-600 dark:text-emerald-400"
+                              : "text-slate-500 dark:text-slate-400"
+                          }`}
+                        >
+                          {selectedRecord.officialReceiptNumber || "Not yet issued"}
+                        </p>
+                      </div>
+
+                      <span
+                        className={`shrink-0 rounded-full px-3 py-1 text-[10px] font-bold uppercase ${
+                          selectedRecord.officialReceiptNumber &&
+                          String(selectedRecord.paymentStatus).toLowerCase() === "paid"
+                            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400"
+                            : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
+                        }`}
+                      >
+                        {selectedRecord.officialReceiptNumber &&
+                        String(selectedRecord.paymentStatus).toLowerCase() === "paid"
+                          ? "PAID"
+                          : "UNPAID"}
+                      </span>
+                    </div>
+                  </div>
                 </div>
 
                 <div>
