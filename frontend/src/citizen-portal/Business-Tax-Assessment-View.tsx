@@ -473,7 +473,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 flex flex-col justify-between text-center">
                   <div>
-                    <h4 className="text-slate-800 font-semibold text-base mb-3">Proceed and Pay Online</h4>
+                    <h4 className="text-blue-900 font-extrabold text-xl sm:text-2xl tracking-wide uppercase mb-3">PROCEED AND PAY ONLINE</h4>
                     <p className="text-xs text-slate-500 leading-relaxed mb-6">
                       You can now submit your Online Sales Declaration along with your Financial Statements and other requirements online. Assessment and settlement of payment can also be done through this portal.
                     </p>
@@ -486,8 +486,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                 </div>
                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 flex flex-col justify-between text-center">
                   <div>
-                    <h3 className="text-blue-900 font-bold text-sm tracking-wider uppercase mb-1">Appointment</h3>
-                    <h4 className="text-slate-800 font-semibold text-base mb-3">&nbsp;</h4>
+                    <h3 className="text-blue-900 font-bold text-sm tracking-wider uppercase mb-3">Appointment</h3>
                     <p className="text-xs text-slate-500 leading-relaxed mb-6">
                       Do you have any concerns regarding your Business Tax Assessment? Schedule an appointment or track your existing appointments below:
                     </p>
