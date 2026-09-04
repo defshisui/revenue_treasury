@@ -433,8 +433,6 @@ export async function verifyTaxBill(req: Request, res: Response): Promise<void> 
         res.status(200).json({
             status: verificationStatus,
 
-            message: 'Tax Bill Number verified successfully in the municipal database.',
-
             record: {
                 businessName: record.business_name,
 
