@@ -263,13 +263,31 @@ export async function initializeDatabase(): Promise<void> {
     // ============================================================
 
     await pool.query(`
+      -- ==========================================================
       -- USERS
+      -- ==========================================================
+
       ALTER TABLE users
       ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT TRUE;
 
+      -- ==========================================================
       -- AUDIT LOGS
+      -- ==========================================================
+
       ALTER TABLE audit_logs
       ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT FALSE;
+
+      -- ==========================================================
+      -- BUSINESS TAX ASSESSMENTS
+      -- ==========================================================
+
+      ALTER TABLE business_assessments
+      ADD COLUMN IF NOT EXISTS tax_bill_number VARCHAR(50);
+
+      CREATE UNIQUE INDEX IF NOT EXISTS
+      idx_business_assessments_tax_bill_number
+      ON business_assessments(tax_bill_number)
+      WHERE tax_bill_number IS NOT NULL;
 
       -- ==========================================================
       -- RPT APPLICATIONS
@@ -333,7 +351,10 @@ export async function initializeDatabase(): Promise<void> {
       ALTER TABLE rpt_applications
       ADD COLUMN IF NOT EXISTS notes TEXT;
 
-      -- Transfer Tax / application payment fields
+      -- ==========================================================
+      -- TRANSFER TAX / APPLICATION PAYMENT FIELDS
+      -- ==========================================================
+
       ALTER TABLE rpt_applications
       ADD COLUMN IF NOT EXISTS payment_amount NUMERIC(12, 2) DEFAULT 0;
 
@@ -409,14 +430,16 @@ export async function initializeDatabase(): Promise<void> {
     // ============================================================
     // FIX EXISTING RPT DOCUMENTS COLUMN
     // ============================================================
+
     //
     // If an older database was created with documents TEXT[],
     // convert it to JSONB.
     //
+
     // PostgreSQL cannot use ALTER TYPE directly from TEXT[]
     // to JSONB using a simple cast, so we convert each existing
     // value through to_jsonb().
-    //
+
     // ============================================================
 
     await pool.query(`
@@ -452,59 +475,183 @@ export async function initializeDatabase(): Promise<void> {
       $$;
     `);
 
-    // Seed QC Sample Real Property Records
+    // ============================================================
+    // SEED QC SAMPLE REAL PROPERTY RECORDS
+    // ============================================================
+
     await pool.query(`
       INSERT INTO lgu_rpt_records (
-        taxDeclarationNumber, pin, new_pspin, ownerName, propertyLocation, barangay, propertyType,
-        billingYear, quarter, bill_expiry_date, lot_area_sqm, market_value, assessed_value,
-        basicTax, sefTax, shttc_applied, penalty, discount, totalAssessment, amountPaid, balance,
-        status, paymentStatus, amountDue, quarterly_amounts
-      ) VALUES
+        taxDeclarationNumber,
+        pin,
+        new_pspin,
+        ownerName,
+        propertyLocation,
+        barangay,
+        propertyType,
+        billingYear,
+        quarter,
+        bill_expiry_date,
+        lot_area_sqm,
+        market_value,
+        assessed_value,
+        basicTax,
+        sefTax,
+        shttc_applied,
+        penalty,
+        discount,
+        totalAssessment,
+        amountPaid,
+        balance,
+        status,
+        paymentStatus,
+        amountDue,
+        quarterly_amounts
+      )
+      VALUES
       (
-        'F-021-01491', '09-021-009-166', '09-021-009-166- - -', '1 OMEGA PRIME PROPERTY MANAGEMENT INC',
-        'Lot 14 Blk 5 Diliman Commercial Center', 'Central', 'Land',
-        2025, 'Q1-Q4', '2025-10-31', 450.00, 1500000.00, 300000.00,
-        600.00, 420.00, 0.00, 107.10, 0.00, 1020.00, 0.00, 1127.10,
-        'Unpaid', 'Unpaid', 1127.10,
+        'F-021-01491',
+        '09-021-009-166',
+        '09-021-009-166- - -',
+        '1 OMEGA PRIME PROPERTY MANAGEMENT INC',
+        'Lot 14 Blk 5 Diliman Commercial Center',
+        'Central',
+        'Land',
+        2025,
+        'Q1-Q4',
+        '2025-10-31',
+        450.00,
+        1500000.00,
+        300000.00,
+        600.00,
+        420.00,
+        0.00,
+        107.10,
+        0.00,
+        1020.00,
+        0.00,
+        1127.10,
+        'Unpaid',
+        'Unpaid',
+        1127.10,
         '{"q1": 255.00, "q2": 255.00, "q3": 255.00, "q4": 255.00}'::jsonb
       ),
       (
-        'G-021-01164', '09-021-009-166-1', '09-021-009-166-1-001-', '1 OMEGA PRIME PROPERTY MANAGEMENT INC',
-        '3-Storey Commercial Building, Lot 14 Blk 5 Diliman', 'Central', 'Building',
-        2025, 'Q1-Q4', '2025-10-31', 780.00, 4200000.00, 1260000.00,
-        1200.00, 840.00, 0.00, 0.00, 0.00, 2040.00, 0.00, 2040.00,
-        'Unpaid', 'Unpaid', 2040.00,
+        'G-021-01164',
+        '09-021-009-166-1',
+        '09-021-009-166-1-001-',
+        '1 OMEGA PRIME PROPERTY MANAGEMENT INC',
+        '3-Storey Commercial Building, Lot 14 Blk 5 Diliman',
+        'Central',
+        'Building',
+        2025,
+        'Q1-Q4',
+        '2025-10-31',
+        780.00,
+        4200000.00,
+        1260000.00,
+        1200.00,
+        840.00,
+        0.00,
+        0.00,
+        0.00,
+        2040.00,
+        0.00,
+        2040.00,
+        'Unpaid',
+        'Unpaid',
+        2040.00,
         '{"q1": 510.00, "q2": 510.00, "q3": 510.00, "q4": 510.00}'::jsonb
       ),
       (
-        'E-015-08832', '09-015-004-122', '09-015-004-122- - -', 'JUAN DELA CRUZ & MARIA DELA CRUZ',
-        'Blk 12 Lot 8 Commonwealth Heights', 'Commonwealth', 'Residential Land',
-        2025, 'Q1-Q4', '2025-12-31', 240.00, 850000.00, 170000.00,
-        850.00, 595.00, 0.00, 0.00, 144.50, 1445.00, 0.00, 1300.50,
-        'Unpaid', 'Unpaid', 1300.50,
+        'E-015-08832',
+        '09-015-004-122',
+        '09-015-004-122- - -',
+        'JUAN DELA CRUZ & MARIA DELA CRUZ',
+        'Blk 12 Lot 8 Commonwealth Heights',
+        'Commonwealth',
+        'Residential Land',
+        2025,
+        'Q1-Q4',
+        '2025-12-31',
+        240.00,
+        850000.00,
+        170000.00,
+        850.00,
+        595.00,
+        0.00,
+        0.00,
+        144.50,
+        1445.00,
+        0.00,
+        1300.50,
+        'Unpaid',
+        'Unpaid',
+        1300.50,
         '{"q1": 361.25, "q2": 361.25, "q3": 361.25, "q4": 361.25}'::jsonb
       ),
       (
-        'B-015-08833', '09-015-004-122-1', '09-015-004-122-1-001-', 'JUAN DELA CRUZ & MARIA DELA CRUZ',
-        '2-Storey Residence, Blk 12 Lot 8 Commonwealth Heights', 'Commonwealth', 'Residential Building',
-        2025, 'Q1-Q4', '2025-12-31', 180.00, 1500000.00, 300000.00,
-        1500.00, 1050.00, 0.00, 0.00, 255.00, 2550.00, 0.00, 2295.00,
-        'Unpaid', 'Unpaid', 2295.00,
+        'B-015-08833',
+        '09-015-004-122-1',
+        '09-015-004-122-1-001-',
+        'JUAN DELA CRUZ & MARIA DELA CRUZ',
+        '2-Storey Residence, Blk 12 Lot 8 Commonwealth Heights',
+        'Commonwealth',
+        'Residential Building',
+        2025,
+        'Q1-Q4',
+        '2025-12-31',
+        180.00,
+        1500000.00,
+        300000.00,
+        1500.00,
+        1050.00,
+        0.00,
+        0.00,
+        255.00,
+        2550.00,
+        0.00,
+        2295.00,
+        'Unpaid',
+        'Unpaid',
+        2295.00,
         '{"q1": 637.50, "q2": 637.50, "q3": 637.50, "q4": 637.50}'::jsonb
       ),
       (
-        'C-088-02451', '09-088-012-501', '09-088-012-501- - -', 'METRO HORIZON HOLDINGS CORP',
-        'Tower 1 Commercial Complex, North Avenue', 'Batasan Hills', 'Commercial',
-        2025, 'Q1-Q4', '2025-10-31', 1200.00, 25000000.00, 7500000.00,
-        12500.00, 8750.00, 0.00, 2125.00, 0.00, 21250.00, 0.00, 23375.00,
-        'Unpaid', 'Unpaid', 23375.00,
+        'C-088-02451',
+        '09-088-012-501',
+        '09-088-012-501- - -',
+        'METRO HORIZON HOLDINGS CORP',
+        'Tower 1 Commercial Complex, North Avenue',
+        'Batasan Hills',
+        'Commercial',
+        2025,
+        'Q1-Q4',
+        '2025-10-31',
+        1200.00,
+        25000000.00,
+        7500000.00,
+        12500.00,
+        8750.00,
+        0.00,
+        2125.00,
+        0.00,
+        21250.00,
+        0.00,
+        23375.00,
+        'Unpaid',
+        'Unpaid',
+        23375.00,
         '{"q1": 5312.50, "q2": 5312.50, "q3": 5312.50, "q4": 5312.50}'::jsonb
       )
       ON CONFLICT (taxDeclarationNumber) DO NOTHING;
     `);
 
-    // Seed default admin account with hashed password
+    // ============================================================
+    // SEED DEFAULT ADMIN ACCOUNT WITH HASHED PASSWORD
+    // ============================================================
+
     const hashedAdminPassword = await bcrypt.hash('admin123', 12);
+
     await pool.query(
       `INSERT INTO users (name, email, password, role)
        VALUES ('System Administrator', 'admin@treasury.gov.ph', $1, 'admin')
@@ -512,18 +659,31 @@ export async function initializeDatabase(): Promise<void> {
       [hashedAdminPassword]
     );
 
-    // Seed real admin account (uses a real email so OTP can be received)
+    // ============================================================
+    // SEED REAL ADMIN ACCOUNT
+    // ============================================================
+
+    // Uses a real email so OTP can be received
+
     const hashedRealAdminPassword = await bcrypt.hash('Admin@1234', 12);
+
     await pool.query(
       `INSERT INTO users (name, email, password, role)
        VALUES ('Hero Odiaman', 'dizon.hero.odiaman@gmail.com', $1, 'admin')
-       ON CONFLICT (email) DO UPDATE SET role = 'admin', password = EXCLUDED.password`,
+       ON CONFLICT (email)
+       DO UPDATE SET
+         role = 'admin',
+         password = EXCLUDED.password`,
       [hashedRealAdminPassword]
     );
 
     console.log(' Database tables checked/initialized successfully.');
   } catch (err) {
     const error = err as Error;
-    console.error(' Error initializing database tables:', error.message || error);
+
+    console.error(
+      ' Error initializing database tables:',
+      error.message || error
+    );
   }
 }

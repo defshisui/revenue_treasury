@@ -18,6 +18,7 @@ interface AttachmentFile {
 interface AssessmentRecord {
   id: string;
   trackingNumber: string;
+  taxBillNumber?: string;
   businessName: string;
   businessOwner: string;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
@@ -208,7 +209,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
     setPaymentConfirmedAt(null);
     setQrPaymentPaid(false);
   };
-  const [taxBillForm, setTaxBillForm] = useState({ permitNo: '', taxBillNo: '', tin: '' });
+  const [taxBillForm, setTaxBillForm] = useState({ taxBillNo: '', tin: '' });
   const [orForm, setOrForm] = useState({ permitNo: '', orNo: '', tin: '' });
   const [salesForm, setSalesForm] = useState({
     businessName: '',
@@ -358,8 +359,19 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
       const headers: HeadersInit = { 'Content-Type': 'application/json' };
       if (user?.token) headers['Authorization'] = `Bearer ${user.token}`;
       const res = isModalOpen === 'tax-bill'
-        ? await fetch(`${API_BASE_URL}/verify/tax-bill`, { method: 'POST', headers, body: JSON.stringify(taxBillForm) })
-        : await fetch(`${API_BASE_URL}/verify/or-number`, { method: 'POST', headers, body: JSON.stringify(orForm) });
+        ? await fetch(`${API_BASE_URL}/verify/tax-bill`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+              taxBillNo: taxBillForm.taxBillNo.trim(),
+              tin: taxBillForm.tin.trim(),
+            })
+          })
+        : await fetch(`${API_BASE_URL}/verify/or-number`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(orForm)
+          });
       const textResponse = await res.text();
       let data;
       try {
@@ -396,8 +408,18 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
         headers,
         body: formData
       });
-      if (!res.ok) throw new Error("Failed to submit sales declaration.");
-      alert("Sales declaration submitted successfully.");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to submit sales declaration.");
+      const generatedTaxBillNumber =
+        data?.taxBillNumber ||
+        data?.record?.tax_bill_number ||
+        data?.record?.taxBillNumber;
+
+      alert(
+        generatedTaxBillNumber
+          ? `Sales declaration submitted successfully.\n\nYour Tax Bill Number is: ${generatedTaxBillNumber}\n\nKeep this number for Tax Bill Number Verification.`
+          : "Sales declaration submitted successfully."
+      );
       setIsModalOpen(false);
       fetchAssessments();
     } catch (err: any) {
@@ -911,17 +933,6 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">Mayor's Permit Number</label>
-                  <input
-                    required
-                    type="text"
-                    value={taxBillForm.permitNo}
-                    onChange={(e) => setTaxBillForm({ ...taxBillForm, permitNo: e.target.value })}
-                    placeholder="Enter Mayor's Permit No."
-                    className="w-full p-2.5 border border-slate-300 rounded bg-slate-50"
-                  />
-                </div>
-                <div>
                   <label className="block text-[11px] font-semibold text-slate-600 mb-1">Tax Bill Number</label>
                   <input
                     required
@@ -1131,9 +1142,15 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                   </span>
                 </div>
               </div>
-              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-1">
+              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-2">
                 <div className="font-semibold text-slate-700">Application Date:</div>
                 <div className="text-slate-600">{new Date(selectedAssessmentView.applicationDate).toLocaleDateString()}</div>
+                <div className="pt-2 border-t border-slate-200">
+                  <div className="font-semibold text-slate-700">Tax Bill Number:</div>
+                  <div className="text-blue-700 font-mono font-bold">
+                    {selectedAssessmentView.taxBillNumber || 'Not yet issued'}
+                  </div>
+                </div>
               </div>
               <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-2">
                 <div className="font-semibold text-slate-700">Submitted Financial Documents:</div>
