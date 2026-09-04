@@ -1137,7 +1137,7 @@ export default function Profile() {
                 {/* SAVE */}
                 <button
                   type="submit"
-                  className="mt-2 rounded-xl bg-blue-600 px-6 py-4 font-bold text-white transition hover:bg-blue-700 cursor-pointer shadow-sm"
+                  className="mt-2 inline-flex items-center justify-center rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-blue-700 cursor-pointer shadow-sm"
                 >
                   Save Profile Details
                 </button>
