@@ -410,16 +410,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to submit sales declaration.");
-      const generatedTaxBillNumber =
-        data?.taxBillNumber ||
-        data?.record?.tax_bill_number ||
-        data?.record?.taxBillNumber;
-
-      alert(
-        generatedTaxBillNumber
-          ? `Sales declaration submitted successfully.\n\nYour Tax Bill Number is: ${generatedTaxBillNumber}\n\nKeep this number for Tax Bill Number Verification.`
-          : "Sales declaration submitted successfully."
-      );
+      alert("Sales declaration submitted successfully.");
       setIsModalOpen(false);
       fetchAssessments();
     } catch (err: any) {
