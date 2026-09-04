@@ -323,6 +323,15 @@ export async function initializeDatabase(): Promise<void> {
       ALTER TABLE rpt_applications
       ADD COLUMN IF NOT EXISTS property_type VARCHAR(100);
 
+      ALTER TABLE market_leases
+      ADD COLUMN IF NOT EXISTS official_receipt_number VARCHAR(100);
+
+      ALTER TABLE market_leases
+      ADD COLUMN IF NOT EXISTS payment_reference VARCHAR(150);
+
+      ALTER TABLE market_leases
+      ADD COLUMN IF NOT EXISTS payment_date TIMESTAMP;
+
       ALTER TABLE rpt_applications
       ADD COLUMN IF NOT EXISTS assigned_officer VARCHAR(255);
 

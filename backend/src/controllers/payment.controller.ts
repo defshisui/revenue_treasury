@@ -802,26 +802,37 @@ export async function handlePayMongoWebhook(
           ` Market lease ${metadata.leaseId} is already Paid.`
         );
       } else {
+        const officialReceiptNumber =
+          existingLease.rows[0].official_receipt_number ||
+          `OR-PM-${new Date().getFullYear()}-${Math.floor(
+            100000 + Math.random() * 900000
+          )}`;
+
         const leaseResult = await pool.query(
           `
           UPDATE market_leases
           SET
             payment_status = 'Paid',
             advance_payment_status = 'Paid',
-            payment_method = $1
-          WHERE lease_id = $2
-             OR id::text = $2
+            payment_method = $1,
+            official_receipt_number = $2,
+            payment_reference = $3,
+            payment_date = NOW()
+          WHERE lease_id = $4
+             OR id::text = $4
           RETURNING *
           `,
           [
             formattedPaymentMethod,
+            officialReceiptNumber,
+            paymentReference,
             metadata.leaseId,
           ]
         );
 
         if (leaseResult.rows.length > 0) {
           console.log(
-            ` Market lease ${metadata.leaseId} marked as PAID.`
+            ` Market lease ${metadata.leaseId} marked as PAID with O.R. ${officialReceiptNumber}.`
           );
         }
       }
@@ -1158,6 +1169,8 @@ export async function getQrPaymentStatus(
     // =========================================================
     // MARKET STALL PAYMENT
     // =========================================================
+    let marketOfficialReceiptNumber: string | undefined;
+
     if (
       paid &&
       metadata.type === 'MARKET_STALL' &&
@@ -1167,23 +1180,52 @@ export async function getQrPaymentStatus(
         `QR payment succeeded for lease ${metadata.leaseId}`
       );
 
+      const existingMarketLease = await pool.query(
+        `
+        SELECT official_receipt_number
+        FROM market_leases
+        WHERE lease_id = $1
+           OR id::text = $1
+        LIMIT 1
+        `,
+        [metadata.leaseId]
+      );
+
+      marketOfficialReceiptNumber =
+        existingMarketLease.rows[0]?.official_receipt_number ||
+        `OR-PM-${new Date().getFullYear()}-${Math.floor(
+          100000 + Math.random() * 900000
+        )}`;
+
+      const paymentReference =
+        metadata.referenceNumber ||
+        attributes.external_reference_number ||
+        `MKT-${metadata.leaseId}-${paymentIntentId.slice(-6)}`;
+
       const leaseResult = await pool.query(
         `
         UPDATE market_leases
         SET
           payment_status = 'Paid',
           advance_payment_status = 'Paid',
-          payment_method = 'PayMongo (QR Ph)'
-        WHERE lease_id = $1
-           OR id::text = $1
+          payment_method = 'PayMongo (QR Ph)',
+          official_receipt_number = $1,
+          payment_reference = $2,
+          payment_date = NOW()
+        WHERE lease_id = $3
+           OR id::text = $3
         RETURNING *
         `,
-        [metadata.leaseId]
+        [
+          marketOfficialReceiptNumber,
+          paymentReference,
+          metadata.leaseId,
+        ]
       );
 
       if (leaseResult.rows.length > 0) {
         console.log(
-          ` Market lease ${metadata.leaseId} marked as PAID.`
+          ` Market lease ${metadata.leaseId} marked as PAID with O.R. ${marketOfficialReceiptNumber}.`
         );
       } else {
         console.warn(
@@ -1312,6 +1354,10 @@ export async function getQrPaymentStatus(
       paid,
       amount: Number(attributes.amount || 0) / 100,
       metadata,
+      officialReceiptNumber:
+        paid && metadata.type === 'MARKET_STALL'
+          ? marketOfficialReceiptNumber
+          : undefined,
     });
   } catch (err: any) {
     console.error(
