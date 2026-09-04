@@ -1,4 +1,4 @@
-// src/citizen-portal/CitizenProfile.tsx
+
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { UnifiedHeader } from "./UnifiedHeader";
@@ -217,10 +217,13 @@ export default function CitizenProfile() {
 
   /* ── UI ── */
   return (
-    <div className="min-h-screen bg-[#F4F6F8] flex flex-col">
+    <div
+      className="min-h-screen bg-[#F4F6F8] text-slate-800 font-['Segoe_UI',Tahoma,Geneva,Verdana,sans-serif] flex flex-col antialiased relative transition-all duration-300 box-border"
+    >
       <UnifiedHeader />
 
-      <main className="flex-1 max-w-4xl mx-auto w-full px-4 py-10">
+      <div className="flex-1 flex flex-col justify-between w-full">
+        <main className="flex-1 max-w-4xl mx-auto w-full px-4 py-10">
         {/* ── Page header ── */}
         <div className="mb-8 flex items-center justify-between">
           <div>
@@ -419,9 +422,10 @@ export default function CitizenProfile() {
             </form>
           </div>
         )}
-      </main>
+        </main>
 
-      <UnifiedFooter />
+        <UnifiedFooter />
+      </div>
     </div>
   );
 }
