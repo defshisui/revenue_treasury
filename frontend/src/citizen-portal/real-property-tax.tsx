@@ -181,8 +181,8 @@ export function RealPropertyTaxHub() {
 
       <section className="w-full max-w-[650px] bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-7 text-center">
 
-        <h2 className="mt-2 text-lg font-black text-slate-900">
-          Proceed and Pay Online
+        <h2 className="text-blue-900 font-bold text-sm tracking-wider uppercase mb-2">
+          PROCEED AND PAY ONLINE
         </h2>
 
         <p className="max-w-xl mx-auto mt-3 text-xs sm:text-sm text-[#36527A] leading-relaxed">
