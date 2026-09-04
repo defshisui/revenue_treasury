@@ -438,7 +438,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
         marginLeft: isCollapsed ? "80px" : "0px",
         width: isCollapsed ? "calc(100% - 80px)" : "100%",
       }}
-      className="min-h-screen bg-slate-100 text-slate-800 pt-0 transition-all duration-300 box-border flex flex-col justify-between"
+      className="min-h-screen bg-slate-100 font-['Segoe_UI',Tahoma,Geneva,Verdana,sans-serif] text-slate-800 pt-0 flex flex-col antialiased relative transition-all duration-300 box-border"
     >
       <div>
         <UnifiedHeader />
