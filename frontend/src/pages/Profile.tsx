@@ -1187,21 +1187,6 @@ export default function Profile() {
                     }`}
                   />
 
-                  {/* NEW PASSWORD */}
-                  <input
-                    type="password"
-                    name="newPassword"
-                    value={passwordData.newPassword}
-                    onChange={handlePasswordChange}
-                    placeholder="New Password"
-                    required
-                    className={`w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors ${
-                      isDarkMode
-                        ? "border-slate-700 bg-slate-900 text-white placeholder:text-slate-500 focus:border-slate-400"
-                        : "border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:border-slate-900"
-                    }`}
-                  />
-
                   {/* PASSWORD REQUIREMENTS */}
                   <div
                     className={`rounded-xl border p-3 text-xs ${
@@ -1298,6 +1283,23 @@ export default function Profile() {
                     </div>
                   </div>
 
+                  {/* NEW + CONFIRM PASSWORD */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {/* NEW PASSWORD */}
+                  <input
+                    type="password"
+                    name="newPassword"
+                    value={passwordData.newPassword}
+                    onChange={handlePasswordChange}
+                    placeholder="New Password"
+                    required
+                    className={`w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors ${
+                      isDarkMode
+                        ? "border-slate-700 bg-slate-900 text-white placeholder:text-slate-500 focus:border-slate-400"
+                        : "border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:border-slate-900"
+                    }`}
+                  />
+
                   {/* CONFIRM PASSWORD */}
                   <input
                     type="password"
@@ -1312,6 +1314,8 @@ export default function Profile() {
                         : "border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:border-slate-900"
                     }`}
                   />
+
+                  </div>
 
                   {/* UPDATE PASSWORD */}
                   <button
