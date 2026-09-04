@@ -329,6 +329,113 @@ export default function CitizenProfile() {
               </div>
             </div>
 
+            {/* ── Change Password accordion ── */}
+            <div className="mt-4 bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setIsPasswordOpen((prev) => !prev)}
+                className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left cursor-pointer hover:bg-slate-50 transition"
+                aria-expanded={isPasswordOpen}
+              >
+                <div>
+                  <h2 className="text-sm font-extrabold text-slate-900">
+                    Change Security Password
+                  </h2>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Update your password to keep your citizen account secure.
+                  </p>
+                </div>
+
+                <span
+                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-50 border border-blue-200 text-blue-700 transition-transform duration-200 ${
+                    isPasswordOpen ? "rotate-180" : ""
+                  }`}
+                  aria-hidden="true"
+                >
+                  <svg
+                    className="h-4 w-4"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="m6 9 6 6 6-6" />
+                  </svg>
+                </span>
+              </button>
+
+              {isPasswordOpen && (
+                <div className="border-t border-slate-100 px-5 pb-5 pt-4">
+                  <div className="space-y-3">
+                    <input
+                      type="password"
+                      name="currentPassword"
+                      value={passwordForm.currentPassword}
+                      onChange={handlePasswordChange}
+                      placeholder="Current Password"
+                      className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                    />
+
+                    <div className="rounded-xl border border-slate-200 bg-white px-3 py-3">
+                      <p className="text-[11px] font-bold text-slate-800 mb-2">
+                        Password must contain:
+                      </p>
+                      <div className="grid grid-cols-2 sm:grid-cols-5 gap-x-3 gap-y-1 text-[10px] leading-tight">
+                        <span className={passwordRequirements.minLength ? "text-emerald-600" : "text-slate-400"}>
+                          {passwordRequirements.minLength ? "✓" : "○"} At least 8 characters
+                        </span>
+                        <span className={passwordRequirements.uppercase ? "text-emerald-600" : "text-slate-400"}>
+                          {passwordRequirements.uppercase ? "✓" : "○"} At least 1 uppercase letter
+                        </span>
+                        <span className={passwordRequirements.lowercase ? "text-emerald-600" : "text-slate-400"}>
+                          {passwordRequirements.lowercase ? "✓" : "○"} At least 1 lowercase letter
+                        </span>
+                        <span className={passwordRequirements.number ? "text-emerald-600" : "text-slate-400"}>
+                          {passwordRequirements.number ? "✓" : "○"} At least 1 number
+                        </span>
+                        <span className={passwordRequirements.special ? "text-emerald-600" : "text-slate-400"}>
+                          {passwordRequirements.special ? "✓" : "○"} At least 1 special character
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <input
+                        type="password"
+                        name="newPassword"
+                        value={passwordForm.newPassword}
+                        onChange={handlePasswordChange}
+                        placeholder="New Password"
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                      />
+
+                      <input
+                        type="password"
+                        name="confirmPassword"
+                        value={passwordForm.confirmPassword}
+                        onChange={handlePasswordChange}
+                        placeholder="Confirm New Password"
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setError("Password change is ready in the profile UI. The citizen password endpoint still needs to be connected.");
+                        setStatus("");
+                      }}
+                      className="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold px-5 py-2.5 rounded-xl text-xs shadow-sm transition cursor-pointer"
+                    >
+                      Update Password
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* ── Right: form ── */}
             <form onSubmit={handleSubmit} className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
               <h2 className="text-base font-extrabold text-slate-900 mb-1">Personal Information</h2>
@@ -443,112 +550,7 @@ export default function CitizenProfile() {
               </div>
             </form>
 
-            {/* ── Change Password accordion ── */}
-            <div className="mt-4 bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
-              <button
-                type="button"
-                onClick={() => setIsPasswordOpen((prev) => !prev)}
-                className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left cursor-pointer hover:bg-slate-50 transition"
-                aria-expanded={isPasswordOpen}
-              >
-                <div>
-                  <h2 className="text-sm font-extrabold text-slate-900">
-                    Change Security Password
-                  </h2>
-                  <p className="text-[11px] text-slate-500 mt-0.5">
-                    Update your password to keep your citizen account secure.
-                  </p>
-                </div>
 
-                <span
-                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-50 border border-blue-200 text-blue-700 transition-transform duration-200 ${
-                    isPasswordOpen ? "rotate-180" : ""
-                  }`}
-                  aria-hidden="true"
-                >
-                  <svg
-                    className="h-4 w-4"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="m6 9 6 6 6-6" />
-                  </svg>
-                </span>
-              </button>
-
-              {isPasswordOpen && (
-                <div className="border-t border-slate-100 px-5 pb-5 pt-4">
-                  <div className="space-y-3">
-                    <input
-                      type="password"
-                      name="currentPassword"
-                      value={passwordForm.currentPassword}
-                      onChange={handlePasswordChange}
-                      placeholder="Current Password"
-                      className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
-                    />
-
-                    <div className="rounded-xl border border-slate-200 bg-white px-3 py-3">
-                      <p className="text-[11px] font-bold text-slate-800 mb-2">
-                        Password must contain:
-                      </p>
-                      <div className="grid grid-cols-2 sm:grid-cols-5 gap-x-3 gap-y-1 text-[10px] leading-tight">
-                        <span className={passwordRequirements.minLength ? "text-emerald-600" : "text-slate-400"}>
-                          {passwordRequirements.minLength ? "✓" : "○"} At least 8 characters
-                        </span>
-                        <span className={passwordRequirements.uppercase ? "text-emerald-600" : "text-slate-400"}>
-                          {passwordRequirements.uppercase ? "✓" : "○"} At least 1 uppercase letter
-                        </span>
-                        <span className={passwordRequirements.lowercase ? "text-emerald-600" : "text-slate-400"}>
-                          {passwordRequirements.lowercase ? "✓" : "○"} At least 1 lowercase letter
-                        </span>
-                        <span className={passwordRequirements.number ? "text-emerald-600" : "text-slate-400"}>
-                          {passwordRequirements.number ? "✓" : "○"} At least 1 number
-                        </span>
-                        <span className={passwordRequirements.special ? "text-emerald-600" : "text-slate-400"}>
-                          {passwordRequirements.special ? "✓" : "○"} At least 1 special character
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <input
-                        type="password"
-                        name="newPassword"
-                        value={passwordForm.newPassword}
-                        onChange={handlePasswordChange}
-                        placeholder="New Password"
-                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
-                      />
-
-                      <input
-                        type="password"
-                        name="confirmPassword"
-                        value={passwordForm.confirmPassword}
-                        onChange={handlePasswordChange}
-                        placeholder="Confirm New Password"
-                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
-                      />
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setError("Password change is ready in the profile UI. The citizen password endpoint still needs to be connected.");
-                        setStatus("");
-                      }}
-                      className="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold px-5 py-2.5 rounded-xl text-xs shadow-sm transition cursor-pointer"
-                    >
-                      Update Password
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
           </div>
         )}
         </main>
