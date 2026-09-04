@@ -131,11 +131,7 @@ export default function MarketLeaseSearch() {
         setSelectedLease(null);
     };
 
-    const formatQrTime = (seconds: number) => {
-        const minutes = Math.floor(seconds / 60);
-        const remainingSeconds = seconds % 60;
-        return `${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2, "0")}`;
-    };
+
 
     const openPaymentForLease = async (lease: CitizenLeaseRecord) => {
         const session = checkUserSession();
@@ -343,16 +339,7 @@ export default function MarketLeaseSearch() {
         qrReferenceNumber,
     ]);
 
-    const downloadPaymentQrCode = () => {
-        if (!qrImageUrl) return;
 
-        const link = document.createElement("a");
-        link.href = qrImageUrl;
-        link.download = `market-stall-qrph-${paymentLeaseId || "payment"}.png`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
 
     const getOfficialReceiptNumber = (lease: CitizenLeaseRecord | null) =>
         lease?.officialReceiptNumber ||
@@ -716,150 +703,201 @@ export default function MarketLeaseSearch() {
             </div>
         )}
 
-        {/* MARKET STALL QR PH PAYMENT MODAL */}
-        {isPaymentOpen && selectedLease && !isPaymentSuccess && (
-            <div className="fixed inset-0 z-[80] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
-                <div className="bg-white rounded-2xl sm:rounded-3xl w-full max-w-5xl shadow-2xl border border-slate-200 overflow-hidden my-auto">
-                    <div className="grid grid-cols-1 lg:grid-cols-[1.05fr_.95fr]">
-                        <div className="p-6 sm:p-8">
-                            <div className="flex items-start justify-between gap-4">
-                                <div>
-                                    <p className="text-[10px] font-bold uppercase tracking-wider text-blue-900">
-                                        Gov Serve Market Services
+        {/* MARKET STALL QR PH PAYMENT MODAL - MATCHES BUSINESS TAX PAYMENT UI */}
+        {isPaymentOpen && paymentLeaseId && selectedLease && (
+            <div className="fixed inset-0 z-[60] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto overscroll-contain">
+                <div className="bg-white rounded-2xl sm:rounded-3xl w-full max-w-5xl max-h-[96vh] shadow-2xl border border-slate-200 overflow-y-auto my-auto">
+                    <>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 min-w-0">
+                            <div className="p-4 sm:p-6 lg:p-8 lg:border-r border-slate-200 min-w-0">
+                                <h2 className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">
+                                    Market Stall Payment
+                                </h2>
+
+                                <p className="text-xl sm:text-2xl font-black text-slate-900 mt-1 break-all">
+                                    ({paymentLeaseId})
+                                </p>
+
+                                <p className="text-sm text-slate-500 mt-3">
+                                    Market Stall Lease Payment ({selectedLease.marketName})
+                                </p>
+
+                                <p className="text-sm text-slate-600 mt-4">
+                                    Billed to{" "}
+                                    <span className="font-bold text-slate-900">
+                                        {selectedLease.firstName} {selectedLease.lastName}
+                                    </span>
+                                </p>
+
+                                <div className="mt-6 rounded-2xl border border-blue-200 bg-blue-50/60 p-5">
+                                    <p className="text-xs font-black uppercase tracking-wide text-blue-900 mb-3">
+                                        Market Stall Lease Assessment
                                     </p>
-                                    <h2 className="text-2xl font-black text-slate-900 mt-1">
-                                        Market Stall Lease Payment
-                                    </h2>
-                                    <p className="text-sm font-mono font-bold text-blue-600 mt-1">
-                                        {paymentLeaseId}
-                                    </p>
+
+                                    <div className="space-y-0 text-sm">
+                                        <div className="flex justify-between items-center gap-4 py-2 border-b border-blue-200">
+                                            <span className="text-slate-600">Market</span>
+                                            <span className="font-bold text-slate-900 text-right">
+                                                {selectedLease.marketName}
+                                            </span>
+                                        </div>
+
+                                        <div className="flex justify-between items-center gap-4 py-2 border-b border-blue-200">
+                                            <span className="text-slate-600">Section</span>
+                                            <span className="font-bold text-slate-900">
+                                                {selectedLease.section}
+                                            </span>
+                                        </div>
+
+                                        <div className="flex justify-between items-center gap-4 py-2">
+                                            <span className="text-slate-600">Stall Number</span>
+                                            <span className="font-bold text-slate-900">
+                                                {selectedLease.stallNumber}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex justify-between items-center gap-4 mt-3 pt-3 border-t border-blue-300">
+                                        <span className="font-black text-blue-800">Total Payable Assessment</span>
+                                        <span className="font-black text-lg text-blue-700 whitespace-nowrap">
+                                            ₱{Number(selectedLease.amountDue || 0).toLocaleString("en-PH", {
+                                                minimumFractionDigits: 2,
+                                                maximumFractionDigits: 2,
+                                            })}
+                                        </span>
+                                    </div>
                                 </div>
 
-                                <button
-                                    type="button"
-                                    onClick={closePayment}
-                                    className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold cursor-pointer"
-                                >
-                                    ✕
-                                </button>
+                                <div className="mt-6 pt-5 border-t border-slate-200">
+                                    <p className="text-4xl sm:text-5xl font-black text-emerald-600">
+                                        ₱{Number(selectedLease.amountDue || 0).toLocaleString("en-PH", {
+                                            minimumFractionDigits: 2,
+                                            maximumFractionDigits: 2,
+                                        })}
+                                    </p>
+
+                                    <div className="flex justify-between items-center mt-8 text-sm">
+                                        <span className="text-slate-600">Subtotal</span>
+                                        <span className="font-bold text-slate-900">
+                                            ₱{Number(selectedLease.amountDue || 0).toLocaleString("en-PH", {
+                                                minimumFractionDigits: 2,
+                                                maximumFractionDigits: 2,
+                                            })}
+                                        </span>
+                                    </div>
+
+                                    <div className="flex justify-between items-center mt-4 text-sm">
+                                        <span className="text-slate-600">Payment Fees</span>
+                                        <span className="font-semibold text-slate-900">Free</span>
+                                    </div>
+
+                                    <div className="flex justify-between items-center mt-5 pt-5 border-t border-slate-200">
+                                        <span className="font-black text-slate-900">Total Due</span>
+                                        <span className="font-black text-lg text-slate-900">
+                                            ₱{Number(selectedLease.amountDue || 0).toLocaleString("en-PH", {
+                                                minimumFractionDigits: 2,
+                                                maximumFractionDigits: 2,
+                                            })}
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
 
-                            <div className="mt-6 border-t border-slate-200 pt-5 space-y-4">
-                                <div>
-                                    <p className="text-xs text-slate-500">Billed to</p>
-                                    <p className="font-bold text-slate-900">
-                                        {selectedLease.firstName} {selectedLease.lastName}
+                            <div className="p-4 sm:p-6 lg:p-8 bg-slate-50/60 flex flex-col items-center min-w-0">
+                                <div className="w-full text-center">
+                                    <p className="text-base sm:text-lg font-black text-slate-900">
+                                        Scan QR Ph code to pay
+                                    </p>
+                                    <p className="text-xs text-slate-500 mt-2">
+                                        Use your supported banking or e-wallet app.
                                     </p>
                                 </div>
 
-                                <div>
-                                    <p className="text-xs text-slate-500">Market / Stall</p>
-                                    <p className="font-bold text-slate-900">
-                                        {selectedLease.marketName} — Stall {selectedLease.stallNumber}
-                                    </p>
-                                </div>
+                                {isGeneratingQr && !qrImageUrl && (
+                                    <div className="w-full max-w-sm mt-5 rounded-2xl border border-slate-200 bg-white p-6 sm:p-10 flex flex-col items-center text-center shadow-sm">
+                                        <div className="h-10 w-10 border-4 border-blue-200 border-t-blue-700 rounded-full animate-spin mb-4" />
+                                        <p className="text-sm font-bold text-slate-800">
+                                            Generating QR Ph code...
+                                        </p>
+                                        <p className="text-xs text-slate-500 mt-1">
+                                            Please wait while PayMongo prepares your secure payment.
+                                        </p>
+                                    </div>
+                                )}
 
-                                <div className="pt-3 border-t border-slate-200 flex justify-between items-center">
-                                    <span className="font-black text-slate-900">Total Due</span>
-                                    <span className="font-black text-2xl text-emerald-600">
-                                        {selectedLease.amountDue.toLocaleString("en-PH", {
-                                            style: "currency",
-                                            currency: "PHP",
-                                            minimumFractionDigits: 2,
-                                        })}
-                                    </span>
-                                </div>
+                                {!isGeneratingQr && qrGenerationError && !qrImageUrl && (
+                                    <div className="w-full max-w-sm mt-5 rounded-2xl border border-rose-200 bg-rose-50 p-4 sm:p-5 text-center">
+                                        <p className="text-xs font-bold text-rose-700">
+                                            {qrGenerationError}
+                                        </p>
+                                        <button
+                                            type="button"
+                                            onClick={() => void openPaymentForLease(selectedLease)}
+                                            className="mt-4 px-5 py-2.5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold cursor-pointer"
+                                        >
+                                            Generate QR Again
+                                        </button>
+                                    </div>
+                                )}
 
-                                <div className="p-4 rounded-xl bg-blue-50 border border-blue-200 text-xs text-blue-900 leading-relaxed">
-                                    Scan the QR Ph code using your supported banking or e-wallet
-                                    application. The lease status will update after the payment
-                                    gateway confirms the transaction.
-                                </div>
+                                {qrImageUrl && !isPaymentSuccess && (
+                                    <div className="w-full flex flex-col items-center mt-5">
+                                        <div className="w-full max-w-sm rounded-xl border border-blue-200 bg-blue-50 px-3 sm:px-4 py-3 text-center mb-4">
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-blue-700">
+                                                QR Code Refreshes In
+                                            </p>
+                                            <p className="text-xl sm:text-2xl font-black tabular-nums text-blue-700">
+                                                {Math.floor(qrTimeLeft / 60)}:{String(qrTimeLeft % 60).padStart(2, "0")}
+                                            </p>
+                                            {qrReferenceNumber && (
+                                                <p className="text-[10px] font-mono text-slate-500 mt-1">
+                                                    Ref: {qrReferenceNumber}
+                                                </p>
+                                            )}
+                                        </div>
 
-                                {qrGenerationError && (
-                                    <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-xs font-semibold text-rose-700">
-                                        {qrGenerationError}
+                                        <div className="bg-white border border-slate-200 rounded-2xl p-3 sm:p-4 shadow-md max-w-full">
+                                            <img
+                                                src={qrImageUrl}
+                                                alt="PayMongo Dynamic QR Ph payment code"
+                                                className="w-[min(72vw,18rem)] h-[min(72vw,18rem)] max-w-full object-contain"
+                                            />
+                                        </div>
+
+                                        <p className="text-xs text-slate-500 text-center mt-3 max-w-sm px-2">
+                                            Scan the QR code with your preferred supported payment app. Your payment will be confirmed automatically through PayMongo.
+                                        </p>
+
+                                        <div className="mt-4 flex items-center gap-2 text-xs font-bold text-blue-700">
+                                            <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
+                                            Waiting for payment...
+                                        </div>
                                     </div>
                                 )}
                             </div>
                         </div>
 
-                        <div className="bg-slate-50 border-l border-slate-200 p-6 sm:p-8 flex flex-col items-center justify-center min-h-[520px]">
-                            {isGeneratingQr ? (
-                                <div className="text-center">
-                                    <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-900 rounded-full animate-spin mx-auto mb-4"></div>
-                                    <p className="font-bold text-slate-900">Generating QR Ph...</p>
-                                    <p className="text-xs text-slate-500 mt-1">
-                                        Please wait while the payment code is prepared.
-                                    </p>
-                                </div>
-                            ) : qrImageUrl ? (
-                                <>
-                                    <p className="text-xs font-black uppercase tracking-wider text-slate-700 mb-4">
-                                        Scan to Pay
-                                    </p>
-
-                                    <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-                                        <img
-                                            src={qrImageUrl}
-                                            alt="Market stall QR Ph payment"
-                                            className="w-72 h-72 object-contain"
-                                        />
-                                    </div>
-
-                                    <div className="mt-4 text-center">
-                                        <p className="text-[10px] uppercase tracking-wider font-bold text-slate-500">
-                                            QR expires in
-                                        </p>
-                                        <p className="font-mono font-black text-lg text-slate-900">
-                                            {formatQrTime(qrTimeLeft)}
-                                        </p>
-                                    </div>
-
-                                    {qrReferenceNumber && (
-                                        <p className="mt-2 text-[10px] text-slate-500 font-mono text-center break-all">
-                                            Reference: {qrReferenceNumber}
-                                        </p>
-                                    )}
-
-                                    <button
-                                        type="button"
-                                        onClick={downloadPaymentQrCode}
-                                        className="mt-4 px-5 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-700 font-bold text-xs hover:bg-slate-100 cursor-pointer"
-                                    >
-                                        Download QR
-                                    </button>
-                                </>
-                            ) : (
-                                <div className="text-center">
-                                    <p className="font-bold text-slate-900">
-                                        Unable to display payment QR
-                                    </p>
-                                    <p className="text-xs text-slate-500 mt-1">
-                                        Close this window and try again.
-                                    </p>
-                                </div>
-                            )}
+                        <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-5 border-t border-slate-200 bg-white flex justify-end sticky bottom-0">
+                            <button
+                                type="button"
+                                onClick={closePayment}
+                                disabled={isGeneratingQr}
+                                className="px-6 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed text-slate-700 font-bold text-sm transition-colors cursor-pointer"
+                            >
+                                Close
+                            </button>
                         </div>
-                    </div>
+                    </>
                 </div>
             </div>
         )}
 
-        {/* PAYMENT SUCCESS MODAL */}
+        {/* Payment Success Screen - same clean style as Business Tax */}
         {isPaymentSuccess && selectedLease && (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-slate-950/75 backdrop-blur-md overflow-y-auto">
-                <div className="relative w-full max-w-lg rounded-3xl bg-white p-6 sm:p-8 shadow-2xl text-center">
-                    <div className="mx-auto mb-5 h-20 w-20 rounded-full bg-emerald-100 flex items-center justify-center">
-                        <svg
-                            viewBox="0 0 52 52"
-                            className="h-12 w-12 text-emerald-600"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="4"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                        >
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-slate-950/75 backdrop-blur-md overflow-y-auto overscroll-contain">
+                <div className="relative w-full max-w-lg max-h-[94vh] overflow-y-auto rounded-2xl sm:rounded-[28px] bg-white p-5 sm:p-8 shadow-2xl text-center">
+                    <div className="mx-auto mb-4 sm:mb-5 h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-emerald-100 flex items-center justify-center">
+                        <svg viewBox="0 0 52 52" className="h-10 w-10 sm:h-12 sm:w-12 text-emerald-600" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M14 27l8 8 17-19" />
                         </svg>
                     </div>
@@ -868,7 +906,7 @@ export default function MarketLeaseSearch() {
                         PAYMENT CONFIRMED
                     </p>
 
-                    <h2 className="mt-4 text-2xl font-black text-slate-900">
+                    <h2 className="mt-3 sm:mt-4 text-xl sm:text-2xl font-black text-slate-900">
                         Payment Successful!
                     </h2>
 
@@ -876,7 +914,7 @@ export default function MarketLeaseSearch() {
                         Your Market Stall payment has been confirmed.
                     </p>
 
-                    <div className="mt-6 rounded-2xl bg-slate-50 border border-slate-200 p-5 text-left space-y-3 text-sm">
+                    <div className="mt-5 rounded-2xl bg-slate-50 border border-slate-200 p-4 sm:p-5 text-left space-y-3 text-sm overflow-x-auto">
                         <div className="flex justify-between gap-4">
                             <span className="text-slate-500">Service</span>
                             <span className="font-bold text-right">Market Stall Lease</span>
@@ -884,18 +922,15 @@ export default function MarketLeaseSearch() {
 
                         <div className="flex justify-between gap-4">
                             <span className="text-slate-500">Lease ID</span>
-                            <span className="font-mono font-bold text-right">
-                                {selectedLease.leaseId}
-                            </span>
+                            <span className="font-mono font-bold text-right">{selectedLease.leaseId}</span>
                         </div>
 
                         <div className="flex justify-between gap-4">
                             <span className="text-slate-500">Amount Paid</span>
                             <span className="font-black">
-                                {selectedLease.amountDue.toLocaleString("en-PH", {
-                                    style: "currency",
-                                    currency: "PHP",
+                                ₱{Number(selectedLease.amountDue || 0).toLocaleString("en-PH", {
                                     minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
                                 })}
                             </span>
                         </div>
@@ -921,9 +956,7 @@ export default function MarketLeaseSearch() {
                                 Official Receipt (O.R.) Number
                             </p>
                             <p className="mt-1 font-mono text-base font-black text-emerald-600">
-                                {paymentOfficialReceipt ||
-                                    selectedLease.officialReceiptNumber ||
-                                    "Not yet issued"}
+                                {paymentOfficialReceipt || selectedLease.officialReceiptNumber || "Not yet issued"}
                             </p>
                         </div>
                     </div>
@@ -941,6 +974,7 @@ export default function MarketLeaseSearch() {
                                 try {
                                     const fresh = await getLeases();
                                     setAllLeases(fresh as CitizenLeaseRecord[]);
+                                    setFilteredLeases(fresh as CitizenLeaseRecord[]);
                                 } catch (error) {
                                     console.error("Failed to refresh market leases:", error);
                                 }
