@@ -26,6 +26,16 @@ interface AssessmentRecord {
   businessType?: 'Manufacturer' | 'Wholesaler' | 'Retailer' | 'Exporter' | 'Service';
   attachments?: AttachmentFile[];
   remarks?: string;
+
+  // Official Receipt fields returned by the backend after successful payment.
+  // Support both camelCase and snake_case so the Admin UI works with either
+  // API response format.
+  officialReceiptNumber?: string;
+  official_receipt_number?: string;
+  orNumber?: string;
+  or_number?: string;
+  paymentReference?: string;
+  payment_reference?: string;
 }
 
 interface AppointmentRecord {
@@ -401,6 +411,23 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
     if (appointmentTab === 'Archived' && !isArchived) return false;
     return true;
   });
+
+  const getOfficialReceiptNumber = (assessment: AssessmentRecord): string => {
+    const directOr =
+      assessment.officialReceiptNumber ||
+      assessment.official_receipt_number ||
+      assessment.orNumber ||
+      assessment.or_number;
+
+    if (directOr) return String(directOr);
+
+    // Some older records may have the O.R. saved inside remarks.
+    // Only accept a value that explicitly looks like an O.R. number.
+    const remarks = String(assessment.remarks || '');
+    const orMatch = remarks.match(/(?:O\.R\.|OR|Official\s+Receipt)\s*(?:Number|No\.?|#)?\s*[:\-]?\s*([A-Z0-9]+(?:-[A-Z0-9]+)+)/i);
+
+    return orMatch?.[1] ? String(orMatch[1]) : '';
+  };
 
   const handleExportCSV = () => {
     if (filteredAssessments.length === 0) {
@@ -1003,6 +1030,38 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
                   <span>Total Payable Assessment</span>
                   <span className="font-mono">₱{computedFees.total.toLocaleString()}</span>
                 </div>
+              </div>
+
+              {/* Official Receipt / Payment Information */}
+              <div className="p-4 rounded-2xl bg-slate-50/70 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <span className="block text-[10px] text-slate-400 uppercase font-bold mb-1">
+                      Official Receipt (O.R.) Number
+                    </span>
+                    <span className={`font-mono font-extrabold text-sm ${
+                      selectedAssessment.paymentStatus === 'PAID'
+                        ? 'text-emerald-600 dark:text-emerald-400'
+                        : 'text-slate-500 dark:text-slate-400'
+                    }`}>
+                      {getOfficialReceiptNumber(selectedAssessment) || 'Not yet issued'}
+                    </span>
+                  </div>
+
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold border ${
+                    selectedAssessment.paymentStatus === 'PAID'
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800'
+                      : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800'
+                  }`}>
+                    {selectedAssessment.paymentStatus === 'PAID' ? 'PAID' : 'UNPAID'}
+                  </span>
+                </div>
+
+                {selectedAssessment.paymentStatus === 'PAID' && !getOfficialReceiptNumber(selectedAssessment) && (
+                  <p className="mt-2 text-[10px] text-amber-600 dark:text-amber-400">
+                    Payment is marked as paid, but the O.R. number was not returned by the server.
+                  </p>
+                )}
               </div>
 
               {/* Uploaded Documents & Verification Checklist */}

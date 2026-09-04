@@ -85,6 +85,19 @@ export async function getBusinessAssessments(req: Request, res: Response): Promi
                 ? 'PAID'
                 : 'UNPAID',
 
+            // Official Receipt Number:
+            // Prefer a dedicated database column when available.
+            // Older business-tax records store the O.R. in remarks as:
+            // "Paid via ... - OR: OR-PM-2026-123456"
+            officialReceiptNumber:
+                row.official_receipt_number ||
+                row.officialReceiptNumber ||
+                (() => {
+                    const remarks = String(row.remarks || '');
+                    const match = remarks.match(/(?:OR|O\.R\.)\s*:\s*([^\s]+)/i);
+                    return match ? match[1] : '';
+                })(),
+
             computedFees: row.computed_fees || {}
         }));
 
@@ -556,7 +569,17 @@ export async function verifyOrNumber(req: Request, res: Response): Promise<void>
 
             message: 'Official Receipt verified successfully in treasury records.',
 
-            orNumber: orNo || 'OR-2026-000000',
+            // Return the O.R. stored with the paid transaction.
+            // Fall back to the submitted value only for legacy records
+            // where the O.R. was not stored separately.
+            orNumber:
+                record.official_receipt_number ||
+                record.officialReceiptNumber ||
+                (() => {
+                    const remarks = String(record.remarks || '');
+                    const match = remarks.match(/(?:OR|O\.R\.)\s*:\s*([^\s]+)/i);
+                    return match ? match[1] : orNo;
+                })(),
 
             businessName:
                 record.business_name || 'Verified Business',
