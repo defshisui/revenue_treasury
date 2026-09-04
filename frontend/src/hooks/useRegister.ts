@@ -4,7 +4,12 @@ import type { FormEvent } from "react";
 import { API_BASE_URL } from "../config/api";
 
 export function useRegister(onSuccess: () => void) {
-  // Registration Steps (1: Account, 2: Personal, 3: Address, 4: Review, 5: Verify Email OTP)
+  // Registration Steps
+  // 1: Account
+  // 2: Personal
+  // 3: Address
+  // 4: Review
+  // 5: Verify Email OTP
   const [regStep, setRegStep] = useState(1);
 
   // Form Fields
@@ -25,8 +30,8 @@ export function useRegister(onSuccess: () => void) {
 
   // OTP Verification States
   const [regOtp, setRegOtp] = useState("");
-  const [otpExpirySeconds, setOtpExpirySeconds] = useState(300); // 5 minutes
-  const [resendCooldown, setResendCooldown] = useState(60); // 60 seconds
+  const [otpExpirySeconds, setOtpExpirySeconds] = useState(300);
+  const [resendCooldown, setResendCooldown] = useState(60);
   const [isSubmittingInit, setIsSubmittingInit] = useState(false);
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
   const [isResendingOtp, setIsResendingOtp] = useState(false);
@@ -35,15 +40,36 @@ export function useRegister(onSuccess: () => void) {
   const [regSuccess, setRegSuccess] = useState(false);
   const [isWorkerNotice, setIsWorkerNotice] = useState(false);
 
+  // ============================================================
+  // STRONG PASSWORD VALIDATION
+  // Requirements:
+  // - At least 8 characters
+  // - At least 1 uppercase letter
+  // - At least 1 lowercase letter
+  // - At least 1 number
+  // - At least 1 special character
+  // ============================================================
+  const isStrongPassword = (password: string) => {
+    return (
+      password.length >= 8 &&
+      /[A-Z]/.test(password) &&
+      /[a-z]/.test(password) &&
+      /\d/.test(password) &&
+      /[^A-Za-z0-9\s]/.test(password)
+    );
+  };
+
   // Countdown timer for Registration OTP step
   useEffect(() => {
     let interval: any = null;
+
     if (regStep === 5) {
       interval = setInterval(() => {
         setOtpExpirySeconds((prev) => (prev > 0 ? prev - 1 : 0));
         setResendCooldown((prev) => (prev > 0 ? prev - 1 : 0));
       }, 1000);
     }
+
     return () => {
       if (interval) clearInterval(interval);
     };
@@ -52,6 +78,7 @@ export function useRegister(onSuccess: () => void) {
   const formatOtpTimer = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
+
     return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
   };
 
@@ -62,26 +89,51 @@ export function useRegister(onSuccess: () => void) {
 
   const handleNextStep = (e: FormEvent) => {
     e.preventDefault();
+
     setRegMessage("");
     setIsWorkerNotice(false);
 
+    // ============================================================
+    // STEP 1: ACCOUNT
+    // ============================================================
     if (regStep === 1) {
       if (!regEmail || !regPassword) {
         setRegMessage("Please fill in both email and password.");
         return;
       }
-    } else if (regStep === 2) {
+
+      // Strong password validation
+      if (!isStrongPassword(regPassword)) {
+        setRegMessage(
+          "Password must have at least 8 characters, 1 uppercase letter, 1 lowercase letter, 1 number, and 1 special character."
+        );
+        return;
+      }
+    }
+
+    // ============================================================
+    // STEP 2: PERSONAL INFORMATION
+    // ============================================================
+    else if (regStep === 2) {
       if (!firstName || !lastName || !birthDate || !sex) {
         setRegMessage("Please fill in all required personal details.");
         return;
       }
-    } else if (regStep === 3) {
+    }
+
+    // ============================================================
+    // STEP 3: ADDRESS
+    // ============================================================
+    else if (regStep === 3) {
       if (!houseNoStreet || !barangay || !city) {
         setRegMessage("Please fill in your complete address.");
         return;
       }
+
       if (!validatePHMobile(mobileNumber)) {
-        setRegMessage("Please enter a valid 11-digit Philippine mobile number starting with 09 (e.g., 09123456789).");
+        setRegMessage(
+          "Please enter a valid 11-digit Philippine mobile number starting with 09 (e.g., 09123456789)."
+        );
         return;
       }
     }
@@ -95,16 +147,32 @@ export function useRegister(onSuccess: () => void) {
   };
 
   /**
-   * STEP 4 Review -> Initiate Registration OTP (Dispatches Nodemailer email)
+   * STEP 4 Review -> Initiate Registration OTP
+   * Dispatches Nodemailer email
    */
   const handleFinalRegisterSubmit = async () => {
     setRegMessage("");
+
+    // ============================================================
+    // FINAL PASSWORD CHECK
+    // This prevents registration from proceeding even if this
+    // function is called without going through Step 1 validation.
+    // ============================================================
+    if (!isStrongPassword(regPassword)) {
+      setRegMessage(
+        "Password must have at least 8 characters, 1 uppercase letter, 1 lowercase letter, 1 number, and 1 special character."
+      );
+      return;
+    }
+
     setIsSubmittingInit(true);
 
     try {
       const response = await fetch(`${API_BASE_URL}/auth/register-init`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           email: regEmail.trim().toLowerCase(),
           password: regPassword,
@@ -126,7 +194,9 @@ export function useRegister(onSuccess: () => void) {
       const data = await response.json();
 
       if (!response.ok) {
-        setRegMessage(data.message || "Failed to initiate registration verification.");
+        setRegMessage(
+          data.message || "Failed to initiate registration verification."
+        );
         return;
       }
 
@@ -135,21 +205,31 @@ export function useRegister(onSuccess: () => void) {
       setRegOtp("");
       setOtpExpirySeconds(300);
       setResendCooldown(60);
-      setRegMessage(`A 6-digit verification code was sent to ${regEmail}.`);
+
+      setRegMessage(
+        `A 6-digit verification code was sent to ${regEmail}.`
+      );
     } catch (err: any) {
-      setRegMessage(err.message || "Network error while sending verification code.");
+      setRegMessage(
+        err.message || "Network error while sending verification code."
+      );
     } finally {
       setIsSubmittingInit(false);
     }
   };
 
   /**
-   * STEP 5: Verify Registration OTP -> Completes account creation in PostgreSQL
+   * STEP 5:
+   * Verify Registration OTP -> Completes account creation
+   * in PostgreSQL
    */
   const handleVerifyRegisterOtp = async (e: FormEvent) => {
     e.preventDefault();
+
     if (!regOtp || regOtp.trim().length !== 6) {
-      setRegMessage("Please enter the complete 6-digit verification code.");
+      setRegMessage(
+        "Please enter the complete 6-digit verification code."
+      );
       return;
     }
 
@@ -157,24 +237,35 @@ export function useRegister(onSuccess: () => void) {
     setIsVerifyingOtp(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/verify-register-otp`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: regEmail.trim().toLowerCase(),
-          otp: regOtp.trim(),
-        }),
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/auth/verify-register-otp`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: regEmail.trim().toLowerCase(),
+            otp: regOtp.trim(),
+          }),
+        }
+      );
 
       const data = await response.json();
 
       if (!response.ok) {
-        setRegMessage(data.message || "Invalid or expired verification code.");
+        setRegMessage(
+          data.message || "Invalid or expired verification code."
+        );
         return;
       }
 
       setRegSuccess(true);
-      setRegMessage("Registration & email verification successful! Redirecting to sign in...");
+
+      setRegMessage(
+        "Registration & email verification successful! Redirecting to sign in..."
+      );
+
       setTimeout(() => {
         setRegStep(1);
         setRegSuccess(false);
@@ -182,7 +273,9 @@ export function useRegister(onSuccess: () => void) {
         onSuccess();
       }, 2500);
     } catch (err: any) {
-      setRegMessage(err.message || "Network error during OTP verification.");
+      setRegMessage(
+        err.message || "Network error during OTP verification."
+      );
     } finally {
       setIsVerifyingOtp(false);
     }
@@ -192,7 +285,9 @@ export function useRegister(onSuccess: () => void) {
    * Resend Registration OTP with 60s cooldown
    */
   const handleResendRegisterOtp = async () => {
-    if (resendCooldown > 0 || isResendingOtp) return;
+    if (resendCooldown > 0 || isResendingOtp) {
+      return;
+    }
 
     setIsResendingOtp(true);
     setRegMessage("");
@@ -200,7 +295,9 @@ export function useRegister(onSuccess: () => void) {
     try {
       const response = await fetch(`${API_BASE_URL}/auth/resend-otp`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           email: regEmail.trim().toLowerCase(),
           purpose: "REGISTER",
@@ -213,15 +310,24 @@ export function useRegister(onSuccess: () => void) {
         setRegOtp("");
         setOtpExpirySeconds(300);
         setResendCooldown(data.retryAfterSeconds || 60);
-        setRegMessage("A new verification code has been dispatched to your email.");
+
+        setRegMessage(
+          "A new verification code has been dispatched to your email."
+        );
       } else {
-        setRegMessage(data.message || "Failed to resend verification code.");
+        setRegMessage(
+          data.message || "Failed to resend verification code."
+        );
+
         if (data.retryAfterSeconds) {
           setResendCooldown(data.retryAfterSeconds);
         }
       }
     } catch (err: any) {
-      setRegMessage(err.message || "Network error requesting new verification code.");
+      setRegMessage(
+        err.message ||
+          "Network error requesting new verification code."
+      );
     } finally {
       setIsResendingOtp(false);
     }
@@ -230,40 +336,86 @@ export function useRegister(onSuccess: () => void) {
   const handleWorkerClick = () => {
     setIsWorkerNotice(true);
     setRegSuccess(false);
-    setRegMessage("To register as a worker you must contact jomelbaisac15@gmail.com");
+
+    setRegMessage(
+      "To register as a worker you must contact jomelbaisac15@gmail.com"
+    );
   };
 
   return {
-    regStep, setRegStep,
-    regEmail, setRegEmail,
-    regPassword, setRegPassword,
-    showRegPassword, setShowRegPassword,
-    firstName, setFirstName,
-    middleName, setMiddleName,
-    lastName, setLastName,
-    suffix, setSuffix,
-    birthDate, setBirthDate,
-    houseNoStreet, setHouseNoStreet,
-    barangay, setBarangay,
-    city, setCity,
-    occupation, setOccupation,
-    sex, setSex,
-    mobileNumber, setMobileNumber,
-    regMessage, setRegMessage,
-    regSuccess, isWorkerNotice, setIsWorkerNotice,
+    regStep,
+    setRegStep,
+
+    regEmail,
+    setRegEmail,
+
+    regPassword,
+    setRegPassword,
+
+    showRegPassword,
+    setShowRegPassword,
+
+    firstName,
+    setFirstName,
+
+    middleName,
+    setMiddleName,
+
+    lastName,
+    setLastName,
+
+    suffix,
+    setSuffix,
+
+    birthDate,
+    setBirthDate,
+
+    houseNoStreet,
+    setHouseNoStreet,
+
+    barangay,
+    setBarangay,
+
+    city,
+    setCity,
+
+    occupation,
+    setOccupation,
+
+    sex,
+    setSex,
+
+    mobileNumber,
+    setMobileNumber,
+
+    regMessage,
+    setRegMessage,
+
+    regSuccess,
+    isWorkerNotice,
+    setIsWorkerNotice,
+
     // OTP States
-    regOtp, setRegOtp,
+    regOtp,
+    setRegOtp,
+
     otpExpirySeconds,
     resendCooldown,
+
     isSubmittingInit,
     isVerifyingOtp,
     isResendingOtp,
+
     handleNextStep,
     handlePrevStep,
     handleFinalRegisterSubmit,
     handleVerifyRegisterOtp,
     handleResendRegisterOtp,
     handleWorkerClick,
+
     formatOtpTimer,
+
+    // Password validation
+    isStrongPassword,
   };
 }
