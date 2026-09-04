@@ -1204,7 +1204,7 @@ export default function Profile() {
 
                   {/* PASSWORD REQUIREMENTS */}
                   <div
-                    className={`sm:col-span-3 rounded-xl border p-3 text-xs ${
+                    className={`rounded-xl border p-3 text-xs ${
                       isDarkMode
                         ? "border-slate-800 bg-slate-900"
                         : "border-slate-200 bg-white"
@@ -1220,7 +1220,7 @@ export default function Profile() {
                       Password must contain:
                     </p>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-x-2 gap-y-1 text-[10px] leading-tight">
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-x-3 gap-y-1 text-[10px] leading-tight">
                       <div
                         className={
                           passwordRequirements.minLength
@@ -1316,7 +1316,7 @@ export default function Profile() {
                   {/* UPDATE PASSWORD */}
                   <button
                     type="submit"
-                    className={`sm:col-span-3 rounded-xl px-5 py-2.5 text-sm font-bold text-white transition cursor-pointer shadow-sm ${
+                    className={`rounded-xl px-5 py-2.5 text-sm font-bold text-white transition cursor-pointer shadow-sm ${
                       isDarkMode
                         ? "bg-slate-700 hover:bg-slate-600"
                         : "bg-slate-800 hover:bg-slate-700"
