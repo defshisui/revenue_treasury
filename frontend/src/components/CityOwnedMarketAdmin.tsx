@@ -15,6 +15,7 @@ interface LeaseRecord {
   advancePaymentStatus: string;
   paymentStatus: "Pending Payment" | "For Payment Verification" | "Payment Information Requested" | "Paid";
   paymentMethod?: string;
+  officialReceiptNumber?: string;
 }
 
 interface Props {
@@ -259,7 +260,7 @@ export default function CityOwnedMarketAdmin({
     const headers = [
       "Lease ID", "First Name", "Last Name", "Market Name", "Section",
       "Stall Number", "Lease Status", "Amount Due", "Helper Approval Status",
-      "Advance Payment Status", "Payment Status", "Payment Method"
+      "Advance Payment Status", "Payment Status", "Payment Method", "Official Receipt Number"
     ];
 
     const rows = exportList.map((l) => [
@@ -275,6 +276,7 @@ export default function CityOwnedMarketAdmin({
       `"${l.advancePaymentStatus}"`,
       `"${l.paymentStatus}"`,
       `"${l.paymentMethod || 'Cash / Direct'}"`,
+      `"${l.officialReceiptNumber || 'Not yet issued'}"`,
     ]);
 
     const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
@@ -787,6 +789,16 @@ export default function CityOwnedMarketAdmin({
                     <option value="Maya">Maya</option>
                     <option value="Landbank Link.BizPortal">Landbank Link.BizPortal</option>
                   </select>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Official Receipt (O.R.)</label>
+                  <input
+                    type="text"
+                    value={selectedRecord.officialReceiptNumber || "Not yet issued"}
+                    readOnly
+                    className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-slate-800 dark:text-slate-100 font-mono"
+                  />
                 </div>
 
                 <div>
