@@ -35,7 +35,7 @@ export const MarketVendorsHub: FC<MarketVendorsHubProps> = ({
     >
       <UnifiedHeader />
 
-      <div className="flex-1 flex flex-col justify-between w-full pt-16 md:pt-20">
+      <div className="flex-1 flex flex-col justify-between w-full">
         <div>
           {/* HERO */}
           <div className="relative w-full bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 h-36 sm:h-48 overflow-hidden flex items-center justify-center border-b-4 border-blue-600">

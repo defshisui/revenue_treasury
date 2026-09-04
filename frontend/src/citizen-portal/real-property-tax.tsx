@@ -156,24 +156,20 @@ export function RealPropertyTaxHub() {
 
       <UnifiedHeader />
 
-      {/* HERO */}
-      <section className="bg-[#1D2F86] text-white border-b-2 border-[#2563EB] bg-[radial-gradient(#3152B5_1px,transparent_1px)] [background-size:16px_16px]">
+      {/* HERO BANNER */}
+<div className="relative w-full bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 h-36 sm:h-48 overflow-hidden flex items-center justify-center border-b-4 border-blue-600">
+  <div className="absolute inset-0 opacity-30 bg-[radial-gradient(#3b82f6_1px,transparent_1px)] [background-size:16px_16px]"></div>
 
-        <div className="max-w-7xl mx-auto px-4 py-12 sm:py-14 text-center">
+  <div className="relative z-10 text-center px-4">
+    <h1 className="text-xl sm:text-3xl font-extrabold text-white tracking-wide uppercase">
+      WELCOME TO REAL PROPERTY TAX
+    </h1>
 
-          <h1 className="text-3xl sm:text-4xl font-black tracking-wide uppercase">
-            WELCOME TO REAL PROPERTY TAX
-          </h1>
-
-          <p className="max-w-2xl mx-auto mt-2 text-sm sm:text-base text-white/95 leading-relaxed">
-            This portal is one of our digital Gov Serve initiatives catering
-            to property owners and taxpayers in accessing their Real Property
-            Tax services.
-          </p>
-
-        </div>
-
-      </section>
+    <p className="text-xs sm:text-sm text-slate-200 mt-1 max-w-xl mx-auto">
+      This portal is one of our digital Gov Serv initiatives catering to property owners and taxpayers in accessing their Real Property Tax services.
+    </p>
+  </div>
+</div>
 
 
       {/* SERVICES */}
