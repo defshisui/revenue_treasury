@@ -12,7 +12,8 @@ export interface LeaseRecord {
     | "Termination Requested"
     | "For Termination"
     | "Terminated"
-    | "Inactive";
+    | "Inactive"
+    | "Archived";
   amountDue: number;
   helperApprovalStatus: string;
   advancePaymentStatus: string;
@@ -22,6 +23,32 @@ export interface LeaseRecord {
     | "Payment Information Requested"
     | "Paid";
   paymentMethod?: string;
+  officialReceiptNumber?: string;
+  paymentReference?: string;
+}
+
+export function detectPaymentMethod(record?: Record<string, any> | null): string {
+  if (!record) return "Cash / Direct";
+  const method = record.paymentMethod || record.payment_method;
+  if (method && method.trim() !== "" && method.trim() !== "Not Specified") {
+    return method.trim();
+  }
+  const receipt = record.officialReceiptNumber || record.official_receipt_number || "";
+  const ref = record.paymentReference || record.payment_reference || "";
+
+  if (receipt.startsWith("OR-PM") || receipt.includes("PM") || ref.includes("TRX") || ref.toLowerCase().includes("paymongo")) {
+    return "PayMongo (QR Ph)";
+  }
+  if (receipt.startsWith("OR-GCASH") || receipt.includes("GCASH")) {
+    return "GCash";
+  }
+  if (receipt.startsWith("OR-MAYA") || receipt.includes("MAYA")) {
+    return "Maya";
+  }
+  if (receipt.startsWith("OR-LB") || receipt.includes("LINKBIZ")) {
+    return "Landbank Link.BizPortal";
+  }
+  return "Cash / Direct";
 }
 
 import { API_BASE_URL } from "../config/api";
@@ -70,7 +97,7 @@ export async function saveLease(newLease: LeaseRecord): Promise<void> {
     paymentMethod:
       newLease.paymentMethod && newLease.paymentMethod.trim() !== ""
         ? newLease.paymentMethod
-        : "Cash / Direct",
+        : detectPaymentMethod(newLease),
   };
 
   if (MODE === "ONLINE") {
@@ -135,7 +162,7 @@ export async function updateLease(
       updatedRecord.paymentMethod &&
       updatedRecord.paymentMethod.trim() !== ""
         ? updatedRecord.paymentMethod
-        : "Cash / Direct",
+        : detectPaymentMethod(updatedRecord),
   };
 
   if (MODE === "ONLINE") {

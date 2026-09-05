@@ -1,13 +1,38 @@
-﻿// src/controllers/market.controller.ts
+// src/controllers/market.controller.ts
 import type { Request, Response } from 'express';
 import pool from '../db.js';
 import { recordAudit } from './audit.controller.js';
 import { AntiFraudService } from '../services/antiFraud.service.js';
 import type { SaveLeaseBody, FraudScanBody } from '../types/index.js';
 
-function resolvePaymentMethod(body: Partial<SaveLeaseBody>): string {
+function autoDetectPaymentMethod(row: any): string {
+  const raw = row.payment_method || row.paymentMethod;
+  if (raw && String(raw).trim() !== '' && String(raw).trim() !== 'Not Specified') {
+    return String(raw).trim();
+  }
+  const receipt = row.official_receipt_number || row.officialReceiptNumber || '';
+  const ref = row.payment_reference || row.paymentReference || '';
+  if (receipt.startsWith('OR-PM') || receipt.includes('PM') || ref.includes('TRX') || ref.toLowerCase().includes('paymongo')) {
+    return 'PayMongo (QR Ph)';
+  }
+  if (receipt.startsWith('OR-GCASH') || receipt.includes('GCASH')) {
+    return 'GCash';
+  }
+  if (receipt.startsWith('OR-MAYA') || receipt.includes('MAYA')) {
+    return 'Maya';
+  }
+  if (receipt.startsWith('OR-LB') || receipt.includes('LINKBIZ')) {
+    return 'Landbank Link.BizPortal';
+  }
+  return 'Cash / Direct';
+}
+
+function resolvePaymentMethod(body: Partial<SaveLeaseBody> & Record<string, any>): string {
   const raw = body.paymentMethod || body.payment_method;
-  return raw && String(raw).trim() !== '' ? String(raw).trim() : 'Cash / Direct';
+  if (raw && String(raw).trim() !== '' && String(raw).trim() !== 'Not Specified') {
+    return String(raw).trim();
+  }
+  return autoDetectPaymentMethod(body);
 }
 
 export async function getTransactions(_req: Request, res: Response): Promise<void> {
@@ -26,7 +51,7 @@ export async function getTransactions(_req: Request, res: Response): Promise<voi
         taxpayer: `${row.first_name || ''} ${row.last_name || ''}`.trim() || 'Unknown Taxpayer',
         paymentType: 'Market Rental',
         amount: parseFloat(row.amount_due) || 0,
-        paymentMethod: row.payment_method || 'Cash / Direct',
+        paymentMethod: autoDetectPaymentMethod(row),
         collector: 'Municipal Treasury',
         date: formattedDate,
         status: row.payment_status?.toLowerCase().includes('paid') ? 'Posted' : 'Pending',
@@ -60,7 +85,7 @@ export async function getMarketLeases(_req: Request, res: Response): Promise<voi
       helperApprovalStatus: row.helper_approval_status,
       advancePaymentStatus: row.advance_payment_status,
       paymentStatus: row.payment_status,
-      paymentMethod: row.payment_method || 'Cash / Direct',
+      paymentMethod: autoDetectPaymentMethod(row),
       officialReceiptNumber: row.official_receipt_number || null,
       paymentReference: row.payment_reference || null,
       paymentDate: row.payment_date || null,

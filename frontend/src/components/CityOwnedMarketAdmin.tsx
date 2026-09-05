@@ -1,6 +1,22 @@
 import { useState, useMemo, useEffect } from "react";
-import { getLeases, updateLease, deleteLease } from "../services/marketService";
+import { getLeases, updateLease, deleteLease, detectPaymentMethod } from "../services/marketService";
 import { API_BASE_URL } from "../config/api";
+
+const STANDARD_PAYMENT_METHODS = [
+  "PayMongo (QR Ph)",
+  "QR Ph",
+  "PayMongo",
+  "PayMongo (GCash)",
+  "PayMongo (Maya)",
+  "PayMongo (Card)",
+  "PayMongo (GrabPay)",
+  "PayMongo (Dobopay)",
+  "Cash / Direct",
+  "GCash",
+  "Maya",
+  "Landbank Link.BizPortal",
+  "Bank Transfer"
+];
 
 interface LeaseRecord {
   leaseId: string;
@@ -130,7 +146,11 @@ export default function CityOwnedMarketAdmin({
   }, [leases, searchTermLeaseId, searchFirstName, searchLastName, selectedMarket, selectedLeaseStatus, selectedPaymentStatus, showInactive, activeTab]);
 
   const handleOpenEdit = (record: LeaseRecord) => {
-    setSelectedRecord(record);
+    const detected = detectPaymentMethod(record);
+    setSelectedRecord({
+      ...record,
+      paymentMethod: record.paymentMethod || detected
+    });
     setFraudAnalysisResult(null);
     setIsModalOpen(true);
   };
@@ -275,7 +295,7 @@ export default function CityOwnedMarketAdmin({
       `"${l.helperApprovalStatus}"`,
       `"${l.advancePaymentStatus}"`,
       `"${l.paymentStatus}"`,
-      `"${l.paymentMethod || 'Cash / Direct'}"`,
+      `"${detectPaymentMethod(l)}"`,
       `"${l.officialReceiptNumber || 'Not yet issued'}"`,
     ]);
 
@@ -589,7 +609,7 @@ export default function CityOwnedMarketAdmin({
                     </td>
 
                     <td className="p-4 font-mono font-bold text-slate-900 dark:text-white">₱{item.amountDue.toLocaleString()}</td>
-                    <td className="p-4 font-medium text-slate-700 dark:text-slate-300">{item.paymentMethod || "Cash / Direct"}</td>
+                    <td className="p-4 font-medium text-slate-700 dark:text-slate-300">{detectPaymentMethod(item)}</td>
                     <td className="p-4">{item.helperApprovalStatus}</td>
                     <td className="p-4">{item.advancePaymentStatus}</td>
 
@@ -779,16 +799,29 @@ export default function CityOwnedMarketAdmin({
 
                 <div>
                   <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Payment Method</label>
-                  <select
-                    value={selectedRecord.paymentMethod || "Cash / Direct"}
-                    onChange={(e) => setSelectedRecord({ ...selectedRecord, paymentMethod: e.target.value })}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-slate-800 dark:text-slate-100"
-                  >
-                    <option value="Cash / Direct">Cash / Direct</option>
-                    <option value="GCash">GCash</option>
-                    <option value="Maya">Maya</option>
-                    <option value="Landbank Link.BizPortal">Landbank Link.BizPortal</option>
-                  </select>
+                  {(() => {
+                    const activeMethod = selectedRecord.paymentMethod || detectPaymentMethod(selectedRecord);
+                    const options = Array.from(
+                      new Set([
+                        ...STANDARD_PAYMENT_METHODS,
+                        activeMethod,
+                        ...(selectedRecord.paymentMethod ? [selectedRecord.paymentMethod] : [])
+                      ])
+                    );
+                    return (
+                      <select
+                        value={activeMethod}
+                        onChange={(e) => setSelectedRecord({ ...selectedRecord, paymentMethod: e.target.value })}
+                        className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-slate-800 dark:text-slate-100 font-medium"
+                      >
+                        {options.map((method) => (
+                          <option key={method} value={method}>
+                            {method}
+                          </option>
+                        ))}
+                      </select>
+                    );
+                  })()}
                 </div>
 
                 <div>
