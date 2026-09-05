@@ -15,8 +15,8 @@ export const UnifiedHeader: FC = () => {
         document.documentElement.classList.remove('dark');
         document.body.classList.remove('dark');
 
-        const checkUserSession = () => {
-            const encData = getEncryptedItem('currentUser') || getEncryptedItem('user');
+        const checkUserSession = async () => {
+            const encData = await getEncryptedItem('currentUser') || await getEncryptedItem('user');
             if (encData && typeof encData === 'object') {
                 const target = (encData as any).user && typeof (encData as any).user === 'object' ? (encData as any).user : encData;
                 const fullName = target.fullname || target.name || target.fullName || target.firstName || target.email;
@@ -54,10 +54,10 @@ export const UnifiedHeader: FC = () => {
                 return null;
             }
         };
-        setUser(checkUserSession());
+        checkUserSession().then(setUser);
 
         // Re-read session when profile is updated (e.g. after avatar/name change)
-        const handleProfileUpdated = () => setUser(checkUserSession());
+        const handleProfileUpdated = () => checkUserSession().then(setUser);
         window.addEventListener('profileUpdated', handleProfileUpdated);
 
         const handleClickOutside = (event: MouseEvent) => {

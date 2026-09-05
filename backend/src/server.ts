@@ -1,4 +1,4 @@
-﻿// src/server.ts
+// src/server.ts
 import dns from 'dns';
 import express from 'express';
 import path from 'path';
@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import bcrypt from 'bcryptjs';
 import { corsMiddleware } from './middleware/cors.js';
+import { decryptRequest, encryptResponse } from './middleware/payloadCrypto.js';
 import routes from './routes/index.js';
 import { initializeDatabase } from './init-db.js';
 import { EmailService } from './services/email.service.js';
@@ -41,6 +42,19 @@ app.use(corsMiddleware);
 app.use(express.json({ limit: '200mb' }));
 app.use(express.urlencoded({ limit: '200mb', extended: true }));
 app.use(express.text({ limit: '200mb' })); // For navigator.sendBeacon (text/plain payloads)
+
+// ==========================================
+//  AES-256-GCM APPLICATION-LAYER ENCRYPTION
+//  All API payloads are encrypted in transit
+// ==========================================
+app.use((req, res, next) => {
+  // Skip encryption for public/infra endpoints
+  const skip = ['/', '/health', '/setup-admin', '/uploads'];
+  if (skip.some(p => req.path === p || req.path.startsWith('/uploads'))) {
+    return next();
+  }
+  decryptRequest(req, res, () => encryptResponse(req, res, next));
+});
 
 console.log(" REAL Express JSON limit successfully set to 200MB!");
 

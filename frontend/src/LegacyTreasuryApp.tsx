@@ -81,52 +81,54 @@ export default function LegacyTreasuryApp() {
   // AUTH GUARD — Only admin / treasury-staff / auditor may access
   // ============================================================
   useEffect(() => {
-    const ALLOWED_ROLES = ["admin", "treasury-staff", "auditor"];
+    (async () => {
+      const ALLOWED_ROLES = ["admin", "treasury-staff", "auditor"];
 
-    // 1. Try encrypted storage first, then plain localStorage/sessionStorage
-    const encUser = getEncryptedItem('currentUser') || getEncryptedItem('user');
-    const rawData =
-      localStorage.getItem('currentUser') ||
-      localStorage.getItem('user') ||
-      sessionStorage.getItem('currentUser') ||
-      sessionStorage.getItem('user');
+      // 1. Try encrypted storage first, then plain localStorage/sessionStorage
+      const encUser = await getEncryptedItem('currentUser') || await getEncryptedItem('user');
+      const rawData =
+        localStorage.getItem('currentUser') ||
+        localStorage.getItem('user') ||
+        sessionStorage.getItem('currentUser') ||
+        sessionStorage.getItem('user');
 
-    let sessionUser: any = null;
+      let sessionUser: any = null;
 
-    if (encUser) {
-      sessionUser = encUser;
-    } else if (rawData) {
-      try {
-        sessionUser = JSON.parse(rawData);
-      } catch {
-        sessionUser = null;
+      if (encUser) {
+        sessionUser = encUser;
+      } else if (rawData) {
+        try {
+          sessionUser = JSON.parse(rawData);
+        } catch {
+          sessionUser = null;
+        }
       }
-    }
 
-    // 2. Also require a JWT token
-    const token = localStorage.getItem('token');
+      // 2. Also require a JWT token
+      const token = localStorage.getItem('token');
 
-    if (!sessionUser || !token) {
-      // Not logged in at all → send to login page
-      navigate("/", { replace: true });
-      return;
-    }
+      if (!sessionUser || !token) {
+        // Not logged in at all → send to login page
+        navigate("/", { replace: true });
+        return;
+      }
 
-    // 3. Resolve the actual user object (handles { user: {...} } wrapper)
-    const targetUser =
-      sessionUser.user && typeof sessionUser.user === 'object'
-        ? sessionUser.user
-        : sessionUser;
-    const userRole = (targetUser.role || '').toLowerCase();
+      // 3. Resolve the actual user object (handles { user: {...} } wrapper)
+      const targetUser =
+        sessionUser.user && typeof sessionUser.user === 'object'
+          ? sessionUser.user
+          : sessionUser;
+      const userRole = (targetUser.role || '').toLowerCase();
 
-    if (!ALLOWED_ROLES.includes(userRole)) {
-      // Logged in but not an admin role → send citizens back to their portal
-      navigate("/citizen-portal", { replace: true });
-      return;
-    }
+      if (!ALLOWED_ROLES.includes(userRole)) {
+        // Logged in but not an admin role → send citizens back to their portal
+        navigate("/citizen-portal", { replace: true });
+        return;
+      }
 
-    // Authorized ✓
-    setIsAuthChecked(true);
+      // Authorized ✓
+      setIsAuthChecked(true);
+    })();
   }, [navigate]);
 
   const [activeRole, setActiveRole] = useState<Role>("Administrator");

@@ -15,34 +15,36 @@ export default function Login() {
 
   // Redirect users who already have an active session
   useEffect(() => {
-    const encUser = getEncryptedItem('currentUser') || getEncryptedItem('user');
-    const rawData = localStorage.getItem('currentUser') ||
-      localStorage.getItem('user') ||
-      sessionStorage.getItem('currentUser') ||
-      sessionStorage.getItem('user');
+    (async () => {
+      const encUser = await getEncryptedItem('currentUser') || await getEncryptedItem('user');
+      const rawData = localStorage.getItem('currentUser') ||
+        localStorage.getItem('user') ||
+        sessionStorage.getItem('currentUser') ||
+        sessionStorage.getItem('user');
 
-    let sessionUser: any = null;
+      let sessionUser: any = null;
 
-    if (encUser) {
-      sessionUser = encUser;
-    } else if (rawData) {
-      try {
-        sessionUser = JSON.parse(rawData);
-      } catch (e) {
-        console.error("Error parsing raw session data", e);
+      if (encUser) {
+        sessionUser = encUser;
+      } else if (rawData) {
+        try {
+          sessionUser = JSON.parse(rawData);
+        } catch (e) {
+          console.error("Error parsing raw session data", e);
+        }
       }
-    }
 
-    if (sessionUser) {
-      const targetUser = sessionUser.user && typeof sessionUser.user === 'object' ? sessionUser.user : sessionUser;
-      const userRole = (targetUser.role || '').toLowerCase();
+      if (sessionUser) {
+        const targetUser = sessionUser.user && typeof sessionUser.user === 'object' ? sessionUser.user : sessionUser;
+        const userRole = (targetUser.role || '').toLowerCase();
 
-      if (["admin", "treasury-staff", "auditor"].includes(userRole)) {
-        navigate("/legacy-treasury", { replace: true });
-      } else {
-        navigate("/citizen-portal", { replace: true });
+        if (["admin", "treasury-staff", "auditor"].includes(userRole)) {
+          navigate("/legacy-treasury", { replace: true });
+        } else {
+          navigate("/citizen-portal", { replace: true });
+        }
       }
-    }
+    })();
   }, [navigate]);
 
   const {

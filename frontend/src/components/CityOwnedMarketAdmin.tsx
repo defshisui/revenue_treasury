@@ -59,7 +59,6 @@ export default function CityOwnedMarketAdmin({
   const [selectedRecord, setSelectedRecord] = useState<LeaseRecord | null>(null);
 
   const [isAnalyzingFraud, setIsAnalyzingFraud] = useState(false);
-  const [showModalIp, setShowModalIp] = useState(false);
   const [fraudAnalysisResult, setFraudAnalysisResult] = useState<{
     riskScore: number;
     riskLevel: "Low" | "Medium" | "High";
@@ -455,8 +454,8 @@ export default function CityOwnedMarketAdmin({
         <button
           onClick={() => setActiveTab("Active")}
           className={`px-5 py-2.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${activeTab === "Active"
-              ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
-              : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+            ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
+            : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
             }`}
         >
           <i className="fa-solid fa-list-check mr-1.5"></i> Active Leases
@@ -464,8 +463,8 @@ export default function CityOwnedMarketAdmin({
         <button
           onClick={() => setActiveTab("Archived")}
           className={`px-5 py-2.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${activeTab === "Archived"
-              ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
-              : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+            ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
+            : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
             }`}
         >
           <i className="fa-solid fa-box-archive mr-1.5"></i> Archiver
@@ -861,27 +860,25 @@ export default function CityOwnedMarketAdmin({
                         </p>
 
                         <p
-                          className={`mt-1 font-mono text-sm font-bold truncate ${
-                            selectedRecord.officialReceiptNumber &&
+                          className={`mt-1 font-mono text-sm font-bold truncate ${selectedRecord.officialReceiptNumber &&
                             String(selectedRecord.paymentStatus).toLowerCase() === "paid"
-                              ? "text-emerald-600 dark:text-emerald-400"
-                              : "text-slate-500 dark:text-slate-400"
-                          }`}
+                            ? "text-emerald-600 dark:text-emerald-400"
+                            : "text-slate-500 dark:text-slate-400"
+                            }`}
                         >
                           {selectedRecord.officialReceiptNumber || "Not yet issued"}
                         </p>
                       </div>
 
                       <span
-                        className={`shrink-0 rounded-full px-3 py-1 text-[10px] font-bold uppercase ${
-                          selectedRecord.officialReceiptNumber &&
+                        className={`shrink-0 rounded-full px-3 py-1 text-[10px] font-bold uppercase ${selectedRecord.officialReceiptNumber &&
                           String(selectedRecord.paymentStatus).toLowerCase() === "paid"
-                            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400"
-                            : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
-                        }`}
+                          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400"
+                          : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
+                          }`}
                       >
                         {selectedRecord.officialReceiptNumber &&
-                        String(selectedRecord.paymentStatus).toLowerCase() === "paid"
+                          String(selectedRecord.paymentStatus).toLowerCase() === "paid"
                           ? "PAID"
                           : "UNPAID"}
                       </span>
@@ -925,7 +922,7 @@ export default function CityOwnedMarketAdmin({
                     <span>₱</span> Gateway Transaction Verification
                   </h4>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-700">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-700">
                     <div>
                       <span className="text-slate-400 block mb-0.5">Gateway Ref ID:</span>
                       <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
@@ -935,32 +932,7 @@ export default function CityOwnedMarketAdmin({
                     <div>
                       <span className="text-slate-400 block mb-0.5">Webhook Timestamp:</span>
                       <span className="font-mono text-slate-800 dark:text-slate-200">
-                        2026-08-21 (Matched)
-                      </span>
-                    </div>
-                    <div>
-                      <div className="flex items-center justify-between text-slate-400 mb-0.5">
-                        <span>Client IP Address:</span>
-                        <button
-                          type="button"
-                          onClick={() => setShowModalIp(!showModalIp)}
-                          className="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors p-0.5 cursor-pointer"
-                          title={showModalIp ? "Hide IP Address" : "Show IP Address"}
-                        >
-                          {showModalIp ? (
-                            <svg className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            </svg>
-                          ) : (
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858-5.908a10.043 10.043 0 013.122-.888c4.478 0 8.268 2.943 9.542 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21M3 3l18 18" />
-                            </svg>
-                          )}
-                        </button>
-                      </div>
-                      <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
-                        {showModalIp ? "192.168.1.104" : "192.***.***.104"}
+                        2026-08-21 (Payment Matched)
                       </span>
                     </div>
                   </div>
@@ -1026,8 +998,8 @@ export default function CityOwnedMarketAdmin({
                       <div className="flex items-center justify-between">
                         <span className="font-medium text-slate-600 dark:text-slate-400">Assessed Risk Level:</span>
                         <span className={`px-2.5 py-0.5 rounded-full font-bold text-[10px] uppercase ${fraudAnalysisResult.riskLevel === "High" ? "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300" :
-                            fraudAnalysisResult.riskLevel === "Medium" ? "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300" :
-                              "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
+                          fraudAnalysisResult.riskLevel === "Medium" ? "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300" :
+                            "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
                           }`}>
                           {fraudAnalysisResult.riskLevel} Risk ({fraudAnalysisResult.riskScore}/100)
                         </span>
