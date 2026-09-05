@@ -36,7 +36,7 @@ export function setEncryptedItem(key: string, value: any): void {
   try {
     const cipher = encryptPayload(value);
     localStorage.setItem(`__enc_${key}`, cipher);
-  } catch {}
+  } catch { }
 }
 
 export function getEncryptedItem<T = any>(key: string): T | null {
@@ -59,13 +59,13 @@ export function getEncryptedItem<T = any>(key: string): T | null {
 }
 
 export function initCitizenSecurity(): () => void {
-  const isCitizenPath = window.location.pathname.includes('citizen') || 
-                        window.location.pathname.includes('market') || 
-                        window.location.pathname.includes('business-tax') || 
-                        window.location.pathname.includes('hawker') ||
-                        window.location.pathname === '/';
+  const isCitizenPath = window.location.pathname.includes('citizen') ||
+    window.location.pathname.includes('market') ||
+    window.location.pathname.includes('business-tax') ||
+    window.location.pathname.includes('hawker') ||
+    window.location.pathname === '/';
 
-  if (!isCitizenPath) return () => {};
+  if (!isCitizenPath) return () => { };
 
   document.documentElement.classList.remove('dark');
   document.body.classList.remove('dark');
@@ -94,18 +94,18 @@ export function initCitizenSecurity(): () => void {
     }
   };
 
-  document.addEventListener('contextmenu', handleContextMenu);
-  document.addEventListener('keydown', handleKeyDown);
+  //document.addEventListener('contextmenu', handleContextMenu);
+  //document.addEventListener('keydown', handleKeyDown);
 
   const originalLog = console.log;
   const originalWarn = console.warn;
   const originalError = console.error;
   const originalInfo = console.info;
 
-  console.log = () => {};
-  console.info = () => {};
-  console.debug = () => {};
-  console.dir = () => {};
+  console.log = () => { };
+  console.info = () => { };
+  console.debug = () => { };
+  console.dir = () => { };
 
   return () => {
     document.removeEventListener('contextmenu', handleContextMenu);
