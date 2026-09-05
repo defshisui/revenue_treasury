@@ -29,6 +29,21 @@ export default function FraudMonitoringView({ isCollapsed }: Props) {
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'BLOCKED' | 'PASSED'>('ALL');
   const [actionInProgress, setActionInProgress] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [revealedIps, setRevealedIps] = useState<Record<string, boolean>>({});
+
+  const toggleIpVisibility = (id: string) => {
+    setRevealedIps((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const maskIp = (ip: string, isRevealed: boolean) => {
+    if (!ip) return "•••.•••.•••.•••";
+    if (isRevealed) return ip;
+    const parts = ip.split(".");
+    if (parts.length === 4) {
+      return `${parts[0]}.${parts[1].replace(/./g, "*")}.${parts[2].replace(/./g, "*")}.${parts[3]}`;
+    }
+    return "•••.•••.•••.•••";
+  };
 
   const showToast = (text: string, type: 'success' | 'error' = 'success') => {
     setToastMessage({ type, text });
@@ -325,7 +340,28 @@ export default function FraudMonitoringView({ isCollapsed }: Props) {
                         <td className="p-4 text-xs font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap">{log.timestamp}</td>
                         <td className="p-4 font-mono text-xs text-blue-600 dark:text-blue-400 font-semibold">{log.user}</td>
                         <td className="p-4 text-xs font-medium text-slate-600 dark:text-slate-300">{log.module}</td>
-                        <td className="p-4 font-mono text-xs text-slate-500 dark:text-slate-400">{log.ipAddress}</td>
+                        <td className="p-4 font-mono text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                          <div className="inline-flex items-center gap-2">
+                            <span>{maskIp(log.ipAddress || '127.0.0.1', !!revealedIps[log.id])}</span>
+                            <button
+                              type="button"
+                              onClick={() => toggleIpVisibility(log.id)}
+                              className="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors p-1 rounded-md cursor-pointer"
+                              title={revealedIps[log.id] ? "Hide IP Address" : "Show IP Address"}
+                            >
+                              {revealedIps[log.id] ? (
+                                <svg className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                              ) : (
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858-5.908a10.043 10.043 0 013.122-.888c4.478 0 8.268 2.943 9.542 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21M3 3l18 18" />
+                                </svg>
+                              )}
+                            </button>
+                          </div>
+                        </td>
                         <td className="p-4 text-xs text-slate-600 dark:text-slate-300">
                           {log.newData || log.action}
                         </td>
