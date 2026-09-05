@@ -8,20 +8,20 @@ export interface LeaseRecord {
   section: string;
   stallNumber: string;
   leaseStatus:
-    | "Active"
-    | "Termination Requested"
-    | "For Termination"
-    | "Terminated"
-    | "Inactive"
-    | "Archived";
+  | "Active"
+  | "Termination Requested"
+  | "For Termination"
+  | "Terminated"
+  | "Inactive"
+  | "Archived";
   amountDue: number;
   helperApprovalStatus: string;
   advancePaymentStatus: string;
   paymentStatus:
-    | "Pending Payment"
-    | "For Payment Verification"
-    | "Payment Information Requested"
-    | "Paid";
+  | "Pending Payment"
+  | "For Payment Verification"
+  | "Payment Information Requested"
+  | "Paid";
   paymentMethod?: string;
   officialReceiptNumber?: string;
   paymentReference?: string;
@@ -73,9 +73,9 @@ export async function getLeases(): Promise<LeaseRecord[]> {
 
         throw new Error(
           errorBody.message ||
-            errorBody.error ||
-            responseText ||
-            `Failed to fetch leases from database (Status: ${res.status})`
+          errorBody.error ||
+          responseText ||
+          `Failed to fetch leases from database (Status: ${res.status})`
         );
       }
 
@@ -160,7 +160,7 @@ export async function updateLease(
     ...updatedRecord,
     paymentMethod:
       updatedRecord.paymentMethod &&
-      updatedRecord.paymentMethod.trim() !== ""
+        updatedRecord.paymentMethod.trim() !== ""
         ? updatedRecord.paymentMethod
         : detectPaymentMethod(updatedRecord),
   };

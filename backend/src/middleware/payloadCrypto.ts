@@ -7,37 +7,43 @@ import crypto from 'crypto';
 import type { Request, Response, NextFunction } from 'express';
 
 // ─── Key Setup ────────────────────────────────────────────────────────────────
-const RAW_SECRET = process.env.PAYLOAD_SECRET || '';
+function getRawSecret(): string {
+  return process.env.PAYLOAD_SECRET || '';
+}
 
-function deriveKey(secret: string): Buffer {
-  // Derive a 32-byte key from the secret using SHA-256
+function getKey(): Buffer {
+  const secret = getRawSecret();
   return crypto.createHash('sha256').update(secret).digest();
 }
 
-const KEY = deriveKey(RAW_SECRET);
 const ALGORITHM = 'aes-256-gcm';
 
 // ─── Core Crypto ──────────────────────────────────────────────────────────────
 
 export function encryptData(plaintext: string): string {
+  const key = getKey();
   const iv = crypto.randomBytes(12); // 96-bit IV for GCM
-  const cipher = crypto.createCipheriv(ALGORITHM, KEY, iv);
+  const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
   const encrypted = Buffer.concat([
     cipher.update(plaintext, 'utf8'),
     cipher.final(),
   ]);
   const authTag = cipher.getAuthTag(); // 128-bit authentication tag
-  // Pack: iv(12) + authTag(16) + ciphertext, encode as base64
-  const combined = Buffer.concat([iv, authTag, encrypted]);
+  // Pack: iv(12) + ciphertext(N) + authTag(16), encode as base64 (matches browser Web Crypto API layout)
+  const combined = Buffer.concat([iv, encrypted, authTag]);
   return combined.toString('base64');
 }
 
 export function decryptData(ciphertext: string): string {
   const combined = Buffer.from(ciphertext, 'base64');
+  if (combined.length < 28) {
+    throw new Error('Ciphertext too short');
+  }
   const iv = combined.subarray(0, 12);
-  const authTag = combined.subarray(12, 28);
-  const encrypted = combined.subarray(28);
-  const decipher = crypto.createDecipheriv(ALGORITHM, KEY, iv);
+  const authTag = combined.subarray(combined.length - 16);
+  const encrypted = combined.subarray(12, combined.length - 16);
+  const key = getKey();
+  const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
   decipher.setAuthTag(authTag);
   const decrypted = Buffer.concat([
     decipher.update(encrypted),
@@ -53,8 +59,9 @@ export function decryptRequest(
   res: Response,
   next: NextFunction
 ): void {
+  const secret = getRawSecret();
   // If no PAYLOAD_SECRET is configured, skip (development fallback)
-  if (!RAW_SECRET) {
+  if (!secret) {
     next();
     return;
   }
@@ -85,8 +92,9 @@ export function encryptResponse(
   res: Response,
   next: NextFunction
 ): void {
+  const secret = getRawSecret();
   // If no PAYLOAD_SECRET is configured, skip (development fallback)
-  if (!RAW_SECRET) {
+  if (!secret) {
     next();
     return;
   }
