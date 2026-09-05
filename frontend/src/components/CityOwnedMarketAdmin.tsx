@@ -10,12 +10,7 @@ const STANDARD_PAYMENT_METHODS = [
   "PayMongo (Maya)",
   "PayMongo (Card)",
   "PayMongo (GrabPay)",
-  "PayMongo (Dobopay)",
-  "Cash / Direct",
-  "GCash",
-  "Maya",
-  "Landbank Link.BizPortal",
-  "Bank Transfer"
+  "PayMongo (Dobopay)"
 ];
 
 interface LeaseRecord {
