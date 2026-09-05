@@ -48,7 +48,7 @@ export const SessionInactivityModal: FC<SessionInactivityModalProps> = ({
         const target = parsed.user && typeof parsed.user === 'object' ? parsed.user : parsed;
         userName = target.fullname || target.name || target.email || 'Admin User';
         userEmail = target.email || 'Unknown';
-      } catch {}
+      } catch { }
     }
 
     const auditPayload = JSON.stringify({
@@ -74,7 +74,7 @@ export const SessionInactivityModal: FC<SessionInactivityModalProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: auditPayload,
         keepalive: true,
-      }).catch(() => {});
+      }).catch(() => { });
     }
 
     localStorage.removeItem('currentUser');
@@ -168,8 +168,8 @@ export const SessionInactivityModal: FC<SessionInactivityModalProps> = ({
     };
 
     activityEvents.forEach((evt) => window.addEventListener(evt, handleUserActivity, { passive: true }));
-    document.addEventListener('keydown', handleAdminShortcuts);
-    document.addEventListener('contextmenu', handleContextMenu);
+    //document.addEventListener('keydown', handleAdminShortcuts);
+    //document.addEventListener('contextmenu', handleContextMenu);
 
     resetIdleTimer();
 
