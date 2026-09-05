@@ -1,0 +1,106 @@
+body {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  background: #f8fafc;
+  color: #1e293b;
+}
+
+/* Main layout */
+.legacy-treasury-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.legacy-treasury-shell > div > aside {
+  background-color: #ffffff;
+  min-height: 0;
+}
+
+/* Sidebar */
+.legacy-treasury-sidebar {
+  width: 260px;
+  background: #1e3a8a;
+  color: #fff;
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  overflow-y: auto;
+  padding: 20px 0;
+}
+
+/* Sidebar links */
+.legacy-treasury-sidebar a {
+  display: block;
+  color: #fff;
+  text-decoration: none;
+  padding: 12px 20px;
+  transition: background 0.3s;
+}
+
+.legacy-treasury-sidebar a:hover {
+  background: #1d4ed8;
+}
+
+/* Active menu */
+.legacy-treasury-sidebar a.active {
+  background: #2563eb;
+}
+
+/* Main content */
+.legacy-treasury-content {
+  margin-left: 260px;
+  flex: 1;
+  padding: 24px;
+}
+
+/* Existing theme */
+.legacy-treasury-shell .bg-slate-950 {
+  background-color: #ffffff;
+}
+
+.legacy-treasury-shell .bg-slate-900 {
+  background-color: #f8fafc;
+}
+
+.legacy-treasury-shell .bg-slate-800 {
+  background-color: #eff6ff;
+}
+
+.legacy-treasury-shell .border-slate-800,
+.legacy-treasury-shell .border-slate-700,
+.legacy-treasury-shell .border-slate-600 {
+  border-color: #cbd5e1;
+}
+
+.legacy-treasury-shell .text-slate-100,
+.legacy-treasury-shell .text-slate-200,
+.legacy-treasury-shell .text-slate-300,
+.legacy-treasury-shell .text-slate-400,
+.legacy-treasury-shell .text-slate-500 {
+  color: #475569;
+}
+
+.legacy-treasury-shell .bg-amber-500,
+.legacy-treasury-shell .bg-amber-600 {
+  background-color: #1e3a8a;
+}
+
+.legacy-treasury-shell .hover\:bg-amber-400:hover {
+  background-color: #1d4ed8;
+}
+
+.legacy-treasury-shell .text-amber-400 {
+  color: #1e3a8a;
+}
+
+.legacy-treasury-shell .hover\:bg-slate-800:hover,
+.legacy-treasury-shell .hover\:bg-slate-700:hover {
+  background-color: #dbeafe;
+}
+
+.legacy-treasury-shell input,
+.legacy-treasury-shell select {
+  background: #fff;
+  color: #1e293b;
+}
