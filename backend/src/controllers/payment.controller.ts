@@ -1,5 +1,4 @@
-﻿// src/controllers/payment.controller.ts
-import type { Request, Response } from 'express';
+﻿import type { Request, Response } from 'express';
 import pool from '../db.js';
 import { PayMongoService } from '../services/paymongo.service.js';
 import { recordAudit } from './audit.controller.js';
@@ -33,7 +32,7 @@ export async function getPayMongoStatus(_req: Request, res: Response): Promise<v
 
 export async function createCheckoutSession(req: Request, res: Response): Promise<void> {
   const {
-    type, // 'RPT' | 'MARKET_STALL' | 'BUSINESS_TAX' | 'CUSTOM'
+    type,
     amount,
     taxDeclarationNumber,
     rptRecordId,
@@ -55,9 +54,7 @@ export async function createCheckoutSession(req: Request, res: Response): Promis
 
   let numericAmount = Number(amount);
 
-  // RPT Citizen's Charter service payments must use the amount
-  // posted by the City Assessor in PostgreSQL. Never trust the
-  // amount supplied by the citizen's browser.
+
   if (type === 'RPT_SERVICE') {
     if (!rptApplicationId) {
       res.status(400).json({ error: 'rptApplicationId is required for RPT service payments.' });
@@ -119,7 +116,7 @@ export async function createCheckoutSession(req: Request, res: Response): Promis
     successRedirectUrl = `${cleanFrontendOrigin}/business-tax-assessment?payment=success&session_id={CHECKOUT_SESSION_ID}&type=BUSINESS`;
     cancelRedirectUrl = `${cleanFrontendOrigin}/business-tax-assessment?payment=cancelled&type=BUSINESS`;
   }
- else if (type === 'RPT_SERVICE') {
+  else if (type === 'RPT_SERVICE') {
     referenceNumber = `RPT-SVC-${rptApplicationId || dateCode}-${randomSuffix}`;
     paymentDescription = `${rptService || 'RPT Service'} Payment`;
     successRedirectUrl = `${cleanFrontendOrigin}/citizen-rpt?payment=success&session_id={CHECKOUT_SESSION_ID}&type=RPT_SERVICE`;
@@ -211,9 +208,7 @@ export async function verifySession(req: Request, res: Response): Promise<void> 
 
     let recordResult: any = null;
 
-    // =========================================================
-    // RPT CITIZEN'S CHARTER SERVICE PAYMENT
-    // =========================================================
+
     if (type === 'RPT_SERVICE' && metadata.rptApplicationId) {
       const applicationResult = await pool.query(
         `SELECT * FROM rpt_applications WHERE id = $1`,
@@ -430,7 +425,7 @@ export async function handlePayMongoWebhook(
       ? req.body
       : JSON.stringify(req.body);
 
-  // Verify the webhook signature when a webhook secret is configured.
+
   if (PayMongoService.getWebhookSecret()) {
     const isValid = PayMongoService.verifyWebhookSignature(
       rawBody,
@@ -462,7 +457,7 @@ export async function handlePayMongoWebhook(
 
     console.log(` PayMongo Webhook received: ${eventType}`);
 
-    // We only process successful payment events here.
+
     if (eventType !== 'payment.paid') {
       console.log(` Ignoring PayMongo event: ${eventType}`);
 
@@ -478,7 +473,7 @@ export async function handlePayMongoWebhook(
     const paymentAttributes = eventData?.attributes || {};
     const paymentId = eventData?.id;
 
-    // PayMongo payment.paid events contain the Payment Intent ID.
+
     const paymentIntentId =
       paymentAttributes.payment_intent_id;
 
@@ -522,10 +517,7 @@ export async function handlePayMongoWebhook(
       return;
     }
 
-    // Retrieve the Payment Intent from PayMongo.
-    // This is important because the leaseId and payment type
-    // were stored in Payment Intent metadata when the payment
-    // was created.
+
     const secretKey = PayMongoService.getSecretKey();
 
     if (!secretKey) {
@@ -576,8 +568,7 @@ export async function handlePayMongoWebhook(
       metadata,
     });
 
-    // The Payment Intent must have succeeded before we update
-    // our database.
+
     if (intentStatus !== 'succeeded') {
       console.warn(
         ` Payment Intent ${paymentIntentId} is not succeeded. Current status: ${intentStatus}`
@@ -608,9 +599,7 @@ export async function handlePayMongoWebhook(
         ? 'PayMongo (QR Ph)'
         : `PayMongo (${String(sourceType).toUpperCase()})`;
 
-    // =========================================================
-    // RPT CITIZEN'S CHARTER SERVICE PAYMENT
-    // =========================================================
+
     if (metadata.type === 'RPT_SERVICE' && metadata.rptApplicationId) {
       const applicationResult = await pool.query(
         `SELECT * FROM rpt_applications WHERE id = $1`,
@@ -715,9 +704,7 @@ export async function handlePayMongoWebhook(
       return;
     }
 
-    // =========================================================
-    // REAL PROPERTY TAX PAYMENT
-    // =========================================================
+
     if (metadata.type === 'RPT' && metadata.taxDeclarationNumber) {
       const tdns = String(metadata.taxDeclarationNumber)
         .split(',')
@@ -767,9 +754,7 @@ export async function handlePayMongoWebhook(
       return;
     }
 
-    // =========================================================
-    // MARKET STALL PAYMENT
-    // =========================================================
+
     if (
       (metadata.type === 'MARKET_STALL' || metadata.type === 'MARKET') &&
       metadata.leaseId
@@ -778,7 +763,7 @@ export async function handlePayMongoWebhook(
         ` Processing market stall payment for lease ${metadata.leaseId}`
       );
 
-      // Check whether the lease is already marked as paid.
+
       const existingLease = await pool.query(
         `
         SELECT payment_status
@@ -864,9 +849,7 @@ export async function handlePayMongoWebhook(
       return;
     }
 
-    // =========================================================
-    // RPT PAYMENT
-    // =========================================================
+
     if (metadata.taxDeclarationNumber) {
       await pool.query(
         `
@@ -955,9 +938,7 @@ export async function handlePayMongoWebhook(
       return;
     }
 
-    // =========================================================
-    // BUSINESS TAX PAYMENT
-    // =========================================================
+
     if (metadata.businessTrackingNumber) {
       await pool.query(
         `
@@ -1002,9 +983,7 @@ export async function handlePayMongoWebhook(
       return;
     }
 
-    // =========================================================
-    // PAYMENT RECEIVED BUT NO KNOWN RECORD TYPE
-    // =========================================================
+
     console.warn(
       ' PayMongo payment was successful but no recognized metadata was found.',
       {
@@ -1110,9 +1089,7 @@ export async function getQrPaymentStatus(
       metadata,
     });
 
-    // =========================================================
-    // BUSINESS TAX PAYMENT
-    // =========================================================
+
     if (
       paid &&
       metadata.type === 'BUSINESS_TAX' &&
@@ -1166,9 +1143,7 @@ export async function getQrPaymentStatus(
       );
     }
 
-    // =========================================================
-    // MARKET STALL PAYMENT
-    // =========================================================
+
     let marketOfficialReceiptNumber: string | undefined;
 
     if (
@@ -1234,12 +1209,7 @@ export async function getQrPaymentStatus(
       }
     }
 
-    // =========================================================
-    // RPT CITIZEN'S CHARTER SERVICE PAYMENT
-    // =========================================================
-    // QR-status polling must perform the same database settlement as the
-    // webhook. Otherwise PayMongo can report `succeeded` while the citizen's
-    // rpt_applications row remains `For Payment`, allowing a second payment.
+
     if (
       paid &&
       metadata.type === 'RPT_SERVICE' &&
@@ -1309,9 +1279,7 @@ export async function getQrPaymentStatus(
       }
     }
 
-    // =========================================================
-    // REAL PROPERTY TAX PAYMENT
-    // =========================================================
+
     if (
       paid &&
       metadata.type === 'RPT' &&
@@ -1406,7 +1374,7 @@ export async function createQrPaymentIntent(
             ? 'RPT'
             : 'MARKET_STALL');
 
-    // RPT Citizen's Charter: the assessor-posted database amount is authoritative.
+
     if (paymentType === 'RPT_SERVICE') {
       if (!rptApplicationId) {
         res.status(400).json({

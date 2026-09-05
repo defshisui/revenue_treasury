@@ -1,4 +1,3 @@
-// src/controllers/auth.controller.ts
 import type { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
@@ -16,16 +15,6 @@ const LOCKOUT_DURATION_SECONDS = 60;
 const OTP_RESEND_COOLDOWN_SECONDS = 60;
 const OTP_EXPIRY_MINUTES = 5;
 
-/**
- * STRONG PASSWORD VALIDATION
- *
- * Requirements:
- * - At least 8 characters
- * - At least 1 uppercase letter
- * - At least 1 lowercase letter
- * - At least 1 number
- * - At least 1 special character
- */
 function isStrongPassword(password: string): boolean {
   return (
     password.length >= 8 &&
@@ -63,11 +52,6 @@ function handleFailedPasswordAttempt(
   }
 }
 
-/**
- * STEP 1: USER SIGN IN
- * Validate credentials, then generate & dispatch Login OTP.
- * Does NOT issue JWT token before OTP verification.
- */
 export async function login(
   req: Request,
   res: Response
@@ -153,7 +137,6 @@ export async function login(
 
     const user = result.rows[0];
 
-    // Support both bcrypt hashed and legacy plain-text passwords
     const storedPassword =
       String(user.password).trim();
 
@@ -162,11 +145,11 @@ export async function login(
 
     const passwordMatch = isBcrypt
       ? await bcrypt.compare(
-          password.trim(),
-          storedPassword
-        )
+        password.trim(),
+        storedPassword
+      )
       : storedPassword ===
-        String(password).trim();
+      String(password).trim();
 
     if (!passwordMatch) {
       await recordAudit(
@@ -191,13 +174,10 @@ export async function login(
       return;
     }
 
-    // Password verified!
-    // Clear password lockout counter
     loginAttemptsTracker.delete(
       normalizedEmail
     );
 
-    // Generate random 6-digit OTP
     const plainOtp =
       Math.floor(
         100000 + Math.random() * 900000
@@ -208,10 +188,9 @@ export async function login(
 
     const expiresAt = new Date(
       Date.now() +
-        OTP_EXPIRY_MINUTES * 60 * 1000
+      OTP_EXPIRY_MINUTES * 60 * 1000
     );
 
-    // Invalidate any existing unused LOGIN OTPs
     await pool.query(
       `UPDATE otp_verifications
        SET used = true
@@ -221,7 +200,6 @@ export async function login(
       [normalizedEmail]
     );
 
-    // Save hashed OTP verification record
     await pool.query(
       `INSERT INTO otp_verifications
        (user_id, email, otp_hash, purpose, expires_at, attempts, used, created_at)
@@ -234,7 +212,6 @@ export async function login(
       ]
     );
 
-    // Send OTP
     await EmailService.sendOtpEmail(
       normalizedEmail,
       plainOtp,
@@ -271,10 +248,6 @@ export async function login(
   }
 }
 
-/**
- * STEP 2: VERIFY SIGN-IN OTP
- * Validate OTP, then issue JWT & session.
- */
 export async function verifyLoginOtp(
   req: Request,
   res: Response
@@ -326,7 +299,6 @@ export async function verifyLoginOtp(
 
     const otpRecord = otpRes.rows[0];
 
-    // Check expiration
     if (
       new Date(otpRecord.expires_at).getTime() <
       Date.now()
@@ -344,7 +316,6 @@ export async function verifyLoginOtp(
       return;
     }
 
-    // Check max attempts
     if (otpRecord.attempts >= 5) {
       await pool.query(
         'UPDATE otp_verifications SET used = true WHERE id = $1',
@@ -359,7 +330,6 @@ export async function verifyLoginOtp(
       return;
     }
 
-    // Compare hashed OTP
     const isOtpValid =
       await bcrypt.compare(
         inputOtp,
@@ -406,13 +376,11 @@ export async function verifyLoginOtp(
       return;
     }
 
-    // Mark OTP as used
     await pool.query(
       'UPDATE otp_verifications SET used = true WHERE id = $1',
       [otpRecord.id]
     );
 
-    // Fetch user details
     const userRes = await pool.query(
       'SELECT * FROM users WHERE email ILIKE $1',
       [normalizedEmail]
@@ -429,7 +397,6 @@ export async function verifyLoginOtp(
 
     const user = userRes.rows[0];
 
-    // Generate JWT Token
     const token = jwt.sign(
       {
         id: user.id,
@@ -484,12 +451,6 @@ export async function verifyLoginOtp(
   }
 }
 
-/**
- * STEP 1: USER REGISTRATION
- *
- * Validate registration info, validate strong password,
- * generate & dispatch Register OTP.
- */
 export async function initiateRegister(
   req: Request,
   res: Response
@@ -530,9 +491,6 @@ export async function initiateRegister(
     return;
   }
 
-  // ============================================================
-  // STRONG PASSWORD VALIDATION
-  // ============================================================
   if (!isStrongPassword(String(password))) {
     res.status(400).json({
       message:
@@ -546,7 +504,6 @@ export async function initiateRegister(
     email.trim().toLowerCase();
 
   try {
-    // Check if user already exists
     const existing =
       await pool.query(
         'SELECT id FROM users WHERE email ILIKE $1',
@@ -562,18 +519,17 @@ export async function initiateRegister(
       return;
     }
 
-    // Anti-Fraud AI Check
     const rawForwarded =
       req?.headers['x-forwarded-for'];
 
     const clientIP =
       typeof rawForwarded === 'string'
         ? rawForwarded
-            .split(',')[0]
-            .trim()
+          .split(',')[0]
+          .trim()
         : Array.isArray(rawForwarded)
-        ? rawForwarded[0].trim()
-        : req?.ip ||
+          ? rawForwarded[0].trim()
+          : req?.ip ||
           req?.socket?.remoteAddress ||
           'Unknown';
 
@@ -601,14 +557,12 @@ export async function initiateRegister(
       return;
     }
 
-    // Hash password for pending storage
     const hashedPassword =
       await bcrypt.hash(
         String(password).trim(),
         12
       );
 
-    // Generate random 6-digit OTP
     const plainOtp =
       Math.floor(
         100000 + Math.random() * 900000
@@ -623,12 +577,11 @@ export async function initiateRegister(
     const expiresAt =
       new Date(
         Date.now() +
-          OTP_EXPIRY_MINUTES *
-            60 *
-            1000
+        OTP_EXPIRY_MINUTES *
+        60 *
+        1000
       );
 
-    // Package pending registration payload
     const pendingPayload = {
       fullname:
         `${firstName} ${lastName}`.trim(),
@@ -661,7 +614,6 @@ export async function initiateRegister(
       },
     };
 
-    // Invalidate existing unused REGISTER OTPs
     await pool.query(
       `UPDATE otp_verifications
        SET used = true
@@ -671,7 +623,6 @@ export async function initiateRegister(
       [normalizedEmail]
     );
 
-    // Save pending registration payload and hashed OTP
     await pool.query(
       `INSERT INTO otp_verifications
        (user_id, email, otp_hash, purpose, expires_at, attempts, used, payload, created_at)
@@ -686,7 +637,6 @@ export async function initiateRegister(
       ]
     );
 
-    // Send OTP via Nodemailer
     await EmailService.sendOtpEmail(
       normalizedEmail,
       plainOtp,
@@ -714,11 +664,6 @@ export async function initiateRegister(
   }
 }
 
-/**
- * STEP 2: VERIFY REGISTRATION OTP
- * Validate OTP, create user & citizen in DB,
- * and complete registration.
- */
 export async function verifyRegisterOtp(
   req: Request,
   res: Response
@@ -732,8 +677,8 @@ export async function verifyRegisterOtp(
     'AUD-' +
     Math.floor(
       100000 +
-        Math.random() *
-          900000
+      Math.random() *
+      900000
     );
 
   if (!email || !otp) {
@@ -778,7 +723,6 @@ export async function verifyRegisterOtp(
     const otpRecord =
       otpRes.rows[0];
 
-    // Check expiration
     if (
       new Date(
         otpRecord.expires_at
@@ -798,7 +742,6 @@ export async function verifyRegisterOtp(
       return;
     }
 
-    // Check attempts limit
     if (
       otpRecord.attempts >= 5
     ) {
@@ -815,7 +758,6 @@ export async function verifyRegisterOtp(
       return;
     }
 
-    // Compare hashed OTP
     const isOtpValid =
       await bcrypt.compare(
         inputOtp,
@@ -850,13 +792,12 @@ export async function verifyRegisterOtp(
       return;
     }
 
-    // OTP is valid! Parse payload
     const payload =
       typeof otpRecord.payload ===
-      'string'
+        'string'
         ? JSON.parse(
-            otpRecord.payload
-          )
+          otpRecord.payload
+        )
         : otpRecord.payload;
 
     if (
@@ -871,16 +812,10 @@ export async function verifyRegisterOtp(
       return;
     }
 
-    // ============================================================
-    // SECOND BACKEND PASSWORD CHECK
-    //
-    // This protects against an old/malformed pending registration
-    // payload bypassing the normal initiateRegister validation.
-    // ============================================================
     if (
       !payload.password ||
       typeof payload.password !==
-        'string'
+      'string'
     ) {
       await client.query(
         'UPDATE otp_verifications SET used = true WHERE id = $1',
@@ -895,18 +830,15 @@ export async function verifyRegisterOtp(
       return;
     }
 
-    // Execute PostgreSQL Transaction
     await client.query(
       'BEGIN'
     );
 
-    // Invalidate OTP
     await client.query(
       'UPDATE otp_verifications SET used = true WHERE id = $1',
       [otpRecord.id]
     );
 
-    // Check for race condition
     const checkUser =
       await client.query(
         'SELECT id FROM users WHERE email ILIKE $1',
@@ -928,7 +860,6 @@ export async function verifyRegisterOtp(
       return;
     }
 
-    // Insert user
     const userRes =
       await client.query(
         `INSERT INTO users
@@ -940,14 +871,13 @@ export async function verifyRegisterOtp(
           normalizedEmail,
           payload.password,
           payload.role ||
-            'citizen',
+          'citizen',
         ]
       );
 
     const newUser =
       userRes.rows[0];
 
-    // Insert citizen profile
     const c =
       payload.citizenData;
 
@@ -1018,11 +948,6 @@ export async function verifyRegisterOtp(
   }
 }
 
-/**
- * RESEND OTP
- * Resends a new 6-digit OTP with a mandatory
- * 60-second cooldown.
- */
 export async function resendOtp(
   req: Request,
   res: Response
@@ -1051,7 +976,6 @@ export async function resendOtp(
     email.trim().toLowerCase();
 
   try {
-    // Check most recent OTP record
     const recentRes =
       await pool.query(
         `SELECT * FROM otp_verifications
@@ -1078,7 +1002,7 @@ export async function resendOtp(
             new Date(
               recent.created_at
             ).getTime()) /
-            1000
+          1000
         );
 
       const remainingCooldown =
@@ -1099,7 +1023,6 @@ export async function resendOtp(
       }
     }
 
-    // Invalidate old OTPs
     await pool.query(
       `UPDATE otp_verifications
        SET used = true
@@ -1112,12 +1035,11 @@ export async function resendOtp(
       ]
     );
 
-    // Generate new 6-digit OTP
     const plainOtp =
       Math.floor(
         100000 +
-          Math.random() *
-            900000
+        Math.random() *
+        900000
       ).toString();
 
     const otpHash =
@@ -1129,9 +1051,9 @@ export async function resendOtp(
     const expiresAt =
       new Date(
         Date.now() +
-          OTP_EXPIRY_MINUTES *
-            60 *
-            1000
+        OTP_EXPIRY_MINUTES *
+        60 *
+        1000
       );
 
     const payloadToKeep =
@@ -1142,7 +1064,6 @@ export async function resendOtp(
       recentRes.rows[0]
         ?.user_id || null;
 
-    // Save new OTP record
     await pool.query(
       `INSERT INTO otp_verifications
        (user_id, email, otp_hash, purpose, expires_at, attempts, used, payload, created_at)
@@ -1157,13 +1078,12 @@ export async function resendOtp(
       ]
     );
 
-    // Send email
     await EmailService.sendOtpEmail(
       normalizedEmail,
       plainOtp,
       purpose as
-        | 'LOGIN'
-        | 'REGISTER'
+      | 'LOGIN'
+      | 'REGISTER'
     );
 
     res.status(200).json({

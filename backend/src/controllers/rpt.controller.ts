@@ -1,5 +1,4 @@
-﻿// src/controllers/rpt.controller.ts
-import type { Request, Response } from 'express';
+﻿import type { Request, Response } from 'express';
 import { randomUUID } from 'crypto';
 import pool from '../db.js';
 import { recordAudit } from './audit.controller.js';
@@ -19,7 +18,7 @@ export async function createRptApplication(req: Request, res: Response): Promise
   const appData = req.body as Record<string, any>;
   const files = (req as Request & { files?: Express.Multer.File[] }).files;
 
-  // 1. Map uploaded files directly into Base64 strings or storage paths to match business tax structure[cite: 4]
+
   let fileObjects: Array<{ name: string; url: string }> = [];
   if (files && files.length > 0) {
     fileObjects = files.map((f: any) => ({
@@ -28,7 +27,7 @@ export async function createRptApplication(req: Request, res: Response): Promise
     }));
   }
 
-  // 2. Fallback if physical files were not processed by multer but document names/paths were passed in body[cite: 4]
+
   if (fileObjects.length === 0 && appData.documents) {
     try {
       const parsed = typeof appData.documents === 'string' ? JSON.parse(appData.documents) : appData.documents;
@@ -67,7 +66,7 @@ export async function createRptApplication(req: Request, res: Response): Promise
   let resolvedApplicantName = appData.applicant_name || appData.applicantName || ownerName || 'Unknown Applicant';
 
   try {
-    // Explicitly cast $16 as jsonb to match your PostgreSQL table schema column type perfectly
+
     const result = await pool.query(
       `INSERT INTO rpt_applications
        (id, control_number, tax_declaration_number, owner_name, applicant_name, applicant_type, email, mobile_number, service, property_location, barangay, property_type, status, filed_date, notes, documents)
@@ -179,7 +178,7 @@ export async function searchRptByTdn(req: Request, res: Response): Promise<void>
   }
 
   try {
-    // 1. Search for direct match on TDN (case-insensitive)
+
     const directResult = await pool.query(
       `SELECT * FROM lgu_rpt_records
        WHERE LOWER(REPLACE(taxDeclarationNumber, ' ', '')) = LOWER(REPLACE($1, ' ', ''))
@@ -198,7 +197,7 @@ export async function searchRptByTdn(req: Request, res: Response): Promise<void>
     const matchedRecord = directResult.rows[0];
     const ownerName = matchedRecord.ownername || matchedRecord.ownerName;
 
-    // 2. Fetch all other associated TDNs for this owner/PIN cluster (Possible properties you might own / Group Bill Set)
+
     const associatedResult = await pool.query(
       `SELECT * FROM lgu_rpt_records
        WHERE (
@@ -431,7 +430,7 @@ export async function createRptPayment(req: Request, res: Response): Promise<voi
       ]
     );
 
-    // Update the record's payment status and balance
+
     if (taxDeclarationNumber) {
       await pool.query(
         `UPDATE lgu_rpt_records
@@ -501,7 +500,7 @@ export async function createGroupRptPayment(req: Request, res: Response): Promis
         ]
       );
 
-      // Update database status for this TDN
+
       await pool.query(
         `UPDATE lgu_rpt_records
          SET amountPaid = amountPaid + $1,

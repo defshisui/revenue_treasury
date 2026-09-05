@@ -1,4 +1,3 @@
-// src/controllers/market.controller.ts
 import type { Request, Response } from 'express';
 import pool from '../db.js';
 import { recordAudit } from './audit.controller.js';
@@ -122,7 +121,6 @@ export async function createMarketLease(req: Request, res: Response): Promise<vo
         return;
       }
     }
-    // --- Real Anti-Fraud AI Validation ---
     const rawForwarded = req?.headers['x-forwarded-for'];
     const clientIP = typeof rawForwarded === 'string'
       ? rawForwarded.split(',')[0].trim()
@@ -152,7 +150,6 @@ export async function createMarketLease(req: Request, res: Response): Promise<vo
       res.status(403).json({ message: 'Application blocked by security policy. Please verify your details or visit the treasury office in person.' });
       return;
     }
-    // -------------------------------------
 
     const result = await pool.query(
       `INSERT INTO market_leases
@@ -171,7 +168,6 @@ export async function createMarketLease(req: Request, res: Response): Promise<vo
       ]
     );
 
-    // Audit logging should not make a successfully saved lease fail.
     try {
       await recordAudit(
         req,
@@ -224,8 +220,8 @@ export async function updateMarketLease(req: Request, res: Response): Promise<vo
        WHERE lease_id=$12 OR id::text=$12
        RETURNING *`,
       [firstName, lastName, marketName, section, stallNumber,
-       leaseStatus, amountDue || 0, helperApprovalStatus,
-       advancePaymentStatus, paymentStatus, resolvedPaymentMethod, id]
+        leaseStatus, amountDue || 0, helperApprovalStatus,
+        advancePaymentStatus, paymentStatus, resolvedPaymentMethod, id]
     );
 
     if (result.rows.length === 0) {
@@ -296,7 +292,7 @@ export async function fraudScan(req: Request, res: Response): Promise<void> {
     const applicantName = `${lease.first_name || ''} ${lease.last_name || ''}`.trim();
     const applicantEmail = `${lease.first_name || 'applicant'}.${lease.last_name || 'taxpayer'}@citizen.gov.ph`.toLowerCase().replace(/\s+/g, '');
 
-    // 1. Live AI Screening via FraudLabs Pro
+
     const rawForwarded = req?.headers['x-forwarded-for'];
     const clientIP = typeof rawForwarded === 'string'
       ? rawForwarded.split(',')[0].trim()
@@ -316,13 +312,13 @@ export async function fraudScan(req: Request, res: Response): Promise<void> {
       flags.push(`FraudLabs Pro AI Risk Score: ${aiCheck.score}/100.`);
     }
 
-    // 2. Financial threshold heuristic
+
     if (amountDue > 50000) {
       riskScore += 25;
       flags.push(`High financial exposure detected: ₱${amountDue.toLocaleString()} exceeds standard median threshold.`);
     }
 
-    // 3. Multi-stall collision detection
+
     try {
       const allLeases = (await pool.query('SELECT * FROM market_leases')).rows;
       const nameCollisions = allLeases.filter((l) =>
@@ -338,7 +334,7 @@ export async function fraudScan(req: Request, res: Response): Promise<void> {
       console.warn('Market leases batch scan warning:', (e as Error).message);
     }
 
-    // 4. Historical audit trail check
+
     try {
       const allAudits = (await pool.query('SELECT * FROM audit_logs')).rows;
       const cleanName = applicantName.toLowerCase();
@@ -358,7 +354,7 @@ export async function fraudScan(req: Request, res: Response): Promise<void> {
     const riskLevel: 'Low' | 'Medium' | 'High' = riskScore >= 70 ? 'High' : riskScore >= 35 ? 'Medium' : 'Low';
     if (flags.length === 0) flags.push('Database & AI validation passed cleanly. No multi-stall name collisions or abnormal payment spikes found.');
 
-    // Log to audit table if flagged or high risk
+
     if (riskScore >= 50 || aiCheck.isFraud) {
       await recordAudit(
         req,

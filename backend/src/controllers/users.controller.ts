@@ -1,4 +1,3 @@
-// src/controllers/users.controller.ts
 import type { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import pool from '../db.js';
@@ -13,7 +12,7 @@ export async function getUsers(_req: Request, res: Response): Promise<void> {
       fullname: row.name || 'System User',
       username: row.email,
       role: row.role || 'admin',
-      // Dynamically map the status from the database
+
       status: row.status || 'Active',
     }));
     res.json(formatted);
@@ -38,7 +37,7 @@ export async function createUser(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    // --- Anti-Fraud AI Check ---
+
     const rawForwarded = req?.headers['x-forwarded-for'];
     const clientIP = typeof rawForwarded === 'string'
       ? rawForwarded.split(',')[0].trim()
@@ -52,7 +51,7 @@ export async function createUser(req: Request, res: Response): Promise<void> {
 
     if (fraudCheck.isFraud) {
       console.warn(`[Anti-Fraud] Blocked account creation attempt for ${username.trim()}. Score: ${fraudCheck.score}`);
-      // Log blocked attempt to audit
+
       const clientAgent = req?.headers['user-agent'] || 'Unknown';
       await pool.query(
         `INSERT INTO audit_logs (audit_id, user_email, user_role, module, action, severity, ip_address, user_agent, previous_data, new_data)
@@ -62,7 +61,7 @@ export async function createUser(req: Request, res: Response): Promise<void> {
       res.status(403).json({ message: 'Account creation blocked by security policy. Please verify your details or contact support.' });
       return;
     }
-    // ---------------------------
+
 
     const hashedPassword = await bcrypt.hash(password.trim(), 12);
 
@@ -101,19 +100,19 @@ export async function createUser(req: Request, res: Response): Promise<void> {
   }
 }
 
-// NEW: Update User Status (Archive/Restore)
+
 export async function updateUserStatus(req: Request, res: Response): Promise<void> {
   const { id } = req.params;
   const { status } = req.body;
 
-  // Validate the incoming status
+
   if (!status || !['Active', 'ARCHIVED'].includes(status)) {
     res.status(400).json({ message: 'Invalid status. Must be Active or ARCHIVED.' });
     return;
   }
 
   try {
-    // 1. Fetch user to ensure they exist
+
     const userRes = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
     if (userRes.rows.length === 0) {
       res.status(404).json({ message: 'User not found.' });
@@ -122,13 +121,13 @@ export async function updateUserStatus(req: Request, res: Response): Promise<voi
 
     const targetUser = userRes.rows[0];
 
-    // 2. Update the status in the database
+
     await pool.query(
       'UPDATE users SET status = $1 WHERE id = $2',
       [status, id]
     );
 
-    // 3. Log the status change
+
     const clientIP = (req?.headers['x-forwarded-for'] as string) || req?.socket?.remoteAddress || 'Unknown';
     const clientAgent = req?.headers['user-agent'] || 'Unknown';
     const actionType = status === 'ARCHIVED' ? 'USER_ARCHIVED' : 'USER_RESTORED';
@@ -155,12 +154,12 @@ export async function updateUserStatus(req: Request, res: Response): Promise<voi
   }
 }
 
-// Delete User Function
+
 export async function deleteUser(req: Request, res: Response): Promise<void> {
   const { id } = req.params;
 
   try {
-    // 1. Fetch the user first so we can log who was deleted
+
     const userRes = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
 
     if (userRes.rows.length === 0) {
@@ -170,10 +169,10 @@ export async function deleteUser(req: Request, res: Response): Promise<void> {
 
     const deletedUser = userRes.rows[0];
 
-    // 2. Delete the user from the database
+
     await pool.query('DELETE FROM users WHERE id = $1', [id]);
 
-    // 3. Log the deletion to the audit trail
+
     const clientIP = (req?.headers['x-forwarded-for'] as string) || req?.socket?.remoteAddress || 'Unknown';
     const clientAgent = req?.headers['user-agent'] || 'Unknown';
 

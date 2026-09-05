@@ -1,4 +1,3 @@
-// src/controllers/citizens.controller.ts
 import type { Request, Response } from 'express';
 import pool from '../db.js';
 import type { SaveCitizenBody } from '../types/index.js';

@@ -1,15 +1,8 @@
-// src/controllers/business.controller.ts
 import type { Request, Response } from 'express';
 import { randomUUID } from 'crypto';
 import pool from '../db.js';
 import { recordAudit } from './audit.controller.js';
 
-/**
- * Generate a unique Tax Bill Number.
- *
- * Example:
- * TB-2026-123456
- */
 async function generateUniqueTaxBillNumber(year: string | number): Promise<string> {
     for (let attempt = 0; attempt < 10; attempt++) {
         const taxBillNumber = `TB-${year}-${Math.floor(100000 + Math.random() * 900000)}`;
@@ -64,8 +57,6 @@ export async function getBusinessAssessments(req: Request, res: Response): Promi
 
             trackingNumber: row.tracking_number,
 
-            // NEW:
-            // Actual Tax Bill Number used for Tax Bill Verification.
             taxBillNumber: row.tax_bill_number || null,
 
             businessName: row.business_name,
@@ -79,16 +70,10 @@ export async function getBusinessAssessments(req: Request, res: Response): Promi
             attachments: row.attachments || [],
             remarks: row.remarks || '',
 
-            // PayMongo marks successful business-tax payments in the remarks.
-            // Expose that as a dedicated status for the citizen portal.
             paymentStatus: String(row.remarks || '').toLowerCase().startsWith('paid via')
                 ? 'PAID'
                 : 'UNPAID',
 
-            // Official Receipt Number:
-            // Prefer a dedicated database column when available.
-            // Older business-tax records store the O.R. in remarks as:
-            // "Paid via ... - OR: OR-PM-2026-123456"
             officialReceiptNumber:
                 row.official_receipt_number ||
                 row.officialReceiptNumber ||
@@ -151,14 +136,8 @@ export async function createSalesDeclaration(req: Request, res: Response): Promi
 
     const file = (req as any).file;
 
-    // Existing Mayor's Permit / tracking number.
     const trackingNumber = `MP-${year}-${Math.floor(100000 + Math.random() * 900000)}`;
 
-    // NEW:
-    // Every Business Tax Assessment receives its own Tax Bill Number.
-    //
-    // Example:
-    // TB-2026-482913
     const taxBillNumber = await generateUniqueTaxBillNumber(year);
 
     const id = randomUUID();
@@ -221,7 +200,6 @@ export async function createSalesDeclaration(req: Request, res: Response): Promi
             message: 'Sales declaration saved successfully',
             record: result.rows[0],
 
-            // Explicitly expose the Tax Bill Number to the frontend.
             taxBillNumber
         });
 
@@ -330,18 +308,6 @@ export async function deleteBusinessAssessment(req: Request, res: Response): Pro
     }
 }
 
-/**
- * TAX BILL NUMBER VERIFICATION
- *
- * Tax Bill Number is used for unpaid/pending business tax records.
- *
- * Required:
- * - Tax Bill Number
- * - TIN
- *
- * The Tax Bill Number must actually exist in the database
- * and must belong to the supplied TIN.
- */
 export async function verifyTaxBill(req: Request, res: Response): Promise<void> {
     const {
         permitNo,
@@ -349,14 +315,6 @@ export async function verifyTaxBill(req: Request, res: Response): Promise<void> 
         tin
     } = req.body;
 
-    /**
-     * permitNo is kept for backwards compatibility with the existing
-     * frontend request.
-     *
-     * The actual Tax Bill verification is now based on:
-     *
-     *     taxBillNumber + TIN
-     */
     const suppliedTaxBillNumber = String(taxBillNo || '').trim();
     const suppliedTin = String(tin || '').trim();
 
@@ -368,14 +326,6 @@ export async function verifyTaxBill(req: Request, res: Response): Promise<void> 
     }
 
     try {
-        /**
-         * IMPORTANT:
-         *
-         * We now check the ACTUAL tax_bill_number column.
-         *
-         * We no longer use permitNo/tracking_number as the Tax Bill
-         * Number verification key.
-         */
         const query = `
             SELECT *
             FROM business_assessments
@@ -401,20 +351,10 @@ export async function verifyTaxBill(req: Request, res: Response): Promise<void> 
 
         const record = result.rows[0];
 
-        /**
-         * Determine whether this assessment has already been paid.
-         *
-         * Existing system marks PayMongo business-tax payments
-         * through the remarks field beginning with "Paid via".
-         */
         const isPaid = String(record.remarks || '')
             .toLowerCase()
             .startsWith('paid via');
 
-        /**
-         * If the citizen is trying to use a Tax Bill Number after
-         * payment, direct them to O.R. Number Verification instead.
-         */
         if (isPaid) {
             res.status(409).json({
                 message: 'This Tax Bill has already been paid. Please use the O.R. Number Verification instead.',
@@ -428,15 +368,6 @@ export async function verifyTaxBill(req: Request, res: Response): Promise<void> 
             return;
         }
 
-        /**
-         * Determine the assessment status.
-         *
-         * PENDING:
-         * The application is still being evaluated.
-         *
-         * APPROVED:
-         * The assessment is already assessed but has not been paid.
-         */
         let verificationStatus = 'PENDING EVALUATION';
 
         if (String(record.status || '').toUpperCase() === 'APPROVED') {
@@ -449,7 +380,6 @@ export async function verifyTaxBill(req: Request, res: Response): Promise<void> 
             record: {
                 businessName: record.business_name,
 
-                // Return the ACTUAL database Tax Bill Number.
                 taxBillNo: record.tax_bill_number,
 
                 trackingNumber: record.tracking_number,
@@ -475,14 +405,6 @@ export async function verifyTaxBill(req: Request, res: Response): Promise<void> 
     }
 }
 
-/**
- * O.R. NUMBER VERIFICATION
- *
- * This remains separate from Tax Bill Number Verification.
- *
- * O.R. Number = PAID transaction
- * Tax Bill Number = UNPAID/PENDING transaction
- */
 export async function verifyOrNumber(req: Request, res: Response): Promise<void> {
     const {
         permitNo,
@@ -498,7 +420,6 @@ export async function verifyOrNumber(req: Request, res: Response): Promise<void>
     }
 
     try {
-        // Keep existing O.R. verification logic.
         const query = `
             SELECT *
             FROM business_assessments
@@ -524,9 +445,6 @@ export async function verifyOrNumber(req: Request, res: Response): Promise<void>
 
         const record = result.rows[0];
 
-        /**
-         * O.R. verification should be used for paid transactions.
-         */
         const isPaid = String(record.remarks || '')
             .toLowerCase()
             .startsWith('paid via');
@@ -569,9 +487,6 @@ export async function verifyOrNumber(req: Request, res: Response): Promise<void>
 
             message: 'Official Receipt verified successfully in treasury records.',
 
-            // Return the O.R. stored with the paid transaction.
-            // Fall back to the submitted value only for legacy records
-            // where the O.R. was not stored separately.
             orNumber:
                 record.official_receipt_number ||
                 record.officialReceiptNumber ||

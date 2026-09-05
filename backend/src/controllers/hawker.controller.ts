@@ -1,4 +1,3 @@
-// src/controllers/hawker.controller.ts
 import type { Request, Response } from 'express';
 import { randomUUID } from 'crypto';
 import pool from '../db.js';
@@ -26,7 +25,7 @@ export async function getHawkers(_req: Request, res: Response): Promise<void> {
       status: row.status,
       remarks: row.remarks || '',
       memberCount: row.member_count || 0,
-      // Retrieve the saved documents and metadata
+
       lguMeta: row.lgu_meta || null,
     }));
     res.json(formatted);
@@ -37,11 +36,11 @@ export async function getHawkers(_req: Request, res: Response): Promise<void> {
 }
 
 export async function createHawker(req: Request, res: Response): Promise<void> {
-  // Use 'any' here to accommodate the new lguMeta payload that includes Base64 strings
+
   const data = req.body as any;
 
   if (!data.associationNumber || !data.associationName || !data.contactNumber ||
-      !data.chairperson?.firstName || !data.chairperson?.lastName || !data.chairperson?.email) {
+    !data.chairperson?.firstName || !data.chairperson?.lastName || !data.chairperson?.email) {
     res.status(400).json({ message: 'Association number, association name, contact number, and chairperson details (first name, last name, email) are required.' });
     return;
   }
@@ -80,7 +79,7 @@ export async function createHawker(req: Request, res: Response): Promise<void> {
         data.status || 'New',
         data.remarks || '',
         data.memberCount || 0,
-        // Convert the LGU metadata & digital vault files into a JSON string for the DB
+
         data.lguMeta ? JSON.stringify(data.lguMeta) : null
       ]
     );
@@ -125,14 +124,10 @@ export async function updateHawkerStatus(req: Request, res: Response): Promise<v
   }
 }
 
-// ==========================================
-// Delete Hawker Association (Mirrored from market stall logic)
-// ==========================================
 export async function deleteHawker(req: Request, res: Response): Promise<void> {
   const { id } = req.params;
 
   try {
-    // Checks for both the internal UUID or the string association_number
     const result = await pool.query(
       'DELETE FROM hawker_associations WHERE association_number=$1 OR id::text=$1 RETURNING *',
       [id]
@@ -143,7 +138,6 @@ export async function deleteHawker(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    // Records the deletion in your audit logs perfectly
     await recordAudit(req, 'AUD-HAWKER-DELETE', 'system-admin@lgu.gov.ph', 'admin',
       'Hawker Module', 'HAWKER_ASSOCIATION_DELETED', 'WARNING', `Deleted hawker record ${id}`, null);
 
