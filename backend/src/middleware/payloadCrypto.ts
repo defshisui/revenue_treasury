@@ -1,12 +1,7 @@
-// src/middleware/payloadCrypto.ts
-// AES-256-GCM application-layer payload encryption middleware
-// All API request bodies are received as { payload: "<encrypted>" }
-// and all responses are sent as { payload: "<encrypted>" }
-
 import crypto from 'crypto';
 import type { Request, Response, NextFunction } from 'express';
 
-// ─── Key Setup ────────────────────────────────────────────────────────────────
+
 function getRawSecret(): string {
   return process.env.PAYLOAD_SECRET || '';
 }
@@ -18,7 +13,6 @@ function getKey(): Buffer {
 
 const ALGORITHM = 'aes-256-gcm';
 
-// ─── Core Crypto ──────────────────────────────────────────────────────────────
 
 export function encryptData(plaintext: string): string {
   const key = getKey();
@@ -28,8 +22,7 @@ export function encryptData(plaintext: string): string {
     cipher.update(plaintext, 'utf8'),
     cipher.final(),
   ]);
-  const authTag = cipher.getAuthTag(); // 128-bit authentication tag
-  // Pack: iv(12) + ciphertext(N) + authTag(16), encode as base64 (matches browser Web Crypto API layout)
+  const authTag = cipher.getAuthTag();
   const combined = Buffer.concat([iv, encrypted, authTag]);
   return combined.toString('base64');
 }
@@ -52,7 +45,6 @@ export function decryptData(ciphertext: string): string {
   return decrypted.toString('utf8');
 }
 
-// ─── Middleware: Decrypt Incoming Requests ────────────────────────────────────
 
 export function decryptRequest(
   req: Request,
@@ -60,13 +52,12 @@ export function decryptRequest(
   next: NextFunction
 ): void {
   const secret = getRawSecret();
-  // If no PAYLOAD_SECRET is configured, skip (development fallback)
+
   if (!secret) {
     next();
     return;
   }
 
-  // Only process requests that carry an encrypted payload
   if (
     req.body &&
     typeof req.body === 'object' &&
@@ -85,7 +76,6 @@ export function decryptRequest(
   next();
 }
 
-// ─── Middleware: Encrypt Outgoing Responses ───────────────────────────────────
 
 export function encryptResponse(
   req: Request,
@@ -93,13 +83,13 @@ export function encryptResponse(
   next: NextFunction
 ): void {
   const secret = getRawSecret();
-  // If no PAYLOAD_SECRET is configured, skip (development fallback)
+
   if (!secret) {
     next();
     return;
   }
 
-  // Capture the original res.json
+
   const originalJson = res.json.bind(res);
 
   res.json = (data: any): Response => {

@@ -1,5 +1,4 @@
-﻿// src/middleware/cors.ts
-import cors from 'cors';
+﻿import cors from 'cors';
 
 const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173')
   .split(',')
@@ -7,7 +6,7 @@ const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173')
 
 export const corsMiddleware = cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, curl, server-to-server)
+
     if (!origin) return callback(null, true);
     if (
       process.env.FRONTEND_URL === '*' ||
@@ -18,7 +17,7 @@ export const corsMiddleware = cors({
     ) {
       return callback(null, true);
     }
-    return callback(null, true); // Permissive customize for strict isolation
+    return callback(null, true);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],

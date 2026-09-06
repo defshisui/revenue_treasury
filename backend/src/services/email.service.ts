@@ -2,19 +2,17 @@
 import nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
 
-// Ensure IPv4 is resolved first to prevent timeout issues on IPv6-restricted cloud platforms (Railway, Docker, etc.)
+
 try {
   dns.setDefaultResultOrder('ipv4first');
 } catch (e) {
-  // Ignore in environments where setDefaultResultOrder is not supported
+
 }
 
 export class EmailService {
   private static transporter: Transporter | null = null;
 
-  /**
-   * Send email via Brevo (formerly Sendinblue) HTTPS REST API (Port 443 - Never blocked on Railway)
-   */
+
   private static async sendViaBrevo(
     apiKey: string,
     toEmail: string,
@@ -53,9 +51,7 @@ export class EmailService {
     return { success: true, messageId: data?.messageId || 'brevo-sent' };
   }
 
-  /**
-   * Send email via Resend HTTPS REST API (Port 443 - Never blocked on Railway)
-   */
+
   private static async sendViaResend(
     apiKey: string,
     toEmail: string,
@@ -66,7 +62,7 @@ export class EmailService {
   ): Promise<{ success: boolean; messageId?: string }> {
     console.log(`[EmailService] Dispatching email via Resend HTTPS API to ${toEmail}...`);
 
-    // Ensure valid format for Resend: "Sender Name <sender@domain.com>" or "onboarding@resend.dev"
+
     let from = fromAddress.trim();
     if (!from.includes('@')) {
       from = 'GovServe Treasury <onboarding@resend.dev>';
@@ -98,9 +94,7 @@ export class EmailService {
     return { success: true, messageId: data?.id };
   }
 
-  /**
-   * Send email via SendGrid HTTPS REST API (Port 443 - Never blocked on Railway)
-   */
+
   private static async sendViaSendGrid(
     apiKey: string,
     toEmail: string,
@@ -138,9 +132,7 @@ export class EmailService {
     return { success: true, messageId: 'sendgrid-sent' };
   }
 
-  /**
-   * Helper to create a nodemailer transporter instance with given configuration
-   */
+
   private static createTransporterInstance(
     host: string,
     port: number,
@@ -210,9 +202,7 @@ export class EmailService {
     return this.transporter;
   }
 
-  /**
-   * Verify email service connectivity (supports HTTPS APIs and SMTP)
-   */
+
   public static async verifyConnection(): Promise<boolean> {
     const brevoKey = process.env.BREVO_API_KEY?.trim();
     const resendKey = process.env.RESEND_API_KEY?.trim();
@@ -251,11 +241,7 @@ export class EmailService {
     }
   }
 
-  /**
-   * Send a 6-digit OTP verification email.
-   * Prioritizes HTTPS REST APIs (Brevo, Resend, SendGrid) over Port 443 to guarantee 100% reliability on Railway,
-   * with fallback to SMTP or development console output.
-   */
+
   public static async sendOtpEmail(
     toEmail: string,
     otp: string,
@@ -271,7 +257,7 @@ export class EmailService {
         ? 'sign in to your GovServe Treasury account'
         : 'complete your citizen registration';
 
-    // 1. Check for Development Console Mode (Instant bypass for development/testing)
+
     if (process.env.DEV_OTP_CONSOLE === 'true' || process.env.BYPASS_EMAIL === 'true') {
       console.log(`\n======================================================`);
       console.log(` [DEV_OTP_CONSOLE] ${purpose} OTP for ${toEmail}: ${otp}`);
@@ -512,7 +498,7 @@ Purpose: ${actionTitle}
 
     const subject = `${otp} is your GovServe Treasury verification code`;
 
-    // 2. Try Brevo HTTPS REST API (Port 443 - Recommended for Railway)
+
     const brevoApiKey = process.env.BREVO_API_KEY?.trim();
     if (brevoApiKey) {
       try {
@@ -533,7 +519,7 @@ Purpose: ${actionTitle}
       }
     }
 
-    // 3. Try Resend HTTPS REST API (Port 443 - Recommended for Railway)
+
     const resendApiKey = process.env.RESEND_API_KEY?.trim();
     if (resendApiKey) {
       try {
@@ -553,7 +539,7 @@ Purpose: ${actionTitle}
       }
     }
 
-    // 4. Try SendGrid HTTPS REST API (Port 443)
+
     const sendgridApiKey = process.env.SENDGRID_API_KEY?.trim();
     if (sendgridApiKey) {
       try {
@@ -574,7 +560,7 @@ Purpose: ${actionTitle}
       }
     }
 
-    // 5. Fallback to SMTP / Nodemailer (Works on local machine or unblocked hosts)
+
     const user = (process.env.SMTP_USER || 'govserve.treasury@gmail.com').trim();
     const pass = (process.env.SMTP_PASS || '').trim().replace(/\s+/g, '');
     const host = (process.env.SMTP_HOST || 'smtp.gmail.com').trim();
@@ -604,7 +590,7 @@ Purpose: ${actionTitle}
         `[EmailService] Primary SMTP attempt failed for ${toEmail} (${primaryError?.message || primaryError}). Attempting fallback port...`
       );
 
-      // Attempt fallback between port 465 and 587
+
       try {
         const fallbackPort = configuredPort === 465 ? 587 : 465;
         const fallbackSecure = fallbackPort === 465;
@@ -646,8 +632,7 @@ Purpose: ${actionTitle}
           : '';
 
         throw new Error(
-          `Failed to send verification email: ${
-            fallbackError?.message || primaryError?.message || 'Connection timeout'
+          `Failed to send verification email: ${fallbackError?.message || primaryError?.message || 'Connection timeout'
           }${railwayHelp}`
         );
       }

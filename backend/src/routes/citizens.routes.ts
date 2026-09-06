@@ -1,4 +1,3 @@
-// src/routes/citizens.routes.ts
 import { Router } from 'express';
 import { getCitizen, saveCitizen } from '../controllers/citizens.controller.js';
 import { authenticateToken } from '../middleware/auth.js';

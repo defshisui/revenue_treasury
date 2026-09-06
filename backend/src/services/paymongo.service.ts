@@ -1,5 +1,4 @@
-﻿// src/services/paymongo.service.ts
-import crypto from 'crypto';
+﻿import crypto from 'crypto';
 import { AntiFraudService } from './antiFraud.service.js';
 
 export interface PayMongoCustomerInfo {
@@ -9,7 +8,7 @@ export interface PayMongoCustomerInfo {
 }
 
 export interface CreateCheckoutSessionParams {
-  amount: number; // In PHP pesos (e.g., 1500.50)
+  amount: number;
   description: string;
   referenceNumber: string;
   customer?: PayMongoCustomerInfo;
@@ -17,7 +16,7 @@ export interface CreateCheckoutSessionParams {
   cancelUrl: string;
   metadata?: Record<string, any>;
   paymentMethodTypes?: string[];
-  ipAddress?: string; // Added for fraud check
+  ipAddress?: string;
 }
 
 export interface CreateQrPaymentIntentParams {
@@ -50,8 +49,7 @@ export class PayMongoService {
     amount: number;
     raw: any;
   }> {
-    // PayMongo QR Ph minimum is PHP 1.00.
-    // PHP amounts are converted to centavos.
+
     const amountInCentavos = Math.round(params.amount * 100);
 
     const payload = {
@@ -151,9 +149,7 @@ export class PayMongoService {
     return `Basic ${encoded}`;
   }
 
-  /**
-   * Tests connectivity and API key validity against PayMongo
-   */
+
   public static async testConnection(): Promise<{
     configured: boolean;
     valid: boolean;
@@ -218,9 +214,7 @@ export class PayMongoService {
     }
   }
 
-  /**
-   * Creates a hosted Checkout Session for GCash, Maya, Card, QR Ph, etc.
-   */
+
   public static async createCheckoutSession(
     params: CreateCheckoutSessionParams
   ): Promise<PayMongoCheckoutResponse> {
@@ -244,7 +238,7 @@ export class PayMongoService {
       ipAddress,
     } = params;
 
-    // --- Anti-Fraud AI Check ---
+
     const fraudCheck =
       await AntiFraudService.evaluateRisk({
         ip: ipAddress,
@@ -256,8 +250,7 @@ export class PayMongoService {
 
     if (fraudCheck.isFraud) {
       console.warn(
-        `[Anti-Fraud] Blocked payment attempt for ${
-          customer?.email || 'Unknown'
+        `[Anti-Fraud] Blocked payment attempt for ${customer?.email || 'Unknown'
         }. Score: ${fraudCheck.score}`
       );
 
@@ -265,10 +258,8 @@ export class PayMongoService {
         `Payment blocked by security policy. Please contact support or use another payment method.`
       );
     }
-    // ---------------------------
 
-    // PayMongo PHP minimum is PHP 1.00.
-    // Convert PHP to centavos.
+
     const amountInCentavos = Math.round(amount * 100);
 
     const payload = {
@@ -300,18 +291,18 @@ export class PayMongoService {
 
           billing: customer
             ? {
-                name:
-                  customer.name ||
-                  'Citizen Taxpayer',
+              name:
+                customer.name ||
+                'Citizen Taxpayer',
 
-                email:
-                  customer.email ||
-                  'citizen@gov.ph',
+              email:
+                customer.email ||
+                'citizen@gov.ph',
 
-                phone:
-                  customer.phone ||
-                  '09000000000',
-              }
+              phone:
+                customer.phone ||
+                '09000000000',
+            }
             : undefined,
 
           metadata: {
@@ -378,9 +369,7 @@ export class PayMongoService {
     };
   }
 
-  /**
-   * Retrieves a Checkout Session by ID from PayMongo
-   */
+
   public static async retrieveCheckoutSession(
     sessionId: string
   ): Promise<{
@@ -463,8 +452,8 @@ export class PayMongoService {
         totalPaidCentavos > 0
           ? totalPaidCentavos / 100
           : (attr.line_items?.[0]?.amount ||
-              0) /
-            100,
+            0) /
+          100,
 
       payments: payments,
 
@@ -478,9 +467,7 @@ export class PayMongoService {
     };
   }
 
-  /**
-   * Verifies incoming webhook signature from PayMongo
-   */
+
   public static verifyWebhookSignature(
     rawBody: string,
     signatureHeader: string
@@ -496,8 +483,7 @@ export class PayMongoService {
     }
 
     try {
-      // Signature header format:
-      // t=timestamp,te=test_signature,li=live_signature
+
       const parts =
         signatureHeader.split(',');
 

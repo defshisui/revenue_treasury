@@ -1,4 +1,3 @@
-// src/routes/users.routes.ts
 import { Router } from 'express';
 import { getUsers, createUser, deleteUser } from '../controllers/users.controller.js';
 import { updateUserStatus } from '../controllers/users.controller.js';
