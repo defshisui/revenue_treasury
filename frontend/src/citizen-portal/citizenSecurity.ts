@@ -1,6 +1,3 @@
-// AES-256-GCM localStorage encryption using the browser Web Crypto API.
-// Each encrypted value has a unique random IV — no two ciphertexts are alike.
-
 const LS_SECRET: string = (import.meta as any).env?.VITE_PAYLOAD_SECRET || 'rt-local-fallback-key-2026';
 
 let _lsKey: CryptoKey | null = null;

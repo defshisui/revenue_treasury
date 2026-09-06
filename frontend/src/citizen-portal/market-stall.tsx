@@ -65,7 +65,7 @@ export default function CitizenPortalLanding() {
             </div>
 
             <div className="relative z-10 flex flex-col items-start space-y-4 max-w-2xl">
-              <span className="bg-blue-500/30 text-blue-200 text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full border border-blue-400/30">
+              <span className="bg-blue-500/30 text-blue-200 text-[10px] font-bold uppercasetracking-wider px-3 py-1 rounded-full border border-blue-400/30">
                 CITIZEN PORTAL DASHBOARD
               </span>
 
@@ -80,7 +80,6 @@ export default function CitizenPortalLanding() {
             </div>
           </div>
 
-          {/* SERVICES */}
           <div className="space-y-4">
 
             <div className="flex justify-between items-center">
@@ -95,7 +94,6 @@ export default function CitizenPortalLanding() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
 
-              {/* MARKET & VENDORS */}
               <div
                 onClick={() => {
                   window.location.href = '/market-vendor-tab';
@@ -140,7 +138,6 @@ export default function CitizenPortalLanding() {
               </div>
 
 
-              {/* REAL PROPERTY TAX */}
               <div
                 onClick={() => {
                   window.location.href = '/real-property-tax-hub';
@@ -180,7 +177,6 @@ export default function CitizenPortalLanding() {
               </div>
 
 
-              {/* BUSINESS TAX */}
               <div
                 onClick={() => {
                   window.location.href = '/business-tax-assessment';

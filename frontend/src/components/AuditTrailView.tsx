@@ -223,7 +223,7 @@ export default function AuditTrailView({
       `}
     >
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
+
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm gap-4">
           <div>
             <h2 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">System Audit Trail</h2>
@@ -248,7 +248,6 @@ export default function AuditTrailView({
           </div>
         </div>
 
-        {/* Filters and Search Bar */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-sm">
           <div>
             <input
@@ -312,7 +311,7 @@ export default function AuditTrailView({
           </div>
         </div>
 
-        {/* Content Section */}
+
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-4">
           <div className="flex justify-between items-center">
             <h3 className="text-base font-bold text-slate-900 dark:text-white uppercase tracking-wider">Audit Activity Logs</h3>
@@ -367,7 +366,7 @@ export default function AuditTrailView({
                 </table>
               </div>
 
-              {/* Pagination */}
+
               <div className="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-slate-800 text-xs">
                 <span className="text-slate-600 dark:text-slate-400 font-medium">Page {currentPage} of {totalPages}</span>
                 <div className="flex gap-2">
@@ -392,7 +391,7 @@ export default function AuditTrailView({
         </div>
       </div>
 
-      {/* Clear/Delete Confirmation & Backup Modal */}
+
       {isClearModalOpen && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4 z-50">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 w-full max-w-md shadow-2xl space-y-5">
@@ -453,7 +452,7 @@ export default function AuditTrailView({
         </div>
       )}
 
-      {/* Details Modal */}
+
       {selectedRecord && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4 z-50">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 w-full max-w-xl shadow-2xl space-y-4">
@@ -472,7 +471,7 @@ export default function AuditTrailView({
               <p><strong className="text-slate-900 dark:text-white">Module / Action:</strong> <span className="text-slate-900 dark:text-slate-100">{selectedRecord.module} / {selectedRecord.action}</span></p>
               <p><strong className="text-slate-900 dark:text-white">Severity Level:</strong> <span className="font-bold text-slate-900 dark:text-slate-100">{selectedRecord.severity}</span></p>
 
-              {/* Display Timestamp formatted to GMT+8 inside the modal */}
+
               <p><strong className="text-slate-900 dark:text-white">Timestamp:</strong> <span className="text-slate-900 dark:text-slate-100">{formatGMT8Time(selectedRecord.timestamp)}</span></p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">

@@ -56,7 +56,7 @@ export const UnifiedHeader: FC = () => {
         };
         checkUserSession().then(setUser);
 
-        // Re-read session when profile is updated (e.g. after avatar/name change)
+
         const handleProfileUpdated = () => checkUserSession().then(setUser);
         window.addEventListener('profileUpdated', handleProfileUpdated);
 

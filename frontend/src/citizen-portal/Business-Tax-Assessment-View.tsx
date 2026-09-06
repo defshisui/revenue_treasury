@@ -83,7 +83,6 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
   const [qrPaymentPaid, setQrPaymentPaid] = useState<boolean>(false);
   const [paymentConfirmedAt, setPaymentConfirmedAt] = useState<Date | null>(null);
 
-  // Market-Stall-style payment success confirmation.
   const [isPaymentSuccess, setIsPaymentSuccess] = useState<boolean>(false);
   const handlePayMongoBusinessTaxQrPayment = async (record: AssessmentRecord) => {
     setIsProcessingPayment(true);
@@ -175,9 +174,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
           setQrSecondsRemaining(0);
           setQrCodeUrl('');
 
-          // Match the Market Stall payment flow:
-          // close the QR/payment modal completely, then show
-          // a separate animated payment-success screen.
+
           await fetchAssessments();
           setIsPaymentStep(false);
           setQrPaymentIntentId('');
@@ -360,18 +357,18 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
       if (user?.token) headers['Authorization'] = `Bearer ${user.token}`;
       const res = isModalOpen === 'tax-bill'
         ? await fetch(`${API_BASE_URL}/verify/tax-bill`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({
-              taxBillNo: taxBillForm.taxBillNo.trim(),
-              tin: taxBillForm.tin.trim(),
-            })
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            taxBillNo: taxBillForm.taxBillNo.trim(),
+            tin: taxBillForm.tin.trim(),
           })
+        })
         : await fetch(`${API_BASE_URL}/verify/or-number`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify(orForm)
-          });
+          method: 'POST',
+          headers,
+          body: JSON.stringify(orForm)
+        });
       const textResponse = await res.text();
       let data;
       try {
@@ -444,288 +441,288 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
 
       <div className="flex-1 flex flex-col justify-between w-full">
         <div>
-          {/* Hero Banner Area */}
-        <div className="relative w-full bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 h-36 sm:h-48 overflow-hidden flex items-center justify-center border-b-4 border-blue-600">
-          <div className="absolute inset-0 opacity-30 bg-[radial-gradient(#3b82f6_1px,transparent_1px)] [background-size:16px_16px]"></div>
 
-          <div className="relative z-10 text-center px-4">
-            <h1 className="text-xl sm:text-3xl font-extrabold text-white tracking-wide">
-              {currentScreen === 'home'
-                ? 'WELCOME TO BUSINESS TAX ASSESSMENT'
-                : currentScreen === 'appointments-list'
-                  ? 'MY APPOINTMENTS TRACKER'
-                  : '2026 BUSINESS TAX PAYMENT'}
-            </h1>
+          <div className="relative w-full bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 h-36 sm:h-48 overflow-hidden flex items-center justify-center border-b-4 border-blue-600">
+            <div className="absolute inset-0 opacity-30 bg-[radial-gradient(#3b82f6_1px,transparent_1px)] [background-size:16px_16px]"></div>
 
-            <p className="text-xs sm:text-sm text-slate-200 mt-1 max-w-xl mx-auto">
-              {currentScreen === 'home'
-                ? "This portal is one of our digital Gov Serv initiatives catering to the needs of business owners in securing their permits and licenses."
-                : currentScreen === 'appointments-list'
-                  ? "Monitor the review, approval, or cancellation status of your scheduled municipal appointments in real time."
-                  : "Manage your online sales declarations and monitor permit assessment status."}
-            </p>
+            <div className="relative z-10 text-center px-4">
+              <h1 className="text-xl sm:text-3xl font-extrabold text-white tracking-wide">
+                {currentScreen === 'home'
+                  ? 'WELCOME TO BUSINESS TAX ASSESSMENT'
+                  : currentScreen === 'appointments-list'
+                    ? 'MY APPOINTMENTS TRACKER'
+                    : '2026 BUSINESS TAX PAYMENT'}
+              </h1>
+
+              <p className="text-xs sm:text-sm text-slate-200 mt-1 max-w-xl mx-auto">
+                {currentScreen === 'home'
+                  ? "This portal is one of our digital Gov Serv initiatives catering to the needs of business owners in securing their permits and licenses."
+                  : currentScreen === 'appointments-list'
+                    ? "Monitor the review, approval, or cancellation status of your scheduled municipal appointments in real time."
+                    : "Manage your online sales declarations and monitor permit assessment status."}
+              </p>
+            </div>
           </div>
-        </div>
 
-        <div className="max-w-6xl mx-auto px-4 py-8">
-          {currentScreen === 'home' ? (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 flex flex-col justify-between text-center">
-                  <div>
-                    <h4 className="text-blue-900 font-bold text-sm tracking-wider uppercase mb-2">PROCEED AND PAY ONLINE</h4>
-                    <p className="text-xs text-slate-500 leading-relaxed mb-6">
-                      You can now submit your Online Sales Declaration along with your Financial Statements and other requirements online. Assessment and settlement of payment can also be done through this portal.
-                    </p>
+          <div className="max-w-6xl mx-auto px-4 py-8">
+            {currentScreen === 'home' ? (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 flex flex-col justify-between text-center">
+                    <div>
+                      <h4 className="text-blue-900 font-bold text-sm tracking-wider uppercase mb-2">PROCEED AND PAY ONLINE</h4>
+                      <p className="text-xs text-slate-500 leading-relaxed mb-6">
+                        You can now submit your Online Sales Declaration along with your Financial Statements and other requirements online. Assessment and settlement of payment can also be done through this portal.
+                      </p>
+                    </div>
+                    <div>
+                      <button onClick={() => setCurrentScreen('assessment-list')} className="w-full sm:w-auto px-6 py-2.5 bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold rounded-full shadow-md transition-all cursor-pointer">
+                        PROCEED WITH BUSINESS TAX ASSESSMENT
+                      </button>
+                    </div>
                   </div>
-                  <div>
-                    <button onClick={() => setCurrentScreen('assessment-list')} className="w-full sm:w-auto px-6 py-2.5 bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold rounded-full shadow-md transition-all cursor-pointer">
-                      PROCEED WITH BUSINESS TAX ASSESSMENT
-                    </button>
-                  </div>
-                </div>
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 flex flex-col justify-between text-center">
-                  <div>
-                    <h3 className="text-blue-900 font-bold text-sm tracking-wider uppercase mb-3">Appointment</h3>
-                    <p className="text-xs text-slate-500 leading-relaxed mb-6">
-                      Do you have any concerns regarding your Business Tax Assessment? Schedule an appointment or track your existing appointments below:
-                    </p>
-                  </div>
-                  <div className="flex flex-col sm:flex-row justify-center gap-2">
-                    <button onClick={() => openModal('appointment')} className="px-5 py-2.5 bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold rounded-full shadow-md transition-all cursor-pointer">
-                      SET AN APPOINTMENT
-                    </button>
-                    <button onClick={() => setCurrentScreen('appointments-list')} className="px-5 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-bold rounded-full shadow-md transition-all cursor-pointer">
-                      VIEW MY APPOINTMENTS
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 text-center">
-                <h3 className="text-blue-900 font-bold text-sm tracking-wider uppercase mb-2">
-                  TAX BILL NUMBER AND O.R. NUMBER VERIFICATION
-                </h3>
-                <p className="text-xs text-slate-500 mb-6">
-                  Do you want to verify your Tax Bill Number or O.R. Number?<br />Just click below
-                </p>
-                <div className="flex flex-col sm:flex-row justify-center items-center gap-3">
-                  <button onClick={() => openModal('tax-bill')} className="w-full sm:w-auto px-5 py-2.5 bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold rounded-full shadow-md transition-all cursor-pointer">
-                    TAX BILL NUMBER VERIFICATION
-                  </button>
-                  <button onClick={() => openModal('or-number')} className="w-full sm:w-auto px-5 py-2.5 bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold rounded-full shadow-md transition-all cursor-pointer">
-                    O.R. NUMBER VERIFICATION
-                  </button>
-                </div>
-              </div>
-            </div>
-          ) : currentScreen === 'appointments-list' ? (
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <button
-                  type="button"
-                  onClick={() => setCurrentScreen('home')}
-                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-xl text-xs transition-colors cursor-pointer inline-block border-0"
-                >
-                  &larr; Back to Previous Page
-                </button>
-                <button onClick={() => openModal('appointment')} className="px-4 py-2 bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold rounded-md shadow-xs cursor-pointer">
-                  + Request New Appointment
-                </button>
-              </div>
-              <div className="overflow-x-auto border border-slate-200 rounded-lg mt-4">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-blue-900 text-white font-semibold">
-                    <tr>
-                      <th className="p-3">DEPARTMENT</th>
-                      <th className="p-3">APPOINTMENT TYPE</th>
-                      <th className="p-3">BUSINESS NAME</th>
-                      <th className="p-3">SCHEDULE DATE & TIME</th>
-                      <th className="p-3 text-center">STATUS</th>
-                      <th className="p-3">REMARKS / NOTES</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {loading ? (
-                      <tr><td colSpan={6} className="p-8 text-center text-slate-500">Loading appointments...</td></tr>
-                    ) : userAppointments.length === 0 ? (
-                      <tr><td colSpan={6} className="p-8 text-center text-slate-400">No appointments found. Click "Request New Appointment" to schedule one.</td></tr>
-                    ) : (
-                      userAppointments.map(apt => (
-                        <tr key={apt.id} className="border-b border-slate-100 hover:bg-slate-50">
-                          <td className="p-3 font-medium">{apt.department}</td>
-                          <td className="p-3 text-blue-600 font-semibold">{apt.appointmentType}</td>
-                          <td className="p-3">{apt.businessName || 'N/A'}</td>
-                          <td className="p-3 font-mono">{apt.date} ({apt.timeSlot || 'All Day'})</td>
-                          <td className="p-3 text-center">
-                            <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold ${apt.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-800  ' :
-                              apt.status === 'CANCELLED' ? 'bg-rose-100 text-rose-800  ' :
-                                'bg-amber-100 text-amber-800  '
-                              }`}>
-                              {apt.status}
-                            </span>
-                          </td>
-                          <td className="p-3 italic text-slate-500">{apt.remarks || 'Under review by municipal staff.'}</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ) : (
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4">
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setCurrentScreen('home')}
-                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-xl text-xs transition-colors cursor-pointer inline-block border-0"
-                >
-                  &larr; Back to Previous Page
-                </button>
-              </div>
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                  <button onClick={() => openModal('sales-declaration')} className="px-4 py-2 bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold rounded-md shadow-xs cursor-pointer">
-                    SUBMIT ONLINE SALES DECLARATION
-                  </button>
-                </div>
-              </div>
-              <div className="flex flex-col md:flex-row justify-between items-center gap-3 pt-4 border-t border-slate-200">
-                <div className="w-full md:w-64">
-                  <label className="block text-[11px] font-semibold text-slate-500 mb-1">Application Status</label>
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-                    className="w-full p-2 text-xs border border-slate-300 rounded bg-slate-50"
-                  >
-                    <option value="ALL">ALL</option>
-                    <option value="PENDING">Pending</option>
-                    <option value="APPROVED">Approved</option>
-                    <option value="REJECTED">Rejected</option>
-                  </select>
-                </div>
-                <div className="flex items-center gap-2 w-full md:w-auto justify-end">
-                  <div className="w-full sm:w-48">
-                    <label className="block text-[11px] font-semibold text-slate-500 mb-1">Search By:</label>
-                    <select
-                      value={searchType}
-                      onChange={(e) => setSearchType(e.target.value)}
-                      className="w-full p-2 text-xs border border-slate-300 rounded bg-slate-50"
-                    >
-                      <option value="Tracking/MP No.">Tracking/MP No.</option>
-                      <option value="Business Name">Business Name</option>
-                    </select>
-                  </div>
-                  <div className="w-full sm:w-64 pt-5">
-                    <div className="flex gap-1">
-                      <input
-                        type="text"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Search..."
-                        className="w-full p-2 text-xs border border-slate-300 rounded bg-slate-50"
-                      />
-                      <button onClick={() => { setCurrentPage(1); fetchAssessments(); }} className="px-3 py-2 bg-slate-200 text-slate-700 text-xs font-semibold rounded cursor-pointer">
-                        Search
+                  <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 flex flex-col justify-between text-center">
+                    <div>
+                      <h3 className="text-blue-900 font-bold text-sm tracking-wider uppercase mb-3">Appointment</h3>
+                      <p className="text-xs text-slate-500 leading-relaxed mb-6">
+                        Do you have any concerns regarding your Business Tax Assessment? Schedule an appointment or track your existing appointments below:
+                      </p>
+                    </div>
+                    <div className="flex flex-col sm:flex-row justify-center gap-2">
+                      <button onClick={() => openModal('appointment')} className="px-5 py-2.5 bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold rounded-full shadow-md transition-all cursor-pointer">
+                        SET AN APPOINTMENT
+                      </button>
+                      <button onClick={() => setCurrentScreen('appointments-list')} className="px-5 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-bold rounded-full shadow-md transition-all cursor-pointer">
+                        VIEW MY APPOINTMENTS
                       </button>
                     </div>
                   </div>
                 </div>
-              </div>
-              <div className="overflow-x-auto border border-slate-200 rounded-lg">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-blue-900 text-white font-semibold">
-                    <tr>
-                      <th className="p-3">TRACKING/MAYOR'S PERMIT NUMBER ↕</th>
-                      <th className="p-3">BUSINESS NAME</th>
-                      <th className="p-3">BUSINESS OWNER</th>
-                      <th className="p-3">APPLICATION STATUS</th>
-                      <th className="p-3">PAYMENT STATUS</th>
-                      <th className="p-3">APPLICATION DATE</th>
-                      <th className="p-3">ACTION</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {loading ? (
-                      <tr>
-                        <td colSpan={7} className="p-8 text-center text-slate-500 bg-slate-50">
-                          Loading records from server...
-                        </td>
-                      </tr>
-                    ) : fetchError ? (
-                      <tr>
-                        <td colSpan={7} className="p-8 text-center text-rose-500 bg-slate-50">
-                          Error: {fetchError}
-                        </td>
-                      </tr>
-                    ) : assessments.length === 0 ? (
-                      <tr>
-                        <td colSpan={7} className="p-8 text-center text-slate-400 bg-slate-50">
-                          No data available in table
-                        </td>
-                      </tr>
-                    ) : (
-                      assessments.map((item) => (
-                        <tr key={item.id} className="border-b border-slate-100 hover:bg-slate-50">
-                          <td className="p-3 font-medium">{item.trackingNumber}</td>
-                          <td className="p-3">{item.businessName}</td>
-                          <td className="p-3">{item.businessOwner}</td>
-                          <td className="p-3">
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${item.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-800  ' :
-                              item.status === 'REJECTED' ? 'bg-rose-100 text-rose-800  ' :
-                                'bg-amber-100 text-amber-800  '
-                              }`}>
-                              {item.status}
-                            </span>
-                          </td>
-                          <td className="p-3">
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${item.paymentStatus === 'PAID'
-                              ? 'bg-emerald-100 text-emerald-800  '
-                              : 'bg-amber-100 text-amber-800  '
-                              }`}>
-                              {item.paymentStatus}
-                            </span>
-                          </td>
-                          <td className="p-3">{new Date(item.applicationDate).toLocaleDateString()}</td>
-                          <td className="p-3">
-                            <button
-                              onClick={() => setSelectedAssessmentView(item)}
-                              className="text-blue-600 hover:underline font-semibold cursor-pointer"
-                            >
-                              View
-                            </button>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-              <div className="flex justify-between items-center text-xs text-slate-500 pt-2">
-                <span>Page {currentPage} of {totalPages}</span>
-                <div className="flex gap-1">
-                  <button
-                    disabled={currentPage <= 1 || loading}
-                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                    className="px-3 py-1 border border-slate-300 rounded disabled:opacity-40 cursor-pointer hover:bg-slate-100"
-                  >
-                    Previous
-                  </button>
-                  <button
-                    disabled={currentPage >= totalPages || loading}
-                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                    className="px-3 py-1 border border-slate-300 rounded disabled:opacity-40 cursor-pointer hover:bg-slate-100"
-                  >
-                    Next
-                  </button>
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 text-center">
+                  <h3 className="text-blue-900 font-bold text-sm tracking-wider uppercase mb-2">
+                    TAX BILL NUMBER AND O.R. NUMBER VERIFICATION
+                  </h3>
+                  <p className="text-xs text-slate-500 mb-6">
+                    Do you want to verify your Tax Bill Number or O.R. Number?<br />Just click below
+                  </p>
+                  <div className="flex flex-col sm:flex-row justify-center items-center gap-3">
+                    <button onClick={() => openModal('tax-bill')} className="w-full sm:w-auto px-5 py-2.5 bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold rounded-full shadow-md transition-all cursor-pointer">
+                      TAX BILL NUMBER VERIFICATION
+                    </button>
+                    <button onClick={() => openModal('or-number')} className="w-full sm:w-auto px-5 py-2.5 bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold rounded-full shadow-md transition-all cursor-pointer">
+                      O.R. NUMBER VERIFICATION
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            ) : currentScreen === 'appointments-list' ? (
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentScreen('home')}
+                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-xl text-xs transition-colors cursor-pointer inline-block border-0"
+                  >
+                    &larr; Back to Previous Page
+                  </button>
+                  <button onClick={() => openModal('appointment')} className="px-4 py-2 bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold rounded-md shadow-xs cursor-pointer">
+                    + Request New Appointment
+                  </button>
+                </div>
+                <div className="overflow-x-auto border border-slate-200 rounded-lg mt-4">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-blue-900 text-white font-semibold">
+                      <tr>
+                        <th className="p-3">DEPARTMENT</th>
+                        <th className="p-3">APPOINTMENT TYPE</th>
+                        <th className="p-3">BUSINESS NAME</th>
+                        <th className="p-3">SCHEDULE DATE & TIME</th>
+                        <th className="p-3 text-center">STATUS</th>
+                        <th className="p-3">REMARKS / NOTES</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {loading ? (
+                        <tr><td colSpan={6} className="p-8 text-center text-slate-500">Loading appointments...</td></tr>
+                      ) : userAppointments.length === 0 ? (
+                        <tr><td colSpan={6} className="p-8 text-center text-slate-400">No appointments found. Click "Request New Appointment" to schedule one.</td></tr>
+                      ) : (
+                        userAppointments.map(apt => (
+                          <tr key={apt.id} className="border-b border-slate-100 hover:bg-slate-50">
+                            <td className="p-3 font-medium">{apt.department}</td>
+                            <td className="p-3 text-blue-600 font-semibold">{apt.appointmentType}</td>
+                            <td className="p-3">{apt.businessName || 'N/A'}</td>
+                            <td className="p-3 font-mono">{apt.date} ({apt.timeSlot || 'All Day'})</td>
+                            <td className="p-3 text-center">
+                              <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold ${apt.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-800  ' :
+                                apt.status === 'CANCELLED' ? 'bg-rose-100 text-rose-800  ' :
+                                  'bg-amber-100 text-amber-800  '
+                                }`}>
+                                {apt.status}
+                              </span>
+                            </td>
+                            <td className="p-3 italic text-slate-500">{apt.remarks || 'Under review by municipal staff.'}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentScreen('home')}
+                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-xl text-xs transition-colors cursor-pointer inline-block border-0"
+                  >
+                    &larr; Back to Previous Page
+                  </button>
+                </div>
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <button onClick={() => openModal('sales-declaration')} className="px-4 py-2 bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold rounded-md shadow-xs cursor-pointer">
+                      SUBMIT ONLINE SALES DECLARATION
+                    </button>
+                  </div>
+                </div>
+                <div className="flex flex-col md:flex-row justify-between items-center gap-3 pt-4 border-t border-slate-200">
+                  <div className="w-full md:w-64">
+                    <label className="block text-[11px] font-semibold text-slate-500 mb-1">Application Status</label>
+                    <select
+                      value={statusFilter}
+                      onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+                      className="w-full p-2 text-xs border border-slate-300 rounded bg-slate-50"
+                    >
+                      <option value="ALL">ALL</option>
+                      <option value="PENDING">Pending</option>
+                      <option value="APPROVED">Approved</option>
+                      <option value="REJECTED">Rejected</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+                    <div className="w-full sm:w-48">
+                      <label className="block text-[11px] font-semibold text-slate-500 mb-1">Search By:</label>
+                      <select
+                        value={searchType}
+                        onChange={(e) => setSearchType(e.target.value)}
+                        className="w-full p-2 text-xs border border-slate-300 rounded bg-slate-50"
+                      >
+                        <option value="Tracking/MP No.">Tracking/MP No.</option>
+                        <option value="Business Name">Business Name</option>
+                      </select>
+                    </div>
+                    <div className="w-full sm:w-64 pt-5">
+                      <div className="flex gap-1">
+                        <input
+                          type="text"
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          placeholder="Search..."
+                          className="w-full p-2 text-xs border border-slate-300 rounded bg-slate-50"
+                        />
+                        <button onClick={() => { setCurrentPage(1); fetchAssessments(); }} className="px-3 py-2 bg-slate-200 text-slate-700 text-xs font-semibold rounded cursor-pointer">
+                          Search
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="overflow-x-auto border border-slate-200 rounded-lg">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-blue-900 text-white font-semibold">
+                      <tr>
+                        <th className="p-3">TRACKING/MAYOR'S PERMIT NUMBER ↕</th>
+                        <th className="p-3">BUSINESS NAME</th>
+                        <th className="p-3">BUSINESS OWNER</th>
+                        <th className="p-3">APPLICATION STATUS</th>
+                        <th className="p-3">PAYMENT STATUS</th>
+                        <th className="p-3">APPLICATION DATE</th>
+                        <th className="p-3">ACTION</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {loading ? (
+                        <tr>
+                          <td colSpan={7} className="p-8 text-center text-slate-500 bg-slate-50">
+                            Loading records from server...
+                          </td>
+                        </tr>
+                      ) : fetchError ? (
+                        <tr>
+                          <td colSpan={7} className="p-8 text-center text-rose-500 bg-slate-50">
+                            Error: {fetchError}
+                          </td>
+                        </tr>
+                      ) : assessments.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="p-8 text-center text-slate-400 bg-slate-50">
+                            No data available in table
+                          </td>
+                        </tr>
+                      ) : (
+                        assessments.map((item) => (
+                          <tr key={item.id} className="border-b border-slate-100 hover:bg-slate-50">
+                            <td className="p-3 font-medium">{item.trackingNumber}</td>
+                            <td className="p-3">{item.businessName}</td>
+                            <td className="p-3">{item.businessOwner}</td>
+                            <td className="p-3">
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${item.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-800  ' :
+                                item.status === 'REJECTED' ? 'bg-rose-100 text-rose-800  ' :
+                                  'bg-amber-100 text-amber-800  '
+                                }`}>
+                                {item.status}
+                              </span>
+                            </td>
+                            <td className="p-3">
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${item.paymentStatus === 'PAID'
+                                ? 'bg-emerald-100 text-emerald-800  '
+                                : 'bg-amber-100 text-amber-800  '
+                                }`}>
+                                {item.paymentStatus}
+                              </span>
+                            </td>
+                            <td className="p-3">{new Date(item.applicationDate).toLocaleDateString()}</td>
+                            <td className="p-3">
+                              <button
+                                onClick={() => setSelectedAssessmentView(item)}
+                                className="text-blue-600 hover:underline font-semibold cursor-pointer"
+                              >
+                                View
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="flex justify-between items-center text-xs text-slate-500 pt-2">
+                  <span>Page {currentPage} of {totalPages}</span>
+                  <div className="flex gap-1">
+                    <button
+                      disabled={currentPage <= 1 || loading}
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      className="px-3 py-1 border border-slate-300 rounded disabled:opacity-40 cursor-pointer hover:bg-slate-100"
+                    >
+                      Previous
+                    </button>
+                    <button
+                      disabled={currentPage >= totalPages || loading}
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      className="px-3 py-1 border border-slate-300 rounded disabled:opacity-40 cursor-pointer hover:bg-slate-100"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
 
-      <UnifiedFooter />
+        <UnifiedFooter />
       </div>
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
@@ -1407,7 +1404,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
           </div>
         </div>
       )}
-      {/* Payment Success Screen - same clean style as RPT */}
+
       {isPaymentSuccess && paymentAssessment && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-slate-950/75 backdrop-blur-md overflow-y-auto overscroll-contain">
           <div className="relative w-full max-w-lg max-h-[94vh] overflow-y-auto rounded-2xl sm:rounded-[28px] bg-white p-5 sm:p-8 shadow-2xl text-center">

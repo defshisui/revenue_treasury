@@ -489,7 +489,7 @@ export default function HawkerAssociation({
         transition-all duration-300 ${isCollapsed ? "ml-20" : "ml-64"}
       `}
     >
-      {/* TOP HEADER */}
+
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8 bg-white dark:bg-slate-900/60 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs backdrop-blur-md">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -522,7 +522,7 @@ export default function HawkerAssociation({
         </div>
       </div>
 
-      {/* EXECUTIVE LGU METRICS */}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
         <div className="bg-white dark:bg-slate-900/85 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs">
           <p className="text-xs text-slate-500 font-medium">Total Registered Guilds</p>
@@ -553,13 +553,13 @@ export default function HawkerAssociation({
         </div>
       </div>
 
-      {/* Tabs Navigation */}
+
       <div className="flex space-x-1 bg-slate-200/50 dark:bg-slate-800/50 p-1.5 rounded-xl w-fit mb-6">
         <button
           onClick={() => setMainTab("Active")}
           className={`px-5 py-2.5 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-2 ${mainTab === "Active"
-              ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
-              : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+            ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
+            : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
             }`}
         >
           <i className="fa-solid fa-users"></i> Active Guilds
@@ -567,15 +567,15 @@ export default function HawkerAssociation({
         <button
           onClick={() => setMainTab("Archived")}
           className={`px-5 py-2.5 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-2 ${mainTab === "Archived"
-              ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
-              : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+            ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
+            : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
             }`}
         >
           <i className="fa-solid fa-box-archive"></i> Archiver
         </button>
       </div>
 
-      {/* DIRECTORY TABLE */}
+
       <section className="bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-xs space-y-5">
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
           <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -731,7 +731,7 @@ export default function HawkerAssociation({
         </div>
       </section>
 
-      {/* MODAL: ADVANCED LGU REVIEW & DOCUMENT VAULT DRAWER */}
+
       {isReviewModalOpen && selectedRecord && (
         <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-4xl w-full p-8 shadow-2xl border border-slate-200 dark:border-slate-800 my-8">
@@ -745,7 +745,7 @@ export default function HawkerAssociation({
               </button>
             </div>
 
-            {/* Modal Tabs Header */}
+
             <div className="flex border-b border-slate-200 dark:border-slate-800 mb-6 gap-6 text-xs font-semibold overflow-x-auto whitespace-nowrap">
               <button
                 type="button"
@@ -777,7 +777,7 @@ export default function HawkerAssociation({
               </button>
             </div>
 
-            {/* TAB 1: DETAILS & STATUS */}
+
             {activeTab === "details" && (
               <form onSubmit={handleUpdateStatus} className="space-y-4 text-xs">
                 <div className="bg-slate-50 dark:bg-slate-950 rounded-2xl p-4 space-y-2 border border-slate-200 dark:border-slate-800">
@@ -820,7 +820,7 @@ export default function HawkerAssociation({
               </form>
             )}
 
-            {/* TAB 2: DIGITAL VAULT WITH IMAGE / PDF VIEW */}
+
             {activeTab === "documents" && (
               <div className="space-y-4 text-xs">
                 <p className="text-slate-500 mb-2">Verified statutory documents uploaded by the applicant to the database:</p>
@@ -841,7 +841,7 @@ export default function HawkerAssociation({
                               className="w-full h-full object-cover transition-transform cursor-pointer"
                               onClick={() => setPreviewImage(doc.file_url)}
                             />
-                            {/* Hover overlay indicator */}
+
                             <div
                               className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                               onClick={() => setPreviewImage(doc.file_url)}
@@ -883,7 +883,7 @@ export default function HawkerAssociation({
               </div>
             )}
 
-            {/* TAB 3: MARKET INSPECTION & VIOLATIONS */}
+
             {activeTab === "compliance" && (
               <div className="space-y-4 text-xs">
                 <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 text-amber-800 dark:text-amber-300">
@@ -917,7 +917,7 @@ export default function HawkerAssociation({
               </div>
             )}
 
-            {/* TAB 4: COA AUDIT TRAIL */}
+
             {activeTab === "audit" && (
               <div className="space-y-4 text-xs">
                 <p className="text-slate-400">Immutable ledger logging all administrative modifications for internal audit compliance:</p>
@@ -942,7 +942,7 @@ export default function HawkerAssociation({
         </div>
       )}
 
-      {/* MODAL: MANUAL WALK-IN REGISTRATION */}
+
       {isRegisterOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-2xl w-full p-8 shadow-2xl border border-slate-200 dark:border-slate-800 my-8">
@@ -1057,7 +1057,7 @@ export default function HawkerAssociation({
         </div>
       )}
 
-      {/* NEW FULLSCREEN IMAGE LIGHTBOX MODAL */}
+
       {previewImage && (
         <div
           className="fixed inset-0 z-[60] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 cursor-zoom-out transition-opacity duration-300"
@@ -1067,7 +1067,7 @@ export default function HawkerAssociation({
           }}
         >
           <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
-            {/* Close Button */}
+
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -1080,7 +1080,7 @@ export default function HawkerAssociation({
               <i className="fa-solid fa-xmark text-xl"></i>
             </button>
 
-            {/* The Zoomable Image */}
+
             <img
               src={previewImage}
               alt="Document Fullscreen Preview"
@@ -1089,7 +1089,7 @@ export default function HawkerAssociation({
                 : "scale-100 object-contain max-h-full max-w-full cursor-zoom-in"
                 }`}
               onClick={(e) => {
-                e.stopPropagation(); 
+                e.stopPropagation();
                 setIsZoomed(!isZoomed);
               }}
             />

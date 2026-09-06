@@ -1,4 +1,3 @@
-// src/citizen-portal/real-property-tax.tsx
 import { useEffect, useMemo, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -18,7 +17,6 @@ import {
   type RPTApplicationRecord
 } from "../services/realpropertytaxService";
 
-// --- Types ---
 export type ApplicantType = "Property Owner" | "Authorized Representative" | "Corporation / Company";
 export type RPTApplicationStatus =
   | "Submitted"
@@ -64,7 +62,7 @@ export interface PropertyItem {
     q3: number;
     q4: number;
   };
-  // Selected option details
+
   selectedPaymentOption?: "Quarterly" | "Full" | "";
   selectedQuarters?: { q1: boolean; q2: boolean; q3: boolean; q4: boolean };
   computedPayableAmount?: number;
@@ -156,53 +154,50 @@ export function RealPropertyTaxHub() {
 
       <UnifiedHeader />
 
-      {/* HERO BANNER */}
-<div className="relative w-full bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 h-36 sm:h-48 overflow-hidden flex items-center justify-center border-b-4 border-blue-600">
-  <div className="absolute inset-0 opacity-30 bg-[radial-gradient(#3b82f6_1px,transparent_1px)] [background-size:16px_16px]"></div>
+      <div className="relative w-full bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 h-36 sm:h-48 overflow-hidden flex items-center justify-center border-b-4 border-blue-600">
+        <div className="absolute inset-0 opacity-30 bg-[radial-gradient(#3b82f6_1px,transparent_1px)] [background-size:16px_16px]"></div>
 
-  <div className="relative z-10 text-center px-4">
-    <h1 className="text-xl sm:text-3xl font-extrabold text-white tracking-wide uppercase">
-      WELCOME TO REAL PROPERTY TAX
-    </h1>
+        <div className="relative z-10 text-center px-4">
+          <h1 className="text-xl sm:text-3xl font-extrabold text-white tracking-wide uppercase">
+            WELCOME TO REAL PROPERTY TAX
+          </h1>
 
-    <p className="text-xs sm:text-sm text-slate-200 mt-1 max-w-xl mx-auto">
-      This portal is one of our digital Gov Serv initiatives catering to property owners and taxpayers in accessing their Real Property Tax services.
-    </p>
-  </div>
-</div>
+          <p className="text-xs sm:text-sm text-slate-200 mt-1 max-w-xl mx-auto">
+            This portal is one of our digital Gov Serv initiatives catering to property owners and taxpayers in accessing their Real Property Tax services.
+          </p>
+        </div>
+      </div>
 
 
-      {/* SERVICES */}
-<main className="flex-1">
-  <div className="max-w-6xl mx-auto px-4 py-8 sm:py-10">
+      <main className="flex-1">
+        <div className="max-w-6xl mx-auto px-4 py-8 sm:py-10">
 
-    {/* CENTERED REAL PROPERTY TAX CARD */}
-    <div className="flex justify-center">
+          <div className="flex justify-center">
 
-      <section className="w-full max-w-[650px] bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-7 text-center">
+            <section className="w-full max-w-[650px] bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-7 text-center">
 
-        <h2 className="text-blue-900 font-bold text-sm tracking-wider uppercase mb-2">
-          PROCEED AND PAY ONLINE
-        </h2>
+              <h2 className="text-blue-900 font-bold text-sm tracking-wider uppercase mb-2">
+                PROCEED AND PAY ONLINE
+              </h2>
 
-        <p className="max-w-xl mx-auto mt-3 text-xs sm:text-sm text-[#36527A] leading-relaxed">
-          Search your Tax Declaration Number, view your property
-          assessment and outstanding balance and pay your Real Property Tax Online.
-        </p>
+              <p className="max-w-xl mx-auto mt-3 text-xs sm:text-sm text-[#36527A] leading-relaxed">
+                Search your Tax Declaration Number, view your property
+                assessment and outstanding balance and pay your Real Property Tax Online.
+              </p>
 
-        <button
-  type="button"
-  onClick={() => navigate("/citizen-rpt")}
-  className="mt-5 w-full sm:w-auto px-6 py-2.5 bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold rounded-full shadow-md transition-all cursor-pointer"
->
-  PROCEED WITH REAL PROPERTY TAX
-</button>
+              <button
+                type="button"
+                onClick={() => navigate("/citizen-rpt")}
+                className="mt-5 w-full sm:w-auto px-6 py-2.5 bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold rounded-full shadow-md transition-all cursor-pointer"
+              >
+                PROCEED WITH REAL PROPERTY TAX
+              </button>
 
-      </section>
+            </section>
 
-    </div>
-  </div>
-</main>
+          </div>
+        </div>
+      </main>
 
       <UnifiedFooter />
 
@@ -213,15 +208,11 @@ export function RealPropertyTaxHub() {
 export default function RealPropertyApplication({ isCollapsed = false }: { isCollapsed?: boolean }) {
   const location = useLocation();
 
-  // --- Active Tab / Sub-View ---
-  // "search" (Step 1-4 QC Flow) | "application" (Form) | "status" (Tracker) | "summary" (Receipts & History)
   const [activePortalTab, setActivePortalTab] = useState<"search" | "application" | "status" | "summary">("search");
 
-  // --- Step Flow within "search" Tab ---
-  // 1: TDN Search | 2: Possible Properties (Group Bill Set) | 3: Selected TDN Config
+
   const [rptSearchStep, setRptSearchStep] = useState<1 | 2 | 3>(1);
 
-  // Search Step 1 State
   const [searchTdnInput, setSearchTdnInput] = useState<string>("F-021-01491");
   const [searchType, setSearchType] = useState<string>("Tax Declaration No. (TDN)");
   const [assessmentYear, setAssessmentYear] = useState<string>("All Years");
@@ -229,19 +220,15 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
   const [isSearchingTdn, setIsSearchingTdn] = useState<boolean>(false);
   const [searchError, setSearchError] = useState<string>("");
 
-  // Step 2 Modal: Owner Verification
   const [isOwnerModalOpen, setIsOwnerModalOpen] = useState<boolean>(false);
   const [verifiedOwnerName, setVerifiedOwnerName] = useState<string>("");
 
-  // Step 3 Data: Associated Properties
   const [associatedProperties, setAssociatedProperties] = useState<PropertyItem[]>([]);
   const [selectedTdnIds, setSelectedTdnIds] = useState<Set<string>>(new Set());
 
-  // Step 3 Warning Modal: Unselected TDNs
   const [isUnselectedWarningOpen, setIsUnselectedWarningOpen] = useState<boolean>(false);
   const [hasAcknowledgedUnselected, setHasAcknowledgedUnselected] = useState<boolean>(false);
 
-  // Step 4: Payment Option Configuration
   const [isOptionModalOpen, setIsOptionModalOpen] = useState<boolean>(false);
   const [activeConfiguringTdn, setActiveConfiguringTdn] = useState<PropertyItem | null>(null);
   const [tempOptionChoice, setTempOptionChoice] = useState<"Quarterly" | "Full">("Full");
@@ -252,19 +239,16 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
     q4: true,
   });
 
-  // Step 4 Confirmation Modals
   const [isGroupApplyConfirmOpen, setIsGroupApplyConfirmOpen] = useState<boolean>(false);
   const [isSuccessFeedbackOpen, setIsSuccessFeedbackOpen] = useState<boolean>(false);
   const [successFeedbackMessage, setSuccessFeedbackMessage] = useState<string>("");
 
-  // --- Cart & Checkout ---
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
   const [isCheckingOut, setIsCheckingOut] = useState<boolean>(false);
   const [issuedReceipt, setIssuedReceipt] = useState<ElectronicReceipt | null>(null);
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState<boolean>(false);
 
-  // --- Dynamic QR Ph checkout ---
   const [isQrPaymentOpen, setIsQrPaymentOpen] = useState<boolean>(false);
   const [isGeneratingQr, setIsGeneratingQr] = useState<boolean>(false);
   const [rptQrCodeUrl, setRptQrCodeUrl] = useState<string>("");
@@ -298,7 +282,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
     propertySketch: { name: "", url: "" },
     authorization: { name: "", url: "" },
   });
-  // Track raw File objects for multipart upload (separate from preview base64)
   const [appRawFiles, setAppRawFiles] = useState<{ [key: string]: File | null }>({
     ownershipProof: null,
     validId: null,
@@ -311,7 +294,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
   const [selectedAppDetail, setSelectedAppDetail] = useState<RPTApplicationRecord | null>(null);
   const [rptServicePaymentNotice, setRptServicePaymentNotice] = useState("");
 
-  // RPT Citizen's Charter QR Ph payment flow (same as Business Tax / Market Stall)
   const [isRPTServiceQrOpen, setIsRPTServiceQrOpen] = useState(false);
   const [isGeneratingRPTServiceQr, setIsGeneratingRPTServiceQr] = useState(false);
   const [rptServiceQrCodeUrl, setRptServiceQrCodeUrl] = useState("");
@@ -323,10 +305,8 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
   const [rptServicePaymentConfirmedAt, setRptServicePaymentConfirmedAt] = useState<Date | null>(null);
   const [rptServicePaymentApplication, setRptServicePaymentApplication] = useState<RPTApplicationRecord | null>(null);
 
-  // --- Step-by-Step Guide Lightbox Modal ---
   const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
 
-  // User & Toast
   const [currentUser, setCurrentUser] = useState<{ fullname: string; email: string } | null>(null);
   const [toastMessage, setToastMessage] = useState<{ text: string; type: "success" | "error" | "info" } | null>(null);
   const [rptPaymentHistory, setRptPaymentHistory] = useState<RPTPaymentHistoryItem[]>([]);
@@ -337,7 +317,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
     setTimeout(() => setToastMessage(null), 4000);
   };
 
-  // Hydrate User and URL params
   useEffect(() => {
     const session = getStoredCitizenSession();
     if (session) {
@@ -363,15 +342,10 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
         if (Array.isArray(parsedHistory)) setRptPaymentHistory(parsedHistory);
       }
     } catch {
-      // Ignore malformed local payment history.
     }
 
-    // Dynamic QR Ph payments are confirmed through the backend webhook/status endpoint.
-
-    // Dynamic QR Ph payments are confirmed in real time by /api/payments/qr-status.
   }, [location.search]);
 
-  // Load existing applications
   const loadApplications = async () => {
     try {
       const data = await getRPTApplications();
@@ -385,9 +359,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
     loadApplications();
   }, []);
 
-  // =========================================================================
-  // STEP 1: Search Tax Declaration Number
-  // =========================================================================
+
   const handleExecuteTdnSearch = async (e?: FormEvent) => {
     if (e) e.preventDefault();
     setSearchError("");
@@ -411,7 +383,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
         setDailySearchQuota((prev) => Math.max(0, prev - 1));
         setVerifiedOwnerName(result.ownerName || result.properties[0].ownerName || "Property Owner");
 
-        // Format properties list
         const mappedProps: PropertyItem[] = result.properties.map((p: any) => ({
           ...p,
           selectedPaymentOption: "Full",
@@ -420,10 +391,8 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
         }));
 
         setAssociatedProperties(mappedProps);
-        // Default select all TDNs
         setSelectedTdnIds(new Set(mappedProps.map((p) => p.taxDeclarationNumber)));
 
-        // Open Step 2 Owner Verification Modal
         setIsOwnerModalOpen(true);
       } else {
         setSearchError(result.message || `Tax Declaration Number "${searchTdnInput}" not found in city records.`);
@@ -435,11 +404,9 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
     }
   };
 
-  // Step 2 Modal: User confirms owner name
   const handleConfirmOwnerVerification = (isCorrect: boolean) => {
     setIsOwnerModalOpen(false);
     if (isCorrect) {
-      // Proceed to Step 3: Possible properties table
       setRptSearchStep(2);
       showToast(`Verified ownership for ${verifiedOwnerName}. Found associated properties.`, "success");
     } else {
@@ -447,9 +414,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
     }
   };
 
-  // =========================================================================
-  // STEP 3: Possible Properties You Might Own (Group Bill Set)
-  // =========================================================================
+
   const toggleSelectAllTdns = () => {
     if (selectedTdnIds.size === associatedProperties.length) {
       setSelectedTdnIds(new Set());
@@ -480,12 +445,10 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
       return;
     }
 
-    // Check if there are unselected TDNs
     if (unselectedTdns.length > 0) {
       setHasAcknowledgedUnselected(false);
       setIsUnselectedWarningOpen(true);
     } else {
-      // All selected, jump directly to Step 4
       setRptSearchStep(3);
     }
   };
@@ -499,9 +462,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
     setRptSearchStep(3);
   };
 
-  // =========================================================================
-  // STEP 4: Selected TDNs & Choose Payment Option Modal
-  // =========================================================================
+
   const selectedPropertiesList = useMemo(() => {
     return associatedProperties.filter((p) => selectedTdnIds.has(p.taxDeclarationNumber));
   }, [associatedProperties, selectedTdnIds]);
@@ -516,7 +477,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
   const handleConfirmPaymentOptionModal = () => {
     if (!activeConfiguringTdn) return;
     setIsOptionModalOpen(false);
-    // Open Confirmation Modal: Apply to all TDNs in group?
     setIsGroupApplyConfirmOpen(true);
   };
 
@@ -548,7 +508,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
       })
     );
 
-    // Trigger Success Modal
     setSuccessFeedbackMessage(
       applyToAll
         ? "Successfully applied to all TDN"
@@ -557,9 +516,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
     setIsSuccessFeedbackOpen(true);
   };
 
-  // =========================================================================
-  // STEP 5: Add to Cart & Group Checkout
-  // =========================================================================
+
   const handleAddToCart = () => {
     if (selectedPropertiesList.length === 0) {
       showToast("No Tax Declaration Numbers selected.", "error");
@@ -571,9 +528,9 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
       const totalPayable = prop.computedPayableAmount || prop.balance || 1020;
       const coverage = isQuarterly
         ? `2025 (${Object.entries(prop.selectedQuarters || {})
-            .filter(([, v]) => v)
-            .map(([k]) => k.toUpperCase())
-            .join(", ")})`
+          .filter(([, v]) => v)
+          .map(([k]) => k.toUpperCase())
+          .join(", ")})`
         : "2025 (Q1) - 2025 (Q4)";
 
       return {
@@ -749,7 +706,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
       try {
         localStorage.setItem("rptPaymentHistory", JSON.stringify(next));
       } catch {
-        // Local storage may be unavailable; keep the in-memory history.
       }
       return next;
     });
@@ -767,7 +723,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
         return;
       }
 
-      // Direct Settlement
       const groupPayload = {
         items: cart.map((item) => ({
           id: item.rawProperty.id,
@@ -806,7 +761,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
       setIsReceiptModalOpen(true);
       showToast("Group Real Property Tax payment completed successfully!", "success");
 
-      // Refresh list
       loadApplications();
     } catch (err: any) {
       console.error(err);
@@ -816,17 +770,13 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
     }
   };
 
-  // =========================================================================
-  // Application Submission & Document Upload Handler
-  // =========================================================================
+
   const handleAppFileChange = (e: ChangeEvent<HTMLInputElement>, field: string) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Store the raw File object for multipart upload
     setAppRawFiles((prev) => ({ ...prev, [field]: file }));
 
-    // Store only name + a local object URL for preview (not a huge base64 string)
     const previewUrl = URL.createObjectURL(file);
     setAppDocuments((prev) => ({
       ...prev,
@@ -839,18 +789,16 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
     setAppNotice("");
 
     if (!appDocuments.ownershipProof.name || !appDocuments.validId.name) {
-      setAppNotice("⚠️ Please attach Proof of Ownership and a Valid Government ID.");
+      setAppNotice("Please attach Proof of Ownership and a Valid Government ID.");
       return;
     }
 
     setIsSubmittingApp(true);
 
-    // Build metadata list with ONLY file names (no base64/blob URLs) to keep DB payload small
     const attachedList = Object.entries(appDocuments)
       .filter(([, d]) => d.name)
       .map(([, d]) => ({ name: d.name, url: "" }));
 
-    // Collect the actual raw File objects to send as multipart form fields
     const rawFiles: File[] = Object.values(appRawFiles).filter(Boolean) as File[];
 
     const payload: Partial<RPTApplicationRecord> = {
@@ -872,7 +820,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
     };
 
     try {
-      // Pass raw files separately so saveRPTApplication sends them as multipart/form-data
       await saveRPTApplication(payload, rawFiles);
       showToast("Application submitted successfully to the City Assessor's Office!", "success");
       setAppNotice(`Application created with Control No: ${payload.controlNumber}`);
@@ -1026,9 +973,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
       return;
     }
 
-    // Always verify the latest server-side payment status before creating
-    // another PayMongo QR. This prevents a stale browser row from showing
-    // a second PAY button after the payment was already confirmed.
+
     try {
       const latestApplications = await getRPTApplications();
       const latestApplication = latestApplications.find(
@@ -1047,7 +992,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
       }
     } catch (error) {
       console.error("Failed to refresh RPT service payment status:", error);
-      // Keep the existing local status check below as a fallback.
     }
 
     if (String(application.paymentStatus || "").toLowerCase() === "paid") {
@@ -1269,17 +1213,15 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
       `}</style>
       <div className="flex-1">
 
-        {/* Global Toast Alert */}
         {toastMessage && (
           <div className="fixed top-20 right-6 z-50 animate-bounce">
             <div
-              className={`px-5 py-3 rounded-2xl shadow-xl font-bold text-xs flex items-center gap-2 border ${
-                toastMessage.type === "success"
-                  ? "bg-emerald-50 text-emerald-800 border-emerald-300"
-                  : toastMessage.type === "error"
+              className={`px-5 py-3 rounded-2xl shadow-xl font-bold text-xs flex items-center gap-2 border ${toastMessage.type === "success"
+                ? "bg-emerald-50 text-emerald-800 border-emerald-300"
+                : toastMessage.type === "error"
                   ? "bg-rose-50 text-rose-800 border-rose-300"
                   : "bg-blue-50 text-blue-800 border-blue-300"
-              }`}
+                }`}
             >
               <span>{toastMessage.type === "success" ? "✓" : "ℹ"}</span>
               <span>{toastMessage.text}</span>
@@ -1287,15 +1229,11 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
           </div>
         )}
 
-        {/* Main Content Area */}
         <div className="w-full max-w-[1120px] mx-auto px-4 py-8 sm:py-10">
-          {/* VIEW: RPT SEARCH & PAYMENT */}
           {activePortalTab === "search" && (
             <div className="space-y-6">
-              {/* --- STEP 1: REAL PROPERTY TAX SEARCH --- */}
               {rptSearchStep === 1 && (
                 <>
-                  {/* SEARCH / RESULTS CARD */}
                   <div className="rpt-main-shell p-5 sm:p-6 mt-2">
                     <div className="mb-5">
                       <button
@@ -1327,7 +1265,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                       </div>
                     )}
 
-                    {/* SEARCH FILTERS - Business Tax style */}
                     <form onSubmit={handleExecuteTdnSearch} className="mt-5">
                       <div className="grid grid-cols-1 sm:grid-cols-[1fr_1.2fr_auto_1fr] gap-x-6 gap-y-4 items-end">
                         <div>
@@ -1385,7 +1322,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                         </div>
                       </div>
                     </form>
-                    {/* RESULTS TABLE */}
+
                     <div className="overflow-x-auto border border-white mt-6 rpt-table">
                       <table className="w-full min-w-[760px] text-left border-collapse rpt-table">
                         <thead className="text-white font-black uppercase">
@@ -1450,7 +1387,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                       </div>
                     </div>
 
-                    {/* How to search */}
                     <div className="hidden">
                       <p className="font-bold text-[#0B3B60] mb-2 flex items-center gap-2">
                         <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 text-blue-600">i</span>
@@ -1467,7 +1403,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                 </>
               )}
 
-              {/* --- STEP 2: POSSIBLE PROPERTIES YOU MIGHT OWN --- */}
               {rptSearchStep === 2 && (
                 <div className="rpt-main-shell p-6 sm:p-8 space-y-6">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
@@ -1492,7 +1427,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                     </div>
                   </div>
 
-                  {/* Properties Table */}
                   <div className="overflow-x-auto rounded-2xl border border-slate-200">
                     <table className="w-full text-left text-xs border-collapse">
                       <thead className="bg-[#F8FAFC] text-slate-700 font-bold border-b border-slate-200">
@@ -1565,7 +1499,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                 </div>
               )}
 
-              {/* --- STEP 3: SELECTED TDN LIST & CONFIGURE PAYMENT OPTION --- */}
               {rptSearchStep === 3 && (
                 <div className="rpt-main-shell p-6 sm:p-8 space-y-6">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
@@ -1597,7 +1530,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                     </div>
                   </div>
 
-                  {/* Selected TDN Table */}
                   <div className="overflow-x-auto rounded-2xl border border-slate-200">
                     <table className="w-full text-left text-xs border-collapse">
                       <thead className="bg-[#F8FAFC] text-slate-700 font-bold border-b border-slate-200">
@@ -1644,7 +1576,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                     </table>
                   </div>
 
-                  {/* Summary & Proceed Banner */}
                   <div className="flex flex-col sm:flex-row items-center justify-between bg-slate-50 border border-slate-200 p-5 rounded-2xl gap-4">
                     <div>
                       <p className="text-xs text-slate-500 font-semibold">Group Bill Set Total Assessment</p>
@@ -1668,10 +1599,8 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
             </div>
           )}
 
-          {/* VIEW: ASSESSOR APPLICATIONS FORM */}
           {activePortalTab === "application" && (
             <div className="rpt-main-shell p-6 sm:p-8 space-y-8">
-              {/* Back Home button row */}
               <div className="mb-1">
                 <button
                   type="button"
@@ -1697,7 +1626,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
               )}
 
               <form onSubmit={handleAppSubmit} className="space-y-8">
-                {/* Transaction details */}
                 <div>
                   <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-800 border-b border-slate-100 pb-2 mb-4">
                     1. Transaction Details
@@ -1730,7 +1658,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                   </div>
                 </div>
 
-                {/* Applicant Info */}
                 <div>
                   <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-800 border-b border-slate-100 pb-2 mb-4">
                     2. Applicant &amp; Owner Details
@@ -1806,7 +1733,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                   </div>
                 </div>
 
-                {/* Property Details */}
                 <div>
                   <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-800 border-b border-slate-100 pb-2 mb-4">
                     3. Real Property Location &amp; Classification
@@ -1861,7 +1787,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                   </div>
                 </div>
 
-                {/* Documentary Requirements Upload */}
                 <div>
                   <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-800 border-b border-slate-100 pb-2 mb-4">
                     4. Documentary Requirements (PDF / Images)
@@ -1926,10 +1851,10 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
             </div>
           )}
 
-          {/* VIEW: APPLICATION STATUS TRACKER */}
+
           {activePortalTab === "status" && (
             <div className="rpt-main-shell p-6 sm:p-8 space-y-6">
-              {/* Back to RPT Payment / Amilyar */}
+
               <div className="mb-1">
                 <button
                   type="button"
@@ -1992,15 +1917,14 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                           <td className="p-4 text-slate-600 truncate max-w-xs">{app.propertyLocation}</td>
                           <td className="p-4">
                             <span
-                              className={`px-3 py-1 rounded-full text-[10px] font-bold ${
-                                app.status === "Approved" || app.status === "Ready for Release" || app.status === "Payment Completed"
-                                  ? "bg-emerald-100 text-emerald-800"
-                                  : app.status === "Rejected"
+                              className={`px-3 py-1 rounded-full text-[10px] font-bold ${app.status === "Approved" || app.status === "Ready for Release" || app.status === "Payment Completed"
+                                ? "bg-emerald-100 text-emerald-800"
+                                : app.status === "Rejected"
                                   ? "bg-rose-100 text-rose-800"
                                   : app.status === "For Payment"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : "bg-amber-100 text-amber-800"
-                              }`}
+                                    ? "bg-blue-100 text-blue-800"
+                                    : "bg-amber-100 text-amber-800"
+                                }`}
                             >
                               {app.status}
                             </span>
@@ -2032,7 +1956,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
             </div>
           )}
 
-          {/* VIEW: OFFICIAL RECEIPTS & SUMMARY */}
           {activePortalTab === "summary" && (
             <div className="rpt-main-shell p-6 sm:p-8 space-y-6">
               <div className="border-b border-slate-200 pb-4">
@@ -2076,7 +1999,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
 
       <div className="hidden"><UnifiedFooter /></div>
 
-      {/* MODAL 1: OWNER VERIFICATION POP-UP */}
       {isOwnerModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4">
           <div className="bg-white rounded-3xl border border-slate-200 p-8 max-w-md w-full shadow-2xl text-center space-y-6">
@@ -2113,7 +2035,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
         </div>
       )}
 
-      {/* MODAL 2: UNSELECTED TDNs WARNING */}
       {isUnselectedWarningOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4">
           <div className="bg-white rounded-3xl border border-slate-200 p-8 max-w-md w-full shadow-2xl text-center space-y-5">
@@ -2164,7 +2085,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
         </div>
       )}
 
-      {/* MODAL 3: CHOOSE PAYMENT OPTION */}
       {isOptionModalOpen && activeConfiguringTdn && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4">
           <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 max-w-2xl w-full shadow-2xl space-y-6">
@@ -2185,16 +2105,14 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
               </button>
             </div>
 
-            {/* Selectable Option Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Option 1: Quarterly */}
+
               <div
                 onClick={() => setTempOptionChoice("Quarterly")}
-                className={`p-5 rounded-2xl border-2 transition cursor-pointer space-y-3 ${
-                  tempOptionChoice === "Quarterly"
-                    ? "border-[#0284C7] bg-sky-50/40 shadow-sm"
-                    : "border-slate-200 bg-white hover:border-slate-300"
-                }`}
+                className={`p-5 rounded-2xl border-2 transition cursor-pointer space-y-3 ${tempOptionChoice === "Quarterly"
+                  ? "border-[#0284C7] bg-sky-50/40 shadow-sm"
+                  : "border-slate-200 bg-white hover:border-slate-300"
+                  }`}
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-black uppercase text-[#0B3B60]">
@@ -2229,22 +2147,20 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                     <span className="font-mono text-[#0B3B60]">
                       {formatCurrency(
                         ((activeConfiguringTdn.totalAssessment || 1020) / 4) *
-                          (Object.values(tempQuarterSelection).filter(Boolean).length || 1)
+                        (Object.values(tempQuarterSelection).filter(Boolean).length || 1)
                       )}
                     </span>
                   </div>
                 </div>
 
-                {/* Quarters selector */}
                 <div className="pt-2">
                   <span className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Select Quarters:</span>
                   <div className="grid grid-cols-4 gap-1 text-center">
                     {(["q1", "q2", "q3", "q4"] as const).map((q) => (
                       <label
                         key={q}
-                        className={`p-1.5 rounded-lg border text-[11px] font-mono font-bold cursor-pointer transition ${
-                          tempQuarterSelection[q] ? "bg-[#0B3B60] text-white border-[#0B3B60]" : "bg-slate-50 text-slate-600 border-slate-200"
-                        }`}
+                        className={`p-1.5 rounded-lg border text-[11px] font-mono font-bold cursor-pointer transition ${tempQuarterSelection[q] ? "bg-[#0B3B60] text-white border-[#0B3B60]" : "bg-slate-50 text-slate-600 border-slate-200"
+                          }`}
                       >
                         <input
                           type="checkbox"
@@ -2261,14 +2177,12 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                 </div>
               </div>
 
-              {/* Option 2: Full Annual Payment */}
               <div
                 onClick={() => setTempOptionChoice("Full")}
-                className={`p-5 rounded-2xl border-2 transition cursor-pointer space-y-3 ${
-                  tempOptionChoice === "Full"
-                    ? "border-[#0284C7] bg-sky-50/40 shadow-sm"
-                    : "border-slate-200 bg-white hover:border-slate-300"
-                }`}
+                className={`p-5 rounded-2xl border-2 transition cursor-pointer space-y-3 ${tempOptionChoice === "Full"
+                  ? "border-[#0284C7] bg-sky-50/40 shadow-sm"
+                  : "border-slate-200 bg-white hover:border-slate-300"
+                  }`}
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-black uppercase text-[#0B3B60]">
@@ -2334,7 +2248,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
         </div>
       )}
 
-      {/* MODAL 4: GROUP APPLY CONFIRMATION */}
       {isGroupApplyConfirmOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4">
           <div className="bg-white rounded-3xl border border-slate-200 p-8 max-w-md w-full shadow-2xl text-center space-y-6">
@@ -2369,7 +2282,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
         </div>
       )}
 
-      {/* MODAL 5: SUCCESS FEEDBACK MODAL */}
       {isSuccessFeedbackOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4">
           <div className="bg-white rounded-3xl border border-slate-200 p-8 max-w-sm w-full shadow-2xl text-center space-y-5">
@@ -2394,7 +2306,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
         </div>
       )}
 
-      {/* CART DRAWER / MODAL */}
       {isCartOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4">
           <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 max-w-xl w-full shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
@@ -2458,7 +2369,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                     disabled={isCheckingOut}
                     className="w-full bg-[#0B3B60] hover:bg-[#082944] text-white font-extrabold py-3.5 px-4 rounded-2xl text-xs uppercase tracking-wider transition cursor-pointer flex items-center justify-center gap-2"
                   >
-                    <span>⚡ Instant Electronic LGU Settlement</span>
+                    <span>Instant Electronic LGU Settlement</span>
                   </button>
                 </div>
               </div>
@@ -2467,7 +2378,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
         </div>
       )}
 
-      {/* PAYMONGO DYNAMIC QR PH MODAL */}
       {isQrPaymentOpen && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 overflow-y-auto">
           <div className="bg-white rounded-2xl sm:rounded-3xl w-full max-w-5xl max-h-[96vh] shadow-2xl border border-slate-200 overflow-y-auto my-auto">
@@ -2549,7 +2459,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                     `}</style>
                     <div className="absolute inset-0 pointer-events-none overflow-hidden">
                       {Array.from({ length: 24 }).map((_, i) => (
-                        <span key={i} className="rpt-payment-confetti absolute top-[-20px] h-2.5 w-2.5 rounded-sm" style={{ left: `${(i * 41) % 100}%`, animationDelay: `${(i % 8) * 0.18}s`, background: ['#22c55e','#3b82f6','#f59e0b','#ec4899','#8b5cf6'][i % 5] }} />
+                        <span key={i} className="rpt-payment-confetti absolute top-[-20px] h-2.5 w-2.5 rounded-sm" style={{ left: `${(i * 41) % 100}%`, animationDelay: `${(i % 8) * 0.18}s`, background: ['#22c55e', '#3b82f6', '#f59e0b', '#ec4899', '#8b5cf6'][i % 5] }} />
                       ))}
                     </div>
                     <div className="rpt-success-card relative w-full max-w-md rounded-[2rem] bg-white shadow-2xl border border-emerald-100 overflow-hidden text-center">
@@ -2612,7 +2522,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
         </div>
       )}
 
-      {/* ELECTRONIC OFFICIAL RECEIPT (eOR) MODAL */}
       {isReceiptModalOpen && issuedReceipt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4">
           <div className="bg-white rounded-3xl border border-slate-200 p-8 max-w-lg w-full shadow-2xl space-y-6 text-slate-800 max-h-[90vh] overflow-y-auto">
@@ -2667,7 +2576,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                 onClick={() => window.print()}
                 className="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-3 rounded-xl text-xs transition cursor-pointer"
               >
-                🖨️ Print Receipt
+                Print Receipt
               </button>
               <button
                 onClick={() => setIsReceiptModalOpen(false)}
@@ -2680,7 +2589,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
         </div>
       )}
 
-      {/* APPLICATION DETAIL MODAL */}
       {selectedAppDetail && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4">
           <div className="bg-white rounded-3xl border border-slate-200 p-8 max-w-lg w-full shadow-2xl space-y-5">
@@ -2763,7 +2671,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
         </div>
       )}
 
-      {/* RPT CITIZEN'S CHARTER QR PH PAYMENT MODAL */}
       {isRPTServiceQrOpen && rptServicePaymentApplication && (
         <div className="fixed inset-0 z-[60] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto overscroll-contain">
           <div className="bg-white rounded-2xl sm:rounded-3xl w-full max-w-5xl max-h-[96vh] shadow-2xl border border-slate-200 overflow-y-auto my-auto">
@@ -2878,7 +2785,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
         </div>
       )}
 
-      {/* STEP-BY-STEP GUIDE MODAL */}
       {isGuideModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4">
           <div className="bg-white rounded-3xl border border-slate-200 p-8 max-w-xl w-full shadow-2xl space-y-6 max-h-[85vh] overflow-y-auto">
@@ -2916,53 +2822,53 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                 <p>Add to Cart and complete payment with GCash, Maya, Cards, or QR Ph. Receive instant downloadable eOR.</p>
               </div>
             </div>
-  <div className="rpt-history mt-6">
-                      <button
-                        type="button"
-                        onClick={() => setIsPaymentHistoryOpen((open) => !open)}
-                        className="w-full px-4 py-4 flex items-center justify-between cursor-pointer"
-                      >
-                        <span>[ MY RPT PAYMENT HISTORY ]</span>
-                        <span>{isPaymentHistoryOpen ? "[-]" : "[+]"}</span>
-                      </button>
+            <div className="rpt-history mt-6">
+              <button
+                type="button"
+                onClick={() => setIsPaymentHistoryOpen((open) => !open)}
+                className="w-full px-4 py-4 flex items-center justify-between cursor-pointer"
+              >
+                <span>[ MY RPT PAYMENT HISTORY ]</span>
+                <span>{isPaymentHistoryOpen ? "[-]" : "[+]"}</span>
+              </button>
 
-                      {isPaymentHistoryOpen && (
-                        <div className="border-t border-white overflow-x-auto">
-                          {rptPaymentHistory.length === 0 ? (
-                            <div className="rpt-empty px-4 py-6">
-                              No RPT payment history available.
-                            </div>
-                          ) : (
-                            <table className="rpt-table w-full min-w-[760px] text-left border-collapse">
-                              <thead>
-                                <tr>
-                                  <th>TDN</th>
-                                  <th>OWNER</th>
-                                  <th>LOCATION</th>
-                                  <th>YEAR</th>
-                                  <th>TAX DUE</th>
-                                  <th>OR NO.</th>
-                                  <th>DATE</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {rptPaymentHistory.map((payment) => (
-                                  <tr key={payment.id}>
-                                    <td className="font-bold">{payment.tdn}</td>
-                                    <td>{payment.ownerName}</td>
-                                    <td>{payment.location}</td>
-                                    <td>{payment.year}</td>
-                                    <td className="font-bold">{formatCurrency(payment.taxDue)}</td>
-                                    <td>{payment.officialReceiptNumber}</td>
-                                    <td>{new Date(payment.paymentDate).toLocaleDateString("en-PH")}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          )}
-                        </div>
-                      )}
+              {isPaymentHistoryOpen && (
+                <div className="border-t border-white overflow-x-auto">
+                  {rptPaymentHistory.length === 0 ? (
+                    <div className="rpt-empty px-4 py-6">
+                      No RPT payment history available.
                     </div>
+                  ) : (
+                    <table className="rpt-table w-full min-w-[760px] text-left border-collapse">
+                      <thead>
+                        <tr>
+                          <th>TDN</th>
+                          <th>OWNER</th>
+                          <th>LOCATION</th>
+                          <th>YEAR</th>
+                          <th>TAX DUE</th>
+                          <th>OR NO.</th>
+                          <th>DATE</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {rptPaymentHistory.map((payment) => (
+                          <tr key={payment.id}>
+                            <td className="font-bold">{payment.tdn}</td>
+                            <td>{payment.ownerName}</td>
+                            <td>{payment.location}</td>
+                            <td>{payment.year}</td>
+                            <td className="font-bold">{formatCurrency(payment.taxDue)}</td>
+                            <td>{payment.officialReceiptNumber}</td>
+                            <td>{new Date(payment.paymentDate).toLocaleDateString("en-PH")}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              )}
+            </div>
 
             <button
               onClick={() => setIsGuideModalOpen(false)}

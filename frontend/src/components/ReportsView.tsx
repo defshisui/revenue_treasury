@@ -1,15 +1,14 @@
-
 import { useState, useEffect } from "react";
 import type { RPTRecord } from "../types/treasury";
 import { getLeases } from "../services/marketService";
 import { getHawkerApplications } from "../services/hawkerservice";
 
-export default function ReportsView({ 
-  rptRecords = [], 
-  isCollapsed = false 
-}: { 
-  rptRecords?: RPTRecord[]; 
-  isCollapsed?: boolean 
+export default function ReportsView({
+  rptRecords = [],
+  isCollapsed = false
+}: {
+  rptRecords?: RPTRecord[];
+  isCollapsed?: boolean
 }) {
   const [reportPeriod, setReportPeriod] = useState("FY 2026");
   const [previewModalType, setPreviewModalType] = useState<"daily" | "delinquent" | "market" | "hawkers" | null>(null);
@@ -80,7 +79,7 @@ export default function ReportsView({
     return true;
   };
 
-  const filteredTransactions = transactions.filter((tx: any) => 
+  const filteredTransactions = transactions.filter((tx: any) =>
     matchesFiscalPeriod(tx.date || tx.createdAt || tx.timestamp || tx.transactionDate)
   );
 
@@ -129,7 +128,7 @@ export default function ReportsView({
     ]);
 
     const rows = [...rptRows, ...marketRows];
-    const csvContent = "data:text/csv;charset=utf-8," + 
+    const csvContent = "data:text/csv;charset=utf-8," +
       [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
 
     const encodedUri = encodeURI(csvContent);
@@ -173,7 +172,7 @@ Generated On: ${new Date().toLocaleDateString()}
   };
 
   return (
-    <div 
+    <div
       className={`
         min-h-screen
         bg-slate-50 dark:bg-slate-950
@@ -185,7 +184,7 @@ Generated On: ${new Date().toLocaleDateString()}
     >
       <div className="max-w-7xl mx-auto space-y-6">
 
-        {/* Header & Global Report Options */}
+
         <div className="flex flex-wrap justify-between items-center bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs gap-4">
           <div>
             <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white m-0 mb-1">
@@ -197,7 +196,7 @@ Generated On: ${new Date().toLocaleDateString()}
           </div>
 
           <div className="flex items-center gap-3 flex-wrap">
-            {/* Fiscal Period Selector */}
+
             <div className="flex items-center gap-2">
               <label htmlFor="reportPeriod" className="text-xs font-medium text-slate-700 dark:text-slate-300">
                 Period:
@@ -215,23 +214,23 @@ Generated On: ${new Date().toLocaleDateString()}
               </select>
             </div>
 
-            {/* Export & Utility Actions */}
+
             <div className="flex items-center gap-2">
-              <button 
+              <button
                 onClick={handleExportCSV}
                 className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 font-semibold px-3 py-2 rounded-xl text-xs text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
               >
                 Export CSV Audit
               </button>
-              <button 
+              <button
                 onClick={fetchDatabaseData}
                 disabled={loading}
                 className="bg-blue-50 hover:bg-blue-100 dark:bg-blue-950 dark:hover:bg-blue-900 text-blue-600 dark:text-blue-400 font-semibold px-3 py-2 rounded-xl text-xs border border-blue-200 dark:border-blue-800 transition-colors cursor-pointer disabled:opacity-50"
               >
                 {loading ? "Syncing DB..." : "Refresh DB"}
               </button>
-              <button 
-                onClick={handleExportSummary} 
+              <button
+                onClick={handleExportSummary}
                 className="bg-amber-500 hover:bg-amber-600 font-bold px-4 py-2 rounded-xl text-xs text-white shadow-xs transition-colors cursor-pointer"
               >
                 Export Summary
@@ -240,10 +239,10 @@ Generated On: ${new Date().toLocaleDateString()}
           </div>
         </div>
 
-        {/* Reports Grid */}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-          {/* Daily Collection Report Card */}
+
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
             <div>
               <div className="flex justify-between items-start mb-2">
@@ -277,7 +276,7 @@ Generated On: ${new Date().toLocaleDateString()}
             </div>
           </div>
 
-          {/* RPT Delinquency Statement Card */}
+
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
             <div>
               <div className="flex justify-between items-start mb-2">
@@ -315,10 +314,10 @@ Generated On: ${new Date().toLocaleDateString()}
 
         </div>
 
-        {/* Secondary Module Summaries */}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-          {/* Market Stalls Summary Card */}
+
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
             <div>
               <div className="flex justify-between items-start mb-2">
@@ -354,7 +353,7 @@ Generated On: ${new Date().toLocaleDateString()}
             </div>
           </div>
 
-          {/* Hawker Associations Summary Card */}
+
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
             <div>
               <div className="flex justify-between items-start mb-2">
@@ -393,7 +392,7 @@ Generated On: ${new Date().toLocaleDateString()}
         </div>
       </div>
 
-      {/* PREVIEW MODAL */}
+
       {previewModalType && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-3xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
@@ -413,7 +412,7 @@ Generated On: ${new Date().toLocaleDateString()}
                   {previewModalType === "hawkers" && `Total Registered Associations: ${filteredHawkerApps.length}`}
                 </p>
               </div>
-              <button 
+              <button
                 onClick={() => setPreviewModalType(null)}
                 className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white flex items-center justify-center font-bold border-none cursor-pointer"
               >
@@ -559,7 +558,7 @@ Generated On: ${new Date().toLocaleDateString()}
 
             <div className="flex justify-between items-center p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
               <span className="text-[11px] text-slate-400">Certified Municipal Record</span>
-              <button 
+              <button
                 onClick={() => setPreviewModalType(null)}
                 className="px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold text-xs cursor-pointer border-none hover:bg-slate-300 dark:hover:bg-slate-700 transition-colors"
               >

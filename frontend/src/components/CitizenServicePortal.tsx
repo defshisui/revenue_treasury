@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import './layouts/CitizenServicePortal.css';
 
@@ -183,9 +182,9 @@ export const CitizenServicePortal: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-white font-sans text-slate-800">
-      {/* Navbar Header */}
+
       <header className="border-b border-gray-100 px-6 py-3 flex items-center justify-between">
-        {/* Left Logo Section */}
+
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-slate-200 rounded flex items-center justify-center text-xs text-slate-500 font-bold border border-slate-300">
             <img src="src/assets/logo-system.png" alt="Hero Icon" className="w-10 h-10 object-contain" />
@@ -195,7 +194,7 @@ export const CitizenServicePortal: React.FC = () => {
           </span>
         </div>
 
-        {/* Navigation Links */}
+
         <nav className="flex items-center gap-8 text-sm font-semibold text-blue-950">
           <a href="#home" className="hover:text-sky-600 transition-colors">
             HOME
@@ -213,7 +212,7 @@ export const CitizenServicePortal: React.FC = () => {
             CONTACT US
           </a>
 
-          {/* User Profile Dropdown */}
+
           <div className="flex items-center gap-2 cursor-pointer hover:text-sky-600 border-l border-gray-200 pl-6">
             <svg className="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -224,7 +223,7 @@ export const CitizenServicePortal: React.FC = () => {
             </svg>
           </div>
 
-          {/* Search Button Icon */}
+
           <button className="border border-sky-400 text-sky-500 p-2 rounded-lg hover:bg-sky-50 transition-colors cursor-pointer">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -233,7 +232,6 @@ export const CitizenServicePortal: React.FC = () => {
         </nav>
       </header>
 
-      {/* Main Content Area */}
       <main className="max-w-7xl mx-auto px-8 py-6">
         <a
           href="#back"
@@ -246,7 +244,7 @@ export const CitizenServicePortal: React.FC = () => {
           List of Services
         </h1>
 
-        {/* Search Input Box */}
+
         <div className="relative mb-6">
           <input
             type="text"
@@ -262,7 +260,7 @@ export const CitizenServicePortal: React.FC = () => {
           </div>
         </div>
 
-        {/* Filter Section */}
+
         <div className="mb-6">
           <div className="flex items-center justify-between text-blue-950 font-medium text-sm mb-2">
             <span>Filter By</span>
@@ -289,7 +287,7 @@ export const CitizenServicePortal: React.FC = () => {
           </div>
         </div>
 
-        {/* Categories Accordions & Service Cards */}
+
         <div className="space-y-6">
           {Object.keys(groupedServices).length === 0 ? (
             <div className="py-12 text-center text-slate-400">
@@ -300,7 +298,7 @@ export const CitizenServicePortal: React.FC = () => {
               const isCollapsed = collapsedCategories[category];
               return (
                 <div key={category} className="space-y-4">
-                  {/* Category Header Bar */}
+
                   <div
                     onClick={() => toggleCategory(category)}
                     className="w-full bg-[#e8f3f8] hover:bg-[#deedf4] px-5 py-3.5 rounded-xl flex items-center justify-between cursor-pointer transition-colors"
@@ -309,9 +307,8 @@ export const CitizenServicePortal: React.FC = () => {
                       {category}
                     </h2>
                     <svg
-                      className={`w-5 h-5 text-[#0e4860] transition-transform duration-200 ${
-                        isCollapsed ? 'transform rotate-180' : ''
-                      }`}
+                      className={`w-5 h-5 text-[#0e4860] transition-transform duration-200 ${isCollapsed ? 'transform rotate-180' : ''
+                        }`}
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -320,7 +317,7 @@ export const CitizenServicePortal: React.FC = () => {
                     </svg>
                   </div>
 
-                  {/* Cards Grid */}
+
                   {!isCollapsed && (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 pt-1">
                       {items.map((service) => (
@@ -329,22 +326,22 @@ export const CitizenServicePortal: React.FC = () => {
                           onClick={() => handleGoToModule(service.id, service.title)}
                           className="bg-white border border-sky-100 rounded-2xl p-6 flex flex-col items-center text-center cursor-pointer shadow-sm relative group hover:shadow-md transition-shadow"
                         >
-                          {/* Icon Container */}
+
                           <div className="w-20 h-20 bg-[#dbeafe] text-sky-800 rounded-2xl flex items-center justify-center mb-5">
                             {renderIcon(service.iconType)}
                           </div>
 
-                          {/* Card Title */}
+
                           <h3 className="text-lg font-bold text-[#0e4860] mb-2 leading-snug">
                             {service.title}
                           </h3>
 
-                          {/* Card Description */}
+
                           <p className="text-slate-500 text-xs leading-relaxed mb-6 grow">
                             {service.description}
                           </p>
 
-                          {/* View Details Button */}
+
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -365,7 +362,7 @@ export const CitizenServicePortal: React.FC = () => {
         </div>
       </main>
 
-      {/* Details Modal */}
+
       {activeModalService && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="bg-white rounded-2xl max-w-xl w-full p-8 shadow-2xl relative animate-in fade-in zoom-in-95 duration-150">

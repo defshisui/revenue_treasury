@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect, type Dispatch, type SetStateAction } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -31,20 +30,20 @@ export default function TreasuryHeader({
   const [isViewAllModalOpen, setIsViewAllModalOpen] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
-  const LS_READ    = 'notif_read_ids';
+  const LS_READ = 'notif_read_ids';
   const LS_CLEARED = 'notif_cleared_ids';
-  const LS_ALL     = 'notif_cleared_all';
+  const LS_ALL = 'notif_cleared_all';
 
-  const getReadIds    = () => new Set<string>(JSON.parse(localStorage.getItem(LS_READ)    || '[]'));
+  const getReadIds = () => new Set<string>(JSON.parse(localStorage.getItem(LS_READ) || '[]'));
   const getClearedIds = () => new Set<string>(JSON.parse(localStorage.getItem(LS_CLEARED) || '[]'));
   const getIsClearedAll = () => localStorage.getItem(LS_ALL) === 'true';
 
-  const saveReadIds    = (s: Set<string>) => localStorage.setItem(LS_READ,    JSON.stringify([...s]));
+  const saveReadIds = (s: Set<string>) => localStorage.setItem(LS_READ, JSON.stringify([...s]));
   const saveClearedIds = (s: Set<string>) => localStorage.setItem(LS_CLEARED, JSON.stringify([...s]));
-  const saveIsClearedAll = (v: boolean)   => localStorage.setItem(LS_ALL,     String(v));
+  const saveIsClearedAll = (v: boolean) => localStorage.setItem(LS_ALL, String(v));
 
-  const readIdsRef      = useRef<Set<string>>(getReadIds());
-  const clearedIdsRef   = useRef<Set<string>>(getClearedIds());
+  const readIdsRef = useRef<Set<string>>(getReadIds());
+  const clearedIdsRef = useRef<Set<string>>(getClearedIds());
   const isClearedAllRef = useRef<boolean>(getIsClearedAll());
 
   const [adminUser, setAdminUser] = useState<{ fullname: string; firstName: string; initials: string; avatar: string | null; } | null>(null);
@@ -204,7 +203,7 @@ export default function TreasuryHeader({
   const handleViewAll = () => {
     markAllAsRead();
     setIsNotifMenuOpen(false);
-    setIsViewAllModalOpen(true); 
+    setIsViewAllModalOpen(true);
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;
@@ -216,16 +215,16 @@ export default function TreasuryHeader({
       }}
       className="fixed top-0 right-0 z-40 h-16 px-6 flex items-center justify-between bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 transition-all duration-300"
     >
-      {/* Left side spacer / branding placeholder */}
+
       <div className="flex items-center">
         <span className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
           Treasury Portal
         </span>
       </div>
 
-      {/* Actions */}
+
       <div className="flex items-center gap-2">
-        {/* Theme Toggle */}
+
         <button
           type="button"
           onClick={toggleTheme}
@@ -243,7 +242,7 @@ export default function TreasuryHeader({
           )}
         </button>
 
-        {/* Notification Dropdown Container */}
+
         <div className="relative" ref={notifRef}>
           <button
             type="button"
@@ -253,7 +252,7 @@ export default function TreasuryHeader({
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
             </svg>
-            {/* Unread Badge indicator */}
+
             {unreadCount > 0 && (
               <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-rose-500 border border-white dark:border-slate-900"></span>
             )}
@@ -309,7 +308,7 @@ export default function TreasuryHeader({
                 )}
               </div>
 
-              {/* View All Button */}
+
               {notifications.length > 0 && (
                 <div className="border-t border-slate-100 dark:border-slate-800 p-2 bg-white dark:bg-slate-900">
                   <button
@@ -324,14 +323,14 @@ export default function TreasuryHeader({
           )}
         </div>
 
-        {/* Profile Dropdown Container */}
+
         <div className="relative" ref={dropdownRef}>
           <button
             type="button"
             onClick={() => setIsProfileMenuOpen((v) => !v)}
             className="flex items-center gap-2.5 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 px-2 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all cursor-pointer shadow-xs"
           >
-            {/* Dynamic Avatar or Initials */}
+
             <div className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-blue-600 text-[11px] font-bold text-white shadow-inner shrink-0">
               {adminUser?.avatar ? (
                 <img src={adminUser.avatar} alt="Profile" className="h-full w-full object-cover" />
@@ -341,21 +340,21 @@ export default function TreasuryHeader({
             </div>
 
             <div className="hidden md:flex flex-col items-start leading-none pr-2">
-              {/* Dynamic Name based on Account Name */}
+
               <span className="text-[13px] font-bold text-slate-800 dark:text-white mb-0.5 truncate max-w-[120px]">
                 {adminUser ? adminUser.firstName : activeRole}
               </span>
-              {/* Uses the Active Role (e.g. Administrator) as the sub-title */}
+
               <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium capitalize">
                 {activeRole.replace('-', ' ')}
               </span>
             </div>
           </button>
 
-          {/* Inline Dropdown Menu (Drops downwards) */}
+
           {isProfileMenuOpen && (
             <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 py-1.5 z-50 overflow-hidden">
-              {/* Display full name in dropdown header */}
+
               {adminUser && (
                 <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-800 mb-1">
                   <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{adminUser.fullname}</p>

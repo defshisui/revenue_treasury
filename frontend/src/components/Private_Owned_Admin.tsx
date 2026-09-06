@@ -5,25 +5,25 @@ interface BusinessRegistration {
   businessPermitNo: string;
   marketName: string;
   marketType:
-    | 'Private Owned Market'
-    | 'Private Talipapa'
-    | 'Public Market';
+  | 'Private Owned Market'
+  | 'Private Talipapa'
+  | 'Public Market';
   firstName: string;
   lastName: string;
   entityType:
-    | 'Stallholder'
-    | 'ambulant_vendor'
-    | 'Wholesaler'
-    | 'Corporation';
+  | 'Stallholder'
+  | 'ambulant_vendor'
+  | 'Wholesaler'
+  | 'Corporation';
   stallNumber: string;
   section: string;
   status:
-    | 'Active'
-    | 'Pending'
-    | 'Suspended'
-    | 'Approved'
-    | 'Under Review'
-    | 'Rejected';
+  | 'Active'
+  | 'Pending'
+  | 'Suspended'
+  | 'Approved'
+  | 'Under Review'
+  | 'Rejected';
   dateRegistered: string;
 }
 
@@ -128,9 +128,9 @@ export default function LGUMarketSystem({ isCollapsed = false }: Props) {
         prev.map((item) =>
           item.id === editingId
             ? {
-                ...item,
-                ...formData,
-              }
+              ...item,
+              ...formData,
+            }
             : item
         )
       );
@@ -231,14 +231,13 @@ export default function LGUMarketSystem({ isCollapsed = false }: Props) {
       }}
       className="min-h-screen bg-slate-50/50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex transition-all duration-300 box-border"
     >
-      {/* =========================================================
-          SIDEBAR
-      ========================================================== */}
+
+
       <aside
         style={{ width: isCollapsed ? '80px' : '256px' }}
         className="hidden lg:flex fixed left-0 top-0 bottom-0 bg-white dark:bg-[#0a132b] border-r border-slate-200 dark:border-[#1c2a47] flex-col z-40 transition-all duration-300"
       >
-        {/* Logo */}
+
         <div className="h-[72px] px-5 border-b border-slate-200 dark:border-[#1c2a47] flex items-center">
           <div className="w-10 h-10 rounded-full bg-blue-600 dark:bg-white flex items-center justify-center mr-3 shrink-0">
             <div className="w-7 h-7 rounded-full border-4 border-white dark:border-blue-600" />
@@ -256,7 +255,7 @@ export default function LGUMarketSystem({ isCollapsed = false }: Props) {
           )}
         </div>
 
-        {/* Menu */}
+
         {!isCollapsed && (
           <div className="p-3">
             <div className="h-9 rounded-lg bg-slate-100 dark:bg-[#182441] border border-slate-200 dark:border-[#293858] flex items-center px-3 text-[11px] text-slate-500 dark:text-slate-400">
@@ -266,7 +265,7 @@ export default function LGUMarketSystem({ isCollapsed = false }: Props) {
           </div>
         )}
 
-        {/* Navigation */}
+
         <nav className="px-3 flex-1 overflow-y-auto">
           {!isCollapsed && (
             <div className="px-3 pt-3 pb-2 text-[10px] font-bold tracking-widest text-slate-400 dark:text-slate-500">
@@ -347,15 +346,13 @@ export default function LGUMarketSystem({ isCollapsed = false }: Props) {
         </nav>
       </aside>
 
-      {/* =========================================================
-          MAIN APPLICATION
-      ========================================================== */}
+
+
       <main className="w-full min-h-screen">
-        {/* =====================================================
-            CONTENT
-        ====================================================== */}
+
+
         <div className="w-full max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 py-7 pt-24">
-          {/* Page Header */}
+
           <section className="rounded-2xl border border-slate-200/80 dark:border-[#20304d] bg-white dark:bg-[#0c152c] p-5 lg:p-6 mb-6 shadow-xs">
             <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-5">
               <div>
@@ -386,9 +383,8 @@ export default function LGUMarketSystem({ isCollapsed = false }: Props) {
             </div>
           </section>
 
-          {/* ===================================================
-              STAT CARDS
-          ==================================================== */}
+
+
           <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
             <StatCard
               title="Total Registrations"
@@ -419,11 +415,10 @@ export default function LGUMarketSystem({ isCollapsed = false }: Props) {
             />
           </section>
 
-          {/* ===================================================
-              DIRECTORY
-          ==================================================== */}
+
+
           <section className="rounded-2xl border border-slate-200/80 dark:border-[#20304d] bg-white dark:bg-[#0c152c] overflow-hidden shadow-xs">
-            {/* Directory Header */}
+
             <div className="p-5 border-b border-slate-200 dark:border-[#1c2a47]">
               <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
                 <div>
@@ -498,7 +493,7 @@ export default function LGUMarketSystem({ isCollapsed = false }: Props) {
               </div>
             </div>
 
-            {/* Table */}
+
             <div className="p-5 pt-0">
               <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-[#20304d]">
                 <table className="w-full min-w-[1000px] text-left text-xs">
@@ -537,7 +532,7 @@ export default function LGUMarketSystem({ isCollapsed = false }: Props) {
                           key={item.id}
                           className="hover:bg-slate-50/80 dark:hover:bg-[#111c36] transition-colors"
                         >
-                          {/* Permit */}
+
                           <td className="px-4 py-5">
                             <div className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
                               {item.businessPermitNo}
@@ -548,7 +543,7 @@ export default function LGUMarketSystem({ isCollapsed = false }: Props) {
                             </div>
                           </td>
 
-                          {/* Vendor */}
+
                           <td className="px-4 py-5">
                             <div className="text-xs font-bold text-slate-900 dark:text-white">
                               {item.lastName},{' '}
@@ -557,13 +552,13 @@ export default function LGUMarketSystem({ isCollapsed = false }: Props) {
 
                             <div className="text-[10px] text-slate-500 mt-1">
                               {item.entityType ===
-                              'ambulant_vendor'
+                                'ambulant_vendor'
                                 ? 'Ambulant Vendor'
                                 : item.entityType}
                             </div>
                           </td>
 
-                          {/* Market */}
+
                           <td className="px-4 py-5">
                             <div className="text-xs font-bold text-slate-900 dark:text-white">
                               {item.marketName}
@@ -574,10 +569,10 @@ export default function LGUMarketSystem({ isCollapsed = false }: Props) {
                             </div>
                           </td>
 
-                          {/* Stall */}
+
                           <td className="px-4 py-5">
                             {item.entityType ===
-                            'Stallholder' ? (
+                              'Stallholder' ? (
                               <>
                                 <span className="inline-flex px-2 py-1 rounded bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/10 text-[10px] font-mono font-bold text-emerald-700 dark:text-emerald-400">
                                   {item.stallNumber ||
@@ -596,7 +591,7 @@ export default function LGUMarketSystem({ isCollapsed = false }: Props) {
                             )}
                           </td>
 
-                          {/* Status */}
+
                           <td className="px-4 py-5">
                             <span
                               className={`inline-flex items-center px-2.5 py-1 rounded-full border text-[10px] font-bold ${getStatusClass(
@@ -607,7 +602,7 @@ export default function LGUMarketSystem({ isCollapsed = false }: Props) {
                             </span>
                           </td>
 
-                          {/* Actions */}
+
                           <td className="px-4 py-5 text-right">
                             <button
                               onClick={() =>
@@ -649,13 +644,12 @@ export default function LGUMarketSystem({ isCollapsed = false }: Props) {
         </div>
       </main>
 
-      {/* =========================================================
-          MODAL
-      ========================================================== */}
+
+
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="w-full max-w-2xl max-h-[92vh] overflow-y-auto rounded-3xl border border-slate-200 dark:border-[#263654] bg-white dark:bg-[#0c152c] shadow-2xl">
-            {/* Modal Header */}
+
             <div className="sticky top-0 z-10 bg-white dark:bg-[#0c152c] border-b border-slate-200 dark:border-[#1c2a47] px-6 py-5 flex items-center justify-between">
               <div>
                 <div className="text-[10px] uppercase tracking-widest text-blue-600 dark:text-blue-400 font-bold mb-1">
@@ -677,7 +671,7 @@ export default function LGUMarketSystem({ isCollapsed = false }: Props) {
               </button>
             </div>
 
-            {/* Form */}
+
             <form
               onSubmit={handleSubmit}
               className="p-6 space-y-5 text-xs"
@@ -868,7 +862,7 @@ export default function LGUMarketSystem({ isCollapsed = false }: Props) {
                 </select>
               </FormField>
 
-              {/* Footer */}
+
               <div className="flex justify-end gap-3 pt-5 border-t border-slate-100 dark:border-[#1c2a47]">
                 <button
                   type="button"

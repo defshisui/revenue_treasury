@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import logoSystem from '../assets/logo-system.png';
 import { API_BASE_URL } from "../config/api";
@@ -11,7 +10,6 @@ import {
     attachQrPhPaymentMethod,
 } from "../services/paymongoService";
 
-// Interfaces for Market Data
 interface MarketInfo {
     address: string;
     name: string;
@@ -131,23 +129,18 @@ export default function MarketStallApplication() {
     const [isFloorPlanOpen, setIsFloorPlanOpen] = useState<boolean>(false);
     const [selectedFloor, setSelectedFloor] = useState<string>("1");
 
-    // Auth Session State matching MarketVendorsHub layout
     const [currentUser, setCurrentUser] = useState<{ fullname: string; email: string; initials: string; firstName: string } | null>(null);
     const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
-    // Leases synced from database layer to dynamically track occupancy status
     const [leases, setLeases] = useState<LeaseRecord[]>([]);
 
-    // Modal state for active stall details
     const [activeStall, setActiveStall] = useState<StallDetails | null>(null);
 
-    // Application Form States
     const [isApplicationFormOpen, setIsApplicationFormOpen] = useState<boolean>(false);
     const [firstName, setFirstName] = useState<string>("");
     const [lastName, setLastName] = useState<string>("");
 
-    // Digital Payment Integration States
     const [isPaymentStep, setIsPaymentStep] = useState<boolean>(false);
     const [isProcessingPayment, setIsProcessingPayment] = useState<boolean>(false);
     const [qrImageUrl, setQrImageUrl] = useState<string>("");
@@ -158,10 +151,8 @@ export default function MarketStallApplication() {
     const [qrGenerationError, setQrGenerationError] = useState<string>("");
     const [qrTimeLeft, setQrTimeLeft] = useState<number>(300);
 
-    // Payment success animation / confirmation modal
     const [isPaymentSuccess, setIsPaymentSuccess] = useState<boolean>(false);
 
-    // Close dropdown on outside click
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -172,7 +163,6 @@ export default function MarketStallApplication() {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    // Fetch leases and check active user session on initial mount
     useEffect(() => {
         const checkUserSession = () => {
             const rawData = localStorage.getItem('currentUser') ||
@@ -208,7 +198,6 @@ export default function MarketStallApplication() {
                 const data = await getLeases();
                 setLeases(data);
 
-                // Check for PayMongo return callback
                 const urlParams = new URLSearchParams(window.location.search);
                 const paymentSuccess = urlParams.get("payment") === "success";
                 const sessionId = urlParams.get("session_id");
@@ -234,10 +223,6 @@ export default function MarketStallApplication() {
         fetchInitialData();
     }, []);
 
-    /**
-     * Creates the Dynamic QR Ph payment and keeps the customer inside our
-     * own payment screen. No PayMongo hosted checkout redirect is used.
-     */
     const handlePayMongoQrPayment = async (refreshExistingQr = false) => {
         if (!activeStall || !selectedMarket) return;
 
@@ -273,16 +258,12 @@ export default function MarketStallApplication() {
         };
 
         try {
-            // Save the application only on the first QR generation.
-            // When the 5-minute QR expires, refresh the QR for the same lease
-            // instead of creating duplicate lease records.
             if (!refreshExistingQr) {
                 await saveLease(pendingLease);
                 setLeases((prev) => [...prev, pendingLease]);
                 setPaymentLeaseId(generatedLeaseId);
             }
 
-            // 1. Create a PayMongo Payment Intent for QR Ph.
             const intent = await createPayMongoQrPaymentIntent({
                 amount: feeAmount,
                 leaseId: generatedLeaseId,
@@ -295,12 +276,10 @@ export default function MarketStallApplication() {
             setPaymentIntentId(intent.paymentIntentId);
             setQrReferenceNumber(intent.referenceNumber || generatedLeaseId);
 
-            // 2. Create the QR Ph Payment Method using the PayMongo public key.
             const paymentMethodId = await createQrPhPaymentMethod(
                 intent.publicKey
             );
 
-            // 3. Attach the QR Ph Payment Method to the Payment Intent.
             const attachedIntent = await attachQrPhPaymentMethod(
                 intent.paymentIntentId,
                 paymentMethodId,
@@ -308,7 +287,6 @@ export default function MarketStallApplication() {
                 intent.publicKey
             );
 
-            // 4. PayMongo returns the actual Dynamic QR image here.
             const imageUrl =
                 attachedIntent?.attributes?.next_action?.code?.image_url;
 
@@ -330,9 +308,6 @@ export default function MarketStallApplication() {
         }
     };
 
-    // QR Ph countdown: 5 minutes per generated QR code.
-    // When the timer reaches zero, a fresh QR is generated automatically
-    // for the same lease/payment record.
     useEffect(() => {
         if (!isPaymentStep || !qrImageUrl || isGeneratingQr) return;
 
@@ -350,10 +325,7 @@ export default function MarketStallApplication() {
         return () => window.clearInterval(timer);
     }, [isPaymentStep, qrImageUrl, isGeneratingQr]);
 
-    // Poll PayMongo while the Dynamic QR Ph code is displayed.
-    // PayMongo marks the Payment Intent as "succeeded" after the citizen pays.
-    // The webhook remains the primary server-side confirmation; this polling
-    // simply makes the citizen portal update immediately without requiring a refresh.
+
     useEffect(() => {
         if (!isPaymentStep || !paymentIntentId || isGeneratingQr) return;
 
@@ -379,7 +351,6 @@ export default function MarketStallApplication() {
                     setPaymentIntentId("");
                     setQrGenerationError("");
 
-                    // Show the animated payment-success screen instead of a plain alert.
                     setIsPaymentSuccess(true);
                 }
             } catch (error) {
@@ -407,7 +378,7 @@ export default function MarketStallApplication() {
 
     const marketData = marketDatabase[selectedMarket];
 
-    // Helper to dynamically evaluate if a specific stall is paid/occupied based on backend lease records
+
     const getStallRealtimeStatus = (stallNum: number, section: string) => {
         const matchedLease = leases.find((l) =>
             l.marketName.includes(selectedMarket) &&
@@ -440,7 +411,6 @@ export default function MarketStallApplication() {
         });
     };
 
-    // Trigger opening the application form and autofilling the detected session user's name
     const handleOpenApplicationForm = () => {
         if (!currentUser) {
             alert("Please log in to your citizen portal account first to submit a market stall application.");
@@ -465,9 +435,6 @@ export default function MarketStallApplication() {
         e.preventDefault();
         if (!activeStall || !selectedMarket) return;
 
-        // Close the application form and immediately open the custom
-        // payment screen. The QR code is generated automatically, so the
-        // customer does not need to click another payment button.
         setIsApplicationFormOpen(false);
         setIsPaymentStep(true);
 
@@ -487,11 +454,9 @@ export default function MarketStallApplication() {
 
     return (
         <div className="bg-slate-100 font-sans text-slate-800 min-h-screen flex flex-col antialiased">
-            {/* Main Navigation Header */}
             <header className="w-full bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-xs sticky top-0 z-40">
                 <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
 
-                    {/* Logo & Branding */}
                     <div className="flex items-center gap-3">
                         <div className="flex items-center gap-3 cursor-pointer" onClick={() => { window.location.href = '/citizen-portal'; }}>
                             <div className="p-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xs flex items-center justify-center">
@@ -512,11 +477,9 @@ export default function MarketStallApplication() {
                         </div>
                     </div>
 
-                    {/* Desktop Navigation */}
                     <div className="hidden md:flex items-center space-x-6 text-xs font-semibold text-slate-600 dark:text-slate-300">
                         <span className="hover:text-blue-700 cursor-pointer" onClick={() => window.location.href = '/citizen-portal'}>HOME</span>
 
-                        {/* Services Dropdown */}
                         <div className="relative group py-2">
                             <span className="hover:text-blue-700 cursor-pointer flex items-center gap-1 select-none">
                                 SERVICES ▾
@@ -555,7 +518,6 @@ export default function MarketStallApplication() {
                         <span className="hover:text-blue-700 cursor-pointer">CONTACT US</span>
                     </div>
 
-                    {/* Authentication & User Dropdown */}
                     <div className="flex items-center space-x-3">
                         {currentUser ? (
                             <div className="relative" ref={dropdownRef}>
@@ -609,7 +571,6 @@ export default function MarketStallApplication() {
                 </div>
             </header>
 
-            {/* Main Content Container */}
             <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
                 <div className="bg-white rounded-3xl p-6 sm:p-10 border border-slate-200 shadow-sm space-y-8">
                     <div className="border-b border-slate-200 pb-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -622,7 +583,6 @@ export default function MarketStallApplication() {
                         </button>
                     </div>
 
-                    {/* Palengke Selection Dropdown Row */}
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-slate-50 p-5 rounded-2xl border border-slate-200">
                         <label htmlFor="palengke-select" className="font-bold text-sm text-slate-700 w-44">Pamilihang Lungsod :</label>
                         <div className="flex-1 w-full max-w-md">
@@ -645,10 +605,9 @@ export default function MarketStallApplication() {
                         </div>
                     </div>
 
-                    {/* Details & Map Grid (Shown after selection) */}
                     {marketData && (
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 pt-2">
-                            {/* Left Column: Contact & Info */}
+
                             <div className="lg:col-span-5 space-y-6">
                                 <div className="space-y-1.5 bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
                                     <h4 className="text-xs font-black uppercase text-slate-400 tracking-wider">Address:</h4>
@@ -684,7 +643,6 @@ export default function MarketStallApplication() {
                                 </div>
                             </div>
 
-                            {/* Right Column: Floor Plan Thumbnail Placeholder */}
                             <div className="lg:col-span-7 bg-slate-50 border-2 border-dashed border-slate-300 rounded-2xl p-6 flex flex-col items-center justify-center min-h-[380px] text-center space-y-3 cursor-pointer hover:border-blue-500 transition-all" onClick={() => setIsFloorPlanOpen(true)}>
                                 <div className="w-16 h-16 rounded-full bg-blue-50 text-blue-900 flex items-center justify-center text-2xl font-bold shadow-inner">
                                     🗺️
@@ -700,11 +658,10 @@ export default function MarketStallApplication() {
                 </div>
             </main>
 
-            {/* Modal: Floor Selection & Floor Plan Interactive Popup */}
             {isFloorPlanOpen && (
                 <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-40 flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
                     <div className="bg-white rounded-2xl sm:rounded-3xl max-w-6xl w-full max-h-[94vh] flex flex-col shadow-2xl relative overflow-hidden">
-                        {/* Modal Header */}
+
                         <div className="px-4 sm:px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
                             <div>
                                 <span className="text-[10px] font-bold uppercase tracking-wider text-blue-900">Interactive Layout</span>
@@ -713,7 +670,6 @@ export default function MarketStallApplication() {
                             <button onClick={() => setIsFloorPlanOpen(false)} className="w-8 h-8 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold flex items-center justify-center transition-colors">✕</button>
                         </div>
 
-                        {/* Floor Selector Bar */}
                         <div className="p-4 bg-white border-b border-slate-200 flex flex-wrap items-center justify-between gap-4">
                             <div className="flex items-center space-x-3">
                                 <label htmlFor="floor-select" className="text-xs font-bold text-slate-700 uppercase">Pumili ng Palapag:</label>
@@ -732,7 +688,6 @@ export default function MarketStallApplication() {
                             </div>
                         </div>
 
-                        {/* Modal Body */}
                         <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-100">
                             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-x-auto flex flex-col items-center">
                                 <div className="relative w-full max-w-4xl bg-white border-4 border-slate-800 rounded-xl p-4 shadow-inner min-h-[500px]">
@@ -850,7 +805,6 @@ export default function MarketStallApplication() {
                             </div>
                         </div>
 
-                        {/* Modal Footer */}
                         <div className="px-6 py-3 border-t border-slate-200 bg-slate-50 flex justify-end">
                             <button onClick={() => setIsFloorPlanOpen(false)} className="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-5 py-2 rounded-xl text-xs transition-colors cursor-pointer">
                                 Close Floor Plan
@@ -860,7 +814,6 @@ export default function MarketStallApplication() {
                 </div>
             )}
 
-            {/* Modal: Individual Stall Details Popup */}
             {activeStall && (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[60] flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
                     <div className="bg-white rounded-lg p-4 sm:p-6 max-w-sm w-full max-h-[94vh] overflow-y-auto space-y-4 shadow-2xl relative border border-slate-300">
@@ -916,7 +869,6 @@ export default function MarketStallApplication() {
                 </div>
             )}
 
-            {/* Modal: Application Form Popup */}
             {isApplicationFormOpen && activeStall && (
                 <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[70] flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
                     <div className="bg-white rounded-2xl max-w-md w-full max-h-[94vh] overflow-y-auto p-4 sm:p-6 shadow-2xl relative border border-slate-300 space-y-4">
@@ -985,7 +937,6 @@ export default function MarketStallApplication() {
                 </div>
             )}
 
-            {/* Payment Success Screen - same clean style as RPT */}
             {isPaymentSuccess && activeStall && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-slate-950/75 backdrop-blur-md overflow-y-auto overscroll-contain">
                     <div className="relative w-full max-w-lg max-h-[94vh] overflow-y-auto rounded-2xl sm:rounded-[28px] bg-white p-5 sm:p-8 shadow-2xl text-center">
@@ -1006,13 +957,12 @@ export default function MarketStallApplication() {
                 </div>
             )}
 
-            {/* Modal: Custom Digital Payment Screen with Dynamic QR Ph */}
             {isPaymentStep && activeStall && (
                 <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[80] flex items-center justify-center p-2 sm:p-4 overflow-y-auto overscroll-contain">
                     <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[96vh] shadow-2xl relative border border-slate-200 overflow-y-auto my-2 sm:my-4">
                         <div className="p-4 sm:p-6 lg:p-8">
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
-                                {/* Invoice / Payment Details */}
+
                                 <div className="space-y-5">
                                     <div>
                                         <h2 className="text-xl sm:text-2xl font-bold text-slate-900">
@@ -1047,7 +997,6 @@ export default function MarketStallApplication() {
                                     </div>
                                 </div>
 
-                                {/* QR Ph */}
                                 <div className="p-4 sm:p-6 lg:p-8 bg-slate-50/60 flex flex-col items-center justify-center min-h-0 lg:min-h-[360px] lg:border-l lg:border-slate-200 min-w-0">
                                     <div className="w-full text-center">
                                         <p className="text-base sm:text-lg font-black text-slate-900">Scan QR Ph code to pay</p>
@@ -1087,7 +1036,6 @@ export default function MarketStallApplication() {
                                     )}
                                 </div>                            </div>
 
-                            {/* Footer Actions */}
                             <div className="mt-8 pt-5 border-t border-slate-200 flex flex-col sm:flex-row gap-3 justify-end">
                                 <button
                                     type="button"
@@ -1108,7 +1056,6 @@ export default function MarketStallApplication() {
                 </div>
             )}
 
-            {/* Official Government Footer */}
             <footer className="bg-slate-900 text-slate-400 text-xs mt-16 py-10 border-t border-slate-800">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6">
                     <div>

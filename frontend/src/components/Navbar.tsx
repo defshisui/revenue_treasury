@@ -16,7 +16,7 @@ export default function Navbar() {
 
         <li>
 
-          <Link to="/legacy-treasury" className="lgu-nav-link"> {/* directs to homepage */}
+          <Link to="/legacy-treasury" className="lgu-nav-link">
 
             Back to Dashboard
 

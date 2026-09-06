@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from "react";
 import type { StallRecord, StallStatus } from "../types/treasury";
 import { getLeases, updateLease, deleteLease } from "../services/marketService";
@@ -553,13 +552,13 @@ export default function MarketStallsView({
         </div>
       </div>
 
-      {/* Tabs Navigation */}
+
       <div className="flex space-x-1 bg-slate-200/50 dark:bg-slate-800/50 p-1.5 rounded-xl w-fit mb-6">
         <button
           onClick={() => setActiveTab("Active")}
           className={`px-5 py-2.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${activeTab === "Active"
-              ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
-              : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+            ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
+            : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
             }`}
         >
           <i className="fa-solid fa-list-check mr-1.5"></i> Active Stalls
@@ -567,8 +566,8 @@ export default function MarketStallsView({
         <button
           onClick={() => setActiveTab("Archived")}
           className={`px-5 py-2.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${activeTab === "Archived"
-              ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
-              : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+            ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
+            : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
             }`}
         >
           <i className="fa-solid fa-box-archive mr-1.5"></i> Archiver
@@ -701,19 +700,19 @@ export default function MarketStallsView({
                     <td className="p-4 text-center">
                       <span
                         className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold border ${activeTab === "Archived"
-                            ? "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-700"
-                            : (stall.overdueStatus || stall.status === "Delinquent") && stall.currentBalance > 0 && stall.status !== "Paid"
-                              ? "bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-900"
-                              : stall.status === "Occupied"
-                                ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900"
-                                : stall.status === "Paid"
-                                  ? "bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-900"
-                                  : "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-900"
+                          ? "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-700"
+                          : (stall.overdueStatus || stall.status === "Delinquent") && stall.currentBalance > 0 && stall.status !== "Paid"
+                            ? "bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-900"
+                            : stall.status === "Occupied"
+                              ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900"
+                              : stall.status === "Paid"
+                                ? "bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-900"
+                                : "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-900"
                           }`}
                       >
                         <span className={`h-1.5 w-1.5 rounded-full ${activeTab === "Archived" ? "bg-slate-500" :
-                            (stall.overdueStatus || stall.status === "Delinquent") && stall.currentBalance > 0 && stall.status !== "Paid" ? "bg-rose-500" :
-                              stall.status === "Occupied" ? "bg-emerald-500" : stall.status === "Paid" ? "bg-indigo-500" : "bg-amber-500"
+                          (stall.overdueStatus || stall.status === "Delinquent") && stall.currentBalance > 0 && stall.status !== "Paid" ? "bg-rose-500" :
+                            stall.status === "Occupied" ? "bg-emerald-500" : stall.status === "Paid" ? "bg-indigo-500" : "bg-amber-500"
                           }`}></span>
                         {activeTab === "Archived" ? "Archived" : (stall.overdueStatus || stall.status === "Delinquent") && stall.currentBalance > 0 && stall.status !== "Paid" ? "Delinquent" : stall.status}
                       </span>
@@ -787,7 +786,7 @@ export default function MarketStallsView({
         </div>
       </section>
 
-      {/* Batch Monthly Billing Modal */}
+
       {isBillingModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-2xl w-full p-8 shadow-2xl border border-slate-200 dark:border-slate-800 my-8">
@@ -870,7 +869,7 @@ export default function MarketStallsView({
         </div>
       )}
 
-      {/* Apply Surcharges Modal */}
+
       {isSurchargeModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-2xl w-full p-8 shadow-2xl border border-slate-200 dark:border-slate-800 my-8">

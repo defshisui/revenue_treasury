@@ -28,7 +28,7 @@ interface NavItem {
 const navigationItems: NavItem[] = [
   { id: "dashboard", label: "Treasury Dashboard", icon: "▦" },
   { id: "rpt", label: "Real Property Tax Management", icon: "▥" },
-  { id: "business", label: "Business Tax & Permit Management", icon: "▣" },
+  { id: "business", label: "Business Tax & Regulatory Fee Payment", icon: "▣" },
   { id: "market", label: "Market Stall Management", icon: "▤", hasDropdown: true },
   { id: "users", label: "User & Access Control", icon: "♙", isGovernance: true },
   { id: "audit", label: "Audit Trail Management", icon: "▤", isGovernance: true },
@@ -51,7 +51,7 @@ export default function TreasurySidebar({
   const visibleItems = navigationItems.filter(item => {
     if (item.id === "users") return canManageUsers();
     if (item.id === "audit") return canViewAudit();
-    return true; 
+    return true;
   });
 
   const handleTabClick = (item: NavItem) => {
@@ -68,10 +68,10 @@ export default function TreasurySidebar({
         }`}
       style={{ backgroundColor: "#0b132b" }}
     >
-      {/* Header Logo */}
+
       <div className="flex items-center gap-3 px-1 py-1">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white shadow-sm">
-          {/* Use the imported logo variable here */}
+
           <img src={logo} alt="System Logo" className="w-10 h-10 object-contain" />
         </div>
         {!isCollapsed && (
@@ -84,7 +84,7 @@ export default function TreasurySidebar({
         )}
       </div>
 
-      {/* Collapse Menu Toggle Button */}
+
       <div className="mt-6">
         <button
           onClick={() => setIsCollapsed((current) => !current)}
@@ -105,7 +105,7 @@ export default function TreasurySidebar({
         </button>
       </div>
 
-      {/* Navigation List */}
+
       <nav className="flex-1 min-h-0 space-y-1 mt-6 overflow-y-auto [scrollbar-thin] [scrollbar-color:--theme(--colors-gray-700/40%)_transparent] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-700/40 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-gray-700/70 transition-colors">
         {!isCollapsed && (
           <p className="text-xs font-semibold uppercase text-slate-400 tracking-wider px-3 mb-2">MODULES</p>
@@ -124,7 +124,7 @@ export default function TreasurySidebar({
                 </p>
               )}
 
-              {/* Main Nav Button */}
+
               <button
                 onClick={() => handleTabClick(item)}
                 title={item.label}
@@ -161,7 +161,7 @@ export default function TreasurySidebar({
                 )}
               </button>
 
-              {/* Dropdown Options for Market Stall Management */}
+
               {isMarketGroup && isMarketOpen && !isCollapsed && (
                 <div className="mt-1 ml-4 pl-3 border-l-2 border-[#1c2541] space-y-1">
                   <button

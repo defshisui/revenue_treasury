@@ -180,9 +180,7 @@ export default function UsersView({
     }
   };
 
-  /* =========================
-     DELETE USER
-  ========================= */
+
 
   const handleDeleteUser = async (
     id: string,
@@ -267,9 +265,7 @@ export default function UsersView({
     >
       <div className="max-w-7xl mx-auto space-y-6">
 
-        {/* =========================
-            HEADER
-        ========================= */}
+
 
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm gap-4">
 
@@ -301,9 +297,7 @@ export default function UsersView({
         </div>
 
 
-        {/* =========================
-            FILTERS AND TABS
-        ========================= */}
+
 
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-sm">
 
@@ -311,22 +305,20 @@ export default function UsersView({
 
             <button
               onClick={() => setMainTab("Active")}
-              className={`px-5 py-2 text-xs font-semibold rounded-lg border transition-colors cursor-pointer ${
-                mainTab === "Active"
+              className={`px-5 py-2 text-xs font-semibold rounded-lg border transition-colors cursor-pointer ${mainTab === "Active"
                   ? "bg-slate-100 dark:bg-slate-800/80 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-600 shadow-sm"
                   : "bg-transparent text-slate-500 border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/50"
-              }`}
+                }`}
             >
               Active Personnel
             </button>
 
             <button
               onClick={() => setMainTab("Archived")}
-              className={`px-5 py-2 text-xs font-semibold rounded-lg border transition-colors cursor-pointer ${
-                mainTab === "Archived"
+              className={`px-5 py-2 text-xs font-semibold rounded-lg border transition-colors cursor-pointer ${mainTab === "Archived"
                   ? "bg-slate-100 dark:bg-slate-800/80 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-600 shadow-sm"
                   : "bg-transparent text-slate-500 border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/50"
-              }`}
+                }`}
             >
               Archived Accounts
             </button>
@@ -334,7 +326,6 @@ export default function UsersView({
           </div>
 
 
-          {/* SEARCH */}
 
           <div className="sm:col-span-2 lg:col-span-3">
 
@@ -351,7 +342,6 @@ export default function UsersView({
           </div>
 
 
-          {/* ROLE FILTER */}
 
           <div className="sm:col-span-2 lg:col-span-1">
 
@@ -378,9 +368,7 @@ export default function UsersView({
         </div>
 
 
-        {/* =========================
-            CONTENT SECTION
-        ========================= */}
+
 
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-4">
 
@@ -400,7 +388,6 @@ export default function UsersView({
           </div>
 
 
-          {/* LOADING */}
 
           {isLoading ? (
 
@@ -462,21 +449,18 @@ export default function UsersView({
                       className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
                     >
 
-                      {/* FULL NAME */}
 
                       <td className="p-4 font-bold text-slate-900 dark:text-white">
                         {record.fullname}
                       </td>
 
 
-                      {/* USERNAME */}
 
                       <td className="p-4 font-mono text-xs text-blue-600 dark:text-blue-400 font-semibold">
                         {record.username}
                       </td>
 
 
-                      {/* ROLE */}
 
                       <td className="p-4">
 
@@ -491,16 +475,15 @@ export default function UsersView({
                       </td>
 
 
-                      {/* FRAUD RISK */}
 
                       <td className="p-4">
 
                         {record.username
                           .toLowerCase()
                           .includes("fraud") ||
-                        record.username
-                          .toLowerCase()
-                          .includes("risk") ? (
+                          record.username
+                            .toLowerCase()
+                            .includes("risk") ? (
 
                           <span className="bg-rose-100 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 px-2 py-1 rounded text-xs font-bold border border-rose-200 dark:border-rose-500/20">
                             High Risk (85)
@@ -517,7 +500,6 @@ export default function UsersView({
                       </td>
 
 
-                      {/* STATUS */}
 
                       <td className="p-4">
 
@@ -539,7 +521,6 @@ export default function UsersView({
                       </td>
 
 
-                      {/* ACTIONS */}
 
                       <td className="p-4 text-right">
 
@@ -547,7 +528,6 @@ export default function UsersView({
 
                           {mainTab === "Active" ? (
 
-                            /* ACTIVE ACCOUNT */
                             <button
                               onClick={() =>
                                 handleArchiveUser(
@@ -562,10 +542,8 @@ export default function UsersView({
 
                           ) : (
 
-                            /* ARCHIVED ACCOUNT */
                             <div className="flex justify-end gap-2">
 
-                              {/* RESTORE */}
 
                               <button
                                 onClick={() =>
@@ -580,7 +558,6 @@ export default function UsersView({
                               </button>
 
 
-                              {/* DELETE */}
 
                               <button
                                 onClick={() =>
@@ -619,9 +596,7 @@ export default function UsersView({
       </div>
 
 
-      {/* =========================
-          ADD USER MODAL
-      ========================= */}
+
 
       {isAddModalOpen && (
 
@@ -652,7 +627,6 @@ export default function UsersView({
               className="space-y-4"
             >
 
-              {/* FULL NAME */}
 
               <div className="space-y-1">
 
@@ -674,7 +648,6 @@ export default function UsersView({
               </div>
 
 
-              {/* EMAIL / USERNAME */}
 
               <div className="space-y-1">
 
@@ -696,7 +669,6 @@ export default function UsersView({
               </div>
 
 
-              {/* PASSWORD */}
 
               <div className="space-y-1">
 
@@ -718,7 +690,6 @@ export default function UsersView({
               </div>
 
 
-              {/* ROLE */}
 
               <div className="space-y-1">
 
@@ -751,7 +722,6 @@ export default function UsersView({
               </div>
 
 
-              {/* BUTTONS */}
 
               <div className="flex items-center justify-end gap-3 pt-2">
 

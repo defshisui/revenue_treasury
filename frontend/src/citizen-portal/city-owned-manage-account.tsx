@@ -27,7 +27,6 @@ export default function MarketLeaseSearch() {
     const [filteredLeases, setFilteredLeases] = useState<CitizenLeaseRecord[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
-    // View Details / payment state
     const [selectedLease, setSelectedLease] = useState<CitizenLeaseRecord | null>(null);
     const [isDetailsOpen, setIsDetailsOpen] = useState(false);
     const [isPaymentOpen, setIsPaymentOpen] = useState(false);
@@ -166,7 +165,6 @@ export default function MarketLeaseSearch() {
                 throw new Error("This lease does not have a valid amount due.");
             }
 
-            // Use the existing lease ID. Do NOT create another lease record.
             const intent = await createPayMongoQrPaymentIntent({
                 amount,
                 type: "MARKET_STALL",
@@ -220,7 +218,6 @@ export default function MarketLeaseSearch() {
         setQrTimeLeft(300);
     };
 
-    // Refresh the QR if the 5-minute Dynamic QR expires.
     useEffect(() => {
         if (!isPaymentOpen || !qrImageUrl || isGeneratingQr || isPaymentSuccess) {
             return;
@@ -243,7 +240,6 @@ export default function MarketLeaseSearch() {
         return () => window.clearInterval(timer);
     }, [isPaymentOpen, qrImageUrl, isGeneratingQr, isPaymentSuccess, selectedLease]);
 
-    // Poll the backend until PayMongo confirms the existing lease as paid.
     useEffect(() => {
         if (!isPaymentOpen || !paymentIntentId || isGeneratingQr || isPaymentSuccess) {
             return;
@@ -282,15 +278,15 @@ export default function MarketLeaseSearch() {
                         previous.map((item) =>
                             item.leaseId === paymentLeaseId
                                 ? {
-                                      ...item,
-                                      ...(updatedLease || {}),
-                                      paymentStatus: "Paid",
-                                      officialReceiptNumber,
-                                      paymentReference:
-                                          data.paymentReference ||
-                                          updatedLease?.paymentReference ||
-                                          qrReferenceNumber,
-                                  }
+                                    ...item,
+                                    ...(updatedLease || {}),
+                                    paymentStatus: "Paid",
+                                    officialReceiptNumber,
+                                    paymentReference:
+                                        data.paymentReference ||
+                                        updatedLease?.paymentReference ||
+                                        qrReferenceNumber,
+                                }
                                 : item
                         )
                     );
@@ -298,14 +294,14 @@ export default function MarketLeaseSearch() {
                     setSelectedLease(
                         updatedLease
                             ? {
-                                  ...updatedLease,
-                                  paymentStatus: "Paid",
-                                  officialReceiptNumber,
-                                  paymentReference:
-                                      data.paymentReference ||
-                                      updatedLease.paymentReference ||
-                                      qrReferenceNumber,
-                              }
+                                ...updatedLease,
+                                paymentStatus: "Paid",
+                                officialReceiptNumber,
+                                paymentReference:
+                                    data.paymentReference ||
+                                    updatedLease.paymentReference ||
+                                    qrReferenceNumber,
+                            }
                             : null
                     );
 
@@ -563,431 +559,427 @@ export default function MarketLeaseSearch() {
                     </div>
                 </div>
             </main>
-        <UnifiedFooter />
+            <UnifiedFooter />
 
-        {/* LEASE DETAILS MODAL */}
-        {isDetailsOpen && selectedLease && (
-            <div className="fixed inset-0 z-[70] bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
-                <div className="bg-white rounded-2xl sm:rounded-3xl w-full max-w-2xl shadow-2xl border border-slate-200 overflow-hidden my-auto">
-                    <div className="flex items-center justify-between px-6 py-5 border-b border-slate-200">
-                        <div>
-                            <p className="text-[10px] font-bold uppercase tracking-wider text-blue-900">
-                                Market Stall Lease
-                            </p>
-                            <h3 className="text-xl font-black text-slate-900 mt-1">
-                                Lease Details
-                            </h3>
-                            <p className="text-xs font-mono text-blue-600 mt-1">
-                                {selectedLease.leaseId}
-                            </p>
+            {isDetailsOpen && selectedLease && (
+                <div className="fixed inset-0 z-[70] bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
+                    <div className="bg-white rounded-2xl sm:rounded-3xl w-full max-w-2xl shadow-2xl border border-slate-200 overflow-hidden my-auto">
+                        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-200">
+                            <div>
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-blue-900">
+                                    Market Stall Lease
+                                </p>
+                                <h3 className="text-xl font-black text-slate-900 mt-1">
+                                    Lease Details
+                                </h3>
+                                <p className="text-xs font-mono text-blue-600 mt-1">
+                                    {selectedLease.leaseId}
+                                </p>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={closeLeaseDetails}
+                                className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold cursor-pointer"
+                            >
+                                ✕
+                            </button>
                         </div>
 
-                        <button
-                            type="button"
-                            onClick={closeLeaseDetails}
-                            className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold cursor-pointer"
-                        >
-                            ✕
-                        </button>
-                    </div>
-
-                    <div className="p-6 space-y-5">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-                                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Stallholder</p>
-                                <p className="mt-1 font-bold text-slate-900">
-                                    {selectedLease.firstName} {selectedLease.lastName}
-                                </p>
-                            </div>
-
-                            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-                                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Market</p>
-                                <p className="mt-1 font-bold text-slate-900">
-                                    {selectedLease.marketName}
-                                </p>
-                            </div>
-
-                            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-                                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Section / Stall</p>
-                                <p className="mt-1 font-bold text-slate-900">
-                                    {selectedLease.section} / Stall {selectedLease.stallNumber}
-                                </p>
-                            </div>
-
-                            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-                                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Lease Status</p>
-                                <p className="mt-1 font-bold text-slate-900">
-                                    {selectedLease.leaseStatus}
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="p-5 rounded-2xl border border-blue-200 bg-blue-50">
-                            <div className="flex items-center justify-between gap-4">
-                                <div>
-                                    <p className="text-[10px] font-bold uppercase tracking-wider text-blue-700">
-                                        Market Stall Assessment
-                                    </p>
-                                    <p className="text-2xl font-black text-[#0B3B60] mt-1">
-                                        {selectedLease.amountDue.toLocaleString("en-PH", {
-                                            style: "currency",
-                                            currency: "PHP",
-                                            minimumFractionDigits: 2,
-                                        })}
-                                    </p>
-                                </div>
-
-                                <span
-                                    className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase ${
-                                        selectedLease.paymentStatus === "Paid"
-                                            ? "bg-emerald-100 text-emerald-800"
-                                            : "bg-white text-blue-800 border border-blue-200"
-                                    }`}
-                                >
-                                    {selectedLease.paymentStatus === "Paid"
-                                        ? "PAID"
-                                        : "FOR PAYMENT"}
-                                </span>
-                            </div>
-
-                            <div className="mt-5 pt-4 border-t border-blue-200">
-                                {selectedLease.paymentStatus === "Paid" ? (
-                                    <div className="space-y-2 text-xs font-semibold text-emerald-800">
-                                        <p>✓ Payment confirmed</p>
-
-                                        <div className="rounded-xl bg-white border border-emerald-200 p-3">
-                                            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                                                Official Receipt (O.R.) Number
-                                            </p>
-                                            <p className="mt-1 font-mono text-sm font-black">
-                                                {getOfficialReceiptNumber(selectedLease) || "Not yet issued"}
-                                            </p>
-                                        </div>
-
-                                        {selectedLease.paymentReference && (
-                                            <p>
-                                                Reference:{" "}
-                                                <span className="font-mono">
-                                                    {selectedLease.paymentReference}
-                                                </span>
-                                            </p>
-                                        )}
-                                    </div>
-                                ) : (
-                                    <>
-                                        <p className="text-[11px] text-blue-800 leading-relaxed mb-4">
-                                            Pay the posted market stall amount online. Your lease will
-                                            update automatically after PayMongo confirms the payment.
-                                        </p>
-
-                                        <button
-                                            type="button"
-                                            onClick={() => void openPaymentForLease(selectedLease)}
-                                            className="w-full bg-[#1D3F99] hover:bg-[#17357F] text-white font-extrabold py-3 rounded-xl text-xs uppercase tracking-wide shadow-sm transition cursor-pointer"
-                                        >
-                                            Pay Market Stall Lease →
-                                        </button>
-                                    </>
-                                )}
-                            </div>
-                        </div>
-
-                        <button
-                            type="button"
-                            onClick={closeLeaseDetails}
-                            className="w-full bg-[#0B3B60] hover:bg-[#082944] text-white font-bold py-3 rounded-xl text-xs transition cursor-pointer"
-                        >
-                            Close
-                        </button>
-                    </div>
-                </div>
-            </div>
-        )}
-
-        {/* MARKET STALL QR PH PAYMENT MODAL - MATCHES BUSINESS TAX PAYMENT UI */}
-        {isPaymentOpen && paymentLeaseId && selectedLease && (
-            <div className="fixed inset-0 z-[60] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto overscroll-contain">
-                <div className="bg-white rounded-2xl sm:rounded-3xl w-full max-w-5xl max-h-[96vh] shadow-2xl border border-slate-200 overflow-y-auto my-auto">
-                    <>
-                        <div className="grid grid-cols-1 lg:grid-cols-2 min-w-0">
-                            <div className="p-4 sm:p-6 lg:p-8 lg:border-r border-slate-200 min-w-0">
-                                <h2 className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">
-                                    Market Stall Payment
-                                </h2>
-
-                                <p className="text-xl sm:text-2xl font-black text-slate-900 mt-1 break-all">
-                                    ({paymentLeaseId})
-                                </p>
-
-                                <p className="text-sm text-slate-500 mt-3">
-                                    Market Stall Lease Payment ({selectedLease.marketName})
-                                </p>
-
-                                <p className="text-sm text-slate-600 mt-4">
-                                    Billed to{" "}
-                                    <span className="font-bold text-slate-900">
+                        <div className="p-6 space-y-5">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Stallholder</p>
+                                    <p className="mt-1 font-bold text-slate-900">
                                         {selectedLease.firstName} {selectedLease.lastName}
-                                    </span>
-                                </p>
-
-                                <div className="mt-6 rounded-2xl border border-blue-200 bg-blue-50/60 p-5">
-                                    <p className="text-xs font-black uppercase tracking-wide text-blue-900 mb-3">
-                                        Market Stall Lease Assessment
                                     </p>
-
-                                    <div className="space-y-0 text-sm">
-                                        <div className="flex justify-between items-center gap-4 py-2 border-b border-blue-200">
-                                            <span className="text-slate-600">Market</span>
-                                            <span className="font-bold text-slate-900 text-right">
-                                                {selectedLease.marketName}
-                                            </span>
-                                        </div>
-
-                                        <div className="flex justify-between items-center gap-4 py-2 border-b border-blue-200">
-                                            <span className="text-slate-600">Section</span>
-                                            <span className="font-bold text-slate-900">
-                                                {selectedLease.section}
-                                            </span>
-                                        </div>
-
-                                        <div className="flex justify-between items-center gap-4 py-2">
-                                            <span className="text-slate-600">Stall Number</span>
-                                            <span className="font-bold text-slate-900">
-                                                {selectedLease.stallNumber}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex justify-between items-center gap-4 mt-3 pt-3 border-t border-blue-300">
-                                        <span className="font-black text-blue-800">Total Payable Assessment</span>
-                                        <span className="font-black text-lg text-blue-700 whitespace-nowrap">
-                                            ₱{Number(selectedLease.amountDue || 0).toLocaleString("en-PH", {
-                                                minimumFractionDigits: 2,
-                                                maximumFractionDigits: 2,
-                                            })}
-                                        </span>
-                                    </div>
                                 </div>
 
-                                <div className="mt-6 pt-5 border-t border-slate-200">
-                                    <p className="text-4xl sm:text-5xl font-black text-emerald-600">
-                                        ₱{Number(selectedLease.amountDue || 0).toLocaleString("en-PH", {
-                                            minimumFractionDigits: 2,
-                                            maximumFractionDigits: 2,
-                                        })}
+                                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Market</p>
+                                    <p className="mt-1 font-bold text-slate-900">
+                                        {selectedLease.marketName}
                                     </p>
+                                </div>
 
-                                    <div className="flex justify-between items-center mt-8 text-sm">
-                                        <span className="text-slate-600">Subtotal</span>
-                                        <span className="font-bold text-slate-900">
-                                            ₱{Number(selectedLease.amountDue || 0).toLocaleString("en-PH", {
-                                                minimumFractionDigits: 2,
-                                                maximumFractionDigits: 2,
-                                            })}
-                                        </span>
-                                    </div>
+                                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Section / Stall</p>
+                                    <p className="mt-1 font-bold text-slate-900">
+                                        {selectedLease.section} / Stall {selectedLease.stallNumber}
+                                    </p>
+                                </div>
 
-                                    <div className="flex justify-between items-center mt-4 text-sm">
-                                        <span className="text-slate-600">Payment Fees</span>
-                                        <span className="font-semibold text-slate-900">Free</span>
-                                    </div>
-
-                                    <div className="flex justify-between items-center mt-5 pt-5 border-t border-slate-200">
-                                        <span className="font-black text-slate-900">Total Due</span>
-                                        <span className="font-black text-lg text-slate-900">
-                                            ₱{Number(selectedLease.amountDue || 0).toLocaleString("en-PH", {
-                                                minimumFractionDigits: 2,
-                                                maximumFractionDigits: 2,
-                                            })}
-                                        </span>
-                                    </div>
+                                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Lease Status</p>
+                                    <p className="mt-1 font-bold text-slate-900">
+                                        {selectedLease.leaseStatus}
+                                    </p>
                                 </div>
                             </div>
 
-                            <div className="p-4 sm:p-6 lg:p-8 bg-slate-50/60 flex flex-col items-center min-w-0">
-                                <div className="w-full text-center">
-                                    <p className="text-base sm:text-lg font-black text-slate-900">
-                                        Scan QR Ph code to pay
-                                    </p>
-                                    <p className="text-xs text-slate-500 mt-2">
-                                        Use your supported banking or e-wallet app.
-                                    </p>
+                            <div className="p-5 rounded-2xl border border-blue-200 bg-blue-50">
+                                <div className="flex items-center justify-between gap-4">
+                                    <div>
+                                        <p className="text-[10px] font-bold uppercase tracking-wider text-blue-700">
+                                            Market Stall Assessment
+                                        </p>
+                                        <p className="text-2xl font-black text-[#0B3B60] mt-1">
+                                            {selectedLease.amountDue.toLocaleString("en-PH", {
+                                                style: "currency",
+                                                currency: "PHP",
+                                                minimumFractionDigits: 2,
+                                            })}
+                                        </p>
+                                    </div>
+
+                                    <span
+                                        className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase ${selectedLease.paymentStatus === "Paid"
+                                                ? "bg-emerald-100 text-emerald-800"
+                                                : "bg-white text-blue-800 border border-blue-200"
+                                            }`}
+                                    >
+                                        {selectedLease.paymentStatus === "Paid"
+                                            ? "PAID"
+                                            : "FOR PAYMENT"}
+                                    </span>
                                 </div>
 
-                                {isGeneratingQr && !qrImageUrl && (
-                                    <div className="w-full max-w-sm mt-5 rounded-2xl border border-slate-200 bg-white p-6 sm:p-10 flex flex-col items-center text-center shadow-sm">
-                                        <div className="h-10 w-10 border-4 border-blue-200 border-t-blue-700 rounded-full animate-spin mb-4" />
-                                        <p className="text-sm font-bold text-slate-800">
-                                            Generating QR Ph code...
-                                        </p>
-                                        <p className="text-xs text-slate-500 mt-1">
-                                            Please wait while PayMongo prepares your secure payment.
-                                        </p>
-                                    </div>
-                                )}
+                                <div className="mt-5 pt-4 border-t border-blue-200">
+                                    {selectedLease.paymentStatus === "Paid" ? (
+                                        <div className="space-y-2 text-xs font-semibold text-emerald-800">
+                                            <p>✓ Payment confirmed</p>
 
-                                {!isGeneratingQr && qrGenerationError && !qrImageUrl && (
-                                    <div className="w-full max-w-sm mt-5 rounded-2xl border border-rose-200 bg-rose-50 p-4 sm:p-5 text-center">
-                                        <p className="text-xs font-bold text-rose-700">
-                                            {qrGenerationError}
-                                        </p>
-                                        <button
-                                            type="button"
-                                            onClick={() => void openPaymentForLease(selectedLease)}
-                                            className="mt-4 px-5 py-2.5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold cursor-pointer"
-                                        >
-                                            Generate QR Again
-                                        </button>
-                                    </div>
-                                )}
+                                            <div className="rounded-xl bg-white border border-emerald-200 p-3">
+                                                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                                                    Official Receipt (O.R.) Number
+                                                </p>
+                                                <p className="mt-1 font-mono text-sm font-black">
+                                                    {getOfficialReceiptNumber(selectedLease) || "Not yet issued"}
+                                                </p>
+                                            </div>
 
-                                {qrImageUrl && !isPaymentSuccess && (
-                                    <div className="w-full flex flex-col items-center mt-5">
-                                        <div className="w-full max-w-sm rounded-xl border border-blue-200 bg-blue-50 px-3 sm:px-4 py-3 text-center mb-4">
-                                            <p className="text-[10px] font-black uppercase tracking-widest text-blue-700">
-                                                QR Code Refreshes In
-                                            </p>
-                                            <p className="text-xl sm:text-2xl font-black tabular-nums text-blue-700">
-                                                {Math.floor(qrTimeLeft / 60)}:{String(qrTimeLeft % 60).padStart(2, "0")}
-                                            </p>
-                                            {qrReferenceNumber && (
-                                                <p className="text-[10px] font-mono text-slate-500 mt-1">
-                                                    Ref: {qrReferenceNumber}
+                                            {selectedLease.paymentReference && (
+                                                <p>
+                                                    Reference:{" "}
+                                                    <span className="font-mono">
+                                                        {selectedLease.paymentReference}
+                                                    </span>
                                                 </p>
                                             )}
                                         </div>
+                                    ) : (
+                                        <>
+                                            <p className="text-[11px] text-blue-800 leading-relaxed mb-4">
+                                                Pay the posted market stall amount online. Your lease will
+                                                update automatically after PayMongo confirms the payment.
+                                            </p>
 
-                                        <div className="bg-white border border-slate-200 rounded-2xl p-3 sm:p-4 shadow-md max-w-full">
-                                            <img
-                                                src={qrImageUrl}
-                                                alt="PayMongo Dynamic QR Ph payment code"
-                                                className="w-[min(72vw,18rem)] h-[min(72vw,18rem)] max-w-full object-contain"
-                                            />
-                                        </div>
-
-                                        <p className="text-xs text-slate-500 text-center mt-3 max-w-sm px-2">
-                                            Scan the QR code with your preferred supported payment app. Your payment will be confirmed automatically through PayMongo.
-                                        </p>
-
-                                        <div className="mt-4 flex items-center gap-2 text-xs font-bold text-blue-700">
-                                            <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
-                                            Waiting for payment...
-                                        </div>
-                                    </div>
-                                )}
+                                            <button
+                                                type="button"
+                                                onClick={() => void openPaymentForLease(selectedLease)}
+                                                className="w-full bg-[#1D3F99] hover:bg-[#17357F] text-white font-extrabold py-3 rounded-xl text-xs uppercase tracking-wide shadow-sm transition cursor-pointer"
+                                            >
+                                                Pay Market Stall Lease →
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
                             </div>
-                        </div>
 
-                        <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-5 border-t border-slate-200 bg-white flex justify-end sticky bottom-0">
                             <button
                                 type="button"
-                                onClick={closePayment}
-                                disabled={isGeneratingQr}
-                                className="px-6 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed text-slate-700 font-bold text-sm transition-colors cursor-pointer"
+                                onClick={closeLeaseDetails}
+                                className="w-full bg-[#0B3B60] hover:bg-[#082944] text-white font-bold py-3 rounded-xl text-xs transition cursor-pointer"
                             >
                                 Close
                             </button>
                         </div>
-                    </>
-                </div>
-            </div>
-        )}
-
-        {/* Payment Success Screen - same clean style as Business Tax */}
-        {isPaymentSuccess && selectedLease && (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-slate-950/75 backdrop-blur-md overflow-y-auto overscroll-contain">
-                <div className="relative w-full max-w-lg max-h-[94vh] overflow-y-auto rounded-2xl sm:rounded-[28px] bg-white p-5 sm:p-8 shadow-2xl text-center">
-                    <div className="mx-auto mb-4 sm:mb-5 h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-emerald-100 flex items-center justify-center">
-                        <svg viewBox="0 0 52 52" className="h-10 w-10 sm:h-12 sm:w-12 text-emerald-600" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M14 27l8 8 17-19" />
-                        </svg>
                     </div>
+                </div>
+            )}
 
-                    <p className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
-                        PAYMENT CONFIRMED
-                    </p>
+            {isPaymentOpen && paymentLeaseId && selectedLease && (
+                <div className="fixed inset-0 z-[60] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto overscroll-contain">
+                    <div className="bg-white rounded-2xl sm:rounded-3xl w-full max-w-5xl max-h-[96vh] shadow-2xl border border-slate-200 overflow-y-auto my-auto">
+                        <>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 min-w-0">
+                                <div className="p-4 sm:p-6 lg:p-8 lg:border-r border-slate-200 min-w-0">
+                                    <h2 className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">
+                                        Market Stall Payment
+                                    </h2>
 
-                    <h2 className="mt-3 sm:mt-4 text-xl sm:text-2xl font-black text-slate-900">
-                        Payment Successful!
-                    </h2>
+                                    <p className="text-xl sm:text-2xl font-black text-slate-900 mt-1 break-all">
+                                        ({paymentLeaseId})
+                                    </p>
 
-                    <p className="mt-2 text-sm text-slate-500">
-                        Your Market Stall payment has been confirmed.
-                    </p>
+                                    <p className="text-sm text-slate-500 mt-3">
+                                        Market Stall Lease Payment ({selectedLease.marketName})
+                                    </p>
 
-                    <div className="mt-5 rounded-2xl bg-slate-50 border border-slate-200 p-4 sm:p-5 text-left space-y-3 text-sm overflow-x-auto">
-                        <div className="flex justify-between gap-4">
-                            <span className="text-slate-500">Service</span>
-                            <span className="font-bold text-right">Market Stall Lease</span>
+                                    <p className="text-sm text-slate-600 mt-4">
+                                        Billed to{" "}
+                                        <span className="font-bold text-slate-900">
+                                            {selectedLease.firstName} {selectedLease.lastName}
+                                        </span>
+                                    </p>
+
+                                    <div className="mt-6 rounded-2xl border border-blue-200 bg-blue-50/60 p-5">
+                                        <p className="text-xs font-black uppercase tracking-wide text-blue-900 mb-3">
+                                            Market Stall Lease Assessment
+                                        </p>
+
+                                        <div className="space-y-0 text-sm">
+                                            <div className="flex justify-between items-center gap-4 py-2 border-b border-blue-200">
+                                                <span className="text-slate-600">Market</span>
+                                                <span className="font-bold text-slate-900 text-right">
+                                                    {selectedLease.marketName}
+                                                </span>
+                                            </div>
+
+                                            <div className="flex justify-between items-center gap-4 py-2 border-b border-blue-200">
+                                                <span className="text-slate-600">Section</span>
+                                                <span className="font-bold text-slate-900">
+                                                    {selectedLease.section}
+                                                </span>
+                                            </div>
+
+                                            <div className="flex justify-between items-center gap-4 py-2">
+                                                <span className="text-slate-600">Stall Number</span>
+                                                <span className="font-bold text-slate-900">
+                                                    {selectedLease.stallNumber}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex justify-between items-center gap-4 mt-3 pt-3 border-t border-blue-300">
+                                            <span className="font-black text-blue-800">Total Payable Assessment</span>
+                                            <span className="font-black text-lg text-blue-700 whitespace-nowrap">
+                                                ₱{Number(selectedLease.amountDue || 0).toLocaleString("en-PH", {
+                                                    minimumFractionDigits: 2,
+                                                    maximumFractionDigits: 2,
+                                                })}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-6 pt-5 border-t border-slate-200">
+                                        <p className="text-4xl sm:text-5xl font-black text-emerald-600">
+                                            ₱{Number(selectedLease.amountDue || 0).toLocaleString("en-PH", {
+                                                minimumFractionDigits: 2,
+                                                maximumFractionDigits: 2,
+                                            })}
+                                        </p>
+
+                                        <div className="flex justify-between items-center mt-8 text-sm">
+                                            <span className="text-slate-600">Subtotal</span>
+                                            <span className="font-bold text-slate-900">
+                                                ₱{Number(selectedLease.amountDue || 0).toLocaleString("en-PH", {
+                                                    minimumFractionDigits: 2,
+                                                    maximumFractionDigits: 2,
+                                                })}
+                                            </span>
+                                        </div>
+
+                                        <div className="flex justify-between items-center mt-4 text-sm">
+                                            <span className="text-slate-600">Payment Fees</span>
+                                            <span className="font-semibold text-slate-900">Free</span>
+                                        </div>
+
+                                        <div className="flex justify-between items-center mt-5 pt-5 border-t border-slate-200">
+                                            <span className="font-black text-slate-900">Total Due</span>
+                                            <span className="font-black text-lg text-slate-900">
+                                                ₱{Number(selectedLease.amountDue || 0).toLocaleString("en-PH", {
+                                                    minimumFractionDigits: 2,
+                                                    maximumFractionDigits: 2,
+                                                })}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="p-4 sm:p-6 lg:p-8 bg-slate-50/60 flex flex-col items-center min-w-0">
+                                    <div className="w-full text-center">
+                                        <p className="text-base sm:text-lg font-black text-slate-900">
+                                            Scan QR Ph code to pay
+                                        </p>
+                                        <p className="text-xs text-slate-500 mt-2">
+                                            Use your supported banking or e-wallet app.
+                                        </p>
+                                    </div>
+
+                                    {isGeneratingQr && !qrImageUrl && (
+                                        <div className="w-full max-w-sm mt-5 rounded-2xl border border-slate-200 bg-white p-6 sm:p-10 flex flex-col items-center text-center shadow-sm">
+                                            <div className="h-10 w-10 border-4 border-blue-200 border-t-blue-700 rounded-full animate-spin mb-4" />
+                                            <p className="text-sm font-bold text-slate-800">
+                                                Generating QR Ph code...
+                                            </p>
+                                            <p className="text-xs text-slate-500 mt-1">
+                                                Please wait while PayMongo prepares your secure payment.
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {!isGeneratingQr && qrGenerationError && !qrImageUrl && (
+                                        <div className="w-full max-w-sm mt-5 rounded-2xl border border-rose-200 bg-rose-50 p-4 sm:p-5 text-center">
+                                            <p className="text-xs font-bold text-rose-700">
+                                                {qrGenerationError}
+                                            </p>
+                                            <button
+                                                type="button"
+                                                onClick={() => void openPaymentForLease(selectedLease)}
+                                                className="mt-4 px-5 py-2.5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold cursor-pointer"
+                                            >
+                                                Generate QR Again
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {qrImageUrl && !isPaymentSuccess && (
+                                        <div className="w-full flex flex-col items-center mt-5">
+                                            <div className="w-full max-w-sm rounded-xl border border-blue-200 bg-blue-50 px-3 sm:px-4 py-3 text-center mb-4">
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-blue-700">
+                                                    QR Code Refreshes In
+                                                </p>
+                                                <p className="text-xl sm:text-2xl font-black tabular-nums text-blue-700">
+                                                    {Math.floor(qrTimeLeft / 60)}:{String(qrTimeLeft % 60).padStart(2, "0")}
+                                                </p>
+                                                {qrReferenceNumber && (
+                                                    <p className="text-[10px] font-mono text-slate-500 mt-1">
+                                                        Ref: {qrReferenceNumber}
+                                                    </p>
+                                                )}
+                                            </div>
+
+                                            <div className="bg-white border border-slate-200 rounded-2xl p-3 sm:p-4 shadow-md max-w-full">
+                                                <img
+                                                    src={qrImageUrl}
+                                                    alt="PayMongo Dynamic QR Ph payment code"
+                                                    className="w-[min(72vw,18rem)] h-[min(72vw,18rem)] max-w-full object-contain"
+                                                />
+                                            </div>
+
+                                            <p className="text-xs text-slate-500 text-center mt-3 max-w-sm px-2">
+                                                Scan the QR code with your preferred supported payment app. Your payment will be confirmed automatically through PayMongo.
+                                            </p>
+
+                                            <div className="mt-4 flex items-center gap-2 text-xs font-bold text-blue-700">
+                                                <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
+                                                Waiting for payment...
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-5 border-t border-slate-200 bg-white flex justify-end sticky bottom-0">
+                                <button
+                                    type="button"
+                                    onClick={closePayment}
+                                    disabled={isGeneratingQr}
+                                    className="px-6 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed text-slate-700 font-bold text-sm transition-colors cursor-pointer"
+                                >
+                                    Close
+                                </button>
+                            </div>
+                        </>
+                    </div>
+                </div>
+            )}
+
+            {isPaymentSuccess && selectedLease && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-slate-950/75 backdrop-blur-md overflow-y-auto overscroll-contain">
+                    <div className="relative w-full max-w-lg max-h-[94vh] overflow-y-auto rounded-2xl sm:rounded-[28px] bg-white p-5 sm:p-8 shadow-2xl text-center">
+                        <div className="mx-auto mb-4 sm:mb-5 h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-emerald-100 flex items-center justify-center">
+                            <svg viewBox="0 0 52 52" className="h-10 w-10 sm:h-12 sm:w-12 text-emerald-600" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M14 27l8 8 17-19" />
+                            </svg>
                         </div>
 
-                        <div className="flex justify-between gap-4">
-                            <span className="text-slate-500">Lease ID</span>
-                            <span className="font-mono font-bold text-right">{selectedLease.leaseId}</span>
-                        </div>
+                        <p className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
+                            PAYMENT CONFIRMED
+                        </p>
 
-                        <div className="flex justify-between gap-4">
-                            <span className="text-slate-500">Amount Paid</span>
-                            <span className="font-black">
-                                ₱{Number(selectedLease.amountDue || 0).toLocaleString("en-PH", {
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2,
-                                })}
-                            </span>
-                        </div>
+                        <h2 className="mt-3 sm:mt-4 text-xl sm:text-2xl font-black text-slate-900">
+                            Payment Successful!
+                        </h2>
 
-                        <div className="flex justify-between gap-4">
-                            <span className="text-slate-500">Reference</span>
-                            <span className="font-mono font-bold text-right break-all">
-                                {selectedLease.paymentReference || qrReferenceNumber || selectedLease.leaseId}
-                            </span>
-                        </div>
+                        <p className="mt-2 text-sm text-slate-500">
+                            Your Market Stall payment has been confirmed.
+                        </p>
 
-                        {paymentConfirmedAt && (
+                        <div className="mt-5 rounded-2xl bg-slate-50 border border-slate-200 p-4 sm:p-5 text-left space-y-3 text-sm overflow-x-auto">
                             <div className="flex justify-between gap-4">
-                                <span className="text-slate-500">Date</span>
-                                <span className="font-bold text-right">
-                                    {paymentConfirmedAt.toLocaleString("en-PH")}
+                                <span className="text-slate-500">Service</span>
+                                <span className="font-bold text-right">Market Stall Lease</span>
+                            </div>
+
+                            <div className="flex justify-between gap-4">
+                                <span className="text-slate-500">Lease ID</span>
+                                <span className="font-mono font-bold text-right">{selectedLease.leaseId}</span>
+                            </div>
+
+                            <div className="flex justify-between gap-4">
+                                <span className="text-slate-500">Amount Paid</span>
+                                <span className="font-black">
+                                    ₱{Number(selectedLease.amountDue || 0).toLocaleString("en-PH", {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                    })}
                                 </span>
                             </div>
-                        )}
 
-                        <div className="pt-3 border-t border-slate-200">
-                            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                                Official Receipt (O.R.) Number
-                            </p>
-                            <p className="mt-1 font-mono text-base font-black text-emerald-600">
-                                {paymentOfficialReceipt || selectedLease.officialReceiptNumber || "Not yet issued"}
-                            </p>
+                            <div className="flex justify-between gap-4">
+                                <span className="text-slate-500">Reference</span>
+                                <span className="font-mono font-bold text-right break-all">
+                                    {selectedLease.paymentReference || qrReferenceNumber || selectedLease.leaseId}
+                                </span>
+                            </div>
+
+                            {paymentConfirmedAt && (
+                                <div className="flex justify-between gap-4">
+                                    <span className="text-slate-500">Date</span>
+                                    <span className="font-bold text-right">
+                                        {paymentConfirmedAt.toLocaleString("en-PH")}
+                                    </span>
+                                </div>
+                            )}
+
+                            <div className="pt-3 border-t border-slate-200">
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                                    Official Receipt (O.R.) Number
+                                </p>
+                                <p className="mt-1 font-mono text-base font-black text-emerald-600">
+                                    {paymentOfficialReceipt || selectedLease.officialReceiptNumber || "Not yet issued"}
+                                </p>
+                            </div>
                         </div>
-                    </div>
 
-                    <button
-                        type="button"
-                        onClick={() => {
-                            setIsPaymentSuccess(false);
-                            setIsPaymentOpen(false);
-                            setPaymentOfficialReceipt("");
-                            setPaymentConfirmedAt(null);
-                            setSelectedLease(null);
-                            setQrReferenceNumber("");
-                            void (async () => {
-                                try {
-                                    const fresh = await getLeases();
-                                    setAllLeases(fresh as CitizenLeaseRecord[]);
-                                    setFilteredLeases(fresh as CitizenLeaseRecord[]);
-                                } catch (error) {
-                                    console.error("Failed to refresh market leases:", error);
-                                }
-                            })();
-                        }}
-                        className="mt-6 w-full rounded-xl bg-[#1D3F99] hover:bg-[#17357F] text-white py-3 font-extrabold text-sm cursor-pointer"
-                    >
-                        Done
-                    </button>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setIsPaymentSuccess(false);
+                                setIsPaymentOpen(false);
+                                setPaymentOfficialReceipt("");
+                                setPaymentConfirmedAt(null);
+                                setSelectedLease(null);
+                                setQrReferenceNumber("");
+                                void (async () => {
+                                    try {
+                                        const fresh = await getLeases();
+                                        setAllLeases(fresh as CitizenLeaseRecord[]);
+                                        setFilteredLeases(fresh as CitizenLeaseRecord[]);
+                                    } catch (error) {
+                                        console.error("Failed to refresh market leases:", error);
+                                    }
+                                })();
+                            }}
+                            className="mt-6 w-full rounded-xl bg-[#1D3F99] hover:bg-[#17357F] text-white py-3 font-extrabold text-sm cursor-pointer"
+                        >
+                            Done
+                        </button>
+                    </div>
                 </div>
-            </div>
-        )}
-    </div>
+            )}
+        </div>
     );
 }

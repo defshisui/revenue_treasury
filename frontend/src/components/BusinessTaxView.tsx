@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../config/api';
 
@@ -27,9 +26,7 @@ interface AssessmentRecord {
   attachments?: AttachmentFile[];
   remarks?: string;
 
-  // Official Receipt fields returned by the backend after successful payment.
-  // Support both camelCase and snake_case so the Admin UI works with either
-  // API response format.
+
   officialReceiptNumber?: string;
   official_receipt_number?: string;
   orNumber?: string;
@@ -421,8 +418,7 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
 
     if (directOr) return String(directOr);
 
-    // Some older records may have the O.R. saved inside remarks.
-    // Only accept a value that explicitly looks like an O.R. number.
+
     const remarks = String(assessment.remarks || '');
     const orMatch = remarks.match(/(?:O\.R\.|OR|Official\s+Receipt)\s*(?:Number|No\.?|#)?\s*[:\-]?\s*([A-Z0-9]+(?:-[A-Z0-9]+)+)/i);
 
@@ -465,7 +461,7 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
       className="min-h-screen bg-slate-50/50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 p-6 pt-24 transition-all duration-300 box-border flex flex-col justify-between"
     >
       <div className="space-y-6">
-        {/* Top Header Banner Area */}
+
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-white dark:bg-slate-900/60 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs backdrop-blur-md">
           <div>
             <div className="flex items-center gap-2 mb-1">
@@ -475,7 +471,7 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
               </span>
             </div>
             <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-              Business Tax Assessment & Permit Management
+              Business Tax & Regulatory Fee Payment
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
               Verify digital sales declarations, compute statutory local business taxes, and issue official orders of payment.
@@ -483,7 +479,7 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
           </div>
         </div>
 
-        {/* Navigation Tabs Bar */}
+
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
           <div className="flex flex-wrap gap-2">
             <button
@@ -517,7 +513,7 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
           )}
         </div>
 
-        {/* Main Content Area */}
+
         {activeTab === 'assessments' ? (
           <section className="bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-xs space-y-5">
             <div className="flex justify-between items-center">
@@ -530,13 +526,13 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
               </span>
             </div>
 
-            {/* Inner Assessment Tabs */}
+
             <div className="flex space-x-1 bg-slate-200/50 dark:bg-slate-800/50 p-1.5 rounded-xl w-fit">
               <button
                 onClick={() => setAssessmentTab("Active")}
                 className={`px-5 py-2.5 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-2 ${assessmentTab === "Active"
-                    ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
-                    : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                  ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
+                  : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
                   }`}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
@@ -545,8 +541,8 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
               <button
                 onClick={() => setAssessmentTab("Archived")}
                 className={`px-5 py-2.5 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-2 ${assessmentTab === "Archived"
-                    ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
-                    : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                  ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
+                  : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
                   }`}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>
@@ -554,7 +550,7 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
               </button>
             </div>
 
-            {/* Filters & Search Toolbar Card */}
+
             <div className="p-5 bg-slate-50/50 dark:bg-slate-950/50 rounded-2xl border border-slate-200/80 dark:border-slate-800 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
               <div className="flex flex-col gap-1.5 text-xs">
                 <label className="font-semibold text-slate-700 dark:text-slate-300">Filter by Status</label>
@@ -603,7 +599,7 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
               </div>
             </div>
 
-            {/* Admin Data Table */}
+
             <div className="overflow-x-auto rounded-xl border border-slate-200/80 dark:border-slate-800">
               <table className="w-full text-left text-xs whitespace-nowrap border-collapse">
                 <thead className="bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-200 dark:border-slate-800">
@@ -653,15 +649,14 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
                             {item.status}
                           </span>
                         </td>
-                         <td className="p-4 text-center">
-                           <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold border ${
-                             item.paymentStatus === 'PAID'
-                               ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-800'
-                               : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-800'
-                           }`}>
-                             {item.paymentStatus === 'PAID' ? 'PAID' : 'UNPAID'}
-                           </span>
-                         </td>
+                        <td className="p-4 text-center">
+                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold border ${item.paymentStatus === 'PAID'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-800'
+                            : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-800'
+                            }`}>
+                            {item.paymentStatus === 'PAID' ? 'PAID' : 'UNPAID'}
+                          </span>
+                        </td>
                         <td className="p-4 text-slate-500">{new Date(item.applicationDate).toLocaleDateString()}</td>
                         <td className="p-4 text-center space-x-2 flex items-center justify-center">
                           {assessmentTab === 'Active' ? (
@@ -703,7 +698,7 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
               </table>
             </div>
 
-            {/* Pagination Footer */}
+
             <div className="flex justify-between items-center text-xs text-slate-500 dark:text-slate-400 pt-2">
               <span className="font-medium">Page {currentPage} of {totalPages}</span>
               <div className="flex gap-2">
@@ -731,13 +726,13 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
               {appointmentTab === 'Active' ? 'Citizen Appointments Management Schedule' : 'Archived Appointments'}
             </h3>
 
-            {/* Inner Appointments Tabs */}
+
             <div className="flex space-x-1 bg-slate-200/50 dark:bg-slate-800/50 p-1.5 rounded-xl w-fit">
               <button
                 onClick={() => setAppointmentTab("Active")}
                 className={`px-5 py-2.5 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-2 ${appointmentTab === "Active"
-                    ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
-                    : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                  ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
+                  : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
                   }`}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
@@ -746,8 +741,8 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
               <button
                 onClick={() => setAppointmentTab("Archived")}
                 className={`px-5 py-2.5 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-2 ${appointmentTab === "Archived"
-                    ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
-                    : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                  ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
+                  : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
                   }`}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>
@@ -853,7 +848,7 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
         )}
       </div>
 
-      {/* APPOINTMENT PREVIEW MODAL */}
+
       {selectedAppointmentPreview && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-8 shadow-2xl border border-slate-200 dark:border-slate-800 my-8">
@@ -966,7 +961,7 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
         </div>
       )}
 
-      {/* DETAILED REVIEW & COMPUTATION MODAL */}
+
       {selectedAssessment && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-2xl w-full p-8 shadow-2xl border border-slate-200 dark:border-slate-800 my-8">
@@ -981,7 +976,7 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
             </div>
 
             <div className="space-y-5 text-xs max-h-[70vh] overflow-y-auto pr-1">
-              {/* Business Info Grid */}
+
               <div className="grid grid-cols-2 gap-3.5 bg-slate-50/50 dark:bg-slate-950/50 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800">
                 <div>
                   <span className="block text-[10px] text-slate-400 uppercase font-bold mb-0.5">Business Name</span>
@@ -1001,7 +996,7 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
                 </div>
               </div>
 
-              {/* Automated Tax Computation Box (RA 7160 Compliant) */}
+
               <div className="p-4 rounded-2xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/50 space-y-2">
                 <h4 className="font-bold text-blue-900 dark:text-blue-300 uppercase tracking-wide text-[11px] mb-2 flex items-center gap-1.5">
                   Computed Local Government Statutory Fees (RA 7160)
@@ -1032,27 +1027,25 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
                 </div>
               </div>
 
-              {/* Official Receipt / Payment Information */}
+
               <div className="p-4 rounded-2xl bg-slate-50/70 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800">
                 <div className="flex items-center justify-between gap-4">
                   <div>
                     <span className="block text-[10px] text-slate-400 uppercase font-bold mb-1">
                       Official Receipt (O.R.) Number
                     </span>
-                    <span className={`font-mono font-extrabold text-sm ${
-                      selectedAssessment.paymentStatus === 'PAID'
-                        ? 'text-emerald-600 dark:text-emerald-400'
-                        : 'text-slate-500 dark:text-slate-400'
-                    }`}>
+                    <span className={`font-mono font-extrabold text-sm ${selectedAssessment.paymentStatus === 'PAID'
+                      ? 'text-emerald-600 dark:text-emerald-400'
+                      : 'text-slate-500 dark:text-slate-400'
+                      }`}>
                       {getOfficialReceiptNumber(selectedAssessment) || 'Not yet issued'}
                     </span>
                   </div>
 
-                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold border ${
-                    selectedAssessment.paymentStatus === 'PAID'
-                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800'
-                      : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800'
-                  }`}>
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold border ${selectedAssessment.paymentStatus === 'PAID'
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800'
+                    : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800'
+                    }`}>
                     {selectedAssessment.paymentStatus === 'PAID' ? 'PAID' : 'UNPAID'}
                   </span>
                 </div>
@@ -1064,7 +1057,7 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
                 )}
               </div>
 
-              {/* Uploaded Documents & Verification Checklist */}
+
               <div className="space-y-3">
                 <h4 className="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide text-[11px]">
                   Attached Requirements & Verification Checklist
@@ -1094,7 +1087,7 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
                   )}
                 </div>
 
-                {/* Checklist checkboxes */}
+
                 <div className="space-y-2 pt-1">
                   <label className="flex items-center gap-2.5 cursor-pointer">
                     <input
@@ -1170,7 +1163,7 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
         </div>
       )}
 
-      {/* EMBEDDED DOCUMENT PREVIEW MODAL (ADMIN) */}
+
       {previewFile && (
         <div className="fixed inset-0 z-60 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-3xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
@@ -1203,7 +1196,7 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
         </div>
       )}
 
-      {/* ORDER OF PAYMENT PRINTABLE MODAL */}
+
       {showOrderOfPaymentModal && selectedAssessment && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white text-slate-900 rounded-3xl max-w-lg w-full p-8 shadow-2xl space-y-6">
@@ -1262,7 +1255,7 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
         </div>
       )}
 
-      {/* Footer bar */}
+
       <footer className="w-full text-slate-400 text-xs py-6 border-t border-slate-200 dark:border-slate-800 mt-12 text-center">
         <p>© 2026 Local Government Treasury Unit. All rights reserved. Production-Ready LGU Module.</p>
       </footer>

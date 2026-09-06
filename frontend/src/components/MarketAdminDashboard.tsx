@@ -17,25 +17,23 @@ export default function MarketAdminDashboard({
 
   return (
     <div className="space-y-6">
-      {/* Sub-navigation switcher to toggle between the two views */}
+
       <div className="flex border-b border-slate-200 bg-white px-6 pt-4 rounded-t-2xl shadow-sm">
         <button
           onClick={() => setActiveTab("city-owned")}
-          className={`pb-3 px-4 font-bold text-xs uppercase tracking-wider border-b-2 transition-colors ${
-            activeTab === "city-owned"
+          className={`pb-3 px-4 font-bold text-xs uppercase tracking-wider border-b-2 transition-colors ${activeTab === "city-owned"
               ? "border-[#15418c] text-[#15418c]"
               : "border-transparent text-slate-500 hover:text-slate-800"
-          }`}
+            }`}
         >
           Market Operator Account (City-Owned)
         </button>
         <button
           onClick={() => setActiveTab("private")}
-          className={`pb-3 px-4 font-bold text-xs uppercase tracking-wider border-b-2 transition-colors ${
-            activeTab === "private"
+          className={`pb-3 px-4 font-bold text-xs uppercase tracking-wider border-b-2 transition-colors ${activeTab === "private"
               ? "border-[#15418c] text-[#15418c]"
               : "border-transparent text-slate-500 hover:text-slate-800"
-          }`}
+            }`}
         >
           Private Market / Private Talipapa Stallholder
         </button>
@@ -51,7 +49,7 @@ export default function MarketAdminDashboard({
             </h2>
           </div>
 
-          {/* Table Container */}
+
           <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm bg-white">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
@@ -124,7 +122,7 @@ export default function MarketAdminDashboard({
               </table>
             </div>
 
-            {/* Pagination Bar */}
+
             <div className="bg-white px-4 py-3 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-600">
               <div className="flex items-center space-x-2">
                 <span>Ipakita</span>
@@ -156,7 +154,7 @@ export default function MarketAdminDashboard({
             </h2>
           </div>
 
-          {/* Filter Search Form Fields */}
+
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end bg-slate-50/60 p-4 rounded-xl border border-slate-200">
             <div className="md:col-span-5 space-y-1.5">
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide">
@@ -191,7 +189,7 @@ export default function MarketAdminDashboard({
 
           <div className="border-t border-slate-200"></div>
 
-          {/* Table Container */}
+
           <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm bg-white">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
@@ -270,7 +268,7 @@ export default function MarketAdminDashboard({
               </table>
             </div>
 
-            {/* Pagination Bar */}
+
             <div className="bg-white px-4 py-3 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-600">
               <div className="flex items-center space-x-2">
                 <span>Ipakita</span>

@@ -916,7 +916,7 @@ export default function CityOwnedMarketAdmin({
                   />
                 </div>
 
-                {/* Gateway Transaction Verification Section */}
+
                 <div className="sm:col-span-2 bg-slate-100/70 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-3 mt-2">
                   <h4 className="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider flex items-center gap-2">
                     <span>₱</span> Gateway Transaction Verification
@@ -970,7 +970,7 @@ export default function CityOwnedMarketAdmin({
                   </div>
                 </div>
 
-                {/* Anti-Fraud AI Guardrails Section */}
+
                 <div className="sm:col-span-2 bg-indigo-50/70 dark:bg-indigo-950/30 p-4 rounded-2xl border border-indigo-200 dark:border-indigo-900/50 space-y-3 mt-1">
                   <div className="flex justify-between items-center">
                     <h4 className="font-bold text-indigo-950 dark:text-indigo-200 text-xs uppercase tracking-wider flex items-center gap-2">

@@ -15,11 +15,7 @@ export const MarketVendorsHub: FC<MarketVendorsHubProps> = ({
   );
   const [submitOptionsModal, setSubmitOptionsModal] = useState(false);
 
-  /*
-   * IMPORTANT:
-   * Keep every popup at the same compact size as the reference screenshot.
-   * Inline width/maxWidth prevents global CSS from stretching the modal.
-   */
+
   const modalStyle = {
     width: '510px',
     maxWidth: 'calc(100vw - 32px)',
@@ -37,7 +33,6 @@ export const MarketVendorsHub: FC<MarketVendorsHubProps> = ({
 
       <div className="flex-1 flex flex-col justify-between w-full">
         <div>
-          {/* HERO */}
           <div className="relative w-full bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 h-36 sm:h-48 overflow-hidden flex items-center justify-center border-b-4 border-blue-600">
             <div className="absolute inset-0 opacity-30 bg-[radial-gradient(#3b82f6_1px,transparent_1px)] [background-size:16px_16px]" />
 
@@ -54,9 +49,8 @@ export const MarketVendorsHub: FC<MarketVendorsHubProps> = ({
             </div>
           </div>
 
-          {/* MAIN CONTENT */}
           <div className="max-w-6xl mx-auto px-4 py-8 space-y-6 relative z-0">
-            {/* CITY-OWNED MARKET */}
+
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 flex flex-col justify-between text-center">
               <div>
                 <h3 className="text-blue-900 font-bold text-sm tracking-wider uppercase mb-1">
@@ -81,7 +75,6 @@ export const MarketVendorsHub: FC<MarketVendorsHubProps> = ({
               </div>
             </div>
 
-            {/* HAWKERS */}
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 text-center">
               <h3 className="text-blue-900 font-bold text-sm tracking-wider uppercase mb-2">
                 HAWKERS &amp; STREET VENDORS REGISTRATION
@@ -108,10 +101,7 @@ export const MarketVendorsHub: FC<MarketVendorsHubProps> = ({
         <UnifiedFooter />
       </div>
 
-      {/* =========================================================
-          MARKET CATEGORY MODAL
-          FIXED SIZE: 510px
-      ========================================================= */}
+
       {marketCategoryModal && (
         <div
           className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
@@ -127,7 +117,6 @@ export const MarketVendorsHub: FC<MarketVendorsHubProps> = ({
             role="dialog"
             aria-modal="true"
           >
-            {/* MODAL HEADER */}
             <div className="flex justify-between items-center px-6 py-4 border-b border-slate-200 bg-slate-50 shrink-0">
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700">
@@ -151,12 +140,11 @@ export const MarketVendorsHub: FC<MarketVendorsHubProps> = ({
               </button>
             </div>
 
-            {/* MODAL BODY */}
             <div className="p-6 space-y-3 max-h-[60vh] overflow-y-auto text-xs">
-              {/* CITY-OWNED OPTIONS */}
+
               {marketCategoryModal === 'cityOwned' && (
                 <>
-                  {/* SUBMIT STALL APPLICATION */}
+
                   <button
                     onClick={() => {
                       setMarketCategoryModal(null);
@@ -179,7 +167,6 @@ export const MarketVendorsHub: FC<MarketVendorsHubProps> = ({
                     </span>
                   </button>
 
-                  {/* MANAGE ACCOUNT */}
                   <button
                     onClick={() => {
                       window.location.href =
@@ -205,7 +192,6 @@ export const MarketVendorsHub: FC<MarketVendorsHubProps> = ({
                 </>
               )}
 
-              {/* HAWKER OPTIONS */}
               {marketCategoryModal === 'hawkers' && (
                 <button
                   onClick={() => {
@@ -231,7 +217,6 @@ export const MarketVendorsHub: FC<MarketVendorsHubProps> = ({
               )}
             </div>
 
-            {/* MODAL FOOTER */}
             <div className="flex justify-end gap-2 px-6 py-3 border-t border-slate-200 bg-slate-50 shrink-0">
               <button
                 onClick={() => setMarketCategoryModal(null)}
@@ -244,10 +229,7 @@ export const MarketVendorsHub: FC<MarketVendorsHubProps> = ({
         </div>
       )}
 
-      {/* =========================================================
-          STALL APPLICATION OPTIONS MODAL
-          SAME FIXED SIZE: 510px
-      ========================================================= */}
+
       {submitOptionsModal && (
         <div
           className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
@@ -263,7 +245,6 @@ export const MarketVendorsHub: FC<MarketVendorsHubProps> = ({
             role="dialog"
             aria-modal="true"
           >
-            {/* MODAL HEADER */}
             <div className="flex justify-between items-center px-6 py-4 border-b border-slate-200 bg-slate-50 shrink-0">
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700">
@@ -284,7 +265,6 @@ export const MarketVendorsHub: FC<MarketVendorsHubProps> = ({
               </button>
             </div>
 
-            {/* MODAL BODY */}
             <div className="p-6 space-y-3 text-xs">
               <button
                 onClick={() => {
@@ -309,7 +289,6 @@ export const MarketVendorsHub: FC<MarketVendorsHubProps> = ({
               </button>
             </div>
 
-            {/* MODAL FOOTER */}
             <div className="flex justify-between items-center px-6 py-3 border-t border-slate-200 bg-slate-50 text-xs shrink-0">
               <button
                 onClick={() => {
