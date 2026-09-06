@@ -1,5 +1,4 @@
-﻿// src/db.ts
-import pg from 'pg';
+﻿import pg from 'pg';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -7,7 +6,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Load environment variables from process cwd, backend dir, and root dir
+
 dotenv.config();
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
@@ -29,17 +28,17 @@ const isInternalDb = Boolean(
 
 const poolConfig: pg.PoolConfig = dbConnectionString
   ? {
-      connectionString: dbConnectionString,
-      ssl: isInternalDb ? false : { rejectUnauthorized: false },
-      password: String(process.env.PGPASSWORD || process.env.DB_PASSWORD || 'admin'),
-    }
+    connectionString: dbConnectionString,
+    ssl: isInternalDb ? false : { rejectUnauthorized: false },
+    password: String(process.env.PGPASSWORD || process.env.DB_PASSWORD || 'admin'),
+  }
   : {
-      host: process.env.PGHOST || process.env.DB_HOST || 'localhost',
-      port: Number(process.env.PGPORT || process.env.DB_PORT) || 5432,
-      database: process.env.PGDATABASE || process.env.DB_NAME || 'revenue_treasury',
-      user: process.env.PGUSER || process.env.DB_USER || 'postgres',
-      password: String(process.env.PGPASSWORD || process.env.DB_PASSWORD || 'admin'),
-    };
+    host: process.env.PGHOST || process.env.DB_HOST || 'localhost',
+    port: Number(process.env.PGPORT || process.env.DB_PORT) || 5432,
+    database: process.env.PGDATABASE || process.env.DB_NAME || 'revenue_treasury',
+    user: process.env.PGUSER || process.env.DB_USER || 'postgres',
+    password: String(process.env.PGPASSWORD || process.env.DB_PASSWORD || 'admin'),
+  };
 
 const pool = new Pool(poolConfig);
 

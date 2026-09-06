@@ -1,6 +1,3 @@
-// src/types/index.ts
-// Shared TypeScript interfaces for the Revenue & Treasury backend
-
 export interface User {
   id: number;
   name: string;
@@ -171,7 +168,7 @@ export interface SaveLeaseBody {
   payment_method?: string;
 }
 
-export interface UpdateLeaseBody extends SaveLeaseBody {}
+export interface UpdateLeaseBody extends SaveLeaseBody { }
 
 export interface RptPaymentBody {
   rptRecordId: number;

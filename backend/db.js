@@ -10,9 +10,9 @@ dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 const { Pool } = pg;
 
-const dbConnectionString = 
-  process.env.DATABASE_URL || 
-  process.env.DATABASE_PRIVATE_URL || 
+const dbConnectionString =
+  process.env.DATABASE_URL ||
+  process.env.DATABASE_PRIVATE_URL ||
   process.env.DATABASE_PUBLIC_URL;
 
 const isInternalDb = Boolean(
@@ -43,7 +43,7 @@ if (dbConnectionString) {
 const pool = new Pool(poolConfig);
 
 pool.on('error', (err) => {
-  console.error('⚠️ Unexpected PostgreSQL client error in db.js:', err.message);
+  console.error('Unexpected PostgreSQL client error in db.js:', err.message);
 });
 
 export default pool;

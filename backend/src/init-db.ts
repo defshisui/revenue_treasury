@@ -1,7 +1,4 @@
-﻿// src/init-db.ts
-// Initializes all database tables and seeds default admin account
-
-import bcrypt from 'bcryptjs';
+﻿import bcrypt from 'bcryptjs';
 import pool from './db.js';
 
 export async function initializeDatabase(): Promise<void> {
@@ -12,9 +9,7 @@ export async function initializeDatabase(): Promise<void> {
 
     client.release();
 
-    // ============================================================
-    // CREATE DATABASE TABLES
-    // ============================================================
+
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
@@ -258,9 +253,7 @@ export async function initializeDatabase(): Promise<void> {
       ON otp_verifications(created_at);
     `);
 
-    // ============================================================
-    // ENSURE COLUMNS EXIST ON OLDER DATABASES
-    // ============================================================
+
 
     await pool.query(`
       -- USERS
@@ -430,18 +423,7 @@ export async function initializeDatabase(): Promise<void> {
       WHERE workflow_stage IS NULL OR transfer_tax_status IS NULL;
     `);
 
-    // ============================================================
-    // FIX EXISTING RPT DOCUMENTS COLUMN
-    // ============================================================
-    //
-    // If an older database was created with documents TEXT[],
-    // convert it to JSONB.
-    //
-    // PostgreSQL cannot use ALTER TYPE directly from TEXT[]
-    // to JSONB using a simple cast, so we convert each existing
-    // value through to_jsonb().
-    //
-    // ============================================================
+
 
     await pool.query(`
       DO $$
@@ -476,7 +458,7 @@ export async function initializeDatabase(): Promise<void> {
       $$;
     `);
 
-    // Seed QC Sample Real Property Records
+
     await pool.query(`
       INSERT INTO lgu_rpt_records (
         taxDeclarationNumber, pin, new_pspin, ownerName, propertyLocation, barangay, propertyType,
@@ -527,7 +509,7 @@ export async function initializeDatabase(): Promise<void> {
       ON CONFLICT (taxDeclarationNumber) DO NOTHING;
     `);
 
-    // Seed default admin account with hashed password
+
     const hashedAdminPassword = await bcrypt.hash('admin123', 12);
     await pool.query(
       `INSERT INTO users (name, email, password, role)
@@ -536,7 +518,7 @@ export async function initializeDatabase(): Promise<void> {
       [hashedAdminPassword]
     );
 
-    // Seed real admin account (uses a real email so OTP can be received)
+
     const hashedRealAdminPassword = await bcrypt.hash('Admin@1234', 12);
     await pool.query(
       `INSERT INTO users (name, email, password, role)
@@ -545,9 +527,9 @@ export async function initializeDatabase(): Promise<void> {
       [hashedRealAdminPassword]
     );
 
-    console.log('✅ Database tables checked/initialized successfully.');
+    console.log('Database tables checked/initialized successfully.');
   } catch (err) {
     const error = err as Error;
-    console.error('❌ Error initializing database tables:', error.message || error);
+    console.error('Error initializing database tables:', error.message || error);
   }
 }
