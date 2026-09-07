@@ -1,5 +1,3 @@
-// src/services/marketService.ts
-
 export interface LeaseRecord {
   leaseId: string;
   firstName: string;
@@ -86,7 +84,7 @@ export async function getLeases(): Promise<LeaseRecord[]> {
     }
   }
 
-  // Local storage fallback
+
   const data = localStorage.getItem("market_leases");
   return data ? JSON.parse(data) : [];
 }
@@ -110,7 +108,7 @@ export async function saveLease(newLease: LeaseRecord): Promise<void> {
         body: JSON.stringify(payload),
       });
 
-      // Read the backend response so we can show the actual error.
+
       const responseText = await res.text();
 
       let responseBody: any = {};
@@ -146,7 +144,7 @@ export async function saveLease(newLease: LeaseRecord): Promise<void> {
     }
   }
 
-  // Local storage fallback
+
   const existing = await getLeases();
   const updated = [payload, ...existing];
 
@@ -212,7 +210,7 @@ export async function updateLease(
     }
   }
 
-  // Local storage fallback
+
   const existing = await getLeases();
 
   const updated = existing.map((item) =>
@@ -259,7 +257,7 @@ export async function deleteLease(leaseId: string): Promise<void> {
     }
   }
 
-  // Local storage fallback
+
   const existing = await getLeases();
 
   const updated = existing.filter(

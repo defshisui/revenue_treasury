@@ -5,18 +5,16 @@ body {
   color: #1e293b;
 }
 
-/* Main layout */
 .legacy-treasury-shell {
   display: flex;
   min-height: 100vh;
 }
 
-.legacy-treasury-shell > div > aside {
+.legacy-treasury-shell>div>aside {
   background-color: #ffffff;
   min-height: 0;
 }
 
-/* Sidebar */
 .legacy-treasury-sidebar {
   width: 260px;
   background: #1e3a8a;
@@ -29,7 +27,6 @@ body {
   padding: 20px 0;
 }
 
-/* Sidebar links */
 .legacy-treasury-sidebar a {
   display: block;
   color: #fff;
@@ -42,19 +39,16 @@ body {
   background: #1d4ed8;
 }
 
-/* Active menu */
 .legacy-treasury-sidebar a.active {
   background: #2563eb;
 }
 
-/* Main content */
 .legacy-treasury-content {
   margin-left: 260px;
   flex: 1;
   padding: 24px;
 }
 
-/* Existing theme */
 .legacy-treasury-shell .bg-slate-950 {
   background-color: #ffffff;
 }

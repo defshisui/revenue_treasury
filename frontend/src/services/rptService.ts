@@ -1,12 +1,3 @@
-/**
- * Citizen RPT API boundary.
- *
- * The default data is deliberately marked DEMO and is only for interface
- * development. Set VITE_RPT_USE_MOCK=false after the protected RPT API is
- * available. The real API must derive the citizen from its authenticated
- * session; this client never sends a citizen ID to select records.
- */
-
 export type RPTTaxStatus =
   | "Paid"
   | "Unpaid"
@@ -336,7 +327,7 @@ export function getCitizenSession(): CitizenSession | null {
         };
       }
     } catch {
-      // A malformed stale browser value is not a valid signed-in session.
+
     }
   }
 
@@ -410,10 +401,10 @@ function mapAdminRPTProperty(record: Record<string, unknown>): RPTProperty {
 
 function mapAdminRPTTaxDetail(record: Record<string, unknown>): RPTTaxDetail {
   const property = mapAdminRPTProperty(record);
- const total =
-  toNumber(firstValue(record, ["totalAssessment", "totalAmountPayable", "totalDue"])) ??
-  property.outstandingBalance ??
-  null;
+  const total =
+    toNumber(firstValue(record, ["totalAssessment", "totalAmountPayable", "totalDue"])) ??
+    property.outstandingBalance ??
+    null;
   return {
     propertyId: property.id,
     billingYear: String(firstValue(record, ["billingYear", "taxYear", "year"]) ?? new Date().getFullYear()),
@@ -593,7 +584,7 @@ export async function resubmitRPTCompliance(applicationId: string, documents: Fi
   const application = demoApplications.find((item) => item.id === applicationId);
   if (!application) throw new Error("The selected application could not be found.");
 
-  // A citizen submission does not approve or change an officer-controlled status.
+
   application.lastUpdated = today();
   application.statusHistory = [
     ...application.statusHistory,

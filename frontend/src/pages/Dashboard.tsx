@@ -4,8 +4,6 @@ import { useLockout } from "../hooks/useLockout";
 import { useLogin } from "../hooks/useLogin";
 import { useRegister } from "../hooks/useRegister";
 import { getEncryptedItem } from "../citizen-portal/citizenSecurity";
-
-// This import ensures Vite correctly links to your dist/assets/logo-system-BmYEKQTP.png file during the build
 import systemLogo from "../assets/logo-system.png";
 
 export default function Login() {
@@ -13,7 +11,6 @@ export default function Login() {
   const [isRegistering, setIsRegistering] = useState(false);
   const { timeLeft, setTimeLeft, isLockedOut, formatTime } = useLockout();
 
-  // Redirect users who already have an active session
   useEffect(() => {
     (async () => {
       const encUser = await getEncryptedItem('currentUser') || await getEncryptedItem('user');
@@ -50,7 +47,6 @@ export default function Login() {
   const {
     email, setEmail, password, setPassword, showPassword, setShowPassword,
     errorMessage, isErrorState, isSubmittingLogin, handleLogin,
-    // 2FA OTP
     isOtpStep, otp, setOtp, otpExpirySeconds, resendCooldown,
     isVerifyingOtp, isResendingOtp, otpNotice,
     handleVerifyLoginOtp, handleResendLoginOtp, handleCancelOtp, formatOtpTimer
@@ -64,7 +60,6 @@ export default function Login() {
     barangay, setBarangay, city, setCity, occupation, setOccupation,
     sex, setSex, mobileNumber, setMobileNumber, regMessage, setRegMessage,
     regSuccess, isWorkerNotice, setIsWorkerNotice,
-    // Registration OTP
     regOtp, setRegOtp, otpExpirySeconds: regOtpExpirySeconds,
     resendCooldown: regResendCooldown, isSubmittingInit, isVerifyingOtp: isVerifyingRegOtp,
     isResendingOtp: isResendingRegOtp,
@@ -76,9 +71,7 @@ export default function Login() {
     handleCancelOtp();
   });
 
-  // ==========================================
-  // PREVENT BACK BUTTON AFTER LOGOUT FIX
-  // ==========================================
+
   useEffect(() => {
     window.history.pushState(null, "", window.location.href);
     const handleBackButton = () => {
@@ -92,7 +85,7 @@ export default function Login() {
 
   return (
     <main className="min-h-screen w-full grid grid-cols-1 lg:grid-cols-2 bg-[#F4F6F8]">
-      {/* Left Branding Column */}
+
       <section className="flex flex-col justify-between p-8 sm:p-10 lg:p-12 bg-[#09101d] text-white relative overflow-hidden min-h-[450px] lg:min-h-screen">
         <div
           className="absolute inset-0 m-auto size-[480px] bg-contain bg-center bg-no-repeat opacity-15 pointer-events-none z-0"
@@ -118,15 +111,13 @@ export default function Login() {
         </div>
       </section>
 
-      {/* Right Form Column */}
+
       <section className="flex items-center justify-center p-6 sm:p-10 bg-[#F4F6F8] relative w-full overflow-y-auto">
         {!isRegistering ? (
-          /* ========================================================================= */
-          /* SIGN IN FLOW (Standard Credentials OR Two-Factor Email OTP)              */
-          /* ========================================================================= */
+
           <div className="w-full max-w-[440px] bg-white rounded-3xl p-8 sm:p-10 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
             {!isOtpStep ? (
-              /* --- Step 1: Username / Email & Password --- */
+
               <>
                 <div className="mb-7">
                   <h2 className="text-3xl font-bold tracking-tight text-slate-900">Welcome Back</h2>
@@ -213,7 +204,7 @@ export default function Login() {
                 </div>
               </>
             ) : (
-              /* --- Step 2: Two-Factor Sign-In Email OTP Screen --- */
+
               <div className="space-y-6">
                 <div className="text-center space-y-2">
                   <div className="size-14 rounded-2xl bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center text-2xl mx-auto shadow-xs">
@@ -255,7 +246,7 @@ export default function Login() {
                     />
                   </div>
 
-                  {/* Expiration Timer & Resend Controls */}
+
                   <div className="flex items-center justify-between text-xs border-t border-slate-100 pt-3">
                     <span className="text-slate-500 font-semibold flex items-center gap-1">
                       <span>⏱️ Code expires in:</span>
@@ -298,9 +289,7 @@ export default function Login() {
             )}
           </div>
         ) : (
-          /* ========================================================================= */
-          /* CITIZEN REGISTRATION FLOW (Steps 1 to 4 + Step 5 Email OTP)               */
-          /* ========================================================================= */
+
           <div className="w-full max-w-xl bg-white rounded-3xl p-8 sm:p-10 shadow-[0_8px_30px_rgba(0,0,0,0.06)] my-6">
             <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
               <div>
@@ -324,7 +313,7 @@ export default function Login() {
               </button>
             </div>
 
-            {/* 5-Step Progress Indicator */}
+
             <div className="grid grid-cols-5 gap-2 mb-6">
               <div className={`h-1.5 rounded-full ${regStep >= 1 ? 'bg-blue-600' : 'bg-slate-200'}`} />
               <div className={`h-1.5 rounded-full ${regStep >= 2 ? 'bg-blue-600' : 'bg-slate-200'}`} />
@@ -339,7 +328,6 @@ export default function Login() {
               </div>
             )}
 
-            {/* Step 1: Account */}
             {regStep === 1 && (
               <form onSubmit={handleNextStep} className="space-y-4">
                 <div className="space-y-1.5">
@@ -386,7 +374,7 @@ export default function Login() {
               </form>
             )}
 
-            {/* Step 2: Personal Details */}
+
             {regStep === 2 && (
               <form onSubmit={handleNextStep} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -442,7 +430,7 @@ export default function Login() {
               </form>
             )}
 
-            {/* Step 3: Address & Contact */}
+
             {regStep === 3 && (
               <form onSubmit={handleNextStep} className="space-y-4">
                 <div className="space-y-1.5">
@@ -488,7 +476,7 @@ export default function Login() {
               </form>
             )}
 
-            {/* Step 4: Review Information */}
+
             {regStep === 4 && (
               <div className="space-y-5">
                 <div className="bg-[#F8FAFC] border-2 border-slate-300 rounded-3xl p-6 space-y-4 text-slate-900 shadow-sm">
@@ -546,7 +534,7 @@ export default function Login() {
               </div>
             )}
 
-            {/* Step 5: Email OTP Verification */}
+
             {regStep === 5 && (
               <div className="space-y-6">
                 <div className="text-center space-y-2">

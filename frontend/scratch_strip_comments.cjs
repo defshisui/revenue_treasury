@@ -8,17 +8,13 @@ for (const file of files) {
   const filePath = path.join(dir, file);
   let content = fs.readFileSync(filePath, 'utf8');
 
-  // Remove {/* ... */}
   content = content.replace(/\{\/\*[\s\S]*?\*\/\}/g, '');
-  
-  // Remove /* ... */
+
   content = content.replace(/\/\*[\s\S]*?\*\//g, '');
-  
-  // Remove // ... (only if it's not inside a URL like http://)
-  // Look for // that is either at start of line, or preceded by whitespace
+
+
   content = content.replace(/(^|\s)\/\/.*$/gm, '');
 
-  // Remove empty lines that might have been left behind
   content = content.replace(/^\s*[\r\n]/gm, '');
 
   fs.writeFileSync(filePath, content);

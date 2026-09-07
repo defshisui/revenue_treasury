@@ -31,9 +31,7 @@ export default function App() {
       <BrowserRouter>
         <Routes>
 
-          {/* =========================
-              MAIN PAGES
-          ========================= */}
+
 
           <Route
             path="/"
@@ -60,13 +58,11 @@ export default function App() {
             element={<MarketRental />}
           />
 
-          {/* EXISTING PROFILE PAGE */}
           <Route
             path="/profile"
             element={<Profile />}
           />
 
-          {/* CITIZEN EDIT PROFILE */}
           <Route
             path="/edit-profile"
             element={<CitizenProfile />}
@@ -76,11 +72,6 @@ export default function App() {
             path="/legacy-treasury"
             element={<LegacyTreasuryApp />}
           />
-
-
-          {/* =========================
-              CITIZEN PORTAL
-          ========================= */}
 
           <Route
             path="/citizen-portal"
@@ -112,20 +103,10 @@ export default function App() {
             element={<HawkerApplication />}
           />
 
-
-          {/* =========================
-              REAL PROPERTY TAX HUB
-          ========================= */}
-
           <Route
             path="/real-property-tax-hub"
             element={<RealPropertyTaxHub />}
           />
-
-
-          {/* =========================
-              ACTUAL RPT SYSTEM
-          ========================= */}
 
           <Route
             path="/citizen-rpt/*"
@@ -137,20 +118,10 @@ export default function App() {
             element={<RealPropertyApplication />}
           />
 
-
-          {/* =========================
-              BUSINESS TAX
-          ========================= */}
-
           <Route
             path="/business-tax-assessment"
             element={<BusinessTaxAssessmentView />}
           />
-
-
-          {/* =========================
-              MARKET VENDORS
-          ========================= */}
 
           <Route
             path="/market-vendor-tab"

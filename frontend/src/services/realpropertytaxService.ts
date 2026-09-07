@@ -1,5 +1,3 @@
-// src/services/realpropertytaxService.ts
-
 export interface RPTApplicationRecord {
   id: string;
   controlNumber?: string;
@@ -60,15 +58,7 @@ import { API_BASE_URL } from '../config/api';
 
 export const getRPTApplications = async (): Promise<RPTApplicationRecord[]> => {
   try {
-    /*
-     * RPT applications are PRIVATE citizen data.
-     *
-     * The login system stores the authenticated JWT in
-     * localStorage under "token".
-     *
-     * If there is no token, do NOT request the application
-     * list at all.
-     */
+
     const token =
       localStorage.getItem("token") ||
       sessionStorage.getItem("token");
@@ -92,7 +82,7 @@ export const getRPTApplications = async (): Promise<RPTApplicationRecord[]> => {
 
     const data = await response.json();
 
-    // Maps database column fields into the expected frontend TypeScript interface structure.
+
     return data.map((row: any) => ({
       id: row.id,
 
@@ -218,7 +208,7 @@ export const saveRPTApplication = async (
   try {
     const formData = new FormData();
 
-    // Append standard application properties to multipart form data
+
     Object.keys(application).forEach((key) => {
       const value = application[key];
 
@@ -240,7 +230,7 @@ export const saveRPTApplication = async (
       }
     });
 
-    // Append physical file uploads if provided
+
     if (
       rawFiles &&
       rawFiles.length > 0
@@ -653,7 +643,7 @@ export const verifyRPTServicePayment =
   };
 
 
-// Backward-compatible aliases for existing Transfer of Ownership code.
+
 export const createTransferTaxCheckout =
   createRPTServiceCheckout;
 

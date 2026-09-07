@@ -1,5 +1,3 @@
-// src/services/hawkerservice.ts
-
 export interface HawkerApplicationPayload {
     id: string;
     associationNumber: string;
@@ -30,14 +28,14 @@ export async function getHawkerApplications(): Promise<HawkerApplicationPayload[
         }
         return res.json();
     }
-    
+
     const data = localStorage.getItem("hawker_applications");
     return data ? JSON.parse(data) : [];
 }
 
 export async function submitHawkerApplication(payload: HawkerApplicationPayload): Promise<any> {
     if (MODE === "ONLINE") {
-        // Matches the Express app.post('/api/hawkers', ...) route in server.js
+
         const response = await fetch(`${API_BASE_URL}/api/hawkers`, {
             method: 'POST',
             headers: {
@@ -53,7 +51,7 @@ export async function submitHawkerApplication(payload: HawkerApplicationPayload)
         return await response.json();
     }
 
-    // LocalStorage fallback (inactive while MODE is ONLINE)
+
     const existing = await getHawkerApplications();
     const updated = [payload, ...existing];
     localStorage.setItem("hawker_applications", JSON.stringify(updated));

@@ -1,4 +1,3 @@
-// src/hooks/useLogin.ts
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../config/api";
@@ -15,18 +14,18 @@ export function useLogin(
   const [isErrorState, setIsErrorState] = useState(false);
   const [isSubmittingLogin, setIsSubmittingLogin] = useState(false);
 
-  // --- Two-Factor Email OTP State ---
+
   const [isOtpStep, setIsOtpStep] = useState(false);
   const [otp, setOtp] = useState("");
-  const [otpExpirySeconds, setOtpExpirySeconds] = useState(300); // 5 minutes
-  const [resendCooldown, setResendCooldown] = useState(60); // 60 seconds
+  const [otpExpirySeconds, setOtpExpirySeconds] = useState(300);
+  const [resendCooldown, setResendCooldown] = useState(60);
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
   const [isResendingOtp, setIsResendingOtp] = useState(false);
   const [otpNotice, setOtpNotice] = useState("");
 
   const navigate = useNavigate();
 
-  // OTP Expiration & Resend Cooldown Countdown Timers
+
   useEffect(() => {
     let interval: any = null;
     if (isOtpStep) {
@@ -46,9 +45,7 @@ export function useLogin(
     return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
   };
 
-  /**
-   * STEP 1: Verify Password -> Initiate Email OTP
-   */
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (timeLeft > 0) return;
@@ -85,14 +82,14 @@ export function useLogin(
 
       if (response.ok) {
         if (data.requireOtp) {
-          // Password is valid! Show OTP verification view
+
           setIsOtpStep(true);
           setOtp("");
-          setOtpExpirySeconds(300); // 5 minutes
-          setResendCooldown(60); // 60 seconds
+          setOtpExpirySeconds(300);
+          setResendCooldown(60);
           setOtpNotice(`A 6-digit verification code was sent to ${data.email || email}.`);
         } else {
-          // Direct fallback if OTP was bypassed by server
+
           finishSession(data);
         }
       } else {
@@ -117,9 +114,7 @@ export function useLogin(
     }
   };
 
-  /**
-   * STEP 2: Verify Login OTP -> Issue JWT & Navigate
-   */
+
   const handleVerifyLoginOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!otp || otp.trim().length !== 6) {
@@ -159,9 +154,7 @@ export function useLogin(
     }
   };
 
-  /**
-   * Resend Sign-In OTP with 60s cooldown
-   */
+
   const handleResendLoginOtp = async () => {
     if (resendCooldown > 0 || isResendingOtp) return;
 
@@ -240,7 +233,6 @@ export function useLogin(
     isErrorState,
     isSubmittingLogin,
     handleLogin,
-    // 2FA OTP States
     isOtpStep,
     otp,
     setOtp,

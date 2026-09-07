@@ -1,4 +1,3 @@
-// src/components/Profile.tsx
 import { useState, useRef, useEffect } from "react";
 import { useLocation, Link } from "react-router-dom";
 
@@ -15,10 +14,7 @@ export default function Profile() {
   const location = useLocation();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  /*
-   * DARK MODE
-   * --------------------------------------------------
-   */
+
   const [isDarkMode, setIsDarkMode] = useState(() => {
     return localStorage.getItem("theme") === "dark";
   });
@@ -45,9 +41,7 @@ export default function Profile() {
     }
   }, [isDarkMode]);
 
-  /*
-   * ROLE
-   */
+
   const rawSession =
     localStorage.getItem("currentUser") ||
     localStorage.getItem("user") ||
@@ -103,9 +97,7 @@ export default function Profile() {
     "Municipal Treasurer",
   ].includes(activeRole);
 
-  /*
-   * FETCH LOGGED-IN ADMIN SESSION
-   */
+
   const getInitialUserData = () => {
     const rawData =
       localStorage.getItem("currentUser") ||
@@ -148,9 +140,9 @@ export default function Profile() {
         initials =
           nameParts.length > 1
             ? (
-                nameParts[0][0] +
-                nameParts[nameParts.length - 1][0]
-              ).toUpperCase()
+              nameParts[0][0] +
+              nameParts[nameParts.length - 1][0]
+            ).toUpperCase()
             : nameParts[0].slice(0, 2).toUpperCase();
       }
 
@@ -171,9 +163,7 @@ export default function Profile() {
 
   const initialUser = getInitialUserData();
 
-  /*
-   * PROFILE DATA
-   */
+
   const {
     profileData,
     setProfileData,
@@ -188,7 +178,7 @@ export default function Profile() {
     position: activeRole,
   });
 
-  // Fetch full profile from DB on mount
+
   useEffect(() => {
     const email = initialUser?.email;
 
@@ -222,7 +212,7 @@ export default function Profile() {
             prev.employeeId,
         }));
 
-        // Hydrate avatar from DB if present
+
         if (data.avatar) {
           setAvatarUrl(resolveAvatarUrl(data.avatar));
 
@@ -256,15 +246,13 @@ export default function Profile() {
         }
       })
       .catch(() => {
-        /* silently ignore */
+
       });
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, []);
 
-  /*
-   * AVATAR
-   */
+
   const resolveAvatarUrl = (
     url: string | null | undefined
   ): string | null => {
@@ -285,9 +273,7 @@ export default function Profile() {
       resolveAvatarUrl(initialUser?.avatar)
     );
 
-  /*
-   * PASSWORD
-   */
+
   const {
     passwordData,
     handlePasswordChange,
@@ -296,18 +282,14 @@ export default function Profile() {
     getPasswordRequirements,
   } = usePasswordForm();
 
-  /*
-   * MESSAGES
-   */
+
   const [statusMessage, setStatusMessage] =
     useState("");
 
   const [errorMessage, setErrorMessage] =
     useState("");
 
-  /*
-   * IMAGE UPLOAD
-   */
+
   async function handleImageUpload(
     event: React.ChangeEvent<HTMLInputElement>
   ) {
@@ -335,7 +317,7 @@ export default function Profile() {
 
     const userObj =
       parsedData?.user &&
-      typeof parsedData.user === "object"
+        typeof parsedData.user === "object"
         ? parsedData.user
         : parsedData;
 
@@ -383,8 +365,8 @@ export default function Profile() {
               "Content-Type": "application/json",
               ...(avatarToken
                 ? {
-                    Authorization: `Bearer ${avatarToken}`,
-                  }
+                  Authorization: `Bearer ${avatarToken}`,
+                }
                 : {}),
             },
             body: JSON.stringify({
@@ -396,16 +378,16 @@ export default function Profile() {
 
         if (resp.ok) {
           setStatusMessage(
-            "✅ Profile picture updated."
+            "Profile picture updated."
           );
         } else {
           setStatusMessage(
-            "✅ Profile picture updated locally."
+            "Profile picture updated locally."
           );
         }
       } catch {
         setStatusMessage(
-          "✅ Profile picture updated locally."
+          "Profile picture updated locally."
         );
       }
     };
@@ -413,9 +395,7 @@ export default function Profile() {
     reader.readAsDataURL(file);
   }
 
-  /*
-   * PROFILE SUBMIT
-   */
+
   async function handleProfileSubmit(
     event: React.FormEvent<HTMLFormElement>
   ) {
@@ -443,7 +423,7 @@ export default function Profile() {
 
       const userObj =
         parsedData.user &&
-        typeof parsedData.user === "object"
+          typeof parsedData.user === "object"
           ? parsedData.user
           : parsedData;
 
@@ -461,8 +441,8 @@ export default function Profile() {
             "Content-Type": "application/json",
             ...(token
               ? {
-                  Authorization: `Bearer ${token}`,
-                }
+                Authorization: `Bearer ${token}`,
+              }
               : {}),
           },
           body: JSON.stringify({
@@ -482,7 +462,7 @@ export default function Profile() {
 
         throw new Error(
           errBody.message ||
-            "Failed to update profile on server."
+          "Failed to update profile on server."
         );
       }
 
@@ -523,7 +503,7 @@ export default function Profile() {
       );
 
       setStatusMessage(
-        "✅ Profile updated successfully."
+        "Profile updated successfully."
       );
     } catch (e: any) {
       console.error(
@@ -533,14 +513,12 @@ export default function Profile() {
 
       setErrorMessage(
         e.message ||
-          "Failed to save changes."
+        "Failed to save changes."
       );
     }
   }
 
-  /*
-   * PASSWORD SUBMIT
-   */
+
   async function handlePasswordSubmit(
     event: React.FormEvent<HTMLFormElement>
   ) {
@@ -549,7 +527,7 @@ export default function Profile() {
     setErrorMessage("");
     setStatusMessage("");
 
-    // Check confirmation
+
     if (
       passwordData.newPassword !==
       passwordData.confirmPassword
@@ -560,15 +538,7 @@ export default function Profile() {
       return;
     }
 
-    // ============================================================
-    // STRONG PASSWORD VALIDATION
-    // Requirements:
-    // - At least 8 characters
-    // - At least 1 uppercase letter
-    // - At least 1 lowercase letter
-    // - At least 1 number
-    // - At least 1 special character
-    // ============================================================
+
     if (
       !isStrongPassword(
         passwordData.newPassword
@@ -580,7 +550,6 @@ export default function Profile() {
       return;
     }
 
-    // Prevent using the current password again
     if (
       passwordData.newPassword ===
       passwordData.currentPassword
@@ -610,7 +579,7 @@ export default function Profile() {
 
       const userObj =
         parsedData.user &&
-        typeof parsedData.user === "object"
+          typeof parsedData.user === "object"
           ? parsedData.user
           : parsedData;
 
@@ -628,8 +597,8 @@ export default function Profile() {
             "Content-Type": "application/json",
             ...(pwToken
               ? {
-                  Authorization: `Bearer ${pwToken}`,
-                }
+                Authorization: `Bearer ${pwToken}`,
+              }
               : {}),
           },
           body: JSON.stringify({
@@ -648,14 +617,14 @@ export default function Profile() {
 
         throw new Error(
           errorData.message ||
-            "Incorrect current password or server error."
+          "Incorrect current password or server error."
         );
       }
 
       resetPasswordForm();
 
       setStatusMessage(
-        "✅ Password changed successfully."
+        "Password changed successfully."
       );
     } catch (e: any) {
       console.error(
@@ -665,18 +634,16 @@ export default function Profile() {
 
       setErrorMessage(
         e.message ||
-          "Failed to secure new password on the server."
+        "Failed to secure new password on the server."
       );
     }
   }
 
-  /*
-   * COLORS
-   */
+
   const pageBackground =
     isDarkMode ? "#020617" : "#f8fafc";
 
-  // Re-calculate initials on render
+
   const currentFullName =
     profileData.fullName || "Administrator";
 
@@ -688,14 +655,14 @@ export default function Profile() {
   const currentInitials =
     nameParts.length > 1
       ? (
-          nameParts[0][0] +
-          nameParts[nameParts.length - 1][0]
-        ).toUpperCase()
+        nameParts[0][0] +
+        nameParts[nameParts.length - 1][0]
+      ).toUpperCase()
       : nameParts[0]
-          .slice(0, 2)
-          .toUpperCase();
+        .slice(0, 2)
+        .toUpperCase();
 
-  // Password requirement status
+
   const passwordRequirements =
     getPasswordRequirements(
       passwordData.newPassword
@@ -703,11 +670,10 @@ export default function Profile() {
 
   return (
     <div
-      className={`min-h-screen w-full overflow-x-auto transition-colors duration-300 ${
-        isDarkMode
+      className={`min-h-screen w-full overflow-x-auto transition-colors duration-300 ${isDarkMode
           ? "text-slate-100"
           : "text-slate-800"
-      }`}
+        }`}
       style={{
         backgroundColor: pageBackground,
       }}
@@ -718,20 +684,17 @@ export default function Profile() {
           backgroundColor: pageBackground,
         }}
       >
-        {/* =====================================================
-            TOP CONTROLS BAR
-        ====================================================== */}
+
         <div
-          className={`flex items-center justify-end gap-3 border-b px-6 py-2.5 transition-colors duration-300 ${
-            isDarkMode
+          className={`flex items-center justify-end gap-3 border-b px-6 py-2.5 transition-colors duration-300 ${isDarkMode
               ? "border-slate-800"
               : "border-slate-200"
-          }`}
+            }`}
           style={{
             backgroundColor: pageBackground,
           }}
         >
-          {/* DARK MODE BUTTON */}
+
           <button
             type="button"
             onClick={() =>
@@ -739,11 +702,10 @@ export default function Profile() {
                 (current) => !current
               )
             }
-            className={`flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold shadow-sm transition cursor-pointer ${
-              isDarkMode
+            className={`flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold shadow-sm transition cursor-pointer ${isDarkMode
                 ? "border-slate-800 bg-slate-900 text-slate-200 hover:bg-slate-800"
                 : "border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
-            }`}
+              }`}
           >
             {isDarkMode ? (
               <>
@@ -782,52 +744,45 @@ export default function Profile() {
             )}
           </button>
 
-          {/* BACK TO DASHBOARD */}
+
           <Link
             to={
               isCitizen
                 ? "/citizen-portal"
                 : "/legacy-treasury"
             }
-            className={`text-sm font-medium transition-colors ${
-              isDarkMode
+            className={`text-sm font-medium transition-colors ${isDarkMode
                 ? "text-slate-300 hover:text-blue-400"
                 : "text-slate-600 hover:text-blue-800"
-            }`}
+              }`}
           >
             Back to Dashboard &rarr;
           </Link>
         </div>
 
-        {/* =====================================================
-            MAIN PAGE
-        ====================================================== */}
+
         <main
           className="min-h-[calc(100vh-73px)] px-6 py-4 transition-colors duration-300"
           style={{
             backgroundColor: pageBackground,
           }}
         >
-          {/* ===================================================
-              PROFILE HEADER
-          ==================================================== */}
+
           <section
-            className={`mx-auto max-w-7xl rounded-3xl border p-5 shadow-md transition-colors duration-300 ${
-              isDarkMode
+            className={`mx-auto max-w-7xl rounded-3xl border p-5 shadow-md transition-colors duration-300 ${isDarkMode
                 ? "border-slate-800 bg-slate-900 text-white"
                 : "border-slate-200 bg-white text-slate-900"
-            }`}
+              }`}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                {/* PROFILE PHOTO */}
+
                 <div className="group relative">
                   <div
-                    className={`flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-4 shadow-inner ${
-                      isDarkMode
+                    className={`flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-4 shadow-inner ${isDarkMode
                         ? "border-slate-700 bg-slate-800"
                         : "border-slate-200 bg-slate-100"
-                    }`}
+                      }`}
                   >
                     {avatarUrl ? (
                       <img
@@ -861,35 +816,32 @@ export default function Profile() {
                   />
                 </div>
 
-                {/* PROFILE TITLE */}
+
                 <div>
                   <p
-                    className={`text-sm uppercase tracking-[0.3em] ${
-                      isDarkMode
+                    className={`text-sm uppercase tracking-[0.3em] ${isDarkMode
                         ? "text-slate-400"
                         : "text-slate-500"
-                    }`}
+                      }`}
                   >
                     Republic of the Philippines • LGU Portal
                   </p>
 
                   <h2
-                    className={`mt-1 text-2xl font-extrabold ${
-                      isDarkMode
+                    className={`mt-1 text-2xl font-extrabold ${isDarkMode
                         ? "text-white"
                         : "text-slate-900"
-                    }`}
+                      }`}
                   >
                     {profileData.fullName ||
                       "Administrator Profile"}
                   </h2>
 
                   <p
-                    className={`text-sm font-medium ${
-                      isDarkMode
+                    className={`text-sm font-medium ${isDarkMode
                         ? "text-blue-400"
                         : "text-blue-800"
-                    }`}
+                      }`}
                   >
                     {profileData.department ||
                       "Office of the Municipal Treasurer"}
@@ -897,13 +849,12 @@ export default function Profile() {
                 </div>
               </div>
 
-              {/* EMPLOYEE ID */}
+
               <div
-                className={`rounded-xl px-3 py-2 text-xs ${
-                  isDarkMode
+                className={`rounded-xl px-3 py-2 text-xs ${isDarkMode
                     ? "bg-slate-800 text-slate-300"
                     : "bg-slate-100 text-slate-700"
-                }`}
+                  }`}
               >
                 Employee ID:{" "}
                 <strong
@@ -920,18 +871,15 @@ export default function Profile() {
             </div>
           </section>
 
-          {/* ===================================================
-              STATUS / ERROR MESSAGES
-          ==================================================== */}
+
           {(statusMessage || errorMessage) && (
             <div className="mx-auto mt-3 max-w-7xl">
               {statusMessage && (
                 <div
-                  className={`rounded-2xl border p-4 text-sm shadow-sm ${
-                    isDarkMode
+                  className={`rounded-2xl border p-4 text-sm shadow-sm ${isDarkMode
                       ? "border-emerald-800 bg-emerald-950/30 text-emerald-400"
                       : "border-emerald-200 bg-emerald-50 text-emerald-700"
-                  }`}
+                    }`}
                 >
                   {statusMessage}
                 </div>
@@ -939,11 +887,10 @@ export default function Profile() {
 
               {errorMessage && (
                 <div
-                  className={`mt-3 rounded-2xl border p-4 text-sm shadow-sm ${
-                    isDarkMode
+                  className={`mt-3 rounded-2xl border p-4 text-sm shadow-sm ${isDarkMode
                       ? "border-rose-800 bg-rose-950/30 text-rose-400"
                       : "border-rose-200 bg-rose-50 text-rose-700"
-                  }`}
+                    }`}
                 >
                   {errorMessage}
                 </div>
@@ -951,46 +898,41 @@ export default function Profile() {
             </div>
           )}
 
-          {/* ===================================================
-              MAIN CONTENT GRID
-          ==================================================== */}
+
           <section className="mx-auto mt-4 grid max-w-7xl grid-cols-[1.45fr_0.85fr] gap-4 items-start">
-            {/* LEFT COLUMN */}
+
             <div
-              className={`rounded-3xl border p-5 shadow-md transition-colors duration-300 ${
-                isDarkMode
+              className={`rounded-3xl border p-5 shadow-md transition-colors duration-300 ${isDarkMode
                   ? "border-slate-800 bg-slate-900 text-white"
                   : "border-slate-200 bg-white text-slate-900"
-              }`}
+                }`}
             >
               <h3 className="text-base font-bold">
                 Official Staff Information
               </h3>
 
               <p
-                className={`mt-1 text-xs ${
-                  isDarkMode
+                className={`mt-1 text-xs ${isDarkMode
                     ? "text-slate-400"
                     : "text-slate-500"
-                }`}
+                  }`}
               >
                 Update your official contact records and
                 assignment details.
               </p>
 
-              {/* PROFILE FORM */}
+
               <form
                 onSubmit={handleProfileSubmit}
                 className="mt-4 grid gap-3"
               >
-                {/* FULL NAME */}
+
                 <div>
                   <label
-                    className={`mb-1 block text-xs font-semibold uppercase ${
-                      isDarkMode
+                    className={`mb-1 block text-xs font-semibold uppercase ${isDarkMode
                         ? "text-slate-400"
                         : "text-slate-500"
-                    }`}
+                      }`}
                   >
                     Full Name
                   </label>
@@ -1002,23 +944,21 @@ export default function Profile() {
                     onChange={handleProfileChange}
                     placeholder="Full Name"
                     required
-                    className={`w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors ${
-                      isDarkMode
+                    className={`w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors ${isDarkMode
                         ? "border-slate-700 bg-slate-950 text-white placeholder:text-slate-500 focus:border-blue-500"
                         : "border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:border-blue-800"
-                    }`}
+                      }`}
                   />
                 </div>
 
-                {/* EMAIL + PHONE */}
+
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label
-                      className={`mb-1 block text-xs font-semibold uppercase ${
-                        isDarkMode
+                      className={`mb-1 block text-xs font-semibold uppercase ${isDarkMode
                           ? "text-slate-400"
                           : "text-slate-500"
-                      }`}
+                        }`}
                     >
                       Official Email Address
                     </label>
@@ -1030,21 +970,19 @@ export default function Profile() {
                       onChange={handleProfileChange}
                       placeholder="Email Address"
                       required
-                      className={`w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors ${
-                        isDarkMode
+                      className={`w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors ${isDarkMode
                           ? "border-slate-700 bg-slate-950 text-white placeholder:text-slate-500 focus:border-blue-500"
                           : "border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:border-blue-800"
-                      }`}
+                        }`}
                     />
                   </div>
 
                   <div>
                     <label
-                      className={`mb-1 block text-xs font-semibold uppercase ${
-                        isDarkMode
+                      className={`mb-1 block text-xs font-semibold uppercase ${isDarkMode
                           ? "text-slate-400"
                           : "text-slate-500"
-                      }`}
+                        }`}
                     >
                       Contact Number
                     </label>
@@ -1055,23 +993,21 @@ export default function Profile() {
                       value={profileData.phone}
                       onChange={handleProfileChange}
                       placeholder="+63 912 345 6789"
-                      className={`w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors ${
-                        isDarkMode
+                      className={`w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors ${isDarkMode
                           ? "border-slate-700 bg-slate-950 text-white placeholder:text-slate-500 focus:border-blue-500"
                           : "border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:border-blue-800"
-                      }`}
+                        }`}
                     />
                   </div>
                 </div>
 
-                {/* DEPARTMENT */}
+
                 <div>
                   <label
-                    className={`mb-1 block text-xs font-semibold uppercase ${
-                      isDarkMode
+                    className={`mb-1 block text-xs font-semibold uppercase ${isDarkMode
                         ? "text-slate-400"
                         : "text-slate-500"
-                    }`}
+                      }`}
                   >
                     Department / Division
                   </label>
@@ -1080,11 +1016,10 @@ export default function Profile() {
                     name="department"
                     value={profileData.department}
                     onChange={handleProfileChange}
-                    className={`w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors ${
-                      isDarkMode
+                    className={`w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors ${isDarkMode
                         ? "border-slate-700 bg-slate-950 text-white focus:border-blue-500"
                         : "border-slate-300 bg-white text-slate-900 focus:border-blue-800"
-                    }`}
+                      }`}
                   >
                     <option value="">
                       Select Department
@@ -1108,14 +1043,13 @@ export default function Profile() {
                   </select>
                 </div>
 
-                {/* ADDRESS */}
+
                 <div>
                   <label
-                    className={`mb-1 block text-xs font-semibold uppercase ${
-                      isDarkMode
+                    className={`mb-1 block text-xs font-semibold uppercase ${isDarkMode
                         ? "text-slate-400"
                         : "text-slate-500"
-                    }`}
+                      }`}
                   >
                     Official Address / Station
                   </label>
@@ -1126,15 +1060,14 @@ export default function Profile() {
                     value={profileData.address}
                     onChange={handleProfileChange}
                     placeholder="Address"
-                    className={`w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors ${
-                      isDarkMode
+                    className={`w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors ${isDarkMode
                         ? "border-slate-700 bg-slate-950 text-white placeholder:text-slate-500 focus:border-blue-500"
                         : "border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:border-blue-800"
-                    }`}
+                      }`}
                   />
                 </div>
 
-                {/* SAVE */}
+
                 <button
                   type="submit"
                   className="mt-2 inline-flex items-center justify-center rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-blue-700 cursor-pointer shadow-sm"
@@ -1143,26 +1076,22 @@ export default function Profile() {
                 </button>
               </form>
 
-              {/* =================================================
-                  PASSWORD SECTION
-              ================================================== */}
+
               <div
-                className={`mt-10 rounded-3xl border p-6 transition-colors duration-300 ${
-                  isDarkMode
+                className={`mt-10 rounded-3xl border p-6 transition-colors duration-300 ${isDarkMode
                     ? "border-slate-800 bg-slate-950 text-white"
                     : "border-slate-100 bg-slate-50 text-slate-900"
-                }`}
+                  }`}
               >
                 <h4 className="text-sm font-bold">
                   Change Security Password
                 </h4>
 
                 <p
-                  className={`mt-1 text-xs ${
-                    isDarkMode
+                  className={`mt-1 text-xs ${isDarkMode
                       ? "text-slate-400"
                       : "text-slate-500"
-                  }`}
+                    }`}
                 >
                   Update your access password regularly to
                   maintain administrative security compliance.
@@ -1172,7 +1101,7 @@ export default function Profile() {
                   onSubmit={handlePasswordSubmit}
                   className="mt-4 grid gap-3"
                 >
-                  {/* CURRENT PASSWORD */}
+
                   <input
                     type="password"
                     name="currentPassword"
@@ -1180,27 +1109,24 @@ export default function Profile() {
                     onChange={handlePasswordChange}
                     placeholder="Current Password"
                     required
-                    className={`w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors ${
-                      isDarkMode
+                    className={`w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors ${isDarkMode
                         ? "border-slate-700 bg-slate-900 text-white placeholder:text-slate-500 focus:border-slate-400"
                         : "border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:border-slate-900"
-                    }`}
+                      }`}
                   />
 
-                  {/* PASSWORD REQUIREMENTS */}
+
                   <div
-                    className={`rounded-xl border p-3 text-xs ${
-                      isDarkMode
+                    className={`rounded-xl border p-3 text-xs ${isDarkMode
                         ? "border-slate-800 bg-slate-900"
                         : "border-slate-200 bg-white"
-                    }`}
+                      }`}
                   >
                     <p
-                      className={`mb-2 font-semibold ${
-                        isDarkMode
+                      className={`mb-2 font-semibold ${isDarkMode
                           ? "text-slate-200"
                           : "text-slate-700"
-                      }`}
+                        }`}
                     >
                       Password must contain:
                     </p>
@@ -1211,8 +1137,8 @@ export default function Profile() {
                           passwordRequirements.minLength
                             ? "text-emerald-500"
                             : isDarkMode
-                            ? "text-slate-500"
-                            : "text-slate-400"
+                              ? "text-slate-500"
+                              : "text-slate-400"
                         }
                       >
                         {passwordRequirements.minLength
@@ -1226,8 +1152,8 @@ export default function Profile() {
                           passwordRequirements.uppercase
                             ? "text-emerald-500"
                             : isDarkMode
-                            ? "text-slate-500"
-                            : "text-slate-400"
+                              ? "text-slate-500"
+                              : "text-slate-400"
                         }
                       >
                         {passwordRequirements.uppercase
@@ -1241,8 +1167,8 @@ export default function Profile() {
                           passwordRequirements.lowercase
                             ? "text-emerald-500"
                             : isDarkMode
-                            ? "text-slate-500"
-                            : "text-slate-400"
+                              ? "text-slate-500"
+                              : "text-slate-400"
                         }
                       >
                         {passwordRequirements.lowercase
@@ -1256,8 +1182,8 @@ export default function Profile() {
                           passwordRequirements.number
                             ? "text-emerald-500"
                             : isDarkMode
-                            ? "text-slate-500"
-                            : "text-slate-400"
+                              ? "text-slate-500"
+                              : "text-slate-400"
                         }
                       >
                         {passwordRequirements.number
@@ -1271,8 +1197,8 @@ export default function Profile() {
                           passwordRequirements.special
                             ? "text-emerald-500"
                             : isDarkMode
-                            ? "text-slate-500"
-                            : "text-slate-400"
+                              ? "text-slate-500"
+                              : "text-slate-400"
                         }
                       >
                         {passwordRequirements.special
@@ -1283,48 +1209,45 @@ export default function Profile() {
                     </div>
                   </div>
 
-                  {/* NEW + CONFIRM PASSWORD */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  {/* NEW PASSWORD */}
-                  <input
-                    type="password"
-                    name="newPassword"
-                    value={passwordData.newPassword}
-                    onChange={handlePasswordChange}
-                    placeholder="New Password"
-                    required
-                    className={`w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors ${
-                      isDarkMode
-                        ? "border-slate-700 bg-slate-900 text-white placeholder:text-slate-500 focus:border-slate-400"
-                        : "border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:border-slate-900"
-                    }`}
-                  />
 
-                  {/* CONFIRM PASSWORD */}
-                  <input
-                    type="password"
-                    name="confirmPassword"
-                    value={passwordData.confirmPassword}
-                    onChange={handlePasswordChange}
-                    placeholder="Confirm New Password"
-                    required
-                    className={`w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors ${
-                      isDarkMode
-                        ? "border-slate-700 bg-slate-900 text-white placeholder:text-slate-500 focus:border-slate-400"
-                        : "border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:border-slate-900"
-                    }`}
-                  />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+
+                    <input
+                      type="password"
+                      name="newPassword"
+                      value={passwordData.newPassword}
+                      onChange={handlePasswordChange}
+                      placeholder="New Password"
+                      required
+                      className={`w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors ${isDarkMode
+                          ? "border-slate-700 bg-slate-900 text-white placeholder:text-slate-500 focus:border-slate-400"
+                          : "border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:border-slate-900"
+                        }`}
+                    />
+
+
+                    <input
+                      type="password"
+                      name="confirmPassword"
+                      value={passwordData.confirmPassword}
+                      onChange={handlePasswordChange}
+                      placeholder="Confirm New Password"
+                      required
+                      className={`w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors ${isDarkMode
+                          ? "border-slate-700 bg-slate-900 text-white placeholder:text-slate-500 focus:border-slate-400"
+                          : "border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:border-slate-900"
+                        }`}
+                    />
 
                   </div>
 
-                  {/* UPDATE PASSWORD */}
+
                   <button
                     type="submit"
-                    className={`rounded-xl px-5 py-2.5 text-sm font-bold text-white transition cursor-pointer shadow-sm ${
-                      isDarkMode
+                    className={`rounded-xl px-5 py-2.5 text-sm font-bold text-white transition cursor-pointer shadow-sm ${isDarkMode
                         ? "bg-slate-700 hover:bg-slate-600"
                         : "bg-slate-800 hover:bg-slate-700"
-                    }`}
+                      }`}
                   >
                     Update Password
                   </button>
@@ -1332,38 +1255,33 @@ export default function Profile() {
               </div>
             </div>
 
-            {/* =================================================
-                RIGHT COLUMN
-            ================================================== */}
+
             <aside
-              className={`h-fit rounded-3xl border p-5 shadow-md transition-colors duration-300 ${
-                isDarkMode
+              className={`h-fit rounded-3xl border p-5 shadow-md transition-colors duration-300 ${isDarkMode
                   ? "border-slate-800 bg-slate-900 text-white"
                   : "border-slate-200 bg-white text-slate-900"
-              }`}
+                }`}
             >
               <h3 className="text-base font-bold">
                 Account Overview
               </h3>
 
               <p
-                className={`mt-1 text-xs ${
-                  isDarkMode
+                className={`mt-1 text-xs ${isDarkMode
                     ? "text-slate-400"
                     : "text-slate-500"
-                }`}
+                  }`}
               >
                 Assigned credentials and system permission
                 matrices.
               </p>
 
-              {/* STAFF CREDENTIALS */}
+
               <div
-                className={`mt-4 rounded-2xl border p-4 ${
-                  isDarkMode
+                className={`mt-4 rounded-2xl border p-4 ${isDarkMode
                     ? "border-slate-800 bg-slate-950"
                     : "border-slate-200 bg-slate-50"
-                }`}
+                  }`}
               >
                 <h4 className="font-bold">
                   Staff Credentials
@@ -1405,11 +1323,10 @@ export default function Profile() {
                     </span>
 
                     <span
-                      className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                        isDarkMode
+                      className={`rounded-full px-3 py-1 text-xs font-semibold ${isDarkMode
                           ? "bg-blue-950 text-blue-300"
                           : "bg-blue-100 text-blue-800"
-                      }`}
+                        }`}
                     >
                       {activeRole}
                     </span>
@@ -1427,11 +1344,10 @@ export default function Profile() {
                     </span>
 
                     <span
-                      className={`font-semibold ${
-                        isDarkMode
+                      className={`font-semibold ${isDarkMode
                           ? "text-emerald-400"
                           : "text-emerald-600"
-                      }`}
+                        }`}
                     >
                       Active Duty
                     </span>
@@ -1439,34 +1355,31 @@ export default function Profile() {
                 </div>
               </div>
 
-              {/* SYSTEM PERMISSIONS */}
+
               <div
-                className={`mt-4 rounded-2xl border p-4 ${
-                  isDarkMode
+                className={`mt-4 rounded-2xl border p-4 ${isDarkMode
                     ? "border-slate-800 bg-slate-950"
                     : "border-slate-200 bg-slate-50"
-                }`}
+                  }`}
               >
                 <h4 className="font-bold">
                   System Permissions
                 </h4>
 
                 <p
-                  className={`mt-1 text-xs ${
-                    isDarkMode
+                  className={`mt-1 text-xs ${isDarkMode
                       ? "text-slate-400"
                       : "text-slate-500"
-                  }`}
+                    }`}
                 >
                   Access privileges for {activeRole}
                 </p>
 
                 <div
-                  className={`mt-3 space-y-2 text-xs ${
-                    isDarkMode
+                  className={`mt-3 space-y-2 text-xs ${isDarkMode
                       ? "text-slate-300"
                       : "text-slate-700"
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center justify-between">
                     <span>Create RPT Records</span>
@@ -1478,8 +1391,8 @@ export default function Profile() {
                             ? "font-semibold text-emerald-400"
                             : "font-semibold text-emerald-600"
                           : isDarkMode
-                          ? "font-semibold text-rose-400"
-                          : "font-semibold text-rose-600"
+                            ? "font-semibold text-rose-400"
+                            : "font-semibold text-rose-600"
                       }
                     >
                       {canCreateRPT
@@ -1498,8 +1411,8 @@ export default function Profile() {
                             ? "font-semibold text-emerald-400"
                             : "font-semibold text-emerald-600"
                           : isDarkMode
-                          ? "font-semibold text-rose-400"
-                          : "font-semibold text-rose-600"
+                            ? "font-semibold text-rose-400"
+                            : "font-semibold text-rose-600"
                       }
                     >
                       {canApprove
@@ -1518,8 +1431,8 @@ export default function Profile() {
                             ? "font-semibold text-emerald-400"
                             : "font-semibold text-emerald-600"
                           : isDarkMode
-                          ? "font-semibold text-rose-400"
-                          : "font-semibold text-rose-600"
+                            ? "font-semibold text-rose-400"
+                            : "font-semibold text-rose-600"
                       }
                     >
                       {canDelete

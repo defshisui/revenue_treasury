@@ -1,5 +1,3 @@
-// src/types/treasury.ts
-
 export type Role =
   | "Municipal Treasurer"
   | "Assistant Treasurer"
@@ -104,11 +102,11 @@ export interface BusinessRecord {
 export type StallStatus = "Occupied" | "Vacant" | "Maintenance" | "Delinquent" | "Closed" | "Paid";
 export type LeaseStatus = "Active" | "Pending Approval" | "Terminated" | "Expired";
 export type MarketBranch = "Central Public Market" | "North Plaza Talipapa" | "Southside Night Market";
-export type MarketSection = 
-  | "Meat & Poultry Section" 
-  | "Fish & Seafood Section" 
-  | "Vegetables & Fruits" 
-  | "Dry Goods Section" 
+export type MarketSection =
+  | "Meat & Poultry Section"
+  | "Fish & Seafood Section"
+  | "Vegetables & Fruits"
+  | "Dry Goods Section"
   | "Eatery / Food Stalls";
 
 export interface StallRecord {
@@ -149,7 +147,7 @@ export interface TransactionRecord {
   referenceNumber: string;
   taxpayer: string;
   paymentType: "Real Property Tax" | "Business Tax" | "Market Rental" | "Other Fees" | string;
-  type?: string; 
+  type?: string;
   amount: number;
   paymentMethod: "Cash" | "Bank Transfer" | "Check" | "Digital Wallet" | string;
   externalReference: string;
@@ -205,11 +203,9 @@ export interface HawkerAssociationRecord {
   memberCount?: number;
 }
 
-/* ============================================================================
-   CITY ASSESSOR - REAL PROPERTY TAX (RPT) CITIZEN'S CHARTER EXTENSIONS
-   ============================================================================ */
 
-export type CategoryType = 
+
+export type CategoryType =
   | '1.1 Transfer of Ownership'
   | '1.2 Consolidation / Segregation'
   | '1.3 New Assessment / Reassessment / Reclassification'
@@ -255,8 +251,8 @@ export interface ApplicationRecord {
     spaUploaded: boolean;
   };
   propertyDetails: {
-    pin: string; // Property Identification Number
-    titleNumber: string; // TCT/CCT
+    pin: string;
+    titleNumber: string;
     address: string;
     lotAreaSqM: number;
     currentValuation?: number;
@@ -264,7 +260,7 @@ export interface ApplicationRecord {
   documents: DocumentItem[];
   status: StatusType;
   submissionDate: string;
-  titleReleaseDate?: string; // For 60-day late filing penalty calculation
+  titleReleaseDate?: string;
   penaltyFee: number;
   adminFee: number;
   paymentStatus: 'Unpaid' | 'Paid' | 'Exempted';

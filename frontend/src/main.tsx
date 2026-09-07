@@ -7,19 +7,11 @@ import App from "./App.tsx";
 import { ThemeProvider } from "./components/ThemeContext";
 import { API_BASE_URL } from "./config/api";
 
-// ============================================================
-// Unified Global Fetch Interceptor
-// Handles:
-//  1. JWT Authorization header attachment
-//  2. AES-256-GCM request body encryption
-//  3. AES-256-GCM response body decryption
-//  4. 401 auto-redirect to login
-// ============================================================
+
 
 const _originalFetch = window.fetch.bind(window);
 const API_ORIGIN = API_BASE_URL;
 
-// ── AES-256-GCM helpers (Web Crypto API) ─────────────────────────────────────
 const _RAW_SECRET: string = (import.meta as any).env?.VITE_PAYLOAD_SECRET || '';
 let _cryptoKey: CryptoKey | null = null;
 
@@ -53,7 +45,6 @@ async function _decrypt(ciphertext: string): Promise<unknown> {
   return JSON.parse(new TextDecoder().decode(decrypted));
 }
 
-// ── Unified interceptor ───────────────────────────────────────────────────────
 window.fetch = async function (input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   const url =
     typeof input === "string"
@@ -70,7 +61,6 @@ window.fetch = async function (input: RequestInfo | URL, init?: RequestInit): Pr
 
   let patchedInit: RequestInit = { ...(init ?? {}) };
 
-  // 1. Attach JWT token
   if (isBackendCall && !isLoginRoute) {
     const token = localStorage.getItem("token");
     if (token) {
@@ -86,7 +76,6 @@ window.fetch = async function (input: RequestInfo | URL, init?: RequestInit): Pr
     }
   }
 
-  // 2. Encrypt request body (POST / PUT / PATCH to our API, skip uploads)
   if (
     isBackendCall &&
     !isUpload &&
@@ -98,7 +87,6 @@ window.fetch = async function (input: RequestInfo | URL, init?: RequestInit): Pr
     if (key) {
       try {
         const parsed = JSON.parse(patchedInit.body as string);
-        // Avoid double-encrypting
         const alreadyEncrypted =
           parsed &&
           typeof parsed === "object" &&
@@ -113,15 +101,13 @@ window.fetch = async function (input: RequestInfo | URL, init?: RequestInit): Pr
           };
         }
       } catch {
-        /* body is not JSON — send as-is */
+
       }
     }
   }
 
-  // 3. Make the actual request
   const response = await _originalFetch(input, patchedInit);
 
-  // 4. Handle 401 — clear session and redirect to login
   if (response.status === 401 && isBackendCall && !isLoginRoute) {
     localStorage.removeItem("token");
     localStorage.removeItem("currentUser");
@@ -138,7 +124,6 @@ window.fetch = async function (input: RequestInfo | URL, init?: RequestInit): Pr
     return response;
   }
 
-  // 5. Decrypt encrypted response envelope { payload: "..." }
   if (isBackendCall && !isUpload) {
     const key = await _getCryptoKey();
     if (key) {
@@ -160,9 +145,9 @@ window.fetch = async function (input: RequestInfo | URL, init?: RequestInit): Pr
           });
         }
       } catch {
-        /* not encrypted or decryption failed */
+
       }
-      // Re-wrap original text (stream already consumed)
+
       return new Response(text, {
         status: response.status,
         statusText: response.statusText,

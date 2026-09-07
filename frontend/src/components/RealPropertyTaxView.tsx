@@ -140,7 +140,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     () => (localStorage.getItem('rpt_admin_tab') as 'master' | 'queue' | 'payments' | 'citizenAudit') || 'master'
   );
 
-  // Persist active tab across refreshes
+
   const switchMainViewTab = (tab: 'master' | 'queue' | 'payments' | 'citizenAudit') => {
     setMainViewTab(tab);
     localStorage.setItem('rpt_admin_tab', tab);
@@ -318,7 +318,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         };
       });
 
-      // Split by status: completed/issued apps go to audit trail, others stay in queue
+
       const auditApps = mapped.filter((a) => AUDIT_STATUSES.includes(a.status as string));
       const activeApps = mapped.filter((a) => !AUDIT_STATUSES.includes(a.status as string));
 
@@ -450,7 +450,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
   const handleUpdateStatus = async (newStatus: ExtendedStatusType) => {
     if (!currentApp) return;
 
-    // Keep the admin UI and backend/database in sync.
+
     try {
       const result = await updateRptApplicationStatus(
         String(currentApp.id),
@@ -522,13 +522,13 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         prev.map((app) =>
           app.id === currentApp.id
             ? {
-                ...app,
-                ...(serverRecord || {}),
-                status: serverRecord?.status || 'For Payment',
-                paymentAmount: amount,
-                paymentStatus:
-                  serverRecord?.payment_status || 'Pending',
-              }
+              ...app,
+              ...(serverRecord || {}),
+              status: serverRecord?.status || 'For Payment',
+              paymentAmount: amount,
+              paymentStatus:
+                serverRecord?.payment_status || 'Pending',
+            }
             : app
         )
       );
@@ -566,7 +566,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
       },
     };
 
-    // Persist the final status to the database so it survives a page refresh
+
     try {
       await updateRptApplicationStatus(String(currentApp.id), 'Digital Certificate Issued');
     } catch (err) {
@@ -591,10 +591,10 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         <div className="fixed top-20 right-6 z-50 animate-in fade-in slide-in-from-top-4 duration-300">
           <div
             className={`px-4 py-3 rounded-xl shadow-lg border flex items-center gap-3 text-xs font-semibold ${toastMessage.type === 'success'
-                ? 'bg-emerald-950 text-emerald-200 border-emerald-800'
-                : toastMessage.type === 'warning'
-                  ? 'bg-amber-950 text-amber-200 border-amber-800'
-                  : 'bg-rose-950 text-rose-200 border-rose-800'
+              ? 'bg-emerald-950 text-emerald-200 border-emerald-800'
+              : toastMessage.type === 'warning'
+                ? 'bg-amber-950 text-amber-200 border-amber-800'
+                : 'bg-rose-950 text-rose-200 border-rose-800'
               }`}
           >
             <span>{toastMessage.type === 'success' ? '✓' : 'ℹ'}</span>
@@ -623,8 +623,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
           <button
             onClick={() => switchMainViewTab('master')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${mainViewTab === 'master'
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              ? 'bg-blue-600 text-white shadow-md'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
           >
             <span>Master Database ({masterProperties.length})</span>
@@ -632,8 +632,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
           <button
             onClick={() => switchMainViewTab('queue')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${mainViewTab === 'queue'
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              ? 'bg-blue-600 text-white shadow-md'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
           >
             <span>Citizen Applications ({applications.length})</span>
@@ -641,8 +641,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
           <button
             onClick={() => switchMainViewTab('payments')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${mainViewTab === 'payments'
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              ? 'bg-blue-600 text-white shadow-md'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
           >
             <span>Payment Ledger ({paymentsLedger.length})</span>
@@ -650,8 +650,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
           <button
             onClick={() => switchMainViewTab('citizenAudit')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${mainViewTab === 'citizenAudit'
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              ? 'bg-blue-600 text-white shadow-md'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
           >
             <span>Audit Trail ({citizenAuditTrail.length})</span>
@@ -746,8 +746,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                         <td className="p-4 text-center">
                           <span
                             className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${prop.paymentStatus === 'Paid'
-                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
-                                : 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
+                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                              : 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
                               }`}
                           >
                             {prop.paymentStatus}
@@ -789,8 +789,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                 <button
                   onClick={() => setQueueTab('Active')}
                   className={`px-4 py-2 text-xs font-semibold rounded-lg border transition-colors cursor-pointer ${queueTab === 'Active'
-                      ? 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-600'
-                      : 'text-slate-500 border-transparent'
+                    ? 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-600'
+                    : 'text-slate-500 border-transparent'
                     }`}
                 >
                   Active Processing
@@ -798,8 +798,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                 <button
                   onClick={() => setQueueTab('Archived')}
                   className={`px-4 py-2 text-xs font-semibold rounded-lg border transition-colors cursor-pointer ${queueTab === 'Archived'
-                      ? 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-600'
-                      : 'text-slate-500 border-transparent'
+                    ? 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-600'
+                    : 'text-slate-500 border-transparent'
                     }`}
                 >
                   System Archiver
@@ -854,8 +854,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                       key={app.id}
                       onClick={() => setSelectedAppId(app.id)}
                       className={`p-3 rounded-xl border transition cursor-pointer ${currentApp?.id === app.id
-                          ? 'bg-blue-50/60 dark:bg-blue-950/40 border-blue-300 dark:border-blue-800'
-                          : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                        ? 'bg-blue-50/60 dark:bg-blue-950/40 border-blue-300 dark:border-blue-800'
+                        : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50'
                         }`}
                     >
                       <div className="flex justify-between items-start">
@@ -911,8 +911,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                         key={st}
                         onClick={() => handleUpdateStatus(st)}
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer border ${currentApp.status === st
-                            ? 'bg-blue-600 text-white border-blue-600'
-                            : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-blue-400'
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-blue-400'
                           }`}
                       >
                         {st}

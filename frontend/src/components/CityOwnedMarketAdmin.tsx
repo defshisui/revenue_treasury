@@ -100,7 +100,7 @@ export default function CityOwnedMarketAdmin({
       loadData();
     }
 
-    // Set up live real-time polling every 3 seconds
+
     const intervalId = setInterval(() => {
       loadData();
     }, 3000);

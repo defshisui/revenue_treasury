@@ -3,17 +3,11 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 .dark {
-  color-scheme: dark;
+    color-scheme: dark;
 }
 
-
-/* =========================
-   NAVBAR
-========================= */
-
 .lgu-navbar {
-    @apply sticky top-0 z-50 flex items-center justify-between 
-    bg-white px-8 py-4 shadow-md;
+    @apply sticky top-0 z-50 flex items-center justify-between bg-white px-8 py-4 shadow-md;
 }
 
 .lgu-navbar-brand {
@@ -25,24 +19,15 @@
 }
 
 .lgu-nav-link {
-    @apply rounded-md px-3 py-2 
-    hover:bg-sky-300 hover:text-black;
+    @apply rounded-md px-3 py-2 hover:bg-sky-300 hover:text-black;
 }
 
 .lgu-logout-button {
-    @apply rounded-lg bg-linear-to-r 
-    from-blue-900 to-blue-600 
-    px-5 py-2 text-white;
+    @apply rounded-lg bg-linear-to-r from-blue-900 to-blue-600 px-5 py-2 text-white;
 }
 
-
-/* =========================
-   HEADER
-========================= */
-
 .lgu-header {
-    @apply bg-linear-to-r from-blue-900 to-blue-600 
-    px-8 py-6 text-white;
+    @apply bg-linear-to-r from-blue-900 to-blue-600 px-8 py-6 text-white;
 }
 
 .lgu-header-title {
@@ -52,11 +37,6 @@
 .lgu-header-subtitle {
     @apply text-sm opacity-80;
 }
-
-
-/* =========================
-   DASHBOARD
-========================= */
 
 .lgu-dashboard {
     @apply min-h-screen bg-gray-100;
@@ -94,14 +74,8 @@
     @apply rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-900 transition hover:bg-slate-100;
 }
 
-
-/* =========================
-   SERVICE CARD
-========================= */
-
 .lgu-service-card {
-    @apply rounded-2xl border-l-4 border-blue-900 
-    bg-white p-6 shadow-lg;
+    @apply rounded-2xl border-l-4 border-blue-900 bg-white p-6 shadow-lg;
 }
 
 .lgu-service-title {
@@ -109,21 +83,12 @@
 }
 
 .lgu-service-description {
-    @apply rounded-xl border border-dashed 
-    border-gray-300 bg-gray-50 
-    p-4 text-center text-sm text-gray-500;
+    @apply rounded-xl border border-dashed border-gray-300 bg-gray-50 p-4 text-center text-sm text-gray-500;
 }
 
 .lgu-service-tag {
-    @apply mt-3 inline-block rounded-full 
-    bg-blue-100 px-3 py-1 text-xs 
-    font-bold text-blue-900;
+    @apply mt-3 inline-block rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-900;
 }
-
-
-/* =========================
-   PAYMENT FORM
-========================= */
 
 .payment-form-main {
     @apply min-h-screen bg-slate-100 p-4 md:p-8;
@@ -132,11 +97,6 @@
 .payment-form-item {
     @apply rounded-xl border border-blue-100 px-4 py-4 text-lg outline-none focus:border-blue-700;
 }
-
-
-/* =========================
-   FOOTER
-========================= */
 
 .lgu-footer {
     @apply p-5 text-center text-xs text-gray-500;

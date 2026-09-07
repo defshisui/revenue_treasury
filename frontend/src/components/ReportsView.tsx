@@ -38,9 +38,7 @@ export default function ReportsView({
 
         const isPaid = paymentStatus.toLowerCase() === "paid";
 
-        // Collected revenue must use the amount actually paid.
-        // Unpaid leases are still kept in the registry, but they are
-        // excluded from the collected-revenue calculation below.
+
         const amountValue = Number(
           isPaid
             ? (lease.amountPaid ?? lease.amount ?? lease.amountDue ?? 0)
@@ -87,8 +85,7 @@ export default function ReportsView({
   const filteredMarketLeases = marketLeases.filter((lease: any) => matchesFiscalPeriod(lease.createdAt || lease.date || lease.timestamp));
   const filteredHawkerApps = hawkerApps.filter((app: any) => matchesFiscalPeriod(app.createdAt || app.date || app.timestamp));
 
-  // Only transactions explicitly marked PAID are counted as collected revenue.
-  // Pending/unpaid market leases must never be included in this total.
+
   const paidTransactions = filteredTransactions.filter((tx: any) => {
     const status = String(
       tx.paymentStatus ?? tx.status ?? ""

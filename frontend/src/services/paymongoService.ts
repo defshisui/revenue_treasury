@@ -1,4 +1,3 @@
-// src/services/paymongoService.ts
 import { API_BASE_URL } from '../config/api';
 
 export interface PayMongoStatusResponse {
@@ -35,9 +34,7 @@ export interface CheckoutResult {
   environment: 'live' | 'test';
 }
 
-// ============================================================
-// DYNAMIC QR PH
-// ============================================================
+
 
 export interface CreateQrPaymentIntentParams {
   amount: number;
@@ -74,9 +71,7 @@ export interface VerifyPaymentResult {
   message?: string;
 }
 
-/**
- * Checks connectivity and API key status from the backend.
- */
+
 export async function getPayMongoStatus(): Promise<PayMongoStatusResponse> {
   try {
     const res = await fetch(`${API_BASE_URL}/api/paymongo/status`);
@@ -99,10 +94,7 @@ export async function getPayMongoStatus(): Promise<PayMongoStatusResponse> {
   }
 }
 
-/**
- * Creates a PayMongo Checkout Session and returns
- * the hosted checkout URL.
- */
+
 export async function createPayMongoCheckout(
   params: CreateCheckoutParams
 ): Promise<CheckoutResult> {
@@ -127,21 +119,15 @@ export async function createPayMongoCheckout(
   if (!response.ok || !data.success) {
     throw new Error(
       data.error ||
-        data.message ||
-        'Failed to initiate PayMongo checkout session.'
+      data.message ||
+      'Failed to initiate PayMongo checkout session.'
     );
   }
 
   return data;
 }
 
-/**
- * Creates a PayMongo Payment Intent for Dynamic QR Ph.
- *
- * IMPORTANT:
- * The Payment Intent is created by your BACKEND.
- * The secret key must never be placed in this frontend file.
- */
+
 export async function createPayMongoQrPaymentIntent(
   params: CreateQrPaymentIntentParams
 ): Promise<QrPaymentIntentResult> {
@@ -161,8 +147,8 @@ export async function createPayMongoQrPaymentIntent(
   if (!response.ok || !data.success) {
     throw new Error(
       data.error ||
-        data.message ||
-        'Failed to create PayMongo QR Ph Payment Intent.'
+      data.message ||
+      'Failed to create PayMongo QR Ph Payment Intent.'
     );
   }
 
@@ -177,11 +163,7 @@ export async function createPayMongoQrPaymentIntent(
   };
 }
 
-/**
- * Creates a QR Ph Payment Method.
- *
- * Only the PUBLIC PayMongo key is used here.
- */
+
 export async function createQrPhPaymentMethod(
   publicKey: string,
   expirySeconds: number = 300
@@ -228,13 +210,7 @@ export async function createQrPhPaymentMethod(
   return data.data.id;
 }
 
-/**
- * Attaches the QR Ph Payment Method to the Payment Intent.
- *
- * The PayMongo response should contain:
- *
- * data.attributes.next_action.code.image_url
- */
+
 export async function attachQrPhPaymentMethod(
   paymentIntentId: string,
   paymentMethodId: string,
@@ -295,10 +271,7 @@ export async function attachQrPhPaymentMethod(
   return data.data;
 }
 
-/**
- * Verifies if a PayMongo Checkout Session was successfully paid
- * and registers the Official Receipt.
- */
+
 export async function verifyPayMongoSession(
   sessionId: string
 ): Promise<VerifyPaymentResult> {
@@ -318,8 +291,8 @@ export async function verifyPayMongoSession(
   if (!response.ok) {
     throw new Error(
       data.error ||
-        data.message ||
-        'Failed to verify PayMongo payment session.'
+      data.message ||
+      'Failed to verify PayMongo payment session.'
     );
   }
 

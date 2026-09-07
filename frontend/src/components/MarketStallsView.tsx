@@ -371,7 +371,7 @@ export default function MarketStallsView({
           marketName: stall.marketBranch,
           section: stall.marketSection,
           stallNumber: stall.stallNumber,
-          leaseStatus: "Archived" as any, // FIXED: Type assertion to bypass strict type checking
+          leaseStatus: "Archived" as any,
           amountDue: stall.currentBalance,
           helperApprovalStatus: "Terminated",
           advancePaymentStatus: "N/A",
@@ -395,7 +395,7 @@ export default function MarketStallsView({
           marketName: stall.marketBranch,
           section: stall.marketSection,
           stallNumber: stall.stallNumber,
-          leaseStatus: "Inactive", // Sets back to an active record state (Vacant)
+          leaseStatus: "Inactive",
           amountDue: stall.currentBalance,
           helperApprovalStatus: "Pending",
           advancePaymentStatus: "N/A",

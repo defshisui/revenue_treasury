@@ -1,4 +1,3 @@
-// src/LegacyTreasuryApp.tsx
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLocalStorage } from "./hooks/useLocalStorage";
@@ -77,14 +76,11 @@ export default function LegacyTreasuryApp() {
   const navigate = useNavigate();
   const [isAuthChecked, setIsAuthChecked] = useState(false);
 
-  // ============================================================
-  // AUTH GUARD — Only admin / treasury-staff / auditor may access
-  // ============================================================
+
   useEffect(() => {
     (async () => {
       const ALLOWED_ROLES = ["admin", "treasury-staff", "auditor"];
 
-      // 1. Try encrypted storage first, then plain localStorage/sessionStorage
       const encUser = await getEncryptedItem('currentUser') || await getEncryptedItem('user');
       const rawData =
         localStorage.getItem('currentUser') ||
@@ -104,16 +100,13 @@ export default function LegacyTreasuryApp() {
         }
       }
 
-      // 2. Also require a JWT token
       const token = localStorage.getItem('token');
 
       if (!sessionUser || !token) {
-        // Not logged in at all → send to login page
         navigate("/", { replace: true });
         return;
       }
 
-      // 3. Resolve the actual user object (handles { user: {...} } wrapper)
       const targetUser =
         sessionUser.user && typeof sessionUser.user === 'object'
           ? sessionUser.user
@@ -121,12 +114,10 @@ export default function LegacyTreasuryApp() {
       const userRole = (targetUser.role || '').toLowerCase();
 
       if (!ALLOWED_ROLES.includes(userRole)) {
-        // Logged in but not an admin role → send citizens back to their portal
         navigate("/citizen-portal", { replace: true });
         return;
       }
 
-      // Authorized ✓
       setIsAuthChecked(true);
     })();
   }, [navigate]);
@@ -519,150 +510,149 @@ export default function LegacyTreasuryApp() {
 
   return (
     <>
-      {/* Block rendering until auth check completes */}
       {!isAuthChecked ? (
         <div className="h-screen w-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
         </div>
       ) : (
-    <div className="legacy-treasury-shell h-screen overflow-hidden bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 flex flex-col font-sans">
-      <TreasuryHeader
-        activeRole={activeRole}
-        setActiveRole={setActiveRole}
-        notify={notify}
-        isCollapsed={isSidebarCollapsed}
-        setIsCollapsed={setIsSidebarCollapsed}
-      />
+        <div className="legacy-treasury-shell h-screen overflow-hidden bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 flex flex-col font-sans">
+          <TreasuryHeader
+            activeRole={activeRole}
+            setActiveRole={setActiveRole}
+            notify={notify}
+            isCollapsed={isSidebarCollapsed}
+            setIsCollapsed={setIsSidebarCollapsed}
+          />
 
-      <SessionInactivityModal idleTimeoutMinutes={10} countdownSeconds={60} />
+          <SessionInactivityModal idleTimeoutMinutes={10} countdownSeconds={60} />
 
-      {notification && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 animate-in fade-in duration-100">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 max-w-sm w-full mx-4 shadow-2xl border border-slate-100 dark:border-gray-700 flex flex-col items-center text-center animate-in zoom-in-95 duration-200">
-            <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/40 rounded-full flex items-center justify-center mb-4">
-              <svg
-                className="w-9 h-9 text-emerald-600 dark:text-emerald-400"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="3"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
+          {notification && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 animate-in fade-in duration-100">
+              <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 max-w-sm w-full mx-4 shadow-2xl border border-slate-100 dark:border-gray-700 flex flex-col items-center text-center animate-in zoom-in-95 duration-200">
+                <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/40 rounded-full flex items-center justify-center mb-4">
+                  <svg
+                    className="w-9 h-9 text-emerald-600 dark:text-emerald-400"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-1">
+                  Transaction Submitted
+                </h3>
+
+                <p className="text-sm text-slate-500 dark:text-gray-400 mb-6">
+                  {notification}
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() => setNotification(null)}
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-xl transition-colors cursor-pointer shadow-md"
+                >
+                  Done
+                </button>
+              </div>
             </div>
+          )}
 
-            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-1">
-              Transaction Submitted
-            </h3>
+          <div className="flex flex-1 min-h-0 overflow-hidden">
+            <TreasurySidebar
+              activeTab={activeTab}
+              isCollapsed={isSidebarCollapsed}
+              setIsCollapsed={setIsSidebarCollapsed}
+              setActiveTab={setActiveTab}
+              canCreate={canCreate}
+              canApprove={canApprove}
+              canDelete={canDelete}
+            />
 
-            <p className="text-sm text-slate-500 dark:text-gray-400 mb-6">
-              {notification}
-            </p>
+            <main className="flex-1 overflow-y-auto p-8 bg-slate-50 dark:bg-slate-900">
+              {activeTab === "dashboard" && (
+                <TreasuryDashboardView
+                  metrics={metrics}
+                  transactions={transactions}
+                  marketStalls={stalls}
+                  isCollapsed={isSidebarCollapsed}
+                  setActiveTab={setActiveTab}
+                />
+              )}
 
-            <button
-              type="button"
-              onClick={() => setNotification(null)}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-xl transition-colors cursor-pointer shadow-md"
-            >
-              Done
-            </button>
+              {activeTab === "rpt" && (
+                <RealPropertyTaxView
+                  {...({
+                    records: rptRecords,
+                    form: rptForm,
+                    setForm: setRptForm,
+                    searchQuery,
+                    setSearchQuery,
+                    onSubmit: handleCreateOrUpdateRPT,
+                    onAdvance: advanceRPTStatus,
+                    onEdit: handleEditRPT,
+                    onDelete: handleDeleteRPT,
+                    editingId,
+                    onCancelEdit: handleCancelEdit,
+                    previewTotalAssessment: previewRPT,
+                    notify,
+                    isCollapsed: isSidebarCollapsed
+                  } as any)}
+                />
+              )}
+
+              {activeTab === "business" && (
+                <BusinessTaxView
+                  {...({
+                    records: businessRecords,
+                    form: bizForm,
+                    setForm: setBizForm,
+                    onSubmit: handleCreateOrUpdateBusiness,
+                    onAdvance: advanceBusinessStatus,
+                    previewTotalDue: previewBusinessDue,
+                    searchQuery: businessSearchQuery,
+                    setSearchQuery: setBusinessSearchQuery,
+                    onEdit: handleEditBusiness,
+                    onDelete: handleDeleteBusiness,
+                    notify,
+                    isCollapsed: isSidebarCollapsed
+                  } as any)}
+                />
+              )}
+
+              {activeTab === "market" && <MarketStallsView records={stalls} isCollapsed={isSidebarCollapsed} />}
+
+              {activeTab === "market-city" && (
+                <CityOwnedMarketAdmin {...({ isCollapsed: isSidebarCollapsed } as any)} />
+              )}
+
+              {activeTab === "market-private" && (
+                <PrivateOwnedMarketAdmin {...({ isCollapsed: isSidebarCollapsed } as any)} />
+              )}
+
+              {activeTab === "users" && <UsersView records={users} isCollapsed={isSidebarCollapsed} />}
+              {activeTab === "audit" && <AuditTrailView records={auditLogs as unknown as ComponentAuditRecord[]} isCollapsed={isSidebarCollapsed} />}
+              {activeTab === "fraud" && <FraudMonitoringView isCollapsed={isSidebarCollapsed} />}
+              {activeTab === "reports" && (
+                <ReportsView
+                  {...({
+                    metrics,
+                    transactionCount: transactions.length,
+                    rptRecords,
+                    onExport: () => notify("Report compiled successfully."),
+                    isCollapsed: isSidebarCollapsed
+                  } as any)}
+                />
+              )}
+
+              {activeTab === "hawker" && (
+                <HawkerAssociation {...({ isCollapsed: isSidebarCollapsed } as any)} />
+              )}
+            </main>
           </div>
         </div>
-      )}
-
-      <div className="flex flex-1 min-h-0 overflow-hidden">
-        <TreasurySidebar
-          activeTab={activeTab}
-          isCollapsed={isSidebarCollapsed}
-          setIsCollapsed={setIsSidebarCollapsed}
-          setActiveTab={setActiveTab}
-          canCreate={canCreate}
-          canApprove={canApprove}
-          canDelete={canDelete}
-        />
-
-        <main className="flex-1 overflow-y-auto p-8 bg-slate-50 dark:bg-slate-900">
-          {activeTab === "dashboard" && (
-            <TreasuryDashboardView
-              metrics={metrics}
-              transactions={transactions}
-              marketStalls={stalls}
-              isCollapsed={isSidebarCollapsed}
-              setActiveTab={setActiveTab}
-            />
-          )}
-
-          {activeTab === "rpt" && (
-            <RealPropertyTaxView
-              {...({
-                records: rptRecords,
-                form: rptForm,
-                setForm: setRptForm,
-                searchQuery,
-                setSearchQuery,
-                onSubmit: handleCreateOrUpdateRPT,
-                onAdvance: advanceRPTStatus,
-                onEdit: handleEditRPT,
-                onDelete: handleDeleteRPT,
-                editingId,
-                onCancelEdit: handleCancelEdit,
-                previewTotalAssessment: previewRPT,
-                notify,
-                isCollapsed: isSidebarCollapsed
-              } as any)}
-            />
-          )}
-
-          {activeTab === "business" && (
-            <BusinessTaxView
-              {...({
-                records: businessRecords,
-                form: bizForm,
-                setForm: setBizForm,
-                onSubmit: handleCreateOrUpdateBusiness,
-                onAdvance: advanceBusinessStatus,
-                previewTotalDue: previewBusinessDue,
-                searchQuery: businessSearchQuery,
-                setSearchQuery: setBusinessSearchQuery,
-                onEdit: handleEditBusiness,
-                onDelete: handleDeleteBusiness,
-                notify,
-                isCollapsed: isSidebarCollapsed
-              } as any)}
-            />
-          )}
-
-          {activeTab === "market" && <MarketStallsView records={stalls} isCollapsed={isSidebarCollapsed} />}
-
-          {activeTab === "market-city" && (
-            <CityOwnedMarketAdmin {...({ isCollapsed: isSidebarCollapsed } as any)} />
-          )}
-
-          {activeTab === "market-private" && (
-            <PrivateOwnedMarketAdmin {...({ isCollapsed: isSidebarCollapsed } as any)} />
-          )}
-
-          {activeTab === "users" && <UsersView records={users} isCollapsed={isSidebarCollapsed} />}
-          {activeTab === "audit" && <AuditTrailView records={auditLogs as unknown as ComponentAuditRecord[]} isCollapsed={isSidebarCollapsed} />}
-          {activeTab === "fraud" && <FraudMonitoringView isCollapsed={isSidebarCollapsed} />}
-          {activeTab === "reports" && (
-            <ReportsView
-              {...({
-                metrics,
-                transactionCount: transactions.length,
-                rptRecords,
-                onExport: () => notify("Report compiled successfully."),
-                isCollapsed: isSidebarCollapsed
-              } as any)}
-            />
-          )}
-
-          {activeTab === "hawker" && (
-            <HawkerAssociation {...({ isCollapsed: isSidebarCollapsed } as any)} />
-          )}
-        </main>
-      </div>
-    </div>
       )}
     </>
   );

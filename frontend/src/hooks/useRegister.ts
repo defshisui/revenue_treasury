@@ -1,18 +1,11 @@
-// src/hooks/useRegister.ts
 import { useState, useEffect } from "react";
 import type { FormEvent } from "react";
 import { API_BASE_URL } from "../config/api";
 
 export function useRegister(onSuccess: () => void) {
-  // Registration Steps
-  // 1: Account
-  // 2: Personal
-  // 3: Address
-  // 4: Review
-  // 5: Verify Email OTP
+
   const [regStep, setRegStep] = useState(1);
 
-  // Form Fields
   const [regEmail, setRegEmail] = useState("");
   const [regPassword, setRegPassword] = useState("");
   const [showRegPassword, setShowRegPassword] = useState(false);
@@ -28,7 +21,6 @@ export function useRegister(onSuccess: () => void) {
   const [sex, setSex] = useState("Male");
   const [mobileNumber, setMobileNumber] = useState("");
 
-  // OTP Verification States
   const [regOtp, setRegOtp] = useState("");
   const [otpExpirySeconds, setOtpExpirySeconds] = useState(300);
   const [resendCooldown, setResendCooldown] = useState(60);
@@ -40,15 +32,7 @@ export function useRegister(onSuccess: () => void) {
   const [regSuccess, setRegSuccess] = useState(false);
   const [isWorkerNotice, setIsWorkerNotice] = useState(false);
 
-  // ============================================================
-  // STRONG PASSWORD VALIDATION
-  // Requirements:
-  // - At least 8 characters
-  // - At least 1 uppercase letter
-  // - At least 1 lowercase letter
-  // - At least 1 number
-  // - At least 1 special character
-  // ============================================================
+
   const isStrongPassword = (password: string) => {
     return (
       password.length >= 8 &&
@@ -59,7 +43,6 @@ export function useRegister(onSuccess: () => void) {
     );
   };
 
-  // Countdown timer for Registration OTP step
   useEffect(() => {
     let interval: any = null;
 
@@ -93,16 +76,13 @@ export function useRegister(onSuccess: () => void) {
     setRegMessage("");
     setIsWorkerNotice(false);
 
-    // ============================================================
-    // STEP 1: ACCOUNT
-    // ============================================================
+
     if (regStep === 1) {
       if (!regEmail || !regPassword) {
         setRegMessage("Please fill in both email and password.");
         return;
       }
 
-      // Strong password validation
       if (!isStrongPassword(regPassword)) {
         setRegMessage(
           "Password must have at least 8 characters, 1 uppercase letter, 1 lowercase letter, 1 number, and 1 special character."
@@ -111,9 +91,7 @@ export function useRegister(onSuccess: () => void) {
       }
     }
 
-    // ============================================================
-    // STEP 2: PERSONAL INFORMATION
-    // ============================================================
+
     else if (regStep === 2) {
       if (!firstName || !lastName || !birthDate || !sex) {
         setRegMessage("Please fill in all required personal details.");
@@ -121,9 +99,7 @@ export function useRegister(onSuccess: () => void) {
       }
     }
 
-    // ============================================================
-    // STEP 3: ADDRESS
-    // ============================================================
+
     else if (regStep === 3) {
       if (!houseNoStreet || !barangay || !city) {
         setRegMessage("Please fill in your complete address.");
@@ -146,18 +122,11 @@ export function useRegister(onSuccess: () => void) {
     setRegStep((prev) => Math.max(prev - 1, 1));
   };
 
-  /**
-   * STEP 4 Review -> Initiate Registration OTP
-   * Dispatches Nodemailer email
-   */
+
   const handleFinalRegisterSubmit = async () => {
     setRegMessage("");
 
-    // ============================================================
-    // FINAL PASSWORD CHECK
-    // This prevents registration from proceeding even if this
-    // function is called without going through Step 1 validation.
-    // ============================================================
+
     if (!isStrongPassword(regPassword)) {
       setRegMessage(
         "Password must have at least 8 characters, 1 uppercase letter, 1 lowercase letter, 1 number, and 1 special character."
@@ -200,7 +169,6 @@ export function useRegister(onSuccess: () => void) {
         return;
       }
 
-      // Move to Step 5: OTP Email Verification
       setRegStep(5);
       setRegOtp("");
       setOtpExpirySeconds(300);
@@ -218,11 +186,7 @@ export function useRegister(onSuccess: () => void) {
     }
   };
 
-  /**
-   * STEP 5:
-   * Verify Registration OTP -> Completes account creation
-   * in PostgreSQL
-   */
+
   const handleVerifyRegisterOtp = async (e: FormEvent) => {
     e.preventDefault();
 
@@ -281,9 +245,7 @@ export function useRegister(onSuccess: () => void) {
     }
   };
 
-  /**
-   * Resend Registration OTP with 60s cooldown
-   */
+
   const handleResendRegisterOtp = async () => {
     if (resendCooldown > 0 || isResendingOtp) {
       return;
@@ -326,7 +288,7 @@ export function useRegister(onSuccess: () => void) {
     } catch (err: any) {
       setRegMessage(
         err.message ||
-          "Network error requesting new verification code."
+        "Network error requesting new verification code."
       );
     } finally {
       setIsResendingOtp(false);
@@ -395,7 +357,6 @@ export function useRegister(onSuccess: () => void) {
     isWorkerNotice,
     setIsWorkerNotice,
 
-    // OTP States
     regOtp,
     setRegOtp,
 
@@ -415,7 +376,6 @@ export function useRegister(onSuccess: () => void) {
 
     formatOtpTimer,
 
-    // Password validation
     isStrongPassword,
   };
 }
