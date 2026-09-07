@@ -370,21 +370,21 @@ export default function MarketLeaseSearch() {
                             />
                         </div>
                         <div className="flex flex-col gap-[6px]">
-                            <label htmlFor="firstName" className="text-[0.85rem] font-semibold text-[#1a202c]">Unang Pangalan ng Stallholder</label>
+                            <label htmlFor="firstName" className="text-[0.85rem] font-semibold text-[#1a202c]">First Name of Stallholder</label>
                             <input
                                 type="text" id="firstName" value={firstName} readOnly disabled
                                 className="w-full px-[14px] py-[10px] border border-[#cbd5e1] rounded-md text-[0.9rem] outline-none transition-all bg-slate-100 text-slate-500 cursor-not-allowed"
                             />
                         </div>
                         <div className="flex flex-col gap-[6px]">
-                            <label htmlFor="lastName" className="text-[0.85rem] font-semibold text-[#1a202c]">Apelyido ng Stallholder</label>
+                            <label htmlFor="lastName" className="text-[0.85rem] font-semibold text-[#1a202c]">Last Name of Stallholder</label>
                             <input
                                 type="text" id="lastName" value={lastName} readOnly disabled
                                 className="w-full px-[14px] py-[10px] border border-[#cbd5e1] rounded-md text-[0.9rem] outline-none transition-all bg-slate-100 text-slate-500 cursor-not-allowed"
                             />
                         </div>
                         <div className="flex flex-col gap-[6px]">
-                            <label htmlFor="marketName" className="text-[0.85rem] font-semibold text-[#1a202c]">Pangalan ng Palengke</label>
+                            <label htmlFor="marketName" className="text-[0.85rem] font-semibold text-[#1a202c]">Name of City Market</label>
                             <select
                                 id="marketName" value={marketName} onChange={(e) => setMarketName(e.target.value)}
                                 className="w-full px-[14px] py-[10px] border border-[#cbd5e1] rounded-md text-[0.9rem] outline-none transition-all bg-white text-[#718096] appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.36%22%20height%3D%22292.36%22%3E%3Cpath%20fill%3D%22%23718096%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[length:10px] bg-[position:right_14px_center] pr-[35px] focus:border-[#3182ce] focus:ring-[3px] focus:ring-[#3182ce]/15"
@@ -401,7 +401,7 @@ export default function MarketLeaseSearch() {
                             </select>
                         </div>
                         <div className="flex flex-col gap-[6px]">
-                            <label htmlFor="leaseStatus" className="text-[0.85rem] font-semibold text-[#1a202c]">Katayuan ng Lease</label>
+                            <label htmlFor="leaseStatus" className="text-[0.85rem] font-semibold text-[#1a202c]">Lease Status</label>
                             <select
                                 id="leaseStatus" value={leaseStatus} onChange={(e) => setLeaseStatus(e.target.value)}
                                 className="w-full px-[14px] py-[10px] border border-[#cbd5e1] rounded-md text-[0.9rem] outline-none transition-all bg-white text-[#718096] appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.36%22%20height%3D%22292.36%22%3E%3Cpath%20fill%3D%22%23718096%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[length:10px] bg-[position:right_14px_center] pr-[35px] focus:border-[#3182ce] focus:ring-[3px] focus:ring-[#3182ce]/15"
@@ -415,7 +415,7 @@ export default function MarketLeaseSearch() {
                             </select>
                         </div>
                         <div className="flex flex-col gap-[6px]">
-                            <label htmlFor="paymentStatus" className="text-[0.85rem] font-semibold text-[#1a202c]">Katayuan ng Pagbabayad</label>
+                            <label htmlFor="paymentStatus" className="text-[0.85rem] font-semibold text-[#1a202c]">Payment Status</label>
                             <select
                                 id="paymentStatus" value={paymentStatus} onChange={(e) => setPaymentStatus(e.target.value)}
                                 className="w-full px-[14px] py-[10px] border border-[#cbd5e1] rounded-md text-[0.9rem] outline-none transition-all bg-white text-[#718096] appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.36%22%20height%3D%22292.36%22%3E%3Cpath%20fill%3D%22%23718096%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[length:10px] bg-[position:right_14px_center] pr-[35px] focus:border-[#3182ce] focus:ring-[3px] focus:ring-[#3182ce]/15"
@@ -432,7 +432,7 @@ export default function MarketLeaseSearch() {
                                 onClick={handleSearch}
                                 className="bg-[#0b2545] text-white border-none px-8 py-[10px] rounded-md font-semibold cursor-pointer transition-colors text-[0.9rem] hover:bg-[#13315c]"
                             >
-                                Hanapin
+                                Search
                             </button>
                         </div>
                     </div>
@@ -447,17 +447,17 @@ export default function MarketLeaseSearch() {
                             <thead>
                                 <tr>
                                     <th className="bg-[#0b2545] text-white text-[0.75rem] uppercase tracking-[0.5px] p-[12px_14px] font-bold border-r border-white/10">LEASE ID</th>
-                                    <th className="bg-[#0b2545] text-white text-[0.75rem] uppercase tracking-[0.5px] p-[12px_14px] font-bold border-r border-white/10">UNANG PANGALAN</th>
-                                    <th className="bg-[#0b2545] text-white text-[0.75rem] uppercase tracking-[0.5px] p-[12px_14px] font-bold border-r border-white/10">APELYIDO</th>
-                                    <th className="bg-[#0b2545] text-white text-[0.75rem] uppercase tracking-[0.5px] p-[12px_14px] font-bold border-r border-white/10">PANGALAN NG PALENGKE</th>
-                                    <th className="bg-[#0b2545] text-white text-[0.75rem] uppercase tracking-[0.5px] p-[12px_14px] font-bold border-r border-white/10">SEKSYON</th>
+                                    <th className="bg-[#0b2545] text-white text-[0.75rem] uppercase tracking-[0.5px] p-[12px_14px] font-bold border-r border-white/10">FIRST NAME</th>
+                                    <th className="bg-[#0b2545] text-white text-[0.75rem] uppercase tracking-[0.5px] p-[12px_14px] font-bold border-r border-white/10">LAST NAME</th>
+                                    <th className="bg-[#0b2545] text-white text-[0.75rem] uppercase tracking-[0.5px] p-[12px_14px] font-bold border-r border-white/10">NAME OF CITY MARKET</th>
+                                    <th className="bg-[#0b2545] text-white text-[0.75rem] uppercase tracking-[0.5px] p-[12px_14px] font-bold border-r border-white/10">SECTION</th>
                                     <th className="bg-[#0b2545] text-white text-[0.75rem] uppercase tracking-[0.5px] p-[12px_14px] font-bold border-r border-white/10">STALL NO.</th>
-                                    <th className="bg-[#0b2545] text-white text-[0.75rem] uppercase tracking-[0.5px] p-[12px_14px] font-bold border-r border-white/10">KATAYUAN NG LEASE</th>
-                                    <th className="bg-[#0b2545] text-white text-[0.75rem] uppercase tracking-[0.5px] p-[12px_14px] font-bold border-r border-white/10">HALAGANG DAPAT BAYARAN</th>
+                                    <th className="bg-[#0b2545] text-white text-[0.75rem] uppercase tracking-[0.5px] p-[12px_14px] font-bold border-r border-white/10">LEASE STATUS</th>
+                                    <th className="bg-[#0b2545] text-white text-[0.75rem] uppercase tracking-[0.5px] p-[12px_14px] font-bold border-r border-white/10">AMOUNT TO BE PAID</th>
                                     <th className="bg-[#0b2545] text-white text-[0.75rem] uppercase tracking-[0.5px] p-[12px_14px] font-bold border-r border-white/10">HELPER APPROVAL</th>
                                     <th className="bg-[#0b2545] text-white text-[0.75rem] uppercase tracking-[0.5px] p-[12px_14px] font-bold border-r border-white/10">ADVANCE PAYMENT</th>
-                                    <th className="bg-[#0b2545] text-white text-[0.75rem] uppercase tracking-[0.5px] p-[12px_14px] font-bold border-r border-white/10">KATAYUAN NG PAGBABAYAD</th>
-                                    <th className="bg-[#0b2545] text-white text-[0.75rem] uppercase tracking-[0.5px] p-[12px_14px] font-bold">AKSYON</th>
+                                    <th className="bg-[#0b2545] text-white text-[0.75rem] uppercase tracking-[0.5px] p-[12px_14px] font-bold border-r border-white/10">PAYMENT STATUS</th>
+                                    <th className="bg-[#0b2545] text-white text-[0.75rem] uppercase tracking-[0.5px] p-[12px_14px] font-bold">ACTION</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -525,7 +525,7 @@ export default function MarketLeaseSearch() {
                     <div className="flex flex-col gap-4 p-[20px_24px_10px_24px]">
                         <div className="flex justify-between items-center text-[0.85rem] text-[#718096]">
                             <div>
-                                Ipakita{' '}
+                                Show{' '}
                                 <select
                                     value={entriesCount}
                                     onChange={(e) => setEntriesCount(e.target.value)}
@@ -535,7 +535,7 @@ export default function MarketLeaseSearch() {
                                     <option value="10">10</option>
                                     <option value="25">25</option>
                                 </select>{' '}
-                                ng {filteredLeases.length} entries
+                                of {filteredLeases.length} entries
                             </div>
                             <div className="flex items-center gap-1">
                                 <button className="bg-white border border-[#cbd5e1] p-[6px_12px] rounded-[4px] cursor-pointer text-[#1a202c] text-[0.85rem] opacity-40 cursor-not-allowed" disabled>&laquo;</button>
@@ -553,7 +553,7 @@ export default function MarketLeaseSearch() {
                                     onChange={(e) => setShowInactive(e.target.checked)}
                                     className="w-4 h-4 cursor-pointer"
                                 />
-                                Ipakita ang hindi aktibong lease
+                                Show Inactive Leases
                             </label>
                         </div>
                     </div>
@@ -634,8 +634,8 @@ export default function MarketLeaseSearch() {
 
                                     <span
                                         className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase ${selectedLease.paymentStatus === "Paid"
-                                                ? "bg-emerald-100 text-emerald-800"
-                                                : "bg-white text-blue-800 border border-blue-200"
+                                            ? "bg-emerald-100 text-emerald-800"
+                                            : "bg-white text-blue-800 border border-blue-200"
                                             }`}
                                     >
                                         {selectedLease.paymentStatus === "Paid"

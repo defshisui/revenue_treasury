@@ -584,7 +584,7 @@ export default function MarketStallApplication() {
                     </div>
 
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-slate-50 p-5 rounded-2xl border border-slate-200">
-                        <label htmlFor="palengke-select" className="font-bold text-sm text-slate-700 w-44">Pamilihang Lungsod :</label>
+                        <label htmlFor="palengke-select" className="font-bold text-sm text-slate-700 w-44">City Markets:</label>
                         <div className="flex-1 w-full max-w-md">
                             <select
                                 id="palengke-select"
@@ -592,7 +592,7 @@ export default function MarketStallApplication() {
                                 onChange={(e) => setSelectedMarket(e.target.value)}
                                 className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900 shadow-sm"
                             >
-                                <option value="">-- Pumili ng Palengke --</option>
+                                <option value="">Select a City Market</option>
                                 <option value="Galas">Galas City-Owned Market</option>
                                 <option value="Kamuning">Kamuning City-Owned Market</option>
                                 <option value="Murphy">Murphy City-Owned Market</option>
@@ -625,20 +625,20 @@ export default function MarketStallApplication() {
                                 </div>
 
                                 <div className="space-y-2 bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
-                                    <h4 className="text-xs font-black uppercase text-slate-400 tracking-wider">Impormasyon sa Palengke</h4>
+                                    <h4 className="text-xs font-black uppercase text-slate-400 tracking-wider">City Market Information</h4>
                                     <div className="space-y-1 text-xs font-semibold text-slate-700">
-                                        <p>Kabuuang bilang ng mga stall: <span className="font-bold text-slate-900">{marketData.total}</span></p>
-                                        <p>Kabuuang bilang ng mga stall na bakante: <span className="font-bold text-emerald-600">{marketData.vacant}</span></p>
-                                        <p>Kabuuang bilang ng mga stall na okupado: <span className="font-bold text-rose-600">{marketData.occupied}</span></p>
+                                        <p>Total Number of Stalls: <span className="font-bold text-slate-900">{marketData.total}</span></p>
+                                        <p>Total Number of Vacant Stalls: <span className="font-bold text-emerald-600">{marketData.vacant}</span></p>
+                                        <p>Total Number of Occupied Stalls: <span className="font-bold text-rose-600">{marketData.occupied}</span></p>
                                     </div>
                                 </div>
 
                                 <div className="flex flex-col sm:flex-row gap-3 pt-2">
                                     <button onClick={() => setIsFloorPlanOpen(true)} className="flex-1 bg-blue-900 hover:bg-blue-800 text-white font-bold px-5 py-3.5 rounded-xl text-xs shadow-md transition-all text-center cursor-pointer">
-                                        Tingnan ang Listahan ng available stall
+                                        View List of Available Stalls
                                     </button>
                                     <button onClick={() => window.history.back()} className="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-6 py-3.5 rounded-xl text-xs transition-colors text-center cursor-pointer border-0">
-                                        Ibalik
+                                        Back
                                     </button>
                                 </div>
                             </div>
@@ -672,7 +672,7 @@ export default function MarketStallApplication() {
 
                         <div className="p-4 bg-white border-b border-slate-200 flex flex-wrap items-center justify-between gap-4">
                             <div className="flex items-center space-x-3">
-                                <label htmlFor="floor-select" className="text-xs font-bold text-slate-700 uppercase">Pumili ng Palapag:</label>
+                                <label htmlFor="floor-select" className="text-xs font-bold text-slate-700 uppercase">Select a Floor:</label>
                                 <select
                                     id="floor-select"
                                     value={selectedFloor}
@@ -834,11 +834,11 @@ export default function MarketStallApplication() {
                                     {activeStall.availability}
                                 </span>
                             </p>
-                            <p><strong>Seksyon:</strong> <span className="text-slate-700">{activeStall.section}</span></p>
-                            <p><strong>Uri:</strong> <span className="text-slate-700">{activeStall.type}</span></p>
-                            <p><strong>Sukat:</strong> <span className="text-slate-700">{activeStall.size}</span></p>
+                            <p><strong>Section:</strong> <span className="text-slate-700">{activeStall.section}</span></p>
+                            <p><strong>Type:</strong> <span className="text-slate-700">{activeStall.type}</span></p>
+                            <p><strong>Size:</strong> <span className="text-slate-700">{activeStall.size}</span></p>
                             <p><strong>Location Classification:</strong> <span className="text-slate-700">{activeStall.classification}</span></p>
-                            <p className="pt-1"><strong>Rental Fee (kada buwan):</strong> <span className="text-slate-900">{activeStall.fee}</span></p>
+                            <p className="pt-1"><strong>Rental Fee (Monthly):</strong> <span className="text-slate-900">{activeStall.fee}</span></p>
                         </div>
 
                         <div className="pt-2">
@@ -889,25 +889,25 @@ export default function MarketStallApplication() {
                             )}
 
                             <div>
-                                <label className="block font-semibold text-slate-700 mb-1">Unang Pangalan (First Name)</label>
+                                <label className="block font-semibold text-slate-700 mb-1">First Name</label>
                                 <input
                                     type="text"
                                     required
                                     value={firstName}
                                     onChange={(e) => setFirstName(e.target.value)}
-                                    placeholder="Ilagay ang unang pangalan..."
+                                    placeholder="Enter first name..."
                                     className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-900"
                                 />
                             </div>
 
                             <div>
-                                <label className="block font-semibold text-slate-700 mb-1">Apelyido (Last Name)</label>
+                                <label className="block font-semibold text-slate-700 mb-1">Last Name</label>
                                 <input
                                     type="text"
                                     required
                                     value={lastName}
                                     onChange={(e) => setLastName(e.target.value)}
-                                    placeholder="Ilagay ang apelyido..."
+                                    placeholder="Enter last name..."
                                     className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-900"
                                 />
                             </div>

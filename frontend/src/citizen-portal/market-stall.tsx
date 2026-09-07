@@ -53,7 +53,6 @@ export default function CitizenPortalLanding() {
 
         <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 mt-4">
 
-          {/* HERO */}
           <div className="relative overflow-hidden bg-[#122261] rounded-3xl p-8 sm:p-12 text-white shadow-lg flex flex-col justify-center bg-[radial-gradient(#1e3a8a_1px,transparent_1px)] [background-size:16px_16px]">
 
             <div className="absolute right-[-20px] bottom-[-40px] pointer-events-none opacity-10 select-none">
@@ -86,10 +85,6 @@ export default function CitizenPortalLanding() {
               <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">
                 Available Online Services
               </h2>
-
-              <span className="text-xs font-bold text-blue-700 cursor-pointer hover:underline">
-                View All &rarr;
-              </span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
