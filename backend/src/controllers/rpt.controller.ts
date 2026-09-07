@@ -1,12 +1,46 @@
 ﻿import type { Request, Response } from 'express';
+import type { AuthenticatedRequest } from '../middleware/auth.js';
 import { randomUUID } from 'crypto';
 import pool from '../db.js';
 import { recordAudit } from './audit.controller.js';
 import type { RptPaymentBody } from '../types/index.js';
 
-export async function getRptApplications(_req: Request, res: Response): Promise<void> {
+export async function getRptApplications(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
-    const result = await pool.query('SELECT * FROM rpt_applications ORDER BY created_at DESC');
+    const role = String(req.user?.role || '').trim().toLowerCase();
+    const isStaff = ['admin', 'treasury-staff'].includes(role);
+
+    // Admin/Treasury staff may view all applications.
+    if (isStaff) {
+      const result = await pool.query(
+        `SELECT *
+         FROM rpt_applications
+         ORDER BY created_at DESC`
+      );
+
+      res.json(result.rows);
+      return;
+    }
+
+    // Citizens can ONLY receive applications belonging to the
+    // email in their authenticated JWT. Never trust a frontend email.
+    const authenticatedEmail = String(req.user?.email || '').trim().toLowerCase();
+
+    if (!authenticatedEmail) {
+      res.status(401).json({
+        message: 'Authenticated citizen email is missing.'
+      });
+      return;
+    }
+
+    const result = await pool.query(
+      `SELECT *
+       FROM rpt_applications
+       WHERE LOWER(TRIM(email)) = $1
+       ORDER BY created_at DESC`,
+      [authenticatedEmail]
+    );
+
     res.json(result.rows);
   } catch (err) {
     console.error('Error fetching RPT applications:', err);
@@ -14,8 +48,22 @@ export async function getRptApplications(_req: Request, res: Response): Promise<
   }
 }
 
-export async function createRptApplication(req: Request, res: Response): Promise<void> {
+export async function createRptApplication(req: AuthenticatedRequest, res: Response): Promise<void> {
   const appData = req.body as Record<string, any>;
+  const authenticatedEmail = String(req.user?.email || '').trim().toLowerCase();
+  const role = String(req.user?.role || '').trim().toLowerCase();
+  const isStaff = ['admin', 'treasury-staff'].includes(role);
+
+  if (!authenticatedEmail && !isStaff) {
+    res.status(401).json({ message: 'Authenticated citizen email is missing.' });
+    return;
+  }
+
+  // A citizen cannot submit an application under another account's email.
+  if (!isStaff) {
+    appData.email = authenticatedEmail;
+  }
+
   const files = (req as Request & { files?: Express.Multer.File[] }).files;
 
 
@@ -543,9 +591,43 @@ export async function createGroupRptPayment(req: Request, res: Response): Promis
   }
 }
 
-export async function getRptPayments(_req: Request, res: Response): Promise<void> {
+export async function getRptPayments(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
-    const result = await pool.query('SELECT * FROM citizen_rpt_payments ORDER BY payment_date DESC');
+    const role = String(req.user?.role || '').trim().toLowerCase();
+    const isStaff = ['admin', 'treasury-staff'].includes(role);
+
+    if (isStaff) {
+      const result = await pool.query(
+        'SELECT * FROM citizen_rpt_payments ORDER BY payment_date DESC'
+      );
+      res.json(result.rows);
+      return;
+    }
+
+    const authenticatedEmail = String(req.user?.email || '').trim().toLowerCase();
+
+    if (!authenticatedEmail) {
+      res.status(401).json({
+        message: 'Authenticated citizen email is missing.'
+      });
+      return;
+    }
+
+    // Citizens may only see payments connected to their own RPT
+    // application. This avoids trusting a client-supplied email.
+    const result = await pool.query(
+      `SELECT p.*
+       FROM citizen_rpt_payments p
+       WHERE EXISTS (
+         SELECT 1
+         FROM rpt_applications a
+         WHERE a.tax_declaration_number = p.tax_declaration_number
+           AND LOWER(TRIM(a.email)) = $1
+       )
+       ORDER BY p.payment_date DESC`,
+      [authenticatedEmail]
+    );
+
     res.json(result.rows);
   } catch (err) {
     console.error('Error fetching RPT payments:', err);
