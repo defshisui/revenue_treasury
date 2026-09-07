@@ -4,52 +4,10 @@ import pool from '../db.js';
 import { recordAudit } from './audit.controller.js';
 import type { RptPaymentBody } from '../types/index.js';
 
-export async function getRptApplications(req: Request, res: Response): Promise<void> {
+export async function getRptApplications(_req: Request, res: Response): Promise<void> {
   try {
-    /*
-     * SECURITY:
-     * The route should be protected by authenticateToken.
-     * We deliberately do NOT return 401 from this controller when the
-     * authenticated user is missing, because the frontend currently
-     * treats any 401 API response as a global logout.
-     *
-     * Staff can see all RPT applications.
-     * Citizens can only see applications matching their JWT email.
-     */
-    const authenticatedUser = (req as Request & {
-      user?: { id?: number | string; email?: string; role?: string };
-    }).user;
-
-    const role = String(authenticatedUser?.role || '').trim().toLowerCase();
-    const email = String(authenticatedUser?.email || '').trim().toLowerCase();
-    const isStaff = ['admin', 'treasury-staff'].includes(role);
-
-    if (isStaff) {
-      const result = await pool.query(
-        'SELECT * FROM rpt_applications ORDER BY created_at DESC'
-      );
-      res.json(result.rows);
-      return;
-    }
-
-    if (email) {
-      const result = await pool.query(
-        `SELECT *
-         FROM rpt_applications
-         WHERE LOWER(TRIM(email)) = $1
-         ORDER BY created_at DESC`,
-        [email]
-      );
-      res.json(result.rows);
-      return;
-    }
-
-    /*
-     * Do not return all citizens' records if the request has no
-     * authenticated identity. Return an empty list instead of 401 so
-     * this endpoint cannot trigger the frontend's global logout.
-     */
-    res.json([]);
+    const result = await pool.query('SELECT * FROM rpt_applications ORDER BY created_at DESC');
+    res.json(result.rows);
   } catch (err) {
     console.error('Error fetching RPT applications:', err);
     res.status(500).json({ message: 'Error loading RPT applications' });
@@ -107,19 +65,6 @@ export async function createRptApplication(req: Request, res: Response): Promise
   const ownerName = appData.owner_name || appData.ownerName || '';
   let resolvedApplicantName = appData.applicant_name || appData.applicantName || ownerName || 'Unknown Applicant';
 
-  // Use the authenticated citizen's email when the route supplies a JWT.
-  // This prevents a citizen from submitting an application under another
-  // account's email while preserving the existing fallback behavior.
-  const authenticatedUser = (req as Request & {
-    user?: { id?: number | string; email?: string; role?: string };
-  }).user;
-  const authenticatedEmail = String(authenticatedUser?.email || '').trim().toLowerCase();
-  const authenticatedRole = String(authenticatedUser?.role || '').trim().toLowerCase();
-  const applicationEmail =
-    ['admin', 'treasury-staff'].includes(authenticatedRole)
-      ? (appData.email || authenticatedEmail || null)
-      : (authenticatedEmail || appData.email || null);
-
   try {
 
     const result = await pool.query(
@@ -147,7 +92,7 @@ export async function createRptApplication(req: Request, res: Response): Promise
       ]
     );
 
-    await recordAudit(req, 'AUD-RPT-SUBMIT', applicationEmail || 'citizen@gov.ph', 'Citizen',
+    await recordAudit(req, 'AUD-RPT-SUBMIT', appData.email || 'citizen@gov.ph', 'Citizen',
       'RPT Module', 'RPT_APPLICATION_SUBMITTED', 'INFO', null,
       `Submitted RPT application for applicant: ${resolvedApplicantName}`);
 
