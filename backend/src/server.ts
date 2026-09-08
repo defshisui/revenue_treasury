@@ -52,7 +52,14 @@ app.use((req, res, next) => {
 console.log(" REAL Express JSON limit successfully set to 200MB!");
 
 
-app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
+[
+  path.join(__dirname, '../uploads'),
+  path.join(__dirname, '../../uploads'),
+  path.join(process.cwd(), 'uploads'),
+  path.join(process.cwd(), 'backend/uploads')
+].forEach((dir) => {
+  app.use('/uploads', express.static(dir));
+});
 
 
 app.get(['/', '/health'], (_req, res) => {

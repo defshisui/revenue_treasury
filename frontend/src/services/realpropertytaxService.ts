@@ -187,8 +187,41 @@ export const getRPTApplications = async (): Promise<RPTApplicationRecord[]> => {
         row.paymentDueDate ||
         '',
 
-      documents:
-        row.documents || []
+      documents: (() => {
+        let docs = row.documents;
+        if (typeof docs === 'string') {
+          try {
+            docs = JSON.parse(docs);
+          } catch {
+            docs = [];
+          }
+        }
+        if (docs && !Array.isArray(docs) && typeof docs === 'object') {
+          docs = Object.values(docs);
+        }
+        if (!Array.isArray(docs)) return [];
+        return docs.map((d: any, idx: number) => {
+          if (typeof d === 'string') {
+            return {
+              id: `DOC-${idx + 1}`,
+              name: d,
+              type: d.toLowerCase().endsWith('.pdf') ? 'PDF' : 'IMAGE',
+              url: d,
+              status: 'Pending' as const,
+              uploadedAt: row.filed_date || row.filedDate || '',
+            };
+          }
+          const docName = d.name || d.fileName || `Document ${idx + 1}`;
+          return {
+            id: d.id || `DOC-${idx + 1}`,
+            name: docName,
+            type: d.type || (docName.toLowerCase().endsWith('.pdf') ? 'PDF' : 'IMAGE'),
+            url: d.url || '',
+            status: d.status || 'Pending',
+            uploadedAt: d.uploadedAt || row.filed_date || row.filedDate || '',
+          };
+        });
+      })(),
     }));
   } catch (error) {
     console.error(

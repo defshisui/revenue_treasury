@@ -167,6 +167,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
 
   const [previewDocUrl, setPreviewDocUrl] = useState<string | null>(null);
   const [previewDocTitle, setPreviewDocTitle] = useState<string>('');
+  const [previewDocError, setPreviewDocError] = useState<boolean>(false);
 
   const [toastMessage, setToastMessage] = useState<{
     text: string;
@@ -440,10 +441,11 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     if (targetUrl.startsWith('data:') || targetUrl.startsWith('http://') || targetUrl.startsWith('https://')) {
     } else if (targetUrl.startsWith('/uploads/')) {
       targetUrl = `${API_BASE_URL}${targetUrl}`;
-    } else {
+    } else if (targetUrl.trim() !== '') {
       targetUrl = `${API_BASE_URL}/uploads/${targetUrl}`;
     }
-    setPreviewDocTitle(doc.name);
+    setPreviewDocError(false);
+    setPreviewDocTitle(doc.name || 'Document');
     setPreviewDocUrl(targetUrl);
   };
 
@@ -1284,24 +1286,71 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-4xl h-[85vh] shadow-2xl overflow-hidden flex flex-col">
             <div className="p-4 bg-slate-900 text-white flex justify-between items-center border-b border-slate-800">
-              <div className="flex items-center gap-2">
-                <span className="text-xs uppercase font-bold text-blue-400">Document Inspector</span>
+              <div className="flex items-center gap-2 min-w-0 pr-2">
+                <span className="text-xs uppercase font-bold text-blue-400 shrink-0">Document Inspector</span>
                 <span className="text-xs text-slate-300 truncate max-w-md">({previewDocTitle})</span>
               </div>
-              <button
-                onClick={() => setPreviewDocUrl(null)}
-                className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-bold cursor-pointer"
-              >
-                Close ✕
-              </button>
+              <div className="flex items-center gap-2 shrink-0">
+                {previewDocUrl && (
+                  <a
+                    href={previewDocUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    download={previewDocTitle}
+                    className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition inline-flex items-center gap-1"
+                  >
+                    <span>Open ↗</span>
+                  </a>
+                )}
+                <button
+                  onClick={() => {
+                    setPreviewDocUrl(null);
+                    setPreviewDocError(false);
+                  }}
+                  className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-bold cursor-pointer transition"
+                >
+                  Close ✕
+                </button>
+              </div>
             </div>
             <div className="flex-1 bg-slate-100 dark:bg-slate-950 overflow-auto flex items-center justify-center p-4">
-              <img
-                src={previewDocUrl}
-                alt="Document Preview"
-                className="max-w-none object-contain rounded-xl shadow-lg"
-                style={{ minHeight: '50vh', maxHeight: '75vh' }}
-              />
+              {previewDocUrl.toLowerCase().includes('.pdf') || previewDocUrl.startsWith('data:application/pdf') ? (
+                <iframe
+                  src={previewDocUrl}
+                  title={previewDocTitle}
+                  className="w-full h-full border-0 rounded-xl bg-white shadow-md"
+                />
+              ) : previewDocError ? (
+                <div className="text-center p-8 max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl space-y-4">
+                  <div className="w-16 h-16 mx-auto rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center text-3xl font-bold">
+                    📄
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">Document Preview Unavailable</h4>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                      The file <span className="font-mono font-semibold text-slate-700 dark:text-slate-300">"{previewDocTitle}"</span> could not be loaded directly in the inline viewer.
+                    </p>
+                  </div>
+                  <div className="pt-2">
+                    <a
+                      href={previewDocUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      download={previewDocTitle}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition shadow-md"
+                    >
+                      Download / Open File ↗
+                    </a>
+                  </div>
+                </div>
+              ) : (
+                <img
+                  src={previewDocUrl}
+                  alt={previewDocTitle}
+                  onError={() => setPreviewDocError(true)}
+                  className="max-w-full max-h-[75vh] object-contain rounded-xl shadow-lg"
+                />
+              )}
             </div>
           </div>
         </div>
