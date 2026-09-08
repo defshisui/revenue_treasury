@@ -140,6 +140,9 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     () => (localStorage.getItem('rpt_admin_tab') as 'master' | 'queue' | 'payments' | 'citizenAudit') || 'master'
   );
 
+  const currentUserRaw = localStorage.getItem('currentUser') || sessionStorage.getItem('currentUser');
+  const adminEmail = currentUserRaw ? JSON.parse(currentUserRaw).email : '';
+
 
   const switchMainViewTab = (tab: 'master' | 'queue' | 'payments' | 'citizenAudit') => {
     setMainViewTab(tab);
@@ -504,7 +507,9 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     try {
       const result = await updateRptApplicationStatus(
         String(currentApp.id),
-        newStatus
+        newStatus,
+        undefined,
+        { adminEmail }
       );
 
       const serverRecord = result?.record;
@@ -561,6 +566,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         'For Payment',
         `${serviceName} fee assessed and payment bill posted for citizen payment.`,
         {
+          adminEmail,
           paymentAmount: amount,
           paymentStatus: 'Pending',
           paymentDueDate: currentApp.paymentDueDate,
@@ -618,7 +624,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
 
 
     try {
-      await updateRptApplicationStatus(String(currentApp.id), 'Digital Certificate Issued');
+      await updateRptApplicationStatus(String(currentApp.id), 'Digital Certificate Issued', undefined, { adminEmail });
     } catch (err) {
       console.error('Failed to persist Digital Certificate Issued status:', err);
     }
