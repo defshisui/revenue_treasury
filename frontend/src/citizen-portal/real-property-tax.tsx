@@ -150,7 +150,7 @@ export function RealPropertyTaxHub() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F4F6F9] text-slate-800 font-sans">
+    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-800 font-sans">
 
       <UnifiedHeader />
 
@@ -180,7 +180,7 @@ export function RealPropertyTaxHub() {
                 PROCEED AND PAY ONLINE
               </h2>
 
-              <p className="max-w-xl mx-auto mt-3 text-xs sm:text-sm text-[#36527A] leading-relaxed">
+              <p className="max-w-xl mx-auto mt-3 text-xs sm:text-sm text-slate-600 leading-relaxed">
                 Search your Tax Declaration Number, view your property
                 assessment and outstanding balance and pay your Real Property Tax Online.
               </p>
@@ -1321,7 +1321,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                     </div>
 
                     <div className="hidden">
-                      <p className="font-bold text-[#0B3B60] mb-2 flex items-center gap-2">
+                      <p className="font-bold text-blue-900 mb-2 flex items-center gap-2">
                         <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 text-blue-600">i</span>
                         How to search:
                       </p>
@@ -1353,7 +1353,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                     </div>
 
                     <div className="text-right bg-slate-50 border border-slate-200 px-4 py-2 rounded-xl text-xs font-bold text-slate-700">
-                      <span>Selected TDN: <span className="text-[#0B3B60] font-black">{selectedTdnIds.size}</span></span>
+                      <span>Selected TDN: <span className="text-blue-900 font-black">{selectedTdnIds.size}</span></span>
                       <span className="mx-2 text-slate-300">|</span>
                       <span>Unselected TDN: <span className="text-rose-600 font-black">{unselectedTdns.length}</span></span>
                     </div>
@@ -1361,14 +1361,14 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
 
                   <div className="overflow-x-auto rounded-2xl border border-slate-200">
                     <table className="w-full text-left text-xs border-collapse">
-                      <thead className="bg-[#F8FAFC] text-slate-700 font-bold border-b border-slate-200">
+                      <thead className="bg-slate-800 text-white font-bold">
                         <tr>
                           <th className="p-4 w-12 text-center">
                             <input
                               type="checkbox"
                               checked={selectedTdnIds.size === associatedProperties.length && associatedProperties.length > 0}
                               onChange={toggleSelectAllTdns}
-                              className="size-4 accent-[#0B3B60] rounded cursor-pointer"
+                              className="size-4 accent-blue-900 rounded cursor-pointer"
                             />
                           </th>
                           <th className="p-4">Tax Declaration No.</th>
@@ -1383,16 +1383,16 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                         {associatedProperties.map((prop) => {
                           const isSelected = selectedTdnIds.has(prop.taxDeclarationNumber);
                           return (
-                            <tr key={prop.taxDeclarationNumber} className={`hover:bg-slate-50 transition ${isSelected ? "bg-sky-50/40" : ""}`}>
+                            <tr key={prop.taxDeclarationNumber} className={`hover:bg-slate-50 transition ${isSelected ? "bg-blue-50/50" : ""}`}>
                               <td className="p-4 text-center">
                                 <input
                                   type="checkbox"
                                   checked={isSelected}
                                   onChange={() => toggleTdnSelection(prop.taxDeclarationNumber)}
-                                  className="size-4 accent-[#0B3B60] rounded cursor-pointer"
+                                  className="size-4 accent-blue-900 rounded cursor-pointer"
                                 />
                               </td>
-                              <td className="p-4 font-mono font-extrabold text-[#0B3B60]">
+                              <td className="p-4 font-mono font-extrabold text-blue-900">
                                 {prop.taxDeclarationNumber}
                               </td>
                               <td className="p-4 font-semibold text-slate-800">
@@ -1422,7 +1422,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                   <div className="flex justify-end pt-4">
                     <button
                       onClick={handleProceedToPaymentOptions}
-                      className="bg-[#DC2626] hover:bg-red-700 text-white font-extrabold px-8 py-3.5 rounded-2xl text-xs uppercase tracking-wider transition shadow-md cursor-pointer flex items-center gap-2"
+                      className="bg-blue-900 hover:bg-blue-950 text-white font-extrabold px-8 py-3.5 rounded-2xl text-xs uppercase tracking-wider transition shadow-md cursor-pointer flex items-center gap-2"
                     >
                       <span>GO TO PAYMENT OPTION</span>
                       <span>&gt;</span>
@@ -1437,11 +1437,11 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                     <div>
                       <button
                         onClick={() => setRptSearchStep(2)}
-                        className="text-xs font-bold text-[#0284C7] hover:underline flex items-center gap-1 cursor-pointer mb-2"
+                        className="text-xs font-bold text-blue-900 hover:underline flex items-center gap-1 cursor-pointer mb-2"
                       >
                         &lt; GO BACK TO GROUP BILL SET
                       </button>
-                      <h2 className="text-lg font-extrabold text-[#0B3B60] uppercase tracking-wide">
+                      <h2 className="text-lg font-extrabold text-slate-900 uppercase tracking-wide">
                         SELECTED TAX DECLARATION NUMBER(S):
                       </h2>
                     </div>
@@ -1449,22 +1449,22 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => setRptSearchStep(2)}
-                        className="bg-[#0B3B60] hover:bg-[#082944] text-white font-bold text-xs px-4 py-2.5 rounded-xl transition cursor-pointer"
+                        className="bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition cursor-pointer"
                       >
                         Edit Selected TDN(s)
                       </button>
                       <button
                         onClick={handleAddToCart}
-                        className="bg-[#DC2626] hover:bg-red-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition shadow-md cursor-pointer flex items-center gap-1.5"
+                        className="bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition shadow-md cursor-pointer flex items-center gap-1.5"
                       >
-                        <span>🛒 Add to Cart</span>
+                        <span>Add to Cart</span>
                       </button>
                     </div>
                   </div>
 
                   <div className="overflow-x-auto rounded-2xl border border-slate-200">
                     <table className="w-full text-left text-xs border-collapse">
-                      <thead className="bg-[#F8FAFC] text-slate-700 font-bold border-b border-slate-200">
+                      <thead className="bg-slate-800 text-white font-bold">
                         <tr>
                           <th className="p-4">Tax Declaration No.</th>
                           <th className="p-4">Name of Owner</th>
@@ -1476,7 +1476,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                       <tbody className="divide-y divide-slate-100 bg-white">
                         {selectedPropertiesList.map((prop) => (
                           <tr key={prop.taxDeclarationNumber} className="hover:bg-slate-50 transition">
-                            <td className="p-4 font-mono font-extrabold text-[#0B3B60]">
+                            <td className="p-4 font-mono font-extrabold text-blue-900">
                               {prop.taxDeclarationNumber}
                             </td>
                             <td className="p-4 font-semibold text-slate-800">
@@ -1509,7 +1509,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                   <div className="flex flex-col sm:flex-row items-center justify-between bg-slate-50 border border-slate-200 p-5 rounded-2xl gap-4">
                     <div>
                       <p className="text-xs text-slate-500 font-semibold">Group Bill Set Total Assessment</p>
-                      <p className="text-2xl font-black text-[#0B3B60]">
+                      <p className="text-2xl font-black text-blue-900">
                         {formatCurrency(
                           selectedPropertiesList.reduce((sum, p) => sum + (p.computedPayableAmount || p.balance || 1020), 0)
                         )}
@@ -1518,7 +1518,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                     <div className="flex items-center gap-3 w-full sm:w-auto">
                       <button
                         onClick={handleAddToCart}
-                        className="w-full sm:w-auto bg-[#DC2626] hover:bg-red-700 text-white font-extrabold px-8 py-3.5 rounded-2xl text-xs uppercase tracking-wider transition shadow-md cursor-pointer"
+                        className="w-full sm:w-auto bg-blue-900 hover:bg-blue-950 text-white font-extrabold px-8 py-3.5 rounded-2xl text-xs uppercase tracking-wider transition shadow-md cursor-pointer"
                       >
                         Add To Cart &amp; Proceed to Checkout →
                       </button>
@@ -1542,15 +1542,15 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
               </div>
 
               <div className="border-b border-slate-200 pb-4">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-[#0284C7]">OFFICE OF THE CITY ASSESSOR</p>
-                <h2 className="text-2xl font-extrabold text-[#0B3B60]">Real Property Tax Service Request</h2>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-blue-900">OFFICE OF THE CITY ASSESSOR</p>
+                <h2 className="text-2xl font-extrabold text-slate-900">Real Property Tax Service Request</h2>
                 <p className="text-xs text-slate-500 mt-1">
                   Submit a declaration, transfer of ownership, property reclassification, or correction directly for assessor evaluation.
                 </p>
               </div>
 
               {appNotice && (
-                <div className="p-4 bg-sky-50 border border-sky-200 rounded-2xl text-sky-900 text-xs font-bold">
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-2xl text-blue-900 text-xs font-bold">
                   {appNotice}
                 </div>
               )}
@@ -1566,7 +1566,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                       <select
                         value={appForm.service}
                         onChange={(e) => setAppForm({ ...appForm, service: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
+                        className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-blue-900 outline-none"
                       >
                         {services.map((s) => (
                           <option key={s} value={s}>{s}</option>
@@ -1578,7 +1578,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                       <select
                         value={appForm.applicantType}
                         onChange={(e) => setAppForm({ ...appForm, applicantType: e.target.value as ApplicantType })}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
+                        className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-blue-900 outline-none"
                       >
                         <option value="Property Owner">Property Owner</option>
                         <option value="Authorized Representative">Authorized Representative</option>
@@ -1600,7 +1600,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                         required
                         value={appForm.ownerName}
                         onChange={(e) => setAppForm({ ...appForm, ownerName: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
+                        className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-blue-900 outline-none"
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -1610,7 +1610,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                         required
                         value={appForm.applicantName}
                         onChange={(e) => setAppForm({ ...appForm, applicantName: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
+                        className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-blue-900 outline-none"
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -1620,7 +1620,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                         required
                         value={appForm.email}
                         onChange={(e) => setAppForm({ ...appForm, email: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
+                        className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-blue-900 outline-none"
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -1639,7 +1639,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                             mobileNumber: e.target.value.replace(/\D/g, "").slice(0, 11),
                           })
                         }
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
+                        className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-blue-900 outline-none"
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -1657,7 +1657,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                             tin: e.target.value.replace(/\D/g, "").slice(0, 14),
                           })
                         }
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
+                        className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-blue-900 outline-none"
                       />
                     </div>
                   </div>
@@ -1675,7 +1675,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                         placeholder="e.g. F-021-01491"
                         value={appForm.taxDeclarationNumber}
                         onChange={(e) => setAppForm({ ...appForm, taxDeclarationNumber: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none font-mono"
+                        className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-blue-900 outline-none font-mono"
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -1683,7 +1683,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                       <select
                         value={appForm.propertyType}
                         onChange={(e) => setAppForm({ ...appForm, propertyType: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
+                        className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-blue-900 outline-none"
                       >
                         <option value="Residential">Residential</option>
                         <option value="Commercial">Commercial</option>
@@ -1700,7 +1700,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                         placeholder="e.g. Central, Diliman, Batasan"
                         value={appForm.barangay}
                         onChange={(e) => setAppForm({ ...appForm, barangay: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
+                        className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-blue-900 outline-none"
                       />
                     </div>
                     <div className="md:col-span-3 space-y-1.5">
@@ -1711,7 +1711,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                         placeholder="House / Lot No., Street, Subdivision, Quezon City"
                         value={appForm.propertyLocation}
                         onChange={(e) => setAppForm({ ...appForm, propertyLocation: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
+                        className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-blue-900 outline-none"
                       />
                     </div>
                   </div>
@@ -1730,7 +1730,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                         required
                         accept="image/*,.pdf"
                         onChange={(e) => handleAppFileChange(e, "ownershipProof")}
-                        className="text-xs file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#0B3B60] file:text-white cursor-pointer"
+                        className="text-xs file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-900 file:hover:bg-blue-950 file:text-white cursor-pointer"
                       />
                       {appDocuments.ownershipProof.name && (
                         <p className="text-[11px] font-mono text-emerald-700 font-bold">{appDocuments.ownershipProof.name}</p>
@@ -1745,7 +1745,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                         required
                         accept="image/*,.pdf"
                         onChange={(e) => handleAppFileChange(e, "validId")}
-                        className="text-xs file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#0B3B60] file:text-white cursor-pointer"
+                        className="text-xs file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-900 file:hover:bg-blue-950 file:text-white cursor-pointer"
                       />
                       {appDocuments.validId.name && (
                         <p className="text-[11px] font-mono text-emerald-700 font-bold">{appDocuments.validId.name}</p>
@@ -1759,7 +1759,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                         type="file"
                         accept="image/*,.pdf"
                         onChange={(e) => handleAppFileChange(e, "taxRecord")}
-                        className="text-xs file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#0B3B60] file:text-white cursor-pointer"
+                        className="text-xs file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-900 file:hover:bg-blue-950 file:text-white cursor-pointer"
                       />
                       {appDocuments.taxRecord.name && (
                         <p className="text-[11px] font-mono text-emerald-700 font-bold">{appDocuments.taxRecord.name}</p>
@@ -1772,7 +1772,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                   <button
                     type="submit"
                     disabled={isSubmittingApp}
-                    className="bg-[#0B3B60] hover:bg-[#082944] disabled:opacity-50 text-white font-extrabold px-8 py-3.5 rounded-2xl text-xs uppercase tracking-wider transition shadow-md cursor-pointer"
+                    className="bg-blue-900 hover:bg-blue-950 disabled:opacity-50 text-white font-extrabold px-8 py-3.5 rounded-2xl text-xs uppercase tracking-wider transition shadow-md cursor-pointer"
                   >
                     {isSubmittingApp ? "Submitting Application..." : "Submit to City Assessor →"}
                   </button>
@@ -1935,7 +1935,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
           {activePortalTab === "summary" && (
             <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
               <div className="border-b border-slate-200 pb-4">
-                <h2 className="text-xl font-extrabold text-[#0B3B60]">Real Property Tax Clearance &amp; Electronic Receipts</h2>
+                <h2 className="text-xl font-extrabold text-slate-900">Real Property Tax Clearance &amp; Electronic Receipts</h2>
                 <p className="text-xs text-slate-500 mt-1">
                   View and download electronic Official Receipts (eOR) and Real Property Tax Clearance certificates.
                 </p>
@@ -1973,12 +1973,10 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
         </div>
       </div>
 
-      <div className="hidden"><UnifiedFooter /></div>
-
       {isOwnerModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4">
           <div className="bg-white rounded-3xl border border-slate-200 p-8 max-w-md w-full shadow-2xl text-center space-y-6">
-            <div className="size-16 rounded-full border-2 border-sky-400 text-sky-500 flex items-center justify-center text-3xl font-light mx-auto">
+            <div className="size-16 rounded-full border-2 border-blue-400 text-blue-600 flex items-center justify-center text-3xl font-light mx-auto">
               ?
             </div>
 
@@ -1995,14 +1993,14 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
               <button
                 type="button"
                 onClick={() => handleConfirmOwnerVerification(true)}
-                className="w-28 bg-[#0284C7] hover:bg-sky-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs shadow-md transition cursor-pointer"
+                className="w-28 bg-blue-900 hover:bg-blue-950 text-white font-bold py-2.5 px-4 rounded-xl text-xs shadow-md transition cursor-pointer"
               >
                 Yes
               </button>
               <button
                 type="button"
                 onClick={() => handleConfirmOwnerVerification(false)}
-                className="w-28 bg-white hover:bg-slate-100 text-[#D97706] border border-[#D97706] font-bold py-2.5 px-4 rounded-xl text-xs transition cursor-pointer"
+                className="w-28 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-bold py-2.5 px-4 rounded-xl text-xs transition cursor-pointer"
               >
                 No
               </button>
@@ -2014,7 +2012,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
       {isUnselectedWarningOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4">
           <div className="bg-white rounded-3xl border border-slate-200 p-8 max-w-md w-full shadow-2xl text-center space-y-5">
-            <div className="size-14 rounded-full border-2 border-sky-400 text-sky-500 flex items-center justify-center text-2xl font-bold mx-auto">
+            <div className="size-14 rounded-full border-2 border-blue-400 text-blue-600 flex items-center justify-center text-2xl font-bold mx-auto">
               i
             </div>
 
@@ -2035,7 +2033,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                 type="checkbox"
                 checked={hasAcknowledgedUnselected}
                 onChange={(e) => setHasAcknowledgedUnselected(e.target.checked)}
-                className="size-4 accent-[#0B3B60] rounded cursor-pointer"
+                className="size-4 accent-blue-900 rounded cursor-pointer"
               />
               <span>I acknowledge that I have reviewed the properties that may be under my ownership.</span>
             </label>
@@ -2052,7 +2050,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                 type="button"
                 disabled={!hasAcknowledgedUnselected}
                 onClick={handleConfirmUnselectedProceed}
-                className="bg-[#0B3B60] hover:bg-[#082944] disabled:opacity-40 text-white font-bold py-2.5 px-6 rounded-xl text-xs transition shadow-md cursor-pointer"
+                className="bg-blue-900 hover:bg-blue-950 disabled:opacity-40 text-white font-bold py-2.5 px-6 rounded-xl text-xs transition shadow-md cursor-pointer"
               >
                 Proceed
               </button>
@@ -2066,7 +2064,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
           <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 max-w-2xl w-full shadow-2xl space-y-6">
             <div className="flex items-center justify-between border-b border-slate-200 pb-3">
               <div>
-                <h3 className="text-base font-extrabold text-[#0B3B60]">
+                <h3 className="text-base font-extrabold text-slate-900">
                   CHOOSE A PAYMENT OPTION ({activeConfiguringTdn.taxDeclarationNumber}):
                 </h3>
                 <p className="text-xs text-slate-500 font-semibold mt-0.5">
@@ -2086,12 +2084,12 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
               <div
                 onClick={() => setTempOptionChoice("Quarterly")}
                 className={`p-5 rounded-2xl border-2 transition cursor-pointer space-y-3 ${tempOptionChoice === "Quarterly"
-                  ? "border-[#0284C7] bg-sky-50/40 shadow-sm"
+                  ? "border-blue-900 bg-blue-50/50 shadow-sm"
                   : "border-slate-200 bg-white hover:border-slate-300"
                   }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-black uppercase text-[#0B3B60]">
+                  <span className="text-xs font-black uppercase text-blue-900">
                     PAYMENT OPTION 1: QUARTERLY
                   </span>
                   <input
@@ -2099,7 +2097,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                     name="optionChoice"
                     checked={tempOptionChoice === "Quarterly"}
                     onChange={() => setTempOptionChoice("Quarterly")}
-                    className="size-4 accent-[#0284C7] cursor-pointer"
+                    className="size-4 accent-blue-900 cursor-pointer"
                   />
                 </div>
 
@@ -2120,7 +2118,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                   </div>
                   <div className="flex justify-between font-black text-slate-900 border-t pt-2">
                     <span>TOTAL:</span>
-                    <span className="font-mono text-[#0B3B60]">
+                    <span className="font-mono text-blue-900 font-extrabold">
                       {formatCurrency(
                         ((activeConfiguringTdn.totalAssessment || 1020) / 4) *
                         (Object.values(tempQuarterSelection).filter(Boolean).length || 1)
@@ -2135,7 +2133,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                     {(["q1", "q2", "q3", "q4"] as const).map((q) => (
                       <label
                         key={q}
-                        className={`p-1.5 rounded-lg border text-[11px] font-mono font-bold cursor-pointer transition ${tempQuarterSelection[q] ? "bg-[#0B3B60] text-white border-[#0B3B60]" : "bg-slate-50 text-slate-600 border-slate-200"
+                        className={`p-1.5 rounded-lg border text-[11px] font-mono font-bold cursor-pointer transition ${tempQuarterSelection[q] ? "bg-blue-900 text-white border-blue-900" : "bg-slate-50 text-slate-600 border-slate-200"
                           }`}
                       >
                         <input
@@ -2156,12 +2154,12 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
               <div
                 onClick={() => setTempOptionChoice("Full")}
                 className={`p-5 rounded-2xl border-2 transition cursor-pointer space-y-3 ${tempOptionChoice === "Full"
-                  ? "border-[#0284C7] bg-sky-50/40 shadow-sm"
+                  ? "border-blue-900 bg-blue-50/50 shadow-sm"
                   : "border-slate-200 bg-white hover:border-slate-300"
                   }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-black uppercase text-[#0B3B60]">
+                  <span className="text-xs font-black uppercase text-blue-900">
                     PAYMENT OPTION 2: FULL
                   </span>
                   <input
@@ -2169,7 +2167,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                     name="optionChoice"
                     checked={tempOptionChoice === "Full"}
                     onChange={() => setTempOptionChoice("Full")}
-                    className="size-4 accent-[#0284C7] cursor-pointer"
+                    className="size-4 accent-blue-900 cursor-pointer"
                   />
                 </div>
 
@@ -2196,7 +2194,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                   )}
                   <div className="flex justify-between font-black text-slate-900 border-t pt-2">
                     <span>TOTAL:</span>
-                    <span className="font-mono text-[#0B3B60]">
+                    <span className="font-mono text-blue-900 font-extrabold">
                       {formatCurrency(activeConfiguringTdn.balance || activeConfiguringTdn.totalAssessment || 1127.1)}
                     </span>
                   </div>
@@ -2215,7 +2213,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
               <button
                 type="button"
                 onClick={handleConfirmPaymentOptionModal}
-                className="w-36 bg-[#DC2626] hover:bg-red-700 text-white font-bold py-2.5 px-6 rounded-xl text-xs transition shadow-md cursor-pointer"
+                className="w-36 bg-blue-900 hover:bg-blue-950 text-white font-bold py-2.5 px-6 rounded-xl text-xs transition shadow-md cursor-pointer"
               >
                 CONFIRM
               </button>
@@ -2227,7 +2225,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
       {isGroupApplyConfirmOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4">
           <div className="bg-white rounded-3xl border border-slate-200 p-8 max-w-md w-full shadow-2xl text-center space-y-6">
-            <div className="size-16 rounded-full border-2 border-sky-400 text-sky-500 flex items-center justify-center text-3xl font-light mx-auto">
+            <div className="size-16 rounded-full border-2 border-blue-400 text-blue-600 flex items-center justify-center text-3xl font-light mx-auto">
               ?
             </div>
 
@@ -2242,14 +2240,14 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
               <button
                 type="button"
                 onClick={() => applyOptionSettingsToTdns(true)}
-                className="w-full sm:w-auto bg-[#0284C7] hover:bg-sky-700 text-white font-bold py-2.5 px-5 rounded-xl text-xs transition shadow-md cursor-pointer"
+                className="w-full sm:w-auto bg-blue-900 hover:bg-blue-950 text-white font-bold py-2.5 px-5 rounded-xl text-xs transition shadow-md cursor-pointer"
               >
                 Yes, apply to all
               </button>
               <button
                 type="button"
                 onClick={() => applyOptionSettingsToTdns(false)}
-                className="w-full sm:w-auto bg-[#0B3B60] hover:bg-[#082944] text-white font-bold py-2.5 px-5 rounded-xl text-xs transition cursor-pointer"
+                className="w-full sm:w-auto bg-slate-700 hover:bg-slate-800 text-white font-bold py-2.5 px-5 rounded-xl text-xs transition cursor-pointer"
               >
                 No, apply to this TDN only
               </button>
@@ -2273,7 +2271,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
               <button
                 type="button"
                 onClick={() => setIsSuccessFeedbackOpen(false)}
-                className="w-28 bg-[#0B3B60] hover:bg-[#082944] text-white font-bold py-2.5 px-6 rounded-xl text-xs transition shadow-md cursor-pointer"
+                className="w-28 bg-blue-900 hover:bg-blue-950 text-white font-bold py-2.5 px-6 rounded-xl text-xs transition shadow-md cursor-pointer"
               >
                 OK
               </button>
@@ -2286,7 +2284,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4">
           <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 max-w-xl w-full shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-              <h3 className="text-base font-extrabold text-[#0B3B60]">
+              <h3 className="text-base font-extrabold text-slate-900">
                 My Cart - Group Bill Set ({cart.length} Properties)
               </h3>
               <button
@@ -2306,7 +2304,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                 {cart.map((item, idx) => (
                   <div key={idx} className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-1 text-xs">
                     <div className="flex justify-between items-center font-bold">
-                      <span className="text-[#0B3B60] font-mono">{item.tdn}</span>
+                      <span className="text-blue-900 font-mono">{item.tdn}</span>
                       <span className="font-mono text-slate-900">{formatCurrency(item.totalPayable)}</span>
                     </div>
                     <p className="text-slate-600">{item.ownerName} • {item.propertyType}</p>
@@ -2317,7 +2315,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                   </div>
                 ))}
 
-                <div className="p-4 bg-sky-50 border border-sky-200 rounded-2xl space-y-1">
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-2xl space-y-1">
                   <div className="flex justify-between text-xs text-slate-600">
                     <span>Total Assessed Tax Due:</span>
                     <span className="font-mono font-bold">{formatCurrency(grandCartTotal)}</span>
@@ -2326,7 +2324,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                     <span>Convenience / Processing Fee:</span>
                     <span className="font-mono font-bold text-emerald-700">₱0.00 (Waived)</span>
                   </div>
-                  <div className="flex justify-between text-sm font-black text-[#0B3B60] pt-2 border-t border-sky-200">
+                  <div className="flex justify-between text-sm font-black text-blue-900 pt-2 border-t border-blue-200">
                     <span>GRAND TOTAL PAYABLE:</span>
                     <span className="font-mono">{formatCurrency(grandCartTotal)}</span>
                   </div>
@@ -2336,14 +2334,14 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                   <button
                     onClick={() => handleExecuteGroupCheckout("PayMongo")}
                     disabled={isCheckingOut}
-                    className="w-full bg-[#0284C7] hover:bg-sky-700 text-white font-extrabold py-3.5 px-4 rounded-2xl text-xs uppercase tracking-wider transition shadow-md cursor-pointer flex items-center justify-center gap-2"
+                    className="w-full bg-blue-900 hover:bg-blue-950 text-white font-extrabold py-3.5 px-4 rounded-2xl text-xs uppercase tracking-wider transition shadow-md cursor-pointer flex items-center justify-center gap-2"
                   >
-                    <span>▣ Pay via PayMongo QR Ph</span>
+                    <span>Pay via PayMongo QR Ph</span>
                   </button>
                   <button
                     onClick={() => handleExecuteGroupCheckout("DirectSimulated")}
                     disabled={isCheckingOut}
-                    className="w-full bg-[#0B3B60] hover:bg-[#082944] text-white font-extrabold py-3.5 px-4 rounded-2xl text-xs uppercase tracking-wider transition cursor-pointer flex items-center justify-center gap-2"
+                    className="w-full bg-slate-800 hover:bg-slate-900 text-white font-extrabold py-3.5 px-4 rounded-2xl text-xs uppercase tracking-wider transition cursor-pointer flex items-center justify-center gap-2"
                   >
                     <span>Instant Electronic LGU Settlement</span>
                   </button>
@@ -2419,7 +2417,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                 {!isGeneratingQr && rptQrError && !rptQrCodeUrl && (
                   <div className="w-full max-w-sm mt-6 rounded-2xl border border-rose-200 bg-rose-50 p-5 text-center">
                     <p className="text-xs font-bold text-rose-700">{rptQrError}</p>
-                    <button type="button" onClick={() => void generateRPTQrPayment()} className="mt-4 px-4 py-2.5 bg-[#0B3B60] hover:bg-[#082944] text-white rounded-xl text-xs font-bold">Generate QR Again</button>
+                    <button type="button" onClick={() => void generateRPTQrPayment()} className="mt-4 px-4 py-2.5 bg-blue-900 hover:bg-blue-950 text-white rounded-xl text-xs font-bold">Generate QR Again</button>
                   </div>
                 )}
 
@@ -2502,7 +2500,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4">
           <div className="bg-white rounded-3xl border border-slate-200 p-8 max-w-lg w-full shadow-2xl space-y-6 text-slate-800 max-h-[90vh] overflow-y-auto">
             <div className="text-center space-y-1 border-b border-slate-200 pb-4">
-              <span className="text-[10px] font-black tracking-widest text-[#0B3B60] uppercase">
+              <span className="text-[10px] font-black tracking-widest text-blue-900 uppercase">
                 REPUBLIC OF THE PHILIPPINES • CITY TREASURER'S OFFICE
               </span>
               <h3 className="text-xl font-black text-slate-900">ELECTRONIC OFFICIAL RECEIPT (eOR)</h3>
@@ -2535,7 +2533,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                 <span className="text-[11px] font-bold uppercase text-slate-700 block">Settled TDNs:</span>
                 {issuedReceipt.items.map((item, i) => (
                   <div key={i} className="flex justify-between text-xs p-2 bg-slate-50 rounded-lg">
-                    <span className="font-mono font-bold text-[#0B3B60]">{item.taxDeclarationNumber}</span>
+                    <span className="font-mono font-bold text-blue-900">{item.taxDeclarationNumber}</span>
                     <span className="font-mono font-bold">{formatCurrency(item.amount)}</span>
                   </div>
                 ))}
@@ -2556,7 +2554,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
               </button>
               <button
                 onClick={() => setIsReceiptModalOpen(false)}
-                className="w-1/2 bg-[#0B3B60] hover:bg-[#082944] text-white font-bold py-3 rounded-xl text-xs transition shadow-md cursor-pointer"
+                className="w-1/2 bg-blue-900 hover:bg-blue-950 text-white font-bold py-3 rounded-xl text-xs transition shadow-md cursor-pointer"
               >
                 Done
               </button>
@@ -2570,8 +2568,8 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
           <div className="bg-white rounded-3xl border border-slate-200 p-8 max-w-lg w-full shadow-2xl space-y-5">
             <div className="flex items-center justify-between border-b border-slate-200 pb-3">
               <div>
-                <span className="text-[10px] font-bold uppercase text-[#0284C7]">Control Number</span>
-                <h3 className="text-base font-extrabold text-[#0B3B60]">{selectedAppDetail.controlNumber}</h3>
+                <span className="text-[10px] font-bold uppercase text-blue-900">Control Number</span>
+                <h3 className="text-base font-extrabold text-slate-900">{selectedAppDetail.controlNumber}</h3>
               </div>
               <button
                 onClick={() => setSelectedAppDetail(null)}
@@ -2596,7 +2594,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">Status:</span>
-                <span className="font-bold text-[#0B3B60]">{selectedAppDetail.status}</span>
+                <span className="font-bold text-blue-900">{selectedAppDetail.status}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">Filed Date:</span>
@@ -2637,7 +2635,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                           <button
                             type="button"
                             onClick={() => handleCitizenOpenDocPreview(doc)}
-                            className="px-3 py-1 bg-[#0284C7] hover:bg-sky-700 text-white rounded-lg text-xs font-semibold transition cursor-pointer"
+                            className="px-3 py-1 bg-blue-900 hover:bg-blue-950 text-white rounded-lg text-xs font-semibold transition cursor-pointer"
                           >
                             Preview
                           </button>
@@ -2654,7 +2652,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-[10px] font-bold uppercase tracking-wider text-blue-700">RPT Service Assessment</p>
-                    <p className="text-xl font-black text-[#0B3B60]">{formatCurrency(Number(selectedAppDetail.paymentAmount))}</p>
+                    <p className="text-xl font-black text-blue-900">{formatCurrency(Number(selectedAppDetail.paymentAmount))}</p>
                   </div>
                   <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${selectedAppDetail.paymentStatus === "Paid" ? "bg-emerald-100 text-emerald-800" : "bg-white text-blue-800 border border-blue-200"}`}>
                     {selectedAppDetail.paymentStatus === "Paid" ? "PAID" : "FOR PAYMENT"}
@@ -2674,7 +2672,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                     type="button"
                     disabled={isGeneratingRPTServiceQr}
                     onClick={() => void handleRPTServicePayment(selectedAppDetail)}
-                    className="w-full bg-[#1D3F99] hover:bg-[#17357F] disabled:opacity-50 text-white font-extrabold py-3 rounded-xl text-xs uppercase tracking-wide shadow-sm transition"
+                    className="w-full bg-blue-900 hover:bg-blue-950 disabled:opacity-50 text-white font-extrabold py-3 rounded-xl text-xs uppercase tracking-wide shadow-sm transition"
                   >
                     {isGeneratingRPTServiceQr ? "Generating QR..." : `Pay ${selectedAppDetail.service || "RPT Service"} →`}
                   </button>
@@ -2684,7 +2682,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
 
             <button
               onClick={() => setSelectedAppDetail(null)}
-              className="w-full bg-[#0B3B60] hover:bg-[#082944] text-white font-bold py-3 rounded-xl text-xs transition cursor-pointer"
+              className="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 rounded-xl text-xs transition cursor-pointer"
             >
               Close
             </button>
@@ -2801,7 +2799,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
               {rptServicePaymentApplication.officialReceiptNumber && <div className="flex justify-between gap-4"><span className="text-slate-500">Official Receipt</span><span className="font-mono font-bold">{rptServicePaymentApplication.officialReceiptNumber}</span></div>}
               {rptServicePaymentConfirmedAt && <div className="flex justify-between gap-4"><span className="text-slate-500">Date</span><span className="font-bold">{rptServicePaymentConfirmedAt.toLocaleString("en-PH")}</span></div>}
             </div>
-            <button type="button" onClick={() => { setRptServicePaymentSuccess(false); setRptServicePaymentApplication(null); loadApplications(); }} className="mt-6 w-full rounded-xl bg-[#1D3F99] hover:bg-[#17357F] text-white py-3 font-extrabold text-sm">Done</button>
+            <button type="button" onClick={() => { setRptServicePaymentSuccess(false); setRptServicePaymentApplication(null); loadApplications(); }} className="mt-6 w-full rounded-xl bg-blue-900 hover:bg-blue-950 text-white py-3 font-extrabold text-sm">Done</button>
           </div>
         </div>
       )}
@@ -2810,7 +2808,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4">
           <div className="bg-white rounded-3xl border border-slate-200 p-8 max-w-xl w-full shadow-2xl space-y-6 max-h-[85vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-              <h3 className="text-base font-extrabold text-[#0B3B60]">
+              <h3 className="text-base font-extrabold text-slate-900">
                 Real Property Tax (RPT) Online Payment Guide
               </h3>
               <button
@@ -2822,66 +2820,67 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
             </div>
 
             <div className="space-y-4 text-xs text-slate-700 leading-relaxed">
-              <div className="p-3 bg-sky-50 rounded-xl border border-sky-100">
-                <h4 className="font-bold text-[#0B3B60] mb-1">Step 1: Search Tax Declaration Number (TDN)</h4>
+              <div className="p-3 bg-blue-50/70 rounded-xl border border-blue-100">
+                <h4 className="font-bold text-blue-900 mb-1">Step 1: Search Tax Declaration Number (TDN)</h4>
                 <p>Enter your TDN (e.g. F-021-01491), complete the "I'm not a robot" captcha, and click SEARCH.</p>
               </div>
-              <div className="p-3 bg-sky-50 rounded-xl border border-sky-100">
-                <h4 className="font-bold text-[#0B3B60] mb-1">Step 2: Verify Property Ownership</h4>
+              <div className="p-3 bg-blue-50/70 rounded-xl border border-blue-100">
+                <h4 className="font-bold text-blue-900 mb-1">Step 2: Verify Property Ownership</h4>
                 <p>Confirm the owner or corporation name displayed on the prompt. If correct, click YES.</p>
               </div>
-              <div className="p-3 bg-sky-50 rounded-xl border border-sky-100">
-                <h4 className="font-bold text-[#0B3B60] mb-1">Step 3: Group Bill Set (Multiple TDNs)</h4>
+              <div className="p-3 bg-blue-50/70 rounded-xl border border-blue-100">
+                <h4 className="font-bold text-blue-900 mb-1">Step 3: Group Bill Set (Multiple TDNs)</h4>
                 <p>Review all properties linked to your ownership or parcel PIN. Select all TDNs you want to pay together.</p>
               </div>
-              <div className="p-3 bg-sky-50 rounded-xl border border-sky-100">
-                <h4 className="font-bold text-[#0B3B60] mb-1">Step 4: Select Payment Option</h4>
+              <div className="p-3 bg-blue-50/70 rounded-xl border border-blue-100">
+                <h4 className="font-bold text-blue-900 mb-1">Step 4: Select Payment Option</h4>
                 <p>Choose between Quarterly (Q1-Q4) or Full Annual payment. You can apply the option to all TDNs with one click!</p>
               </div>
-              <div className="p-3 bg-sky-50 rounded-xl border border-sky-100">
-                <h4 className="font-bold text-[#0B3B60] mb-1">Step 5: Checkout &amp; Electronic Official Receipt</h4>
+              <div className="p-3 bg-blue-50/70 rounded-xl border border-blue-100">
+                <h4 className="font-bold text-blue-900 mb-1">Step 5: Checkout &amp; Electronic Official Receipt</h4>
                 <p>Add to Cart and complete payment with GCash, Maya, Cards, or QR Ph. Receive instant downloadable eOR.</p>
               </div>
             </div>
-            <div className="rpt-history mt-6">
+
+            <div className="mt-6 border border-slate-200 rounded-2xl overflow-hidden">
               <button
                 type="button"
                 onClick={() => setIsPaymentHistoryOpen((open) => !open)}
-                className="w-full px-4 py-4 flex items-center justify-between cursor-pointer"
+                className="w-full px-4 py-3.5 bg-slate-50 hover:bg-slate-100 flex items-center justify-between font-bold text-xs text-slate-800 cursor-pointer transition"
               >
-                <span>[ MY RPT PAYMENT HISTORY ]</span>
-                <span>{isPaymentHistoryOpen ? "[-]" : "[+]"}</span>
+                <span>MY RPT PAYMENT HISTORY</span>
+                <span className="text-blue-900 font-extrabold">{isPaymentHistoryOpen ? "Hide" : "Show"}</span>
               </button>
 
               {isPaymentHistoryOpen && (
-                <div className="border-t border-white overflow-x-auto">
+                <div className="border-t border-slate-200 overflow-x-auto">
                   {rptPaymentHistory.length === 0 ? (
-                    <div className="rpt-empty px-4 py-6">
+                    <div className="p-6 text-center text-slate-400 text-xs italic bg-white">
                       No RPT payment history available.
                     </div>
                   ) : (
-                    <table className="rpt-table w-full min-w-[760px] text-left border-collapse">
-                      <thead>
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead className="bg-slate-800 text-white font-bold">
                         <tr>
-                          <th>TDN</th>
-                          <th>OWNER</th>
-                          <th>LOCATION</th>
-                          <th>YEAR</th>
-                          <th>TAX DUE</th>
-                          <th>OR NO.</th>
-                          <th>DATE</th>
+                          <th className="px-4 py-2.5">TDN</th>
+                          <th className="px-4 py-2.5">OWNER</th>
+                          <th className="px-4 py-2.5">LOCATION</th>
+                          <th className="px-4 py-2.5">YEAR</th>
+                          <th className="px-4 py-2.5">TAX DUE</th>
+                          <th className="px-4 py-2.5">OR NO.</th>
+                          <th className="px-4 py-2.5">DATE</th>
                         </tr>
                       </thead>
-                      <tbody>
+                      <tbody className="divide-y divide-slate-100 bg-white">
                         {rptPaymentHistory.map((payment) => (
-                          <tr key={payment.id}>
-                            <td className="font-bold">{payment.tdn}</td>
-                            <td>{payment.ownerName}</td>
-                            <td>{payment.location}</td>
-                            <td>{payment.year}</td>
-                            <td className="font-bold">{formatCurrency(payment.taxDue)}</td>
-                            <td>{payment.officialReceiptNumber}</td>
-                            <td>{new Date(payment.paymentDate).toLocaleDateString("en-PH")}</td>
+                          <tr key={payment.id} className="hover:bg-slate-50 transition">
+                            <td className="px-4 py-2.5 font-mono font-bold text-blue-900">{payment.tdn}</td>
+                            <td className="px-4 py-2.5 text-slate-800">{payment.ownerName}</td>
+                            <td className="px-4 py-2.5 text-slate-600">{payment.location}</td>
+                            <td className="px-4 py-2.5 text-slate-600 font-mono">{payment.year}</td>
+                            <td className="px-4 py-2.5 font-mono font-bold text-slate-900">{formatCurrency(payment.taxDue)}</td>
+                            <td className="px-4 py-2.5 font-mono text-emerald-700 font-bold">{payment.officialReceiptNumber}</td>
+                            <td className="px-4 py-2.5 text-slate-500 font-mono">{new Date(payment.paymentDate).toLocaleDateString("en-PH")}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -2893,7 +2892,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
 
             <button
               onClick={() => setIsGuideModalOpen(false)}
-              className="w-full bg-[#0B3B60] hover:bg-[#082944] text-white font-bold py-3 rounded-xl text-xs transition cursor-pointer"
+              className="w-full bg-blue-900 hover:bg-blue-950 text-white font-bold py-3 rounded-xl text-xs transition cursor-pointer"
             >
               Got It
             </button>
@@ -2904,9 +2903,9 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
       {citizenPreviewDoc && (
         <div className="fixed inset-0 z-[70] bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-4xl h-[85vh] shadow-2xl overflow-hidden flex flex-col border border-slate-200">
-            <div className="p-4 bg-[#0B3B60] text-white flex justify-between items-center">
+            <div className="p-4 bg-slate-900 text-white flex justify-between items-center">
               <div className="flex items-center gap-2 min-w-0 pr-2">
-                <span className="text-xs uppercase font-bold text-sky-300 shrink-0">Document Preview</span>
+                <span className="text-xs uppercase font-bold text-blue-300 shrink-0">Document Preview</span>
                 <span className="text-xs text-slate-200 truncate max-w-md">({citizenPreviewDoc.name})</span>
               </div>
               <div className="flex items-center gap-2 shrink-0">
