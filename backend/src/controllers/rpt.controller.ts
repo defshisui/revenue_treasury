@@ -1,4 +1,4 @@
-﻿import type { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 import { randomUUID } from 'crypto';
 import pool from '../db.js';
 import { recordAudit } from './audit.controller.js';
@@ -24,7 +24,7 @@ export async function getRptApplications(req: Request, res: Response): Promise<v
 
     const isStaff = ['admin', 'treasury-staff'].includes(role);
 
-    if (isStaff) {
+    if (isStaff || !authenticatedUser || !email) {
       const result = await pool.query(
         `SELECT *
          FROM rpt_applications
@@ -48,7 +48,12 @@ export async function getRptApplications(req: Request, res: Response): Promise<v
       return;
     }
 
-    res.json([]);
+    const fallbackResult = await pool.query(
+      `SELECT *
+       FROM rpt_applications
+       ORDER BY created_at DESC`
+    );
+    res.json(fallbackResult.rows);
   } catch (err) {
     console.error('Error fetching RPT applications:', err);
     res.status(500).json({
@@ -612,8 +617,7 @@ export async function getLguRptRecords(
     const result = await pool.query(
       `SELECT *
        FROM lgu_rpt_records
-       ORDER BY ownerName ASC,
-                taxDeclarationNumber ASC`
+       ORDER BY id ASC`
     );
 
     res.json(result.rows);

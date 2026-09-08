@@ -33,3 +33,24 @@ export function authenticateToken(
     next();
   });
 }
+
+export function optionalAuthToken(
+  req: AuthenticatedRequest,
+  _res: Response,
+  next: NextFunction
+): void {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return next();
+  }
+
+  jwt.verify(token, JWT_SECRET, (err: jwt.VerifyErrors | null, decoded: string | jwt.JwtPayload | undefined) => {
+    if (!err && decoded) {
+      req.user = decoded as any;
+    }
+    next();
+  });
+}
+

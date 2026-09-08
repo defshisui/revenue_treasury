@@ -1,7 +1,7 @@
 import { Router } from 'express';
 
 import { upload } from '../middleware/upload.js';
-import { authenticateToken } from '../middleware/auth.js';
+import { authenticateToken, optionalAuthToken } from '../middleware/auth.js';
 
 import {
   getRptApplications,
@@ -22,9 +22,10 @@ const router = Router();
 
 router.get(
   '/citizen-rpt-applications',
-  authenticateToken,
+  optionalAuthToken,
   getRptApplications
 );
+
 
 router.post(
   '/citizen-rpt-applications',
