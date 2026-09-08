@@ -293,6 +293,8 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
   const [appNotice, setAppNotice] = useState("");
   const [selectedAppDetail, setSelectedAppDetail] = useState<RPTApplicationRecord | null>(null);
   const [rptServicePaymentNotice, setRptServicePaymentNotice] = useState("");
+  const [statusSearchTerm, setStatusSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
 
   const [citizenPreviewDoc, setCitizenPreviewDoc] = useState<{ name: string; url: string } | null>(null);
   const [citizenPreviewError, setCitizenPreviewError] = useState<boolean>(false);
@@ -1068,204 +1070,11 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
         marginLeft: isCollapsed ? "80px" : "0px",
         width: isCollapsed ? "calc(100% - 80px)" : "100%",
       }}
-      className="rpt-portal min-h-screen flex flex-col bg-[#F4F6F9] text-slate-800 font-sans transition-all duration-300"
+      className="min-h-screen flex flex-col bg-slate-50 text-slate-800 font-sans transition-all duration-300"
     >
       <UnifiedHeader />
 
-      <style>{`
-        .rpt-portal {
-          --rpt-blue: #1D3F99;
-          --rpt-blue-dark: #17357F;
-          --rpt-navy: #0B3B60;
-          --rpt-border: #E2E8F0;
-          --rpt-bg: #F4F6F9;
-          font-family: inherit;
-        }
-
-        .rpt-portal .rpt-main-shell {
-          background: #ffffff !important;
-          border: 1px solid #E2E8F0 !important;
-          border-radius: 16px !important;
-          box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08) !important;
-          color: #1E293B !important;
-        }
-
-        .rpt-portal .rpt-nav-row {
-          border-bottom: 1px solid #E2E8F0 !important;
-        }
-
-        .rpt-portal .rpt-nav-button {
-          display: inline-flex !important;
-          align-items: center !important;
-          justify-content: center !important;
-          min-height: 36px !important;
-          padding: 0 14px !important;
-          color: #ffffff !important;
-          background: #1D3F99 !important;
-          border: 1px solid #1D3F99 !important;
-          border-radius: 6px !important;
-          box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08) !important;
-          font-family: inherit !important;
-          font-size: 11px !important;
-          font-weight: 800 !important;
-          letter-spacing: .01em !important;
-          text-transform: uppercase !important;
-          transition: background .15s ease, border-color .15s ease !important;
-        }
-
-        .rpt-portal .rpt-nav-button:hover {
-          color: #ffffff !important;
-          background: #17357F !important;
-          border-color: #17357F !important;
-          text-decoration: none !important;
-        }
-
-        .rpt-portal .rpt-back {
-          color: #2563EB !important;
-          font-family: inherit !important;
-          font-size: 12px !important;
-          font-weight: 700 !important;
-        }
-
-        .rpt-portal .rpt-back:hover {
-          color: #1D4ED8 !important;
-          text-decoration: underline !important;
-        }
-
-        .rpt-portal .rpt-title {
-          color: #0B3B60 !important;
-          font-family: inherit !important;
-          font-size: 13px !important;
-          font-weight: 900 !important;
-          letter-spacing: .02em !important;
-        }
-
-        .rpt-portal .rpt-label {
-          color: #0B3B60 !important;
-          font-family: inherit !important;
-          font-size: 11px !important;
-          font-weight: 700 !important;
-        }
-
-        .rpt-portal .rpt-field {
-          height: 36px !important;
-          border: 1px solid #CBD5E1 !important;
-          border-radius: 6px !important;
-          background: #ffffff !important;
-          color: #1E293B !important;
-          font-family: inherit !important;
-          font-size: 12px !important;
-          font-weight: 500 !important;
-          box-shadow: none !important;
-          outline: none !important;
-        }
-
-        .rpt-portal .rpt-field:focus {
-          border-color: #2563EB !important;
-          box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.10) !important;
-        }
-
-        .rpt-portal .rpt-field::placeholder {
-          color: #94A3B8 !important;
-        }
-
-        .rpt-portal .rpt-action {
-          height: 36px !important;
-          border: 1px solid #1D3F99 !important;
-          border-radius: 6px !important;
-          background: #1D3F99 !important;
-          color: #ffffff !important;
-          font-family: inherit !important;
-          font-size: 11px !important;
-          font-weight: 800 !important;
-          box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08) !important;
-        }
-
-        .rpt-portal .rpt-action:hover {
-          background: #17357F !important;
-          border-color: #17357F !important;
-          color: #ffffff !important;
-        }
-
-        .rpt-portal .rpt-table {
-          border-color: #E2E8F0 !important;
-          border-radius: 8px !important;
-          background: #ffffff !important;
-        }
-
-        .rpt-portal .rpt-table th,
-        .rpt-portal .rpt-table td {
-          border-color: #E2E8F0 !important;
-          color: #334155 !important;
-          background: #ffffff !important;
-          font-family: inherit !important;
-          font-size: 11px !important;
-          padding: 10px 12px !important;
-        }
-
-        .rpt-portal .rpt-table th {
-          color: #ffffff !important;
-          background: #2846A0 !important;
-          font-weight: 800 !important;
-          text-transform: uppercase !important;
-          white-space: nowrap !important;
-        }
-
-        .rpt-portal .rpt-table tbody tr:hover td {
-          background: #F8FAFC !important;
-        }
-
-        .rpt-portal .rpt-history {
-          border: 1px solid #E2E8F0 !important;
-          border-radius: 10px !important;
-          background: #ffffff !important;
-          color: #334155 !important;
-        }
-
-        .rpt-portal .rpt-history button {
-          color: #0B3B60 !important;
-          background: #ffffff !important;
-          border: 0 !important;
-          border-radius: 10px !important;
-          font-family: inherit !important;
-          font-size: 11px !important;
-          font-weight: 800 !important;
-        }
-
-        .rpt-portal .rpt-history button:hover {
-          background: #F8FAFC !important;
-        }
-
-        .rpt-portal .rpt-empty {
-          color: #94A3B8 !important;
-          font-family: inherit !important;
-          font-size: 11px !important;
-        }
-
-        .rpt-portal .rpt-link {
-          color: #2563EB !important;
-          font-family: inherit !important;
-          font-weight: 800 !important;
-          text-decoration: none !important;
-        }
-
-        .rpt-portal .rpt-link:hover {
-          color: #1D4ED8 !important;
-          text-decoration: underline !important;
-        }
-
-        .rpt-portal .rpt-divider {
-          border-color: #E2E8F0 !important;
-        }
-
-        .rpt-portal .rpt-main-shell input,
-        .rpt-portal .rpt-main-shell select,
-        .rpt-portal .rpt-main-shell textarea {
-          font-family: inherit;
-        }
-      `}</style>
       <div className="flex-1">
-
         {toastMessage && (
           <div className="fixed top-20 right-6 z-50 animate-bounce">
             <div
@@ -1276,44 +1085,115 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                   : "bg-blue-50 text-blue-800 border-blue-300"
                 }`}
             >
-              <span>{toastMessage.type === "success" ? "✓" : "ℹ"}</span>
               <span>{toastMessage.text}</span>
             </div>
           </div>
         )}
 
-        <div className="w-full max-w-[1120px] mx-auto px-4 py-8 sm:py-10">
+        {/* Unified Portal Sub-Header & Navigation */}
+        <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 pt-6 pb-2">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-slate-200">
+            <div>
+              <div className="flex items-center gap-2 text-xs text-blue-900 font-bold uppercase tracking-wider mb-1">
+                <span>City Assessor &amp; Treasury</span>
+                <span>/</span>
+                <span>Real Property Tax Portal</span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                Real Property Tax &amp; Assessment Management
+              </h1>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Quezon City Local Government Unit &bull; Electronic Assessment, Filing &amp; Payment Service
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => window.location.href = '/'}
+              className="bg-white hover:bg-slate-100 text-slate-700 font-bold px-4 py-2 rounded-xl text-xs border border-slate-200 transition shadow-xs cursor-pointer"
+            >
+              &larr; Back to Services
+            </button>
+          </div>
+
+          {/* Unified Navigation Tabs */}
+          <div className="flex items-center gap-2 overflow-x-auto py-4">
+            <button
+              type="button"
+              onClick={() => {
+                setActivePortalTab("search");
+                setRptSearchStep(1);
+              }}
+              className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
+                activePortalTab === "search"
+                  ? "bg-blue-900 text-white shadow-md"
+                  : "bg-white text-slate-600 hover:text-blue-900 hover:bg-slate-50 border border-slate-200"
+              }`}
+            >
+              <span>Search Property &amp; Pay Tax</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActivePortalTab("application")}
+              className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
+                activePortalTab === "application"
+                  ? "bg-blue-900 text-white shadow-md"
+                  : "bg-white text-slate-600 hover:text-blue-900 hover:bg-slate-50 border border-slate-200"
+              }`}
+            >
+              <span>File New Application</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActivePortalTab("status")}
+              className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
+                activePortalTab === "status"
+                  ? "bg-blue-900 text-white shadow-md"
+                  : "bg-white text-slate-600 hover:text-blue-900 hover:bg-slate-50 border border-slate-200"
+              }`}
+            >
+              <span>My Applications</span>
+              {applications.length > 0 && (
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                  activePortalTab === "status"
+                    ? "bg-blue-800 text-blue-100"
+                    : "bg-blue-100 text-blue-900"
+                }`}>
+                  {applications.length}
+                </span>
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActivePortalTab("summary")}
+              className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
+                activePortalTab === "summary"
+                  ? "bg-blue-900 text-white shadow-md"
+                  : "bg-white text-slate-600 hover:text-blue-900 hover:bg-slate-50 border border-slate-200"
+              }`}
+            >
+              <span>Tax Clearance &amp; Receipts</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 pb-12">
           {activePortalTab === "search" && (
             <div className="space-y-6">
               {rptSearchStep === 1 && (
                 <>
-                  <div className="rpt-main-shell p-5 sm:p-6 mt-2">
-                    <div className="mb-5">
-                      <button
-                        type="button"
-                        onClick={() => window.history.back()}
-                        className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-xl text-xs transition-colors cursor-pointer inline-block border-0"
-                      >
-                        &larr; Back to Previous Page
-                      </button>
-                    </div>
-
-                    <div className="rpt-nav-row border-b pb-4 flex items-center gap-6">
-                      <button
-                        type="button"
-                        onClick={() => setActivePortalTab("status")}
-                        className="rpt-nav-button cursor-pointer"
-                      >
-                        MY APPLICATIONS
-                      </button>
-                    </div>
-
-                    <div className="rpt-divider border-b pb-5 pt-5">
-                      <p className="rpt-title uppercase">RPT PAYMENT / AMILYAR</p>
+                  <div className="bg-white rounded-3xl p-6 sm:p-10 border border-slate-200 shadow-sm space-y-6">
+                    <div className="border-b border-slate-200 pb-4">
+                      <span className="text-[11px] font-bold text-blue-900 uppercase tracking-wider">Office of the City Treasurer</span>
+                      <h2 className="text-2xl font-black text-slate-900 tracking-tight">Real Property Tax Assessment &amp; Payment (Amilyar)</h2>
+                      <p className="text-xs text-slate-500 mt-1">Search your property by TDN, Property Owner, or PIN to verify assessment and settle dues online.</p>
                     </div>
 
                     {searchError && (
-                      <div className="mt-4 p-3 border border-white text-white text-[10px] font-bold">
+                      <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl text-rose-800 text-xs font-bold">
                         {searchError}
                       </div>
                     )}
@@ -1321,13 +1201,13 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                     <form onSubmit={handleExecuteTdnSearch} className="mt-5">
                       <div className="grid grid-cols-1 sm:grid-cols-[1fr_1.2fr_auto_1fr] gap-x-6 gap-y-4 items-end">
                         <div>
-                          <label className="rpt-label block mb-1.5">
+                          <label className="block mb-1.5 text-xs font-bold text-slate-700">
                             Search By:
                           </label>
                           <select
                             value={searchType}
                             onChange={(e) => setSearchType(e.target.value)}
-                            className="rpt-field w-full px-3 outline-none"
+                            className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-blue-900"
                           >
                             <option value="Tax Declaration No. (TDN)">TDN</option>
                             <option value="Property Owner">Owner</option>
@@ -1336,35 +1216,35 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                         </div>
 
                         <div>
-                          <label className="rpt-label block mb-1.5">
-                            TDN:
+                          <label className="block mb-1.5 text-xs font-bold text-slate-700">
+                            TDN / Reference:
                           </label>
                           <input
                             type="text"
                             required
                             value={searchTdnInput}
                             onChange={(e) => setSearchTdnInput(e.target.value.toUpperCase())}
-                            placeholder="____________"
-                            className="rpt-field w-full px-3 uppercase"
+                            placeholder="e.g. F-021-01491"
+                            className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-800 uppercase outline-none focus:ring-2 focus:ring-blue-900"
                           />
                         </div>
 
                         <button
                           type="submit"
                           disabled={isSearchingTdn}
-                          className="rpt-action px-4 disabled:opacity-50 cursor-pointer"
+                          className="bg-blue-900 hover:bg-blue-950 disabled:opacity-50 text-white font-bold px-6 py-2.5 rounded-xl text-xs transition cursor-pointer shadow-sm"
                         >
                           {isSearchingTdn ? "Searching..." : "Search"}
                         </button>
 
                         <div>
-                          <label className="rpt-label block mb-1.5">
-                            Year:
+                          <label className="block mb-1.5 text-xs font-bold text-slate-700">
+                            Assessment Year:
                           </label>
                           <select
                             value={assessmentYear}
                             onChange={(e) => setAssessmentYear(e.target.value)}
-                            className="rpt-field w-full px-3 outline-none"
+                            className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-blue-900"
                           >
                             <option>All Years</option>
                             <option>2026</option>
@@ -1376,42 +1256,42 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                       </div>
                     </form>
 
-                    <div className="overflow-x-auto border border-white mt-6 rpt-table">
-                      <table className="w-full min-w-[760px] text-left border-collapse rpt-table">
-                        <thead className="text-white font-black uppercase">
+                    <div className="overflow-x-auto rounded-2xl border border-slate-200 mt-6">
+                      <table className="w-full min-w-[760px] text-left text-xs border-collapse">
+                        <thead className="bg-slate-800 text-white font-bold">
                           <tr>
-                            <th>TDN</th>
-                            <th>OWNER</th>
-                            <th>LOCATION</th>
-                            <th>YEAR</th>
-                            <th>ASSESSED</th>
-                            <th>TAX DUE</th>
-                            <th>VIEW</th>
+                            <th className="px-4 py-3">TDN</th>
+                            <th className="px-4 py-3">OWNER</th>
+                            <th className="px-4 py-3">LOCATION</th>
+                            <th className="px-4 py-3">YEAR</th>
+                            <th className="px-4 py-3">ASSESSED VALUE</th>
+                            <th className="px-4 py-3">TAX DUE</th>
+                            <th className="px-4 py-3">ACTION</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100">
+                        <tbody className="divide-y divide-slate-100 bg-white">
                           {associatedProperties.length > 0 ? (
                             associatedProperties
                               .filter((property) => assessmentYear === "All Years" || String(property.billingYear) === assessmentYear)
                               .map((property) => {
                                 return (
                                   <tr key={property.taxDeclarationNumber} className="hover:bg-slate-50 transition">
-                                    <td className="font-mono font-black">{property.taxDeclarationNumber}</td>
-                                    <td className="font-bold">{property.ownerName}</td>
-                                    <td>{property.propertyLocation || property.barangay || "—"}</td>
-                                    <td>{property.billingYear || "—"}</td>
-                                    <td className="font-bold">{formatCurrency(property.assessedValue)}</td>
-                                    <td className="font-bold">{formatCurrency(property.balance || property.totalAssessment)}</td>
-                                    <td>
+                                    <td className="px-4 py-3 font-mono font-black text-blue-900">{property.taxDeclarationNumber}</td>
+                                    <td className="px-4 py-3 font-semibold text-slate-800">{property.ownerName}</td>
+                                    <td className="px-4 py-3 text-slate-600">{property.propertyLocation || property.barangay || "—"}</td>
+                                    <td className="px-4 py-3 text-slate-600">{property.billingYear || "—"}</td>
+                                    <td className="px-4 py-3 font-bold text-slate-800">{formatCurrency(property.assessedValue)}</td>
+                                    <td className="px-4 py-3 font-bold text-slate-900">{formatCurrency(property.balance || property.totalAssessment)}</td>
+                                    <td className="px-4 py-3">
                                       <button
                                         type="button"
                                         onClick={() => {
                                           setSelectedTdnIds(new Set([property.taxDeclarationNumber]));
                                           setRptSearchStep(2);
                                         }}
-                                        className="rpt-link cursor-pointer"
+                                        className="bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs px-3 py-1.5 rounded-lg transition cursor-pointer"
                                       >
-                                        VIEW
+                                        View
                                       </button>
                                     </td>
                                   </tr>
@@ -1419,7 +1299,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                               })
                           ) : (
                             <tr>
-                              <td colSpan={7} className="px-4 py-10 text-center rpt-empty italic">
+                              <td colSpan={7} className="px-4 py-10 text-center text-slate-400 italic text-xs">
                                 Search for a Tax Declaration Number to view real property tax records.
                               </td>
                             </tr>
@@ -1457,19 +1337,18 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
               )}
 
               {rptSearchStep === 2 && (
-                <div className="rpt-main-shell p-6 sm:p-8 space-y-6">
+                <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
                     <div>
                       <button
                         onClick={() => setRptSearchStep(1)}
-                        className="text-xs font-bold text-[#0284C7] hover:underline flex items-center gap-1 cursor-pointer mb-2"
+                        className="text-xs font-bold text-blue-900 hover:underline flex items-center gap-1 cursor-pointer mb-2"
                       >
-                        &lt; GO BACK TO SEARCH
+                        &lt; Back to Search
                       </button>
-                      <h2 className="text-lg font-extrabold text-[#0B3B60]">Possible properties you might own</h2>
-                      <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1.5">
-                        <span>ℹ️</span>
-                        <span>Here is the list of other Tax Declaration Numbers (TDNs) in relation to the TDN that you entered.</span>
+                      <h2 className="text-lg font-extrabold text-slate-900">Possible properties you might own</h2>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Here is the list of other Tax Declaration Numbers (TDNs) in relation to the TDN that you entered.
                       </p>
                     </div>
 
@@ -1553,7 +1432,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
               )}
 
               {rptSearchStep === 3 && (
-                <div className="rpt-main-shell p-6 sm:p-8 space-y-6">
+                <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
                     <div>
                       <button
@@ -1605,7 +1484,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                             </td>
                             <td className="p-4">
                               <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 px-3 py-1 rounded-lg text-xs font-bold">
-                                <span>✓</span>
                                 <span>
                                   {prop.selectedPaymentOption === "Quarterly" ? "Quarterly (Q1-Q4)" : "Full Payment (Annual)"}
                                 </span>
@@ -1617,9 +1495,8 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                             <td className="p-4 text-right">
                               <button
                                 onClick={() => openPaymentOptionModal(prop)}
-                                className="text-xs font-bold text-[#0284C7] hover:text-sky-800 hover:underline cursor-pointer flex items-center gap-1 justify-end ml-auto"
+                                className="text-xs font-bold text-blue-900 hover:text-blue-950 hover:underline cursor-pointer flex items-center gap-1 justify-end ml-auto"
                               >
-                                <span>✏️</span>
                                 <span>Select Payment Option</span>
                               </button>
                             </td>
@@ -1653,7 +1530,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
           )}
 
           {activePortalTab === "application" && (
-            <div className="rpt-main-shell p-6 sm:p-8 space-y-8">
+            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-8">
               <div className="mb-1">
                 <button
                   type="button"
@@ -1856,7 +1733,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                         className="text-xs file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#0B3B60] file:text-white cursor-pointer"
                       />
                       {appDocuments.ownershipProof.name && (
-                        <p className="text-[11px] font-mono text-emerald-700 font-bold">✓ {appDocuments.ownershipProof.name}</p>
+                        <p className="text-[11px] font-mono text-emerald-700 font-bold">{appDocuments.ownershipProof.name}</p>
                       )}
                     </div>
 
@@ -1871,7 +1748,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                         className="text-xs file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#0B3B60] file:text-white cursor-pointer"
                       />
                       {appDocuments.validId.name && (
-                        <p className="text-[11px] font-mono text-emerald-700 font-bold">✓ {appDocuments.validId.name}</p>
+                        <p className="text-[11px] font-mono text-emerald-700 font-bold">{appDocuments.validId.name}</p>
                       )}
                     </div>
 
@@ -1885,7 +1762,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                         className="text-xs file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#0B3B60] file:text-white cursor-pointer"
                       />
                       {appDocuments.taxRecord.name && (
-                        <p className="text-[11px] font-mono text-emerald-700 font-bold">✓ {appDocuments.taxRecord.name}</p>
+                        <p className="text-[11px] font-mono text-emerald-700 font-bold">{appDocuments.taxRecord.name}</p>
                       )}
                     </div>
                   </div>
@@ -1906,31 +1783,19 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
 
 
           {activePortalTab === "status" && (
-            <div className="rpt-main-shell p-6 sm:p-8 space-y-6">
-
-              <div className="mb-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActivePortalTab("search");
-                    setRptSearchStep(1);
-                  }}
-                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-xl text-xs transition-colors cursor-pointer inline-block border-0"
-                >
-                  &larr; Back to Previous Page
-                </button>
-              </div>
+            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
 
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
                 <div>
-                  <h2 className="text-xl font-extrabold text-[#0B3B60]">Real Property Applications Status</h2>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-blue-900">Office of the City Assessor</span>
+                  <h2 className="text-xl font-extrabold text-slate-900 mt-0.5">My RPT Applications</h2>
                   <p className="text-xs text-slate-500 mt-1">
                     Track the evaluation progress and digital certificate release of your submitted applications.
                   </p>
                 </div>
                 <button
                   onClick={() => setActivePortalTab("application")}
-                  className="bg-[#0284C7] hover:bg-sky-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition cursor-pointer"
+                  className="bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition cursor-pointer shadow-sm"
                 >
                   + New Service Request
                 </button>
@@ -1938,61 +1803,101 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
 
               {rptServicePaymentNotice && (
                 <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-emerald-800 font-semibold">
-                  ✓ {rptServicePaymentNotice}
+                  {rptServicePaymentNotice}
                 </div>
               )}
 
-              {applications.length === 0 ? (
-                <div className="p-12 text-center text-slate-400 text-xs italic bg-slate-50 rounded-2xl border border-dashed">
-                  No submitted applications found. Click "+ New Service Request" to submit one.
-                </div>
-              ) : (
+              {/* Search and Filter Bar */}
+              <div className="flex flex-col sm:flex-row items-center gap-3">
+                <input
+                  type="text"
+                  value={statusSearchTerm}
+                  onChange={(e) => setStatusSearchTerm(e.target.value)}
+                  placeholder="Search by control no., service, or owner..."
+                  className="w-full sm:flex-1 bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-blue-900"
+                />
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="w-full sm:w-44 bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-blue-900"
+                >
+                  <option value="ALL">All Statuses</option>
+                  <option value="Submitted">Submitted</option>
+                  <option value="Under Evaluation">Under Evaluation</option>
+                  <option value="For Payment">For Payment</option>
+                  <option value="Payment Completed">Payment Completed</option>
+                  <option value="Ready for Release">Ready for Release</option>
+                  <option value="Approved">Approved</option>
+                  <option value="Rejected">Rejected</option>
+                </select>
+              </div>
+
+              {(() => {
+                const filteredApps = applications.filter((app) => {
+                  const term = statusSearchTerm.toLowerCase();
+                  const matchSearch = !term ||
+                    (app.controlNumber || '').toLowerCase().includes(term) ||
+                    (app.service || '').toLowerCase().includes(term) ||
+                    (app.ownerName || '').toLowerCase().includes(term) ||
+                    (app.applicantName || '').toLowerCase().includes(term) ||
+                    (app.propertyLocation || '').toLowerCase().includes(term);
+                  const matchStatus = statusFilter === 'ALL' || app.status === statusFilter;
+                  return matchSearch && matchStatus;
+                });
+                return filteredApps.length === 0 ? (
+                  <div className="p-12 text-center text-slate-400 text-xs italic bg-slate-50 rounded-2xl border border-dashed">
+                    {applications.length === 0
+                      ? 'No submitted applications found. Click "+ New Service Request" to submit one.'
+                      : 'No applications match your search criteria.'}
+                  </div>
+                ) : (
                 <div className="overflow-x-auto rounded-2xl border border-slate-200">
                   <table className="w-full text-left text-xs border-collapse">
-                    <thead className="bg-[#F8FAFC] text-slate-700 font-bold border-b border-slate-200">
+                    <thead className="bg-slate-800 text-white font-bold">
                       <tr>
-                        <th className="p-4">Control No.</th>
-                        <th className="p-4">Service</th>
-                        <th className="p-4">Owner / Applicant</th>
-                        <th className="p-4">Location</th>
-                        <th className="p-4">Status</th>
-                        <th className="p-4">Payment</th>
-                        <th className="p-4">Documents</th>
-                        <th className="p-4">Filed Date</th>
-                        <th className="p-4 text-right">Action</th>
+                        <th className="px-4 py-3">Control No.</th>
+                        <th className="px-4 py-3">Service</th>
+                        <th className="px-4 py-3">Owner / Applicant</th>
+                        <th className="px-4 py-3">Location</th>
+                        <th className="px-4 py-3">Status</th>
+                        <th className="px-4 py-3">Payment</th>
+                        <th className="px-4 py-3">Documents</th>
+                        <th className="px-4 py-3">Filed Date</th>
+                        <th className="px-4 py-3 text-right">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 bg-white">
-                      {applications.map((app) => (
+                      {filteredApps.map((app) => (
                         <tr key={app.id} className="hover:bg-slate-50 transition">
-                          <td className="p-4 font-mono font-extrabold text-[#0B3B60]">{app.controlNumber}</td>
-                          <td className="p-4 font-semibold text-slate-800">{app.service}</td>
-                          <td className="p-4 text-slate-600">{app.ownerName || app.applicantName}</td>
-                          <td className="p-4 text-slate-600 truncate max-w-xs">{app.propertyLocation}</td>
-                          <td className="p-4">
+                          <td className="px-4 py-3 font-mono font-extrabold text-blue-900">{app.controlNumber}</td>
+                          <td className="px-4 py-3 font-semibold text-slate-800">{app.service}</td>
+                          <td className="px-4 py-3 text-slate-600">{app.ownerName || app.applicantName}</td>
+                          <td className="px-4 py-3 text-slate-600 truncate max-w-xs">{app.propertyLocation}</td>
+                          <td className="px-4 py-3">
                             <span
-                              className={`px-3 py-1 rounded-full text-[10px] font-bold ${app.status === "Approved" || app.status === "Ready for Release" || app.status === "Payment Completed"
-                                ? "bg-emerald-100 text-emerald-800"
-                                : app.status === "Rejected"
-                                  ? "bg-rose-100 text-rose-800"
-                                  : app.status === "For Payment"
-                                    ? "bg-blue-100 text-blue-800"
-                                    : "bg-amber-100 text-amber-800"
-                                }`}
+                              className={`px-3 py-1 rounded-full text-[10px] font-bold ${
+                                app.status === "Approved" || app.status === "Ready for Release" || app.status === "Payment Completed"
+                                  ? "bg-emerald-100 text-emerald-800"
+                                  : app.status === "Rejected"
+                                    ? "bg-rose-100 text-rose-800"
+                                    : app.status === "For Payment"
+                                      ? "bg-blue-100 text-blue-800"
+                                      : "bg-amber-100 text-amber-800"
+                              }`}
                             >
                               {app.status}
                             </span>
                           </td>
-                          <td className="p-4">
-                            {app.service === "Transfer of Ownership" && Number(app.paymentAmount || 0) > 0 ? (
+                          <td className="px-4 py-3">
+                            {Number(app.paymentAmount || 0) > 0 ? (
                               <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${app.paymentStatus === "Paid" ? "bg-emerald-100 text-emerald-800" : "bg-blue-100 text-blue-800"}`}>
-                                {app.paymentStatus === "Paid" ? "PAID" : `₱${Number(app.paymentAmount).toLocaleString("en-PH", { minimumFractionDigits: 2 })} DUE`}
+                                {app.paymentStatus === "Paid" ? "Paid" : `₱${Number(app.paymentAmount).toLocaleString("en-PH", { minimumFractionDigits: 2 })} Due`}
                               </span>
                             ) : (
                               <span className="text-[10px] text-slate-400">Not assessed</span>
                             )}
                           </td>
-                          <td className="p-4">
+                          <td className="px-4 py-3">
                             {(() => {
                               const docs = getAppDocumentsList(app);
                               if (docs.length === 0) return <span className="text-[10px] text-slate-400">None</span>;
@@ -2000,7 +1905,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                                 <button
                                   type="button"
                                   onClick={() => setSelectedAppDetail(app)}
-                                  className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-sky-50 text-[#0284C7] hover:bg-sky-100 border border-sky-200 transition cursor-pointer"
+                                  className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-900 hover:bg-blue-100 border border-blue-200 transition cursor-pointer"
                                   title="View application documents"
                                 >
                                   {docs.length} Document{docs.length > 1 ? 's' : ''}
@@ -2008,27 +1913,27 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                               );
                             })()}
                           </td>
-                          <td className="p-4 font-mono text-slate-500">{app.filedDate}</td>
-                          <td className="p-4 text-right">
+                          <td className="px-4 py-3 font-mono text-slate-500">{app.filedDate}</td>
+                          <td className="px-4 py-3 text-right">
                             <button
                               onClick={() => setSelectedAppDetail(app)}
-                              className="text-xs font-bold text-[#0284C7] hover:underline cursor-pointer"
+                              className="text-xs font-bold text-blue-900 hover:underline cursor-pointer"
                             >
                               View Details
                             </button>
                           </td>
                         </tr>
                       ))}
-
                     </tbody>
                   </table>
                 </div>
-              )}
+                );
+              })()}
             </div>
           )}
 
           {activePortalTab === "summary" && (
-            <div className="rpt-main-shell p-6 sm:p-8 space-y-6">
+            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
               <div className="border-b border-slate-200 pb-4">
                 <h2 className="text-xl font-extrabold text-[#0B3B60]">Real Property Tax Clearance &amp; Electronic Receipts</h2>
                 <p className="text-xs text-slate-500 mt-1">
@@ -2382,7 +2287,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
           <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 max-w-xl w-full shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-200 pb-3">
               <h3 className="text-base font-extrabold text-[#0B3B60]">
-                🛒 My Cart - Group Bill Set ({cart.length} Properties)
+                My Cart - Group Bill Set ({cart.length} Properties)
               </h3>
               <button
                 onClick={() => setIsCartOpen(false)}
@@ -2760,7 +2665,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                 </p>
                 {selectedAppDetail.paymentStatus === "Paid" ? (
                   <div className="space-y-1 text-[11px] text-emerald-800 font-semibold">
-                    <p>✓ Payment confirmed</p>
+                    <p>Payment confirmed</p>
                     {selectedAppDetail.officialReceiptNumber && <p>Official Receipt: <span className="font-mono">{selectedAppDetail.officialReceiptNumber}</span></p>}
                     {selectedAppDetail.paymentReference && <p>Reference: <span className="font-mono">{selectedAppDetail.paymentReference}</span></p>}
                   </div>
@@ -2906,7 +2811,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
           <div className="bg-white rounded-3xl border border-slate-200 p-8 max-w-xl w-full shadow-2xl space-y-6 max-h-[85vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-200 pb-3">
               <h3 className="text-base font-extrabold text-[#0B3B60]">
-                📖 Real Property Tax (RPT) Online Payment Guide
+                Real Property Tax (RPT) Online Payment Guide
               </h3>
               <button
                 onClick={() => setIsGuideModalOpen(false)}

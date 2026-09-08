@@ -655,7 +655,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
           >
-            <span>Audit Trail ({citizenAuditTrail.length})</span>
+            <span>System Archiver ({citizenAuditTrail.length})</span>
           </button>
         </div>
       </div>
@@ -696,6 +696,15 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
           </div>
 
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
+            <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">{filteredMasterProperties.length} Record{filteredMasterProperties.length !== 1 ? 's' : ''} Found</span>
+              <button
+                onClick={() => { setEditingProperty({}); setIsPropertyModalOpen(true); }}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-4 py-1.5 rounded-lg transition cursor-pointer shadow-sm"
+              >
+                + Add New TDN Record
+              </button>
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead className="bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-800">
@@ -933,7 +942,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                     {currentApp.status !== 'Archived' ? (
                       <button
                         onClick={() => handleUpdateStatus('Archived')}
-                        className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition cursor-pointer shadow-sm"
+                        className="bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl transition cursor-pointer shadow-sm border border-amber-700"
                       >
                         Send to System Archiver
                       </button>
@@ -1155,28 +1164,63 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
 
       {mainViewTab === 'citizenAudit' && (
         <div className="flex-1 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs p-6 space-y-4">
-          <h2 className="text-lg font-black text-slate-900 dark:text-white">Archived &amp; Certified Applications</h2>
-          <p className="text-xs text-slate-500">
-            Immutable log of all released Tax Declarations and Certified True Copies.
-          </p>
+          <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
+            <div>
+              <h2 className="text-lg font-black text-slate-900 dark:text-white">System Archiver &amp; Vault</h2>
+              <p className="text-xs text-slate-500 mt-1">
+                Immutable log of all released Tax Declarations, Certified True Copies, and archived citizen applications.
+              </p>
+            </div>
+          </div>
 
           {citizenAuditTrail.length === 0 ? (
             <div className="p-8 text-center text-slate-400 text-xs italic bg-slate-50 dark:bg-slate-950 rounded-xl">
-              No applications in the audit trail yet. Approved applications will appear here.
+              No records in the System Archiver yet. Approved applications will appear here once released.
             </div>
           ) : (
-            <div className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl">
-              {citizenAuditTrail.map((app) => (
-                <div key={app.id} className="p-4 flex justify-between items-center text-xs">
-                  <div>
-                    <span className="font-mono font-bold text-blue-600 dark:text-blue-400">{app.referenceNumber}</span>
-                    <p className="font-semibold text-slate-800 dark:text-slate-200">{app.applicantName} • {app.category}</p>
-                  </div>
-                  <span className="bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full font-bold text-[10px]">
-                    ✓ Digital Certificate Issued
-                  </span>
-                </div>
-              ))}
+            <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-800">
+                  <tr>
+                    <th className="p-4">Control No.</th>
+                    <th className="p-4">Applicant</th>
+                    <th className="p-4">Service</th>
+                    <th className="p-4">Status</th>
+                    <th className="p-4">Released / Archived At</th>
+                    <th className="p-4 text-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {citizenAuditTrail.map((app) => (
+                    <tr key={app.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition">
+                      <td className="p-4 font-mono font-bold text-blue-600 dark:text-blue-400">{app.referenceNumber}</td>
+                      <td className="p-4 font-semibold text-slate-900 dark:text-white">{app.applicantName}</td>
+                      <td className="p-4 text-slate-600 dark:text-slate-300">{app.category}</td>
+                      <td className="p-4">
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                          app.status === 'Digital Certificate Issued'
+                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                            : 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
+                        }`}>
+                          {app.status}
+                        </span>
+                      </td>
+                      <td className="p-4 font-mono text-slate-500 text-[11px]">
+                        {app.digitalRelease?.releasedAt || 'Archived'}
+                      </td>
+                      <td className="p-4 text-center">
+                        <button
+                          type="button"
+                          onClick={() => void handleUpdateStatusDirect(String(app.id), 'Under Evaluation')}
+                          className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                        >
+                          Restore
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
