@@ -280,30 +280,26 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
             address: item.propertyLocation || '',
             currentValuation: item.currentValuation || 0,
           },
-          documents: (Array.isArray(rawDocs) ? rawDocs : []).map((doc: any, idx: number) => {
-            if (!doc) {
-              return {
-                id: `DOC-${idx + 1}`,
-                name: `Document ${idx + 1}`,
-                type: 'PDF',
-                url: '',
-                status: 'Pending' as const,
-                uploadedAt: item.filedDate || '',
-              };
-            }
+          documents: (Array.isArray(rawDocs) ? rawDocs : []).reduce((acc: any[], doc: any, idx: number) => {
+            // Skip null/undefined entries — do not inject placeholder docs
+            if (!doc) return acc;
             if (typeof doc === 'string') {
-              return {
+              if (!doc.trim()) return acc; // skip empty strings
+              acc.push({
                 id: `DOC-${idx + 1}`,
                 name: doc,
                 type: doc.includes('.pdf') ? 'PDF' : 'IMAGE',
                 url: doc.startsWith('data:') || doc.startsWith('http') ? doc : `${API_BASE_URL}/uploads/${doc}`,
                 status: 'Pending' as const,
                 uploadedAt: item.filedDate || '',
-              };
+              });
+              return acc;
             }
-            return {
+            const docName = doc.name || doc.fileName || '';
+            if (!docName) return acc; // skip entries with no real filename
+            acc.push({
               id: doc.id || `DOC-${idx + 1}`,
-              name: doc.name || doc.fileName || `Document ${idx + 1}`,
+              name: docName,
               type: doc.type || 'PDF',
               url: doc.url
                 ? doc.url.startsWith('data:') || doc.url.startsWith('http')
@@ -312,8 +308,9 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                 : '',
               status: doc.status || 'Pending',
               uploadedAt: doc.uploadedAt || item.filedDate || '',
-            };
-          }),
+            });
+            return acc;
+          }, []),
           auditLogs: item.auditLogs || [],
           notificationLogs: item.notificationLogs || [],
         };

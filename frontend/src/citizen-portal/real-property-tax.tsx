@@ -322,10 +322,19 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
       raw = Object.values(raw);
     }
     if (!Array.isArray(raw)) return [];
-    return raw.map((d: any) => {
-      if (typeof d === 'string') return { name: d, url: d };
-      return { name: d.name || 'Document', url: d.url || '' };
-    });
+    return raw.reduce((acc: Array<{ name: string; url: string }>, d: any) => {
+      // Skip null/undefined or empty entries — show only real uploaded documents
+      if (!d) return acc;
+      if (typeof d === 'string') {
+        if (!d.trim()) return acc;
+        acc.push({ name: d, url: d });
+        return acc;
+      }
+      const docName = d.name || d.fileName || '';
+      if (!docName) return acc; // skip entries with no real filename
+      acc.push({ name: docName, url: d.url || '' });
+      return acc;
+    }, []);
   };
 
   const createDocumentFallbackSvg = (title: string) => {
