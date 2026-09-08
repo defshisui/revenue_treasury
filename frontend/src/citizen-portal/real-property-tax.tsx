@@ -1991,10 +1991,10 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                                 <button
                                   type="button"
                                   onClick={() => setSelectedAppDetail(app)}
-                                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-sky-50 text-[#0284C7] hover:bg-sky-100 border border-sky-200 transition cursor-pointer"
-                                  title="Click to view documents"
+                                  className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-sky-50 text-[#0284C7] hover:bg-sky-100 border border-sky-200 transition cursor-pointer"
+                                  title="View application documents"
                                 >
-                                  📎 {docs.length} Doc{docs.length > 1 ? 's' : ''}
+                                  {docs.length} Document{docs.length > 1 ? 's' : ''}
                                 </button>
                               );
                             })()}
@@ -2704,39 +2704,29 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
               ) : (
                 <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
                   {getAppDocumentsList(selectedAppDetail).map((doc, idx) => {
-                    const resolvedUrl = resolveCitizenDocUrl(doc.url, doc.name);
                     const isPdf = doc.name.toLowerCase().endsWith('.pdf') || (doc.url && (doc.url.toLowerCase().includes('.pdf') || doc.url.startsWith('data:application/pdf')));
                     return (
                       <div
                         key={idx}
                         className="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100/80 transition text-xs"
                       >
-                        <div className="flex items-center gap-2 min-w-0 pr-2">
-                          <span className="text-base shrink-0">{isPdf ? '📄' : '🖼️'}</span>
+                        <div className="flex items-center gap-2.5 min-w-0 pr-3">
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-200 text-slate-700 shrink-0">
+                            {isPdf ? 'PDF' : 'IMG'}
+                          </span>
                           <div className="min-w-0">
-                            <p className="font-bold text-slate-800 truncate">{doc.name}</p>
+                            <p className="font-semibold text-slate-800 truncate">{doc.name}</p>
                             <p className="text-[10px] text-slate-400">{isPdf ? 'PDF Document' : 'Image File'}</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-1.5 shrink-0">
+                        <div className="shrink-0">
                           <button
                             type="button"
                             onClick={() => handleCitizenOpenDocPreview(doc)}
-                            className="px-2.5 py-1 bg-[#0284C7] hover:bg-sky-700 text-white rounded-lg text-xs font-bold transition cursor-pointer"
+                            className="px-3 py-1 bg-[#0284C7] hover:bg-sky-700 text-white rounded-lg text-xs font-semibold transition cursor-pointer"
                           >
-                            Inspect 👁
+                            Preview
                           </button>
-                          {resolvedUrl && (
-                            <a
-                              href={resolvedUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              download={doc.name}
-                              className="px-2.5 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-bold transition"
-                            >
-                              Download ⬇
-                            </a>
-                          )}
                         </div>
                       </div>
                     );
@@ -3002,30 +2992,19 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
           <div className="bg-white rounded-2xl w-full max-w-4xl h-[85vh] shadow-2xl overflow-hidden flex flex-col border border-slate-200">
             <div className="p-4 bg-[#0B3B60] text-white flex justify-between items-center">
               <div className="flex items-center gap-2 min-w-0 pr-2">
-                <span className="text-xs uppercase font-bold text-sky-300 shrink-0">Citizen Document Preview</span>
+                <span className="text-xs uppercase font-bold text-sky-300 shrink-0">Document Preview</span>
                 <span className="text-xs text-slate-200 truncate max-w-md">({citizenPreviewDoc.name})</span>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                {citizenPreviewDoc.url && (
-                  <a
-                    href={citizenPreviewDoc.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    download={citizenPreviewDoc.name}
-                    className="px-3 py-1 bg-sky-500 hover:bg-sky-400 text-white rounded-lg text-xs font-bold transition inline-flex items-center gap-1"
-                  >
-                    <span>Open ↗</span>
-                  </a>
-                )}
                 <button
                   type="button"
                   onClick={() => {
                     setCitizenPreviewDoc(null);
                     setCitizenPreviewError(false);
                   }}
-                  className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-bold cursor-pointer transition"
+                  className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-semibold cursor-pointer transition"
                 >
-                  Close ✕
+                  Close
                 </button>
               </div>
             </div>
@@ -3038,8 +3017,10 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                 />
               ) : citizenPreviewError || !citizenPreviewDoc.url ? (
                 <div className="text-center p-8 max-w-md bg-white border border-slate-200 rounded-2xl shadow-lg space-y-4">
-                  <div className="w-16 h-16 mx-auto rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-3xl font-bold">
-                    📄
+                  <div className="w-12 h-12 mx-auto rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center">
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
                   </div>
                   <div>
                     <h4 className="text-sm font-bold text-slate-900">Preview Unavailable</h4>
@@ -3054,9 +3035,9 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                         target="_blank"
                         rel="noopener noreferrer"
                         download={citizenPreviewDoc.name}
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-[#0B3B60] hover:bg-[#082944] text-white font-bold text-xs rounded-xl transition shadow-md"
+                        className="inline-flex items-center px-4 py-2 bg-[#0B3B60] hover:bg-[#082944] text-white font-semibold text-xs rounded-xl transition shadow-md"
                       >
-                        Download / Open File ↗
+                        Download File
                       </a>
                     </div>
                   )}

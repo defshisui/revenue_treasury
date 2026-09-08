@@ -1291,25 +1291,15 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                 <span className="text-xs text-slate-300 truncate max-w-md">({previewDocTitle})</span>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                {previewDocUrl && (
-                  <a
-                    href={previewDocUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    download={previewDocTitle}
-                    className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition inline-flex items-center gap-1"
-                  >
-                    <span>Open ↗</span>
-                  </a>
-                )}
                 <button
+                  type="button"
                   onClick={() => {
                     setPreviewDocUrl(null);
                     setPreviewDocError(false);
                   }}
-                  className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-bold cursor-pointer transition"
+                  className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-semibold cursor-pointer transition"
                 >
-                  Close ✕
+                  Close
                 </button>
               </div>
             </div>
@@ -1322,8 +1312,10 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                 />
               ) : previewDocError ? (
                 <div className="text-center p-8 max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl space-y-4">
-                  <div className="w-16 h-16 mx-auto rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center text-3xl font-bold">
-                    📄
+                  <div className="w-12 h-12 mx-auto rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 flex items-center justify-center">
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
                   </div>
                   <div>
                     <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">Document Preview Unavailable</h4>
@@ -1337,9 +1329,9 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                       target="_blank"
                       rel="noopener noreferrer"
                       download={previewDocTitle}
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition shadow-md"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl transition shadow-md"
                     >
-                      Download / Open File ↗
+                      Download File
                     </a>
                   </div>
                 </div>
