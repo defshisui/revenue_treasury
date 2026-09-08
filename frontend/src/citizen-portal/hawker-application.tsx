@@ -822,7 +822,7 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                                 onClick={handleCancelClick}
                                                 className="bg-white hover:bg-slate-50 text-blue-800 border border-blue-600 font-semibold text-xs py-1.5 px-6 rounded shadow-sm transition-colors cursor-pointer"
                                             >
-                                                {isPreviewMode ? "Back to Edit" : "Kanselahin"}
+                                                {isPreviewMode ? "Back to Edit" : "Cancel"}
                                             </button>
                                             {isPreviewMode ? (
                                                 <button

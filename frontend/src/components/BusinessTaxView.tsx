@@ -607,6 +607,7 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
                     <th className="p-4">TRACKING / PERMIT NO.</th>
                     <th className="p-4">BUSINESS NAME</th>
                     <th className="p-4">OWNER</th>
+                    <th className="p-4">TIN NUMBER</th>
                     <th className="p-4">GROSS SALES (PHP)</th>
                     <th className="p-4 text-center">STATUS</th>
                     <th className="p-4 text-center">PAYMENT STATUS</th>
@@ -617,19 +618,19 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-slate-700 dark:text-slate-300">
                   {loading ? (
                     <tr>
-                      <td colSpan={8} className="text-center py-16 text-slate-400 italic">
+                      <td colSpan={9} className="text-center py-16 text-slate-400 italic">
                         Loading assessment declarations...
                       </td>
                     </tr>
                   ) : fetchError ? (
                     <tr>
-                      <td colSpan={8} className="text-center py-16 text-rose-500 font-medium">
+                      <td colSpan={9} className="text-center py-16 text-rose-500 font-medium">
                         Error: {fetchError}
                       </td>
                     </tr>
                   ) : filteredAssessments.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="text-center py-16 text-slate-400 italic">
+                      <td colSpan={9} className="text-center py-16 text-slate-400 italic">
                         {assessmentTab === 'Active' ? 'No active business tax assessment records found.' : 'No archived records found.'}
                       </td>
                     </tr>
@@ -639,6 +640,7 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
                         <td className="p-4 font-mono font-bold text-blue-600 dark:text-blue-400">{item.trackingNumber}</td>
                         <td className="p-4 font-semibold text-slate-900 dark:text-slate-100">{item.businessName}</td>
                         <td className="p-4 font-medium text-slate-700 dark:text-slate-300">{item.businessOwner}</td>
+                        <td className="p-4 font-mono text-slate-700 dark:text-slate-300">{item.tin || 'N/A'}</td>
                         <td className="p-4 font-mono font-bold text-slate-900 dark:text-white">₱{item.grossSales ? item.grossSales.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '0.00'}</td>
                         <td className="p-4 text-center">
                           <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold border ${item.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-800' :
