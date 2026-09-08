@@ -216,16 +216,15 @@ export function installFetchInterceptor(): void {
       return originalFetch(input, init);
     }
 
-    if (url.includes('/uploads')) {
+    if (url.includes('/uploads') || (init?.body instanceof FormData)) {
       return originalFetch(input, init);
     }
 
-    const isFormData = init?.body instanceof FormData;
     const method = (init?.method || 'GET').toUpperCase();
     const key = await getKey();
 
     let patchedInit = { ...init };
-    if (!isFormData && key && init?.body && typeof init.body === 'string' && ['POST', 'PUT', 'PATCH'].includes(method)) {
+    if (key && init?.body && typeof init.body === 'string' && ['POST', 'PUT', 'PATCH'].includes(method)) {
       try {
         const parsed = JSON.parse(init.body as string);
 
