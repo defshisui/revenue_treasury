@@ -248,19 +248,20 @@ export async function createRptApplication(
        RETURNING *`,
       [
         appData.id || randomUUID(),
-        appData.control_number || null,
-        appData.tax_declaration_number || null,
+        appData.control_number || appData.controlNumber || null,
+        appData.tax_declaration_number || appData.taxDeclarationNumber || null,
         ownerName,
         resolvedApplicantName,
-        appData.applicant_type || null,
+        appData.applicant_type || appData.applicantType || null,
         applicationEmail,
-        appData.mobile_number || null,
+        appData.mobile_number || appData.mobileNumber || null,
         appData.service || null,
-        appData.property_location || null,
+        appData.property_location || appData.propertyLocation || null,
         appData.barangay || null,
-        appData.property_type || null,
+        appData.property_type || appData.propertyType || null,
         appData.status || 'Submitted',
         appData.filed_date ||
+          appData.filedDate ||
           new Date()
             .toISOString()
             .split('T')[0],

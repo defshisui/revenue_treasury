@@ -243,6 +243,11 @@ export const saveRPTApplication = async (
 
 
     Object.keys(application).forEach((key) => {
+      // If raw files are uploaded, skip appending documents as JSON to avoid duplicate payload collision and excessive size
+      if (key === 'documents' && rawFiles && rawFiles.length > 0) {
+        return;
+      }
+
       const value = application[key];
 
       if (
@@ -262,7 +267,6 @@ export const saveRPTApplication = async (
         }
       }
     });
-
 
     if (
       rawFiles &&
@@ -284,19 +288,16 @@ export const saveRPTApplication = async (
       }
     );
 
-    if (!response.ok) {
-      const errorData =
-        await response
-          .json()
-          .catch(() => ({}));
+    const data = await response.json().catch(() => ({}));
 
+    if (!response.ok) {
       throw new Error(
-        errorData.message ||
+        data.message ||
         `Failed to save application: ${response.statusText}`
       );
     }
 
-    return await response.json();
+    return data;
   } catch (error) {
     console.error(
       'Error persisting RPT application:',

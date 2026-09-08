@@ -432,55 +432,6 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     }));
   };
 
-  const createDocumentFallbackSvg = (title: string) => {
-    const cleanTitle = title.replace(/^\d+-\d+-/, '').replace(/\.[^/.]+$/, '').replace(/[._-]/g, ' ');
-    const ext = (title.split('.').pop() || 'DOC').toUpperCase();
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1050" width="100%" height="100%">
-      <rect width="800" height="1050" fill="#F8FAFC" rx="16"/>
-      <rect x="20" y="20" width="760" height="1010" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="2" rx="12"/>
-      <rect x="40" y="40" width="720" height="110" fill="#0B3B60" rx="8"/>
-      <text x="400" y="80" fill="#93C5FD" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="700" letter-spacing="2" text-anchor="middle">REPUBLIC OF THE PHILIPPINES</text>
-      <text x="400" y="115" fill="#FFFFFF" font-family="system-ui, -apple-system, sans-serif" font-size="20" font-weight="900" text-anchor="middle">CITY ASSESSOR &amp; TREASURY OFFICE</text>
-      
-      <rect x="60" y="190" width="680" height="400" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1.5" rx="10"/>
-      <rect x="60" y="190" width="680" height="42" fill="#F1F5F9" rx="10"/>
-      <text x="90" y="217" fill="#475569" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="800" letter-spacing="1">ATTACHED DOCUMENT RECORD</text>
-      
-      <text x="90" y="275" fill="#64748B" font-family="system-ui, -apple-system, sans-serif" font-size="13">Document Name:</text>
-      <text x="250" y="275" fill="#0F172A" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="700">${title}</text>
-      
-      <text x="90" y="325" fill="#64748B" font-family="system-ui, -apple-system, sans-serif" font-size="13">Document Type:</text>
-      <text x="250" y="325" fill="#0284C7" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="700">${ext} Document</text>
-      
-      <text x="90" y="375" fill="#64748B" font-family="system-ui, -apple-system, sans-serif" font-size="13">Classification:</text>
-      <text x="250" y="375" fill="#0F172A" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="600">${cleanTitle}</text>
-      
-      <text x="90" y="425" fill="#64748B" font-family="system-ui, -apple-system, sans-serif" font-size="13">Verification Status:</text>
-      <rect x="250" y="407" width="140" height="26" fill="#DCFCE7" rx="6"/>
-      <text x="320" y="425" fill="#166534" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="800" text-anchor="middle">VERIFIED ON FILE</text>
-
-      <text x="90" y="475" fill="#64748B" font-family="system-ui, -apple-system, sans-serif" font-size="13">Registry Archive:</text>
-      <text x="250" y="475" fill="#0F172A" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="600">Quezon City Local Government Unit</text>
-
-      <line x1="90" y1="510" x2="710" y2="510" stroke="#E2E8F0" stroke-width="1"/>
-      <text x="400" y="545" fill="#64748B" font-family="system-ui, -apple-system, sans-serif" font-size="12" text-anchor="middle">This document is certified and recorded in the Real Property Tax management archive.</text>
-
-      <rect x="60" y="630" width="680" height="240" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5" rx="10"/>
-      <text x="90" y="670" fill="#0B3B60" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="700">DOCUMENT PREVIEW CERTIFICATION</text>
-      <text x="90" y="700" fill="#475569" font-family="system-ui, -apple-system, sans-serif" font-size="12">Registered under Application Filing. Official documentation acknowledged by treasury evaluation officers.</text>
-      <text x="90" y="725" fill="#64748B" font-family="system-ui, -apple-system, sans-serif" font-size="12">Documentary proof is recognized for Assessment, Tax Declaration, and Transfer of Ownership procedures.</text>
-
-      <circle cx="620" cy="750" r="50" fill="none" stroke="#0284C7" stroke-width="2" stroke-dasharray="4 2"/>
-      <circle cx="620" cy="750" r="44" fill="none" stroke="#0B3B60" stroke-width="1.5"/>
-      <text x="620" y="746" fill="#0B3B60" font-family="system-ui, -apple-system, sans-serif" font-size="10" font-weight="900" text-anchor="middle">OFFICIAL</text>
-      <text x="620" y="760" fill="#0284C7" font-family="system-ui, -apple-system, sans-serif" font-size="10" font-weight="900" text-anchor="middle">ARCHIVE</text>
-
-      <text x="90" y="930" fill="#0F172A" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="700">CITY ASSESSOR &amp; TREASURER</text>
-      <text x="90" y="950" fill="#64748B" font-family="system-ui, -apple-system, sans-serif" font-size="12">Document Repository &amp; Compliance Office</text>
-    </svg>`;
-    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
-  };
-
   const handleOpenPreview = (doc: { name: string; url?: string }) => {
     let targetUrl = doc.url || '';
     if (!targetUrl || targetUrl.trim() === '') targetUrl = doc.name;
@@ -489,21 +440,16 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
       targetUrl = `${API_BASE_URL}${targetUrl}`;
     } else if (targetUrl.trim() !== '') {
       targetUrl = `${API_BASE_URL}/uploads/${targetUrl}`;
-    } else {
-      targetUrl = createDocumentFallbackSvg(doc.name || 'Document');
     }
-    setPreviewDocError(false);
+    setPreviewDocError(!targetUrl);
     setPreviewDocTitle(doc.name || 'Document');
     setPreviewDocUrl(targetUrl);
   };
 
-  const handleUpdateStatus = async (newStatus: ExtendedStatusType) => {
-    if (!currentApp) return;
-
-
+  const handleUpdateStatusDirect = async (appId: string, newStatus: ExtendedStatusType) => {
     try {
       const result = await updateRptApplicationStatus(
-        String(currentApp.id),
+        appId,
         newStatus
       );
 
@@ -512,7 +458,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
 
       setApplications((prev) =>
         prev.map((app) => {
-          if (app.id !== currentApp.id) return app;
+          if (app.id !== appId) return app;
 
           return {
             ...app,
@@ -531,7 +477,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         })
       );
 
-      triggerToast(`Application workflow advanced to "${newStatus}".`, 'success');
+      triggerToast(`Application status updated to "${newStatus}".`, 'success');
     } catch (error: any) {
       console.error('Failed to persist RPT application status:', error);
       triggerToast(
@@ -539,6 +485,11 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         'error'
       );
     }
+  };
+
+  const handleUpdateStatus = async (newStatus: ExtendedStatusType) => {
+    if (!currentApp) return;
+    await handleUpdateStatusDirect(String(currentApp.id), newStatus);
   };
 
   const handleSetRPTServiceForPayment = async () => {
@@ -890,6 +841,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                   <option value="Ready for Release">Ready for Release</option>
                   <option value="Approved">Approved</option>
                   <option value="Rejected">Rejected</option>
+                  <option value="Archived">Archived</option>
                 </select>
               </div>
             </div>
@@ -912,12 +864,46 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                         <span className="font-mono font-bold text-xs text-blue-600 dark:text-blue-400">
                           {app.referenceNumber}
                         </span>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
-                          {app.status}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${app.status === 'Archived'
+                            ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
+                            : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                            }`}>
+                            {app.status}
+                          </span>
+                        </div>
                       </div>
                       <p className="font-bold text-xs text-slate-900 dark:text-white mt-1">{app.applicantName}</p>
-                      <p className="text-[11px] text-slate-500 truncate">{app.category}</p>
+                      <div className="flex justify-between items-center mt-1">
+                        <p className="text-[11px] text-slate-500 truncate max-w-[200px]">{app.category}</p>
+                        {app.status !== 'Archived' ? (
+                          <button
+                            type="button"
+                            title="Send to System Archiver"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedAppId(app.id);
+                              void handleUpdateStatusDirect(String(app.id), 'Archived');
+                            }}
+                            className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 hover:underline cursor-pointer"
+                          >
+                            Archive
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            title="Restore to Active Queue"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedAppId(app.id);
+                              void handleUpdateStatusDirect(String(app.id), 'Under Evaluation');
+                            }}
+                            className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                          >
+                            Restore
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))
                 )}
@@ -943,12 +929,27 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                     <p className="text-xs text-slate-500 font-semibold">{currentApp.category}</p>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {currentApp.status !== 'Archived' ? (
+                      <button
+                        onClick={() => handleUpdateStatus('Archived')}
+                        className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition cursor-pointer shadow-sm"
+                      >
+                        Send to System Archiver
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleUpdateStatus('Under Evaluation')}
+                        className="bg-slate-700 hover:bg-slate-800 text-white font-bold text-xs px-4 py-2 rounded-xl transition cursor-pointer shadow-sm"
+                      >
+                        Restore to Active Processing
+                      </button>
+                    )}
                     <button
                       onClick={handleDigitalRelease}
                       className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition cursor-pointer shadow-sm"
                     >
-                      ✓ Approve &amp; Issue Digital Certificate
+                      Approve &amp; Issue Digital Certificate
                     </button>
                   </div>
                 </div>
@@ -956,13 +957,17 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                 <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2">
                   <span className="text-[10px] font-bold uppercase text-slate-400 block">Advance Assessor Workflow:</span>
                   <div className="flex flex-wrap gap-2">
-                    {(['For Review', 'Under Evaluation', 'For Compliance', 'Processing', 'Approved', 'Ready for Release', 'Rejected'] as ExtendedStatusType[]).map((st) => (
+                    {(['For Review', 'Under Evaluation', 'For Compliance', 'Processing', 'Approved', 'Ready for Release', 'Rejected', 'Archived'] as ExtendedStatusType[]).map((st) => (
                       <button
                         key={st}
                         onClick={() => handleUpdateStatus(st)}
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer border ${currentApp.status === st
-                          ? 'bg-blue-600 text-white border-blue-600'
-                          : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-blue-400'
+                          ? st === 'Archived'
+                            ? 'bg-amber-600 text-white border-amber-600'
+                            : 'bg-blue-600 text-white border-blue-600'
+                          : st === 'Archived'
+                            ? 'bg-white dark:bg-slate-900 text-amber-700 dark:text-amber-400 border-amber-300 dark:border-amber-800 hover:border-amber-500'
+                            : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-blue-400'
                           }`}
                       >
                         {st}
@@ -1388,11 +1393,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                   src={previewDocUrl}
                   alt={previewDocTitle}
                   onError={() => {
-                    if (previewDocUrl && !previewDocUrl.startsWith('data:image/svg+xml')) {
-                      setPreviewDocUrl(createDocumentFallbackSvg(previewDocTitle));
-                    } else {
-                      setPreviewDocError(true);
-                    }
+                    setPreviewDocError(true);
                   }}
                   className="max-w-full max-h-[75vh] object-contain rounded-xl shadow-lg"
                 />

@@ -337,61 +337,9 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
     }, []);
   };
 
-  const createDocumentFallbackSvg = (title: string) => {
-    const cleanTitle = title.replace(/^\d+-\d+-/, '').replace(/\.[^/.]+$/, '').replace(/[._-]/g, ' ');
-    const ext = (title.split('.').pop() || 'DOC').toUpperCase();
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1050" width="100%" height="100%">
-      <rect width="800" height="1050" fill="#F8FAFC" rx="16"/>
-      <rect x="20" y="20" width="760" height="1010" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="2" rx="12"/>
-      <rect x="40" y="40" width="720" height="110" fill="#0B3B60" rx="8"/>
-      <text x="400" y="80" fill="#93C5FD" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="700" letter-spacing="2" text-anchor="middle">REPUBLIC OF THE PHILIPPINES</text>
-      <text x="400" y="115" fill="#FFFFFF" font-family="system-ui, -apple-system, sans-serif" font-size="20" font-weight="900" text-anchor="middle">CITY ASSESSOR &amp; TREASURY OFFICE</text>
-      
-      <rect x="60" y="190" width="680" height="400" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1.5" rx="10"/>
-      <rect x="60" y="190" width="680" height="42" fill="#F1F5F9" rx="10"/>
-      <text x="90" y="217" fill="#475569" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="800" letter-spacing="1">ATTACHED DOCUMENT RECORD</text>
-      
-      <text x="90" y="275" fill="#64748B" font-family="system-ui, -apple-system, sans-serif" font-size="13">Document Name:</text>
-      <text x="250" y="275" fill="#0F172A" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="700">${title}</text>
-      
-      <text x="90" y="325" fill="#64748B" font-family="system-ui, -apple-system, sans-serif" font-size="13">Document Type:</text>
-      <text x="250" y="325" fill="#0284C7" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="700">${ext} Document</text>
-      
-      <text x="90" y="375" fill="#64748B" font-family="system-ui, -apple-system, sans-serif" font-size="13">Classification:</text>
-      <text x="250" y="375" fill="#0F172A" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="600">${cleanTitle}</text>
-      
-      <text x="90" y="425" fill="#64748B" font-family="system-ui, -apple-system, sans-serif" font-size="13">Verification Status:</text>
-      <rect x="250" y="407" width="140" height="26" fill="#DCFCE7" rx="6"/>
-      <text x="320" y="425" fill="#166534" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="800" text-anchor="middle">VERIFIED ON FILE</text>
-
-      <text x="90" y="475" fill="#64748B" font-family="system-ui, -apple-system, sans-serif" font-size="13">Registry Archive:</text>
-      <text x="250" y="475" fill="#0F172A" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="600">Quezon City Local Government Unit</text>
-
-      <line x1="90" y1="510" x2="710" y2="510" stroke="#E2E8F0" stroke-width="1"/>
-      <text x="400" y="545" fill="#64748B" font-family="system-ui, -apple-system, sans-serif" font-size="12" text-anchor="middle">This document is certified and recorded in the Real Property Tax management archive.</text>
-
-      <rect x="60" y="630" width="680" height="240" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5" rx="10"/>
-      <text x="90" y="670" fill="#0B3B60" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="700">DOCUMENT PREVIEW CERTIFICATION</text>
-      <text x="90" y="700" fill="#475569" font-family="system-ui, -apple-system, sans-serif" font-size="12">Registered under Application Filing. Official documentation acknowledged by treasury evaluation officers.</text>
-      <text x="90" y="725" fill="#64748B" font-family="system-ui, -apple-system, sans-serif" font-size="12">Documentary proof is recognized for Assessment, Tax Declaration, and Transfer of Ownership procedures.</text>
-
-      <circle cx="620" cy="750" r="50" fill="none" stroke="#0284C7" stroke-width="2" stroke-dasharray="4 2"/>
-      <circle cx="620" cy="750" r="44" fill="none" stroke="#0B3B60" stroke-width="1.5"/>
-      <text x="620" y="746" fill="#0B3B60" font-family="system-ui, -apple-system, sans-serif" font-size="10" font-weight="900" text-anchor="middle">OFFICIAL</text>
-      <text x="620" y="760" fill="#0284C7" font-family="system-ui, -apple-system, sans-serif" font-size="10" font-weight="900" text-anchor="middle">ARCHIVE</text>
-
-      <text x="90" y="930" fill="#0F172A" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="700">CITY ASSESSOR &amp; TREASURER</text>
-      <text x="90" y="950" fill="#64748B" font-family="system-ui, -apple-system, sans-serif" font-size="12">Document Repository &amp; Compliance Office</text>
-    </svg>`;
-    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
-  };
-
   const handleCitizenOpenDocPreview = (doc: { name: string; url?: string }) => {
-    let resolvedUrl = resolveCitizenDocUrl(doc.url, doc.name);
-    if (!resolvedUrl || resolvedUrl.trim() === '') {
-      resolvedUrl = createDocumentFallbackSvg(doc.name || 'Document');
-    }
-    setCitizenPreviewError(false);
+    const resolvedUrl = resolveCitizenDocUrl(doc.url, doc.name);
+    setCitizenPreviewError(!resolvedUrl);
     setCitizenPreviewDoc({ name: doc.name || 'Document', url: resolvedUrl });
   };
 
@@ -3089,33 +3037,13 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                       The document <span className="font-mono font-semibold text-slate-700">"{citizenPreviewDoc.name}"</span> could not be loaded in the inline viewer.
                     </p>
                   </div>
-                  {citizenPreviewDoc.url && (
-                    <div className="pt-2">
-                      <a
-                        href={citizenPreviewDoc.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        download={citizenPreviewDoc.name}
-                        className="inline-flex items-center px-4 py-2 bg-[#0B3B60] hover:bg-[#082944] text-white font-semibold text-xs rounded-xl transition shadow-md"
-                      >
-                        Download File
-                      </a>
-                    </div>
-                  )}
                 </div>
               ) : (
                 <img
                   src={citizenPreviewDoc.url}
                   alt={citizenPreviewDoc.name}
                   onError={() => {
-                    if (citizenPreviewDoc?.url && !citizenPreviewDoc.url.startsWith('data:image/svg+xml')) {
-                      setCitizenPreviewDoc({
-                        ...citizenPreviewDoc,
-                        url: createDocumentFallbackSvg(citizenPreviewDoc.name),
-                      });
-                    } else {
-                      setCitizenPreviewError(true);
-                    }
+                    setCitizenPreviewError(true);
                   }}
                   className="max-w-full max-h-[75vh] object-contain rounded-xl shadow-lg"
                 />
