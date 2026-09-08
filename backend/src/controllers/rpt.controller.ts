@@ -151,8 +151,8 @@ export async function createRptApplication(
 
           const pathOnly =
             fileName.startsWith('data:') ||
-            fileName.startsWith('http') ||
-            fileName.startsWith('/uploads/')
+              fileName.startsWith('http') ||
+              fileName.startsWith('/uploads/')
               ? fileName
               : `/uploads/${fileName}`;
 
@@ -178,8 +178,8 @@ export async function createRptApplication(
 
       const pathOnly =
         fileName.startsWith('data:') ||
-        fileName.startsWith('http') ||
-        fileName.startsWith('/uploads/')
+          fileName.startsWith('http') ||
+          fileName.startsWith('/uploads/')
           ? fileName
           : `/uploads/${fileName}`;
 
@@ -261,9 +261,9 @@ export async function createRptApplication(
         appData.property_type || null,
         appData.status || 'Submitted',
         appData.filed_date ||
-          new Date()
-            .toISOString()
-            .split('T')[0],
+        new Date()
+          .toISOString()
+          .split('T')[0],
         appData.notes || null,
         JSON.stringify(fileObjects)
       ]
@@ -361,13 +361,14 @@ export async function updateRptApplicationStatus(
     assignedOfficer,
     paymentAmount,
     paymentStatus,
-    paymentDueDate
+    paymentDueDate,
+    adminEmail
   } = req.body;
 
   const numericPaymentAmount =
     paymentAmount === undefined ||
-    paymentAmount === null ||
-    paymentAmount === ''
+      paymentAmount === null ||
+      paymentAmount === ''
       ? null
       : Number(paymentAmount);
 
@@ -418,7 +419,7 @@ export async function updateRptApplicationStatus(
     await recordAudit(
       req,
       'AUD-RPT-STATUS',
-      'admin@gov.ph',
+      adminEmail || 'admin@gov.ph',
       'Admin',
       'RPT Module',
       'RPT_STATUS_UPDATED',
@@ -705,11 +706,11 @@ export async function createLguRptRecord(
         data.propertyLocation || null,
         data.barangay || null,
         data.propertyType ||
-          'Residential',
+        'Residential',
         data.billingYear || 2025,
         data.quarter || 'Q1-Q4',
         data.billExpiryDate ||
-          '2025-10-31',
+        '2025-10-31',
         data.lotAreaSqM || 0,
         data.marketValue || 0,
         data.assessedValue || 0,
@@ -721,14 +722,14 @@ export async function createLguRptRecord(
         data.totalAssessment || 0,
         data.amountPaid || 0,
         data.balance ||
-          data.totalAssessment ||
-          0,
+        data.totalAssessment ||
+        0,
         data.status || 'Unpaid',
         data.paymentStatus ||
-          'Unpaid',
+        'Unpaid',
         data.amountDue ||
-          data.totalAssessment ||
-          0,
+        data.totalAssessment ||
+        0,
         JSON.stringify(
           data.quarterlyAmounts || {}
         )
@@ -934,7 +935,7 @@ export async function createRptPayment(
         officialReceiptNumber,
         paymentOption || 'Full',
         quarterCoverage ||
-          '2025(Q1) - 2025(Q4)',
+        '2025(Q1) - 2025(Q4)',
         paymongoSessionId || null
       ]
     );
@@ -1119,19 +1120,19 @@ export async function createGroupRptPayment(
           item.id || null,
           item.taxDeclarationNumber,
           item.ownerName ||
-            customerName ||
-            'Property Owner',
+          customerName ||
+          'Property Owner',
           itemAmount,
           paymentMethod ||
-            'Online Gateway',
+          'Online Gateway',
           itemRef,
           itemOR,
           item.selectedOption ||
-            'Full Payment',
+          'Full Payment',
           item.billCoverage ||
-            '2025(Q1) - 2025(Q4)',
+          '2025(Q1) - 2025(Q4)',
           paymongoSessionId ||
-            null
+          null
         ]
       );
 
@@ -1207,8 +1208,8 @@ export async function createGroupRptPayment(
       req,
       'AUD-RPT-GROUP-PAY',
       customerEmail ||
-        customerName ||
-        'Citizen',
+      customerName ||
+      'Citizen',
       'Citizen',
       'RPT Module',
       'RPT_GROUP_PAYMENT_COMPLETED',
