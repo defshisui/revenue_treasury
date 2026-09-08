@@ -29,7 +29,7 @@ router.get(
 
 router.post(
   '/citizen-rpt-applications',
-  authenticateToken,
+  optionalAuthToken,
   upload.any(),
   createRptApplication
 );
