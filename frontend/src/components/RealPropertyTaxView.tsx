@@ -1160,10 +1160,10 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         <div className="fixed top-20 right-6 z-70 animate-in fade-in slide-in-from-top-4 duration-300">
           <div
             className={`px-4 py-3 rounded-2xl shadow-xl border flex items-center gap-3 text-xs font-bold ${toastMessage.type === 'success'
-                ? 'bg-emerald-950 text-emerald-200 border-emerald-800'
-                : toastMessage.type === 'warning'
-                  ? 'bg-amber-950 text-amber-200 border-amber-800'
-                  : 'bg-rose-950 text-rose-200 border-rose-800'
+              ? 'bg-emerald-950 text-emerald-200 border-emerald-800'
+              : toastMessage.type === 'warning'
+                ? 'bg-amber-950 text-amber-200 border-amber-800'
+                : 'bg-rose-950 text-rose-200 border-rose-800'
               }`}
           >
             <span>{toastMessage.type === 'success' ? '✓' : 'ℹ'}</span>
@@ -1208,28 +1208,6 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
             className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold px-4 py-2.5 rounded-xl transition-all border border-slate-200 dark:border-slate-700 cursor-pointer flex items-center gap-2 shadow-xs"
           >
             <i className="fa-solid fa-download text-[11px]"></i> Export Masterlist
-          </button>
-          <button
-            onClick={() => {
-              setEditingProperty({
-                taxDeclarationNumber: '',
-                newPspin: '09-021-009-166- - -',
-                ownerName: '',
-                barangay: '',
-                propertyType: 'Residential',
-                marketValue: 1000000,
-                assessedValue: 200000,
-                basicTax: 3000,
-                sefTax: 2000,
-                totalAssessment: 5000,
-                paymentStatus: 'Unpaid',
-                status: 'Active',
-              });
-              setIsPropertyModalOpen(true);
-            }}
-            className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-md cursor-pointer flex items-center gap-2"
-          >
-            <i className="fa-solid fa-plus text-[11px]"></i> New Assessment Record
           </button>
         </div>
       </div>
@@ -1292,8 +1270,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         <button
           onClick={() => switchMainViewTab('master')}
           className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${mainViewTab === 'master'
-              ? 'bg-blue-600 text-white shadow-md'
-              : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+            ? 'bg-blue-600 text-white shadow-md'
+            : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
             }`}
         >
           <i className="fa-solid fa-database text-xs"></i>
@@ -1306,8 +1284,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         <button
           onClick={() => switchMainViewTab('queue')}
           className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${mainViewTab === 'queue'
-              ? 'bg-blue-600 text-white shadow-md'
-              : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+            ? 'bg-blue-600 text-white shadow-md'
+            : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
             }`}
         >
           <i className="fa-solid fa-list-check text-xs"></i>
@@ -1320,8 +1298,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         <button
           onClick={() => switchMainViewTab('payments')}
           className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${mainViewTab === 'payments'
-              ? 'bg-blue-600 text-white shadow-md'
-              : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+            ? 'bg-blue-600 text-white shadow-md'
+            : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
             }`}
         >
           <i className="fa-solid fa-receipt text-xs"></i>
@@ -1334,8 +1312,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         <button
           onClick={() => switchMainViewTab('citizenAudit')}
           className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${mainViewTab === 'citizenAudit'
-              ? 'bg-blue-600 text-white shadow-md'
-              : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+            ? 'bg-blue-600 text-white shadow-md'
+            : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
             }`}
         >
           <i className="fa-solid fa-shield-halved text-xs"></i>
@@ -1357,8 +1335,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
               <button
                 onClick={() => setMasterTab('Active')}
                 className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-2 ${masterTab === 'Active'
-                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
-                    : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                  ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                  : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                   }`}
               >
                 <i className="fa-solid fa-list-check text-xs"></i>
@@ -1371,8 +1349,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
               <button
                 onClick={() => setMasterTab('Archived')}
                 className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-2 ${masterTab === 'Archived'
-                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
-                    : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                  ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                  : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                   }`}
               >
                 <i className="fa-solid fa-box-archive text-xs"></i>
@@ -1636,8 +1614,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                 <button
                   onClick={() => setQueueTab('Active')}
                   className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${queueTab === 'Active'
-                      ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
-                      : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                    : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                     }`}
                 >
                   <i className="fa-solid fa-list-check text-xs"></i>
@@ -1650,8 +1628,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                 <button
                   onClick={() => setQueueTab('Archived')}
                   className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${queueTab === 'Archived'
-                      ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
-                      : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                    : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                     }`}
                 >
                   <i className="fa-solid fa-box-archive text-xs"></i>
@@ -1720,8 +1698,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                       key={app.id}
                       onClick={() => setSelectedAppId(app.id)}
                       className={`p-3.5 rounded-xl border transition cursor-pointer flex flex-col gap-1.5 ${currentApp?.id === app.id
-                          ? 'bg-blue-50/70 dark:bg-blue-950/40 border-blue-400 dark:border-blue-700 shadow-xs'
-                          : 'border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                        ? 'bg-blue-50/70 dark:bg-blue-950/40 border-blue-400 dark:border-blue-700 shadow-xs'
+                        : 'border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50'
                         }`}
                     >
                       <div className="flex justify-between items-start">
@@ -1740,12 +1718,12 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                           ) : null}
                           <span
                             className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${app.status === 'Approved'
-                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
-                                : app.status === 'Archived'
-                                  ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
-                                  : app.status === 'Rejected'
-                                    ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
-                                    : 'bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300'
+                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                              : app.status === 'Archived'
+                                ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                                : app.status === 'Rejected'
+                                  ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
+                                  : 'bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300'
                               }`}
                           >
                             {app.status}
@@ -1882,8 +1860,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                         key={st}
                         onClick={() => handleUpdateStatus(st)}
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer border ${currentApp.status === st
-                            ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                            : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-blue-400'
+                          ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                          : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-blue-400'
                           }`}
                       >
                         {st}
@@ -2073,10 +2051,10 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                             </div>
                             <span
                               className={`text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0 ${doc.status === 'Verified'
-                                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                                  : doc.status === 'Rejected'
-                                    ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
-                                    : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                                : doc.status === 'Rejected'
+                                  ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+                                  : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
                                 }`}
                             >
                               {doc.status}
@@ -2112,8 +2090,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
               <button
                 onClick={() => setLedgerCategoryFilter('ALL')}
                 className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${ledgerCategoryFilter === 'ALL'
-                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
-                    : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                  ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                  : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                   }`}
               >
                 <i className="fa-solid fa-receipt text-xs"></i>
@@ -2126,8 +2104,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
               <button
                 onClick={() => setLedgerCategoryFilter('MASTER')}
                 className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${ledgerCategoryFilter === 'MASTER'
-                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
-                    : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                  ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                  : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                   }`}
               >
                 <i className="fa-solid fa-landmark text-xs"></i>
@@ -2140,8 +2118,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
               <button
                 onClick={() => setLedgerCategoryFilter('APPLICATION')}
                 className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${ledgerCategoryFilter === 'APPLICATION'
-                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
-                    : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                  ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                  : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                   }`}
               >
                 <i className="fa-solid fa-file-invoice text-xs"></i>
@@ -2213,8 +2191,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                         <td className="p-4 text-slate-600 dark:text-slate-300">
                           <span
                             className={`px-2 py-0.5 rounded text-[10px] font-bold ${pay.type === 'MASTER'
-                                ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300'
-                                : 'bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300'
+                              ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300'
+                              : 'bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300'
                               }`}
                           >
                             {pay.category}
@@ -2243,43 +2221,6 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         </section>
       )}
 
-      {/* ============================================================ */}
-      {/* 4. AUDIT TRAIL VIEW TAB */}
-      {/* ============================================================ */}
-      {mainViewTab === 'citizenAudit' && (
-        <section className="bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs p-6 space-y-4">
-          <div>
-            <h2 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
-              <i className="fa-solid fa-shield-halved text-emerald-600"></i>
-              Archived &amp; Certified Applications Audit Trail
-            </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Immutable cryptographic ledger of all released Tax Declarations and Certified True Copies.
-            </p>
-          </div>
-
-          {citizenAuditTrail.length === 0 ? (
-            <div className="p-8 text-center text-slate-400 text-xs italic bg-slate-50 dark:bg-slate-950 rounded-xl">
-              No applications in the audit trail yet. Approved applications will appear here once certificates are issued.
-            </div>
-          ) : (
-            <div className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
-              {citizenAuditTrail.map((app) => (
-                <div key={app.id} className="p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 text-xs hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
-                  <div>
-                    <span className="font-mono font-bold text-blue-600 dark:text-blue-400">{app.referenceNumber}</span>
-                    <p className="font-semibold text-slate-800 dark:text-slate-200 mt-0.5">{app.applicantName} • {app.category}</p>
-                    <p className="text-[11px] text-slate-400">Released: {app.digitalRelease?.releasedAt || app.submissionDate}</p>
-                  </div>
-                  <span className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 px-3 py-1 rounded-full font-bold text-[10px] flex items-center gap-1">
-                    ✓ Digital Certificate Issued
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-      )}
 
       {/* ============================================================ */}
       {/* ADD / EDIT MASTER PROPERTY RECORD MODAL */}
@@ -2460,8 +2401,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                     type="button"
                     onClick={() => setPreviewTabMode('viewer')}
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${previewTabMode === 'viewer'
-                        ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
-                        : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                      ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
                       }`}
                   >
                     <i className="fa-solid fa-eye text-xs"></i>
@@ -2472,8 +2413,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                     type="button"
                     onClick={() => setPreviewTabMode('details')}
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${previewTabMode === 'details'
-                        ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
-                        : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                      ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
                       }`}
                   >
                     <i className="fa-solid fa-circle-info text-xs"></i>
@@ -2522,18 +2463,18 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                       setPreviewZoom(100);
                     }}
                     className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-2 shrink-0 cursor-pointer ${activeDocIndex === idx
-                        ? 'bg-blue-600 text-white shadow-xs'
-                        : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
                       }`}
                   >
                     <i className={`fa-solid ${doc.type === 'PDF' ? 'fa-file-pdf' : 'fa-file-image'} text-[11px]`}></i>
                     <span className="truncate max-w-[150px]">{doc.name}</span>
                     <span
                       className={`text-[9px] px-1.5 py-0.2 rounded-full font-extrabold ${doc.status === 'Verified'
-                          ? 'bg-emerald-500/20 text-emerald-300'
-                          : doc.status === 'Rejected'
-                            ? 'bg-rose-500/20 text-rose-300'
-                            : 'bg-amber-500/20 text-amber-300'
+                        ? 'bg-emerald-500/20 text-emerald-300'
+                        : doc.status === 'Rejected'
+                          ? 'bg-rose-500/20 text-rose-300'
+                          : 'bg-amber-500/20 text-amber-300'
                         }`}
                     >
                       {doc.status}
@@ -2658,10 +2599,10 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                         <span className="text-slate-400 block text-[10px] font-bold uppercase">Verification Status</span>
                         <span
                           className={`inline-block mt-0.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${activeDoc.status === 'Verified'
-                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                              : activeDoc.status === 'Rejected'
-                                ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
-                                : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                            : activeDoc.status === 'Rejected'
+                              ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+                              : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
                             }`}
                         >
                           {activeDoc.status}
@@ -2682,8 +2623,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                         type="button"
                         onClick={() => handleToggleDocStatus(activeDocIndex, 'Verified')}
                         className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${activeDoc.status === 'Verified'
-                            ? 'bg-emerald-600 text-white shadow-sm'
-                            : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+                          ? 'bg-emerald-600 text-white shadow-sm'
+                          : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
                           }`}
                       >
                         <i className="fa-solid fa-check"></i> Mark as Verified
@@ -2693,8 +2634,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                         type="button"
                         onClick={() => handleToggleDocStatus(activeDocIndex, 'Rejected')}
                         className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${activeDoc.status === 'Rejected'
-                            ? 'bg-rose-600 text-white shadow-sm'
-                            : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
+                          ? 'bg-rose-600 text-white shadow-sm'
+                          : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
                           }`}
                       >
                         <i className="fa-solid fa-xmark"></i> Flag as Rejected
@@ -2704,8 +2645,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                         type="button"
                         onClick={() => handleToggleDocStatus(activeDocIndex, 'Pending')}
                         className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${activeDoc.status === 'Pending'
-                            ? 'bg-amber-600 text-white shadow-sm'
-                            : 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
+                          ? 'bg-amber-600 text-white shadow-sm'
+                          : 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
                           }`}
                       >
                         <i className="fa-solid fa-hourglass-half"></i> Set as Pending
@@ -2723,8 +2664,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                   type="button"
                   onClick={() => handleToggleDocStatus(activeDocIndex, 'Verified')}
                   className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${activeDoc.status === 'Verified'
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 border border-emerald-200 dark:border-emerald-800'
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 border border-emerald-200 dark:border-emerald-800'
                     }`}
                 >
                   <i className="fa-solid fa-check text-xs"></i> Verified
@@ -2734,8 +2675,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                   type="button"
                   onClick={() => handleToggleDocStatus(activeDocIndex, 'Rejected')}
                   className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${activeDoc.status === 'Rejected'
-                      ? 'bg-rose-600 text-white'
-                      : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 hover:bg-rose-100 border border-rose-200 dark:border-rose-800'
+                    ? 'bg-rose-600 text-white'
+                    : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 hover:bg-rose-100 border border-rose-200 dark:border-rose-800'
                     }`}
                 >
                   <i className="fa-solid fa-xmark text-xs"></i> Rejected
