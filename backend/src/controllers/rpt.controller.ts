@@ -4,6 +4,95 @@ import pool from '../db.js';
 import { recordAudit } from './audit.controller.js';
 import type { RptPaymentBody } from '../types/index.js';
 
+const PAYMONGO_SECRET_KEY = process.env.PAYMONGO_SECRET_KEY || '';
+
+async function verifyPaymongoSession(
+  sessionId: string | null | undefined
+): Promise<{ paid: boolean; amount: number | null; rawStatus: string | null }> {
+  if (!sessionId) {
+    return { paid: false, amount: null, rawStatus: null };
+  }
+
+  if (!PAYMONGO_SECRET_KEY) {
+    console.error(
+      'PAYMONGO_SECRET_KEY is not configured — refusing to trust client-supplied payment status.'
+    );
+    return { paid: false, amount: null, rawStatus: null };
+  }
+
+  try {
+    const authHeader =
+      'Basic ' + Buffer.from(`${PAYMONGO_SECRET_KEY}:`).toString('base64');
+
+    const response = await fetch(
+      `https://api.paymongo.com/v1/checkout_sessions/${sessionId}`,
+      {
+        method: 'GET',
+        headers: {
+          Authorization: authHeader,
+          Accept: 'application/json'
+        }
+      }
+    );
+
+    if (!response.ok) {
+      console.error(
+        `PayMongo verification failed (HTTP ${response.status}) for session ${sessionId}`
+      );
+      return { paid: false, amount: null, rawStatus: null };
+    }
+
+    const body = await response.json() as {
+      data?: {
+        attributes?: {
+          payment_intent?: {
+            attributes?: {
+              status?: string;
+              amount?: number;
+            };
+          };
+          payments?: Array<{
+            attributes?: { status?: string; amount?: number };
+          }>;
+        };
+      };
+    };
+
+    const attrs = body?.data?.attributes;
+    const intentStatus = attrs?.payment_intent?.attributes?.status;
+    const intentAmount = attrs?.payment_intent?.attributes?.amount;
+
+    if (intentStatus === 'succeeded' && typeof intentAmount === 'number') {
+      return {
+        paid: true,
+        amount: intentAmount / 100,
+        rawStatus: intentStatus
+      };
+    }
+
+    const paidPayment = (attrs?.payments || []).find(
+      (p) => p?.attributes?.status === 'paid'
+    );
+
+    if (paidPayment && typeof paidPayment.attributes?.amount === 'number') {
+      return {
+        paid: true,
+        amount: paidPayment.attributes.amount / 100,
+        rawStatus: 'paid'
+      };
+    }
+
+    return {
+      paid: false,
+      amount: null,
+      rawStatus: intentStatus || 'unknown'
+    };
+  } catch (err) {
+    console.error('Error verifying PayMongo session:', sessionId, err);
+    return { paid: false, amount: null, rawStatus: null };
+  }
+}
+
 export async function getRptApplications(req: Request, res: Response): Promise<void> {
   try {
     const authenticatedUser = (req as Request & {
@@ -403,7 +492,6 @@ export async function updateRptApplicationStatus(
     return;
   }
 
-  // If payment status is marked Paid/Settled and status was For Payment, promote to Payment Completed
   const finalStatus =
     status ||
     ((paymentStatus === 'Paid' || paymentStatus === 'Settled')
@@ -956,6 +1044,19 @@ export async function createRptPayment(
   };
 
   try {
+    const verification = await verifyPaymongoSession(paymongoSessionId);
+
+    if (!verification.paid) {
+      res.status(402).json({
+        success: false,
+        message:
+          'Payment could not be verified with PayMongo. No payment was recorded.'
+      });
+      return;
+    }
+
+    const verifiedAmount = verification.amount as number;
+
     await pool.query(
       `INSERT INTO citizen_rpt_payments
        (
@@ -989,7 +1090,7 @@ export async function createRptPayment(
         rptRecordId || null,
         taxDeclarationNumber,
         ownerName,
-        amount,
+        verifiedAmount,
         paymentMethod,
         paymentReference,
         officialReceiptNumber,
@@ -1048,7 +1149,7 @@ export async function createRptPayment(
            )
          )`,
         [
-          amount,
+          verifiedAmount,
           paymentMethod,
           officialReceiptNumber,
           paymentReference,
@@ -1123,6 +1224,36 @@ export async function createGroupRptPayment(
       .slice(-8)}`;
 
   try {
+    const verification = await verifyPaymongoSession(paymongoSessionId);
+
+    if (!verification.paid) {
+      res.status(402).json({
+        success: false,
+        message:
+          'Payment could not be verified with PayMongo. No payment was recorded.'
+      });
+      return;
+    }
+
+    const claimedTotal = items.reduce(
+      (sum: number, item: any) =>
+        sum + parseFloat(item.totalAmount || item.amount || 0),
+      0
+    );
+
+    const verifiedTotal = verification.amount as number;
+    if (Math.abs(claimedTotal - verifiedTotal) > 1) {
+      console.error(
+        `Group payment mismatch: claimed ${claimedTotal} vs PayMongo-verified ${verifiedTotal} (session ${paymongoSessionId})`
+      );
+      res.status(402).json({
+        success: false,
+        message:
+          'Payment amount could not be reconciled with PayMongo. No payment was recorded.'
+      });
+      return;
+    }
+
     let totalPaid = 0;
 
     const processedItems: Array<{
