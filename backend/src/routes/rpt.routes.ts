@@ -36,11 +36,13 @@ router.post(
 
 router.delete(
   '/citizen-rpt-applications/:id',
+  authenticateToken,
   deleteRptApplication
 );
 
 router.patch(
   '/citizen-rpt-applications/:id/status',
+  authenticateToken,
   updateRptApplicationStatus
 );
 
@@ -58,16 +60,19 @@ router.get(
 
 router.post(
   '/lgu-rpt-records',
+  authenticateToken,
   createLguRptRecord
 );
 
 router.put(
   '/lgu-rpt-records/:id',
+  authenticateToken,
   updateLguRptRecord
 );
 
 router.delete(
   '/lgu-rpt-records/:id',
+  authenticateToken,
   deleteLguRptRecord
 );
 
