@@ -1,7 +1,5 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import type {
-  StatusType
-} from '../types/treasury';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import type { StatusType } from '../types/treasury';
 import {
   getRPTApplications,
   getLguMasterRptRecords,
@@ -9,11 +7,26 @@ import {
   updateRptApplicationStatus,
   updateLguMasterRptRecord,
   deleteLguMasterRptRecord,
-  type RPTApplicationRecord
+  deleteRptApplication,
+  type RPTApplicationRecord,
 } from '../services/realpropertytaxService';
 import { API_BASE_URL } from '../config/api';
 
-type ExtendedStatusType = StatusType | 'Archived';
+type ExtendedStatusType =
+  | StatusType
+  | 'Archived'
+  | 'Submitted'
+  | 'For Review'
+  | 'Under Evaluation'
+  | 'For Compliance'
+  | 'Processing'
+  | 'Approved'
+  | 'For Payment'
+  | 'Payment Completed'
+  | 'Ready for Release'
+  | 'Rejected'
+  | 'Completed'
+  | 'Digital Certificate Issued';
 
 export interface LguMasterProperty {
   id: number | string;
@@ -58,6 +71,15 @@ export interface PaymentLedgerRecord {
   status: string;
 }
 
+export interface ApplicationDocument {
+  id: string;
+  name: string;
+  type: string;
+  url?: string;
+  status: 'Verified' | 'Rejected' | 'Pending';
+  uploadedAt: string;
+}
+
 interface ExtendedApplicationRecord extends Omit<RPTApplicationRecord, 'documents' | 'status'> {
   status: ExtendedStatusType;
   referenceNumber: string;
@@ -81,22 +103,13 @@ interface ExtendedApplicationRecord extends Omit<RPTApplicationRecord, 'document
     address: string;
     currentValuation?: number;
   };
-  documents: {
-    id: string;
-    name: string;
-    type: string;
-    url?: string;
-    status: 'Verified' | 'Rejected' | 'Pending';
-    uploadedAt: string;
-  }[];
-
+  documents: ApplicationDocument[];
   auditLogs?: {
     id: string;
     timestamp: string;
     officer: string;
     action: string;
   }[];
-
   notificationLogs?: {
     id: string;
     timestamp: string;
@@ -104,10 +117,8 @@ interface ExtendedApplicationRecord extends Omit<RPTApplicationRecord, 'document
     message: string;
     status: 'Delivered' | 'Pending';
   }[];
-
   aiFraudRisk?: 'Low' | 'Medium' | 'High';
   aiFraudReason?: string;
-
   digitalRelease?: {
     releaseMethod: 'Digital';
     releasedAt?: string;
@@ -122,6 +133,7 @@ interface ExtendedApplicationRecord extends Omit<RPTApplicationRecord, 'document
 
 export interface RealPropertyTaxViewProps {
   isCollapsed: boolean;
+  [key: string]: any;
 }
 
 function formatCurrency(val: number): string {
@@ -133,9 +145,9 @@ function formatCurrency(val: number): string {
 }
 
 export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
-  isCollapsed
+  isCollapsed,
 }) => {
-
+  // Navigation tabs
   const [mainViewTab, setMainViewTab] = useState<'master' | 'queue' | 'payments' | 'citizenAudit'>(
     () => (localStorage.getItem('rpt_admin_tab') as 'master' | 'queue' | 'payments' | 'citizenAudit') || 'master'
   );
@@ -144,18 +156,27 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     setMainViewTab(tab);
     localStorage.setItem('rpt_admin_tab', tab);
   };
+
+  // Master Database subtabs (Active vs Archiver)
+  const [masterTab, setMasterTab] = useState<'Active' | 'Archived'>('Active');
+  // Citizen Applications subtabs (Active vs Archiver)
   const [queueTab, setQueueTab] = useState<'Active' | 'Archived'>('Active');
 
+  // Master Properties state
   const [masterProperties, setMasterProperties] = useState<LguMasterProperty[]>([]);
   const [masterSearch, setMasterSearch] = useState<string>('');
   const [masterTypeFilter, setMasterTypeFilter] = useState<string>('ALL');
   const [masterStatusFilter, setMasterStatusFilter] = useState<string>('ALL');
   const [isPropertyModalOpen, setIsPropertyModalOpen] = useState<boolean>(false);
   const [editingProperty, setEditingProperty] = useState<Partial<LguMasterProperty> | null>(null);
+  const [masterEntriesPerPage, setMasterEntriesPerPage] = useState<number>(10);
+  const [masterCurrentPage, setMasterCurrentPage] = useState<number>(1);
 
+  // Payments ledger state
   const [paymentsLedger, setPaymentsLedger] = useState<PaymentLedgerRecord[]>([]);
   const [paymentSearch, setPaymentSearch] = useState<string>('');
 
+  // Applications queue state
   const [applications, setApplications] = useState<ExtendedApplicationRecord[]>([]);
   const [citizenAuditTrail, setCitizenAuditTrail] = useState<ExtendedApplicationRecord[]>([]);
   const [selectedAppId, setSelectedAppId] = useState<string>('');
@@ -164,10 +185,15 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('ALL');
   const [rptServiceAmountInput, setRptServiceAmountInput] = useState<string>('');
 
-  const [previewDocUrl, setPreviewDocUrl] = useState<string | null>(null);
-  const [previewDocTitle, setPreviewDocTitle] = useState<string>('');
+  // Document Preview Pop-Up Modal State
+  const [previewModalOpen, setPreviewModalOpen] = useState<boolean>(false);
+  const [previewDocList, setPreviewDocList] = useState<ApplicationDocument[]>([]);
+  const [activeDocIndex, setActiveDocIndex] = useState<number>(0);
+  const [previewTabMode, setPreviewTabMode] = useState<'viewer' | 'details'>('viewer');
+  const [previewZoom, setPreviewZoom] = useState<number>(100);
   const [previewDocError, setPreviewDocError] = useState<boolean>(false);
 
+  // Toast message state
   const [toastMessage, setToastMessage] = useState<{
     text: string;
     type: 'success' | 'warning' | 'error';
@@ -180,7 +206,10 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     }, 4000);
   };
 
-  const loadMasterRecords = async () => {
+  // -------------------------------------------------------------
+  // Data Fetching
+  // -------------------------------------------------------------
+  const loadMasterRecords = useCallback(async () => {
     try {
       const records = await getLguMasterRptRecords();
       const mapped: LguMasterProperty[] = records.map((r: any) => ({
@@ -215,9 +244,9 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     } catch (e) {
       console.error('Failed to load master records:', e);
     }
-  };
+  }, []);
 
-  const loadPayments = async () => {
+  const loadPayments = useCallback(async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/citizen-rpt-payments`);
       if (response.ok) {
@@ -241,11 +270,11 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     } catch (e) {
       console.error('Failed to load payments ledger:', e);
     }
-  };
+  }, []);
 
-  const AUDIT_STATUSES = ['Digital Certificate Issued', 'Completed', 'Archived'];
+  const AUDIT_STATUSES = ['Digital Certificate Issued', 'Completed'];
 
-  const loadApplications = async () => {
+  const loadApplications = useCallback(async () => {
     try {
       const data = await getRPTApplications();
       const mapped: ExtendedApplicationRecord[] = (Array.isArray(data) ? data : []).map((item: any) => {
@@ -279,15 +308,14 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
             address: item.propertyLocation || '',
             currentValuation: item.currentValuation || 0,
           },
-          documents: (Array.isArray(rawDocs) ? rawDocs : []).reduce((acc: any[], doc: any, idx: number) => {
-            // Skip null/undefined entries — do not inject placeholder docs
+          documents: (Array.isArray(rawDocs) ? rawDocs : []).reduce((acc: ApplicationDocument[], doc: any, idx: number) => {
             if (!doc) return acc;
             if (typeof doc === 'string') {
-              if (!doc.trim()) return acc; // skip empty strings
+              if (!doc.trim()) return acc;
               acc.push({
                 id: `DOC-${idx + 1}`,
                 name: doc,
-                type: doc.includes('.pdf') ? 'PDF' : 'IMAGE',
+                type: doc.toLowerCase().includes('.pdf') ? 'PDF' : 'IMAGE',
                 url: doc.startsWith('data:') || doc.startsWith('http') ? doc : `${API_BASE_URL}/uploads/${doc}`,
                 status: 'Pending' as const,
                 uploadedAt: item.filedDate || '',
@@ -295,11 +323,11 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
               return acc;
             }
             const docName = doc.name || doc.fileName || '';
-            if (!docName) return acc; // skip entries with no real filename
+            if (!docName) return acc;
             acc.push({
               id: doc.id || `DOC-${idx + 1}`,
               name: docName,
-              type: doc.type || 'PDF',
+              type: doc.type || (docName.toLowerCase().includes('.pdf') ? 'PDF' : 'IMAGE'),
               url: doc.url
                 ? doc.url.startsWith('data:') || doc.url.startsWith('http')
                   ? doc.url
@@ -315,27 +343,56 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         };
       });
 
-
+      // Split into Audit Trail vs Applications (Archived remains in applications!)
       const auditApps = mapped.filter((a) => AUDIT_STATUSES.includes(a.status as string));
       const activeApps = mapped.filter((a) => !AUDIT_STATUSES.includes(a.status as string));
 
       setApplications(activeApps);
       setCitizenAuditTrail(auditApps);
 
-      if (activeApps.length > 0) {
+      if (activeApps.length > 0 && !selectedAppId) {
         setSelectedAppId(activeApps[0].id);
       }
     } catch (err) {
       console.error('Failed to load RPT applications:', err);
     }
-  };
+  }, [selectedAppId]);
+
+  const refreshAllData = useCallback(async () => {
+    await Promise.all([loadMasterRecords(), loadPayments(), loadApplications()]);
+    triggerToast('RPT Admin data synchronized.', 'success');
+  }, [loadMasterRecords, loadPayments, loadApplications]);
 
   useEffect(() => {
     loadMasterRecords();
     loadPayments();
     loadApplications();
-  }, []);
 
+    const intervalId = setInterval(() => {
+      loadMasterRecords();
+      loadPayments();
+      loadApplications();
+    }, 5000);
+
+    const handleFocus = () => {
+      loadMasterRecords();
+      loadPayments();
+      loadApplications();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('visibilitychange', handleFocus);
+    window.addEventListener('db_treasury_updated', handleFocus);
+
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('visibilitychange', handleFocus);
+      window.removeEventListener('db_treasury_updated', handleFocus);
+    };
+  }, [loadMasterRecords, loadPayments, loadApplications]);
+
+  // Current selected application
   const currentApp = useMemo(() => {
     return applications.find((app) => app.id === selectedAppId) || applications[0];
   }, [applications, selectedAppId]);
@@ -346,28 +403,80 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     );
   }, [currentApp?.id, currentApp?.paymentAmount]);
 
+  // -------------------------------------------------------------
+  // KPI Metrics Calculation
+  // -------------------------------------------------------------
+  const metrics = useMemo(() => {
+    const activeMaster = masterProperties.filter((p) => p.status !== 'Archived');
+    const totalMaster = activeMaster.length;
+    const activeApps = applications.filter((a) => a.status !== 'Archived').length;
+    const totalPaidRevenue = paymentsLedger.reduce((sum, p) => sum + (p.amountPaid || 0), 0);
+
+    let pendingBalance = 0;
+    let unpaidCount = 0;
+    activeMaster.forEach((p) => {
+      if (p.paymentStatus !== 'Paid') {
+        pendingBalance += p.balance || p.totalAssessment || 0;
+        unpaidCount++;
+      }
+    });
+
+    return {
+      totalMaster,
+      activeApps,
+      totalPaidRevenue,
+      pendingBalance,
+      unpaidCount,
+    };
+  }, [masterProperties, applications, paymentsLedger]);
+
+  // -------------------------------------------------------------
+  // Filtered Master Properties
+  // -------------------------------------------------------------
   const filteredMasterProperties = useMemo(() => {
+    const lowerSearch = masterSearch.toLowerCase();
     return masterProperties.filter((p) => {
+      const isArchived = p.status === 'Archived';
+      if (masterTab === 'Active' && isArchived) return false;
+      if (masterTab === 'Archived' && !isArchived) return false;
+
       const matchesSearch =
-        p.taxDeclarationNumber.toLowerCase().includes(masterSearch.toLowerCase()) ||
-        p.ownerName.toLowerCase().includes(masterSearch.toLowerCase()) ||
-        p.newPspin.toLowerCase().includes(masterSearch.toLowerCase()) ||
-        p.barangay.toLowerCase().includes(masterSearch.toLowerCase());
+        !lowerSearch ||
+        p.taxDeclarationNumber.toLowerCase().includes(lowerSearch) ||
+        p.ownerName.toLowerCase().includes(lowerSearch) ||
+        p.newPspin.toLowerCase().includes(lowerSearch) ||
+        p.barangay.toLowerCase().includes(lowerSearch);
+
       const matchesType = masterTypeFilter === 'ALL' || p.propertyType === masterTypeFilter;
       const matchesStatus = masterStatusFilter === 'ALL' || p.paymentStatus === masterStatusFilter;
+
       return matchesSearch && matchesType && matchesStatus;
     });
-  }, [masterProperties, masterSearch, masterTypeFilter, masterStatusFilter]);
+  }, [masterProperties, masterSearch, masterTypeFilter, masterStatusFilter, masterTab]);
 
+  const paginatedMasterProperties = useMemo(() => {
+    const startIndex = (masterCurrentPage - 1) * masterEntriesPerPage;
+    return filteredMasterProperties.slice(startIndex, startIndex + masterEntriesPerPage);
+  }, [filteredMasterProperties, masterCurrentPage, masterEntriesPerPage]);
+
+  const masterTotalPages = Math.ceil(filteredMasterProperties.length / masterEntriesPerPage) || 1;
+
+  // -------------------------------------------------------------
+  // Filtered Applications
+  // -------------------------------------------------------------
   const filteredApplications = useMemo(() => {
+    const lowerSearch = searchTerm.toLowerCase();
     return applications.filter((app) => {
-      if (queueTab === 'Active' && app.status === 'Archived') return false;
-      if (queueTab === 'Archived' && app.status !== 'Archived') return false;
+      const isArchived = app.status === 'Archived';
+      if (queueTab === 'Active' && isArchived) return false;
+      if (queueTab === 'Archived' && !isArchived) return false;
 
       const matchesSearch =
-        app.referenceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        app.applicantName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        app.propertyDetails.address.toLowerCase().includes(searchTerm.toLowerCase());
+        !lowerSearch ||
+        app.referenceNumber.toLowerCase().includes(lowerSearch) ||
+        app.applicantName.toLowerCase().includes(lowerSearch) ||
+        app.propertyDetails.address.toLowerCase().includes(lowerSearch);
+
       const matchesCategory = selectedCategory === 'ALL' || app.category === selectedCategory;
       const matchesStatus = selectedStatusFilter === 'ALL' || app.status === selectedStatusFilter;
 
@@ -375,10 +484,13 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     });
   }, [applications, searchTerm, selectedCategory, selectedStatusFilter, queueTab]);
 
+  // -------------------------------------------------------------
+  // Master Property Operations (Create/Edit, Archive, Restore, Delete)
+  // -------------------------------------------------------------
   const handleSavePropertyRecord = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingProperty?.taxDeclarationNumber || !editingProperty?.ownerName) {
-      triggerToast('Please provide TDN and Owner Name.', 'warning');
+      triggerToast('Please provide Tax Declaration Number and Owner Name.', 'warning');
       return;
     }
 
@@ -387,8 +499,11 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         await updateLguMasterRptRecord(editingProperty.id, editingProperty);
         triggerToast(`Property record ${editingProperty.taxDeclarationNumber} updated successfully.`, 'success');
       } else {
-        await createLguMasterRptRecord(editingProperty);
-        triggerToast(`New Property ${editingProperty.taxDeclarationNumber} added to master database.`, 'success');
+        await createLguMasterRptRecord({
+          ...editingProperty,
+          status: 'Active',
+        });
+        triggerToast(`New property assessment ${editingProperty.taxDeclarationNumber} registered.`, 'success');
       }
       setIsPropertyModalOpen(false);
       setEditingProperty(null);
@@ -398,14 +513,43 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     }
   };
 
+  const handleArchiveMasterProperty = async (prop: LguMasterProperty) => {
+    if (window.confirm(`Are you sure you want to move assessment record ${prop.taxDeclarationNumber} to the Archiver?`)) {
+      try {
+        await updateLguMasterRptRecord(prop.id, { status: 'Archived' });
+        setMasterProperties((prev) =>
+          prev.map((p) => (p.id === prop.id ? { ...p, status: 'Archived' } : p))
+        );
+        triggerToast(`Assessment record ${prop.taxDeclarationNumber} moved to Archiver.`, 'success');
+      } catch (err: any) {
+        triggerToast(err.message || 'Failed to archive assessment record.', 'error');
+      }
+    }
+  };
+
+  const handleRestoreMasterProperty = async (prop: LguMasterProperty) => {
+    if (window.confirm(`Are you sure you want to restore assessment record ${prop.taxDeclarationNumber} to Active?`)) {
+      try {
+        await updateLguMasterRptRecord(prop.id, { status: 'Active' });
+        setMasterProperties((prev) =>
+          prev.map((p) => (p.id === prop.id ? { ...p, status: 'Active' } : p))
+        );
+        triggerToast(`Assessment record ${prop.taxDeclarationNumber} restored to Active registry.`, 'success');
+      } catch (err: any) {
+        triggerToast(err.message || 'Failed to restore assessment record.', 'error');
+      }
+    }
+  };
+
   const handleDeleteMasterProperty = async (id: string | number, tdn: string) => {
-    if (!window.confirm(`Are you sure you want to delete assessment record ${tdn}?`)) return;
-    try {
-      await deleteLguMasterRptRecord(id);
-      triggerToast(`Assessment record ${tdn} deleted.`, 'success');
-      loadMasterRecords();
-    } catch (err: any) {
-      triggerToast(err.message || 'Failed to delete record.', 'error');
+    if (window.confirm(`WARNING: Are you sure you want to PERMANENTLY delete assessment record ${tdn}? This action cannot be undone.`)) {
+      try {
+        await deleteLguMasterRptRecord(id);
+        setMasterProperties((prev) => prev.filter((p) => p.id !== id));
+        triggerToast(`Assessment record ${tdn} permanently deleted.`, 'success');
+      } catch (err: any) {
+        triggerToast(err.message || 'Failed to delete record.', 'error');
+      }
     }
   };
 
@@ -431,74 +575,56 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     }));
   };
 
-  const createDocumentFallbackSvg = (title: string) => {
-    const cleanTitle = title.replace(/^\d+-\d+-/, '').replace(/\.[^/.]+$/, '').replace(/[._-]/g, ' ');
-    const ext = (title.split('.').pop() || 'DOC').toUpperCase();
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1050" width="100%" height="100%">
-      <rect width="800" height="1050" fill="#F8FAFC" rx="16"/>
-      <rect x="20" y="20" width="760" height="1010" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="2" rx="12"/>
-      <rect x="40" y="40" width="720" height="110" fill="#0B3B60" rx="8"/>
-      <text x="400" y="80" fill="#93C5FD" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="700" letter-spacing="2" text-anchor="middle">REPUBLIC OF THE PHILIPPINES</text>
-      <text x="400" y="115" fill="#FFFFFF" font-family="system-ui, -apple-system, sans-serif" font-size="20" font-weight="900" text-anchor="middle">CITY ASSESSOR &amp; TREASURY OFFICE</text>
-      
-      <rect x="60" y="190" width="680" height="400" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1.5" rx="10"/>
-      <rect x="60" y="190" width="680" height="42" fill="#F1F5F9" rx="10"/>
-      <text x="90" y="217" fill="#475569" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="800" letter-spacing="1">ATTACHED DOCUMENT RECORD</text>
-      
-      <text x="90" y="275" fill="#64748B" font-family="system-ui, -apple-system, sans-serif" font-size="13">Document Name:</text>
-      <text x="250" y="275" fill="#0F172A" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="700">${title}</text>
-      
-      <text x="90" y="325" fill="#64748B" font-family="system-ui, -apple-system, sans-serif" font-size="13">Document Type:</text>
-      <text x="250" y="325" fill="#0284C7" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="700">${ext} Document</text>
-      
-      <text x="90" y="375" fill="#64748B" font-family="system-ui, -apple-system, sans-serif" font-size="13">Classification:</text>
-      <text x="250" y="375" fill="#0F172A" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="600">${cleanTitle}</text>
-      
-      <text x="90" y="425" fill="#64748B" font-family="system-ui, -apple-system, sans-serif" font-size="13">Verification Status:</text>
-      <rect x="250" y="407" width="140" height="26" fill="#DCFCE7" rx="6"/>
-      <text x="320" y="425" fill="#166534" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="800" text-anchor="middle">VERIFIED ON FILE</text>
+  const handleExportMasterCSV = () => {
+    const list = masterTab === 'Active'
+      ? masterProperties.filter((p) => p.status !== 'Archived')
+      : filteredMasterProperties;
 
-      <text x="90" y="475" fill="#64748B" font-family="system-ui, -apple-system, sans-serif" font-size="13">Registry Archive:</text>
-      <text x="250" y="475" fill="#0F172A" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="600">Quezon City Local Government Unit</text>
-
-      <line x1="90" y1="510" x2="710" y2="510" stroke="#E2E8F0" stroke-width="1"/>
-      <text x="400" y="545" fill="#64748B" font-family="system-ui, -apple-system, sans-serif" font-size="12" text-anchor="middle">This document is certified and recorded in the Real Property Tax management archive.</text>
-
-      <rect x="60" y="630" width="680" height="240" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5" rx="10"/>
-      <text x="90" y="670" fill="#0B3B60" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="700">DOCUMENT PREVIEW CERTIFICATION</text>
-      <text x="90" y="700" fill="#475569" font-family="system-ui, -apple-system, sans-serif" font-size="12">Registered under Application Filing. Official documentation acknowledged by treasury evaluation officers.</text>
-      <text x="90" y="725" fill="#64748B" font-family="system-ui, -apple-system, sans-serif" font-size="12">Documentary proof is recognized for Assessment, Tax Declaration, and Transfer of Ownership procedures.</text>
-
-      <circle cx="620" cy="750" r="50" fill="none" stroke="#0284C7" stroke-width="2" stroke-dasharray="4 2"/>
-      <circle cx="620" cy="750" r="44" fill="none" stroke="#0B3B60" stroke-width="1.5"/>
-      <text x="620" y="746" fill="#0B3B60" font-family="system-ui, -apple-system, sans-serif" font-size="10" font-weight="900" text-anchor="middle">OFFICIAL</text>
-      <text x="620" y="760" fill="#0284C7" font-family="system-ui, -apple-system, sans-serif" font-size="10" font-weight="900" text-anchor="middle">ARCHIVE</text>
-
-      <text x="90" y="930" fill="#0F172A" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="700">CITY ASSESSOR &amp; TREASURER</text>
-      <text x="90" y="950" fill="#64748B" font-family="system-ui, -apple-system, sans-serif" font-size="12">Document Repository &amp; Compliance Office</text>
-    </svg>`;
-    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
-  };
-
-  const handleOpenPreview = (doc: { name: string; url?: string }) => {
-    let targetUrl = doc.url || '';
-    if (!targetUrl || targetUrl.trim() === '') targetUrl = doc.name;
-    if (targetUrl.startsWith('data:') || targetUrl.startsWith('http://') || targetUrl.startsWith('https://')) {
-    } else if (targetUrl.startsWith('/uploads/')) {
-      targetUrl = `${API_BASE_URL}${targetUrl}`;
-    } else if (targetUrl.trim() !== '') {
-      targetUrl = `${API_BASE_URL}/uploads/${targetUrl}`;
-    } else {
-      targetUrl = createDocumentFallbackSvg(doc.name || 'Document');
+    if (list.length === 0) {
+      triggerToast('No records available to export.', 'warning');
+      return;
     }
-    setPreviewDocError(false);
-    setPreviewDocTitle(doc.name || 'Document');
-    setPreviewDocUrl(targetUrl);
+
+    const headers = [
+      'Tax Declaration No.',
+      'Owner Name',
+      'NewPSPIN',
+      'Barangay',
+      'Property Type',
+      'Assessed Value',
+      'Tax Due',
+      'Payment Status',
+      'Record Status',
+    ];
+
+    const rows = list.map((p) => [
+      `"${p.taxDeclarationNumber}"`,
+      `"${p.ownerName}"`,
+      `"${p.newPspin}"`,
+      `"${p.barangay}"`,
+      `"${p.propertyType}"`,
+      p.assessedValue || 0,
+      p.balance || p.totalAssessment || 0,
+      `"${p.paymentStatus}"`,
+      `"${p.status}"`,
+    ]);
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `QC_RPT_Master_Assessment_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    triggerToast('Master assessment CSV exported successfully.', 'success');
   };
 
+  // -------------------------------------------------------------
+  // Citizen Application Operations (Status, Archive, Restore, Delete)
+  // -------------------------------------------------------------
   const handleUpdateStatus = async (newStatus: ExtendedStatusType) => {
     if (!currentApp) return;
-
 
     try {
       const result = await updateRptApplicationStatus(
@@ -532,11 +658,52 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
 
       triggerToast(`Application workflow advanced to "${newStatus}".`, 'success');
     } catch (error: any) {
-      console.error('Failed to persist RPT application status:', error);
-      triggerToast(
-        error?.message || 'Failed to save the application status. Please try again.',
-        'error'
-      );
+      console.error('Failed to update status:', error);
+      triggerToast(error?.message || 'Failed to update application status.', 'error');
+    }
+  };
+
+  const handleArchiveApplication = async (app: ExtendedApplicationRecord) => {
+    if (window.confirm(`Are you sure you want to move application ${app.referenceNumber} to the Archiver?`)) {
+      try {
+        await updateRptApplicationStatus(String(app.id), 'Archived');
+        setApplications((prev) =>
+          prev.map((a) => (a.id === app.id ? { ...a, status: 'Archived' } : a))
+        );
+        triggerToast(`Application ${app.referenceNumber} moved to Archiver.`, 'success');
+      } catch (err: any) {
+        triggerToast(err.message || 'Failed to archive application.', 'error');
+      }
+    }
+  };
+
+  const handleRestoreApplication = async (app: ExtendedApplicationRecord) => {
+    if (window.confirm(`Are you sure you want to restore application ${app.referenceNumber}?`)) {
+      try {
+        await updateRptApplicationStatus(String(app.id), 'Under Evaluation');
+        setApplications((prev) =>
+          prev.map((a) => (a.id === app.id ? { ...a, status: 'Under Evaluation' } : a))
+        );
+        triggerToast(`Application ${app.referenceNumber} restored to active evaluation.`, 'success');
+      } catch (err: any) {
+        triggerToast(err.message || 'Failed to restore application.', 'error');
+      }
+    }
+  };
+
+  const handlePermanentDeleteApplication = async (appId: string, refNum: string) => {
+    if (window.confirm(`WARNING: Are you sure you want to PERMANENTLY delete application ${refNum}? This action cannot be undone.`)) {
+      try {
+        await deleteRptApplication(appId);
+        setApplications((prev) => prev.filter((a) => a.id !== appId));
+        if (selectedAppId === appId) {
+          const remaining = applications.filter((a) => a.id !== appId);
+          setSelectedAppId(remaining.length > 0 ? remaining[0].id : '');
+        }
+        triggerToast(`Application ${refNum} permanently deleted.`, 'success');
+      } catch (err: any) {
+        triggerToast(err.message || 'Failed to delete application.', 'error');
+      }
     }
   };
 
@@ -547,10 +714,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     const serviceName = currentApp.category || currentApp.service || 'RPT Service';
 
     if (!Number.isFinite(amount) || amount <= 0) {
-      triggerToast(
-        `Enter the assessed ${serviceName} fee before sending the application for payment.`,
-        'warning'
-      );
+      triggerToast(`Enter the assessed ${serviceName} fee before sending the application for payment.`, 'warning');
       return;
     }
 
@@ -571,29 +735,21 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         prev.map((app) =>
           app.id === currentApp.id
             ? {
-              ...app,
-              ...(serverRecord || {}),
-              status: serverRecord?.status || 'For Payment',
-              paymentAmount: amount,
-              paymentStatus:
-                serverRecord?.payment_status || 'Pending',
-            }
+                ...app,
+                ...(serverRecord || {}),
+                status: serverRecord?.status || 'For Payment',
+                paymentAmount: amount,
+                paymentStatus: serverRecord?.payment_status || 'Pending',
+              }
             : app
         )
       );
 
-      triggerToast(
-        `${serviceName} assessment posted: ${formatCurrency(amount)}. Citizen can now pay online.`,
-        'success'
-      );
+      triggerToast(`${serviceName} assessment posted: ${formatCurrency(amount)}. Citizen can now pay online.`, 'success');
     } catch (error: any) {
-      triggerToast(
-        error?.message || `Failed to post the ${serviceName} assessment.`,
-        'error'
-      );
+      triggerToast(error?.message || `Failed to post the ${serviceName} assessment.`, 'error');
     }
   };
-
 
   const handleDigitalRelease = async () => {
     if (!currentApp) return;
@@ -615,7 +771,6 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
       },
     };
 
-
     try {
       await updateRptApplicationStatus(String(currentApp.id), 'Digital Certificate Issued');
     } catch (err) {
@@ -628,23 +783,122 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     triggerToast(`Digital Tax Certificate issued for ${currentApp.referenceNumber}. Transferred to Audit Trail.`, 'success');
   };
 
+  // -------------------------------------------------------------
+  // Document Inspection & Preview Pop-Up Tab Modal Handlers
+  // -------------------------------------------------------------
+  const createDocumentFallbackSvg = (title: string, docStatus = 'VERIFIED ON FILE') => {
+    const cleanTitle = title.replace(/^\d+-\d+-/, '').replace(/\.[^/.]+$/, '').replace(/[._-]/g, ' ');
+    const ext = (title.split('.').pop() || 'DOC').toUpperCase();
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1050" width="100%" height="100%">
+      <rect width="800" height="1050" fill="#F8FAFC" rx="16"/>
+      <rect x="20" y="20" width="760" height="1010" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="2" rx="12"/>
+      <rect x="40" y="40" width="720" height="110" fill="#0B3B60" rx="8"/>
+      <text x="400" y="80" fill="#93C5FD" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="700" letter-spacing="2" text-anchor="middle">REPUBLIC OF THE PHILIPPINES</text>
+      <text x="400" y="115" fill="#FFFFFF" font-family="system-ui, -apple-system, sans-serif" font-size="20" font-weight="900" text-anchor="middle">CITY ASSESSOR &amp; TREASURY OFFICE</text>
+      
+      <rect x="60" y="190" width="680" height="400" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1.5" rx="10"/>
+      <rect x="60" y="190" width="680" height="42" fill="#F1F5F9" rx="10"/>
+      <text x="90" y="217" fill="#475569" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="800" letter-spacing="1">ATTACHED DOCUMENT RECORD</text>
+      
+      <text x="90" y="275" fill="#64748B" font-family="system-ui, -apple-system, sans-serif" font-size="13">Document Name:</text>
+      <text x="250" y="275" fill="#0F172A" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="700">${title}</text>
+      
+      <text x="90" y="325" fill="#64748B" font-family="system-ui, -apple-system, sans-serif" font-size="13">Document Type:</text>
+      <text x="250" y="325" fill="#0284C7" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="700">${ext} Document</text>
+      
+      <text x="90" y="375" fill="#64748B" font-family="system-ui, -apple-system, sans-serif" font-size="13">Classification:</text>
+      <text x="250" y="375" fill="#0F172A" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="600">${cleanTitle}</text>
+      
+      <text x="90" y="425" fill="#64748B" font-family="system-ui, -apple-system, sans-serif" font-size="13">Verification Status:</text>
+      <rect x="250" y="407" width="160" height="26" fill="#DCFCE7" rx="6"/>
+      <text x="330" y="425" fill="#166534" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="800" text-anchor="middle">${docStatus}</text>
+
+      <text x="90" y="475" fill="#64748B" font-family="system-ui, -apple-system, sans-serif" font-size="13">Registry Archive:</text>
+      <text x="250" y="475" fill="#0F172A" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="600">Quezon City Local Government Unit</text>
+
+      <line x1="90" y1="510" x2="710" y2="510" stroke="#E2E8F0" stroke-width="1"/>
+      <text x="400" y="545" fill="#64748B" font-family="system-ui, -apple-system, sans-serif" font-size="12" text-anchor="middle">This document is certified and recorded in the Real Property Tax management archive.</text>
+
+      <rect x="60" y="630" width="680" height="240" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5" rx="10"/>
+      <text x="90" y="670" fill="#0B3B60" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="700">DOCUMENT PREVIEW CERTIFICATION</text>
+      <text x="90" y="700" fill="#475569" font-family="system-ui, -apple-system, sans-serif" font-size="12">Registered under Application Filing. Official documentation acknowledged by treasury evaluation officers.</text>
+      <text x="90" y="725" fill="#64748B" font-family="system-ui, -apple-system, sans-serif" font-size="12">Documentary proof is recognized for Assessment, Tax Declaration, and Transfer of Ownership procedures.</text>
+
+      <circle cx="620" cy="750" r="50" fill="none" stroke="#0284C7" stroke-width="2" stroke-dasharray="4 2"/>
+      <circle cx="620" cy="750" r="44" fill="none" stroke="#0B3B60" stroke-width="1.5"/>
+      <text x="620" y="746" fill="#0B3B60" font-family="system-ui, -apple-system, sans-serif" font-size="10" font-weight="900" text-anchor="middle">OFFICIAL</text>
+      <text x="620" y="760" fill="#0284C7" font-family="system-ui, -apple-system, sans-serif" font-size="10" font-weight="900" text-anchor="middle">ARCHIVE</text>
+
+      <text x="90" y="930" fill="#0F172A" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="700">CITY ASSESSOR &amp; TREASURER</text>
+      <text x="90" y="950" fill="#64748B" font-family="system-ui, -apple-system, sans-serif" font-size="12">Document Repository &amp; Compliance Office</text>
+    </svg>`;
+    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+  };
+
+  const getResolvedDocUrl = (doc: ApplicationDocument): string => {
+    let targetUrl = doc.url || '';
+    if (!targetUrl || targetUrl.trim() === '') targetUrl = doc.name;
+    if (targetUrl.startsWith('data:') || targetUrl.startsWith('http://') || targetUrl.startsWith('https://')) {
+      return targetUrl;
+    } else if (targetUrl.startsWith('/uploads/')) {
+      return `${API_BASE_URL}${targetUrl}`;
+    } else if (targetUrl.trim() !== '') {
+      return `${API_BASE_URL}/uploads/${targetUrl}`;
+    }
+    return createDocumentFallbackSvg(doc.name, doc.status === 'Verified' ? 'VERIFIED' : 'PENDING');
+  };
+
+  const handleOpenDocPreview = (docList: ApplicationDocument[], initialIndex = 0) => {
+    if (!docList || docList.length === 0) return;
+    setPreviewDocList(docList);
+    setActiveDocIndex(Math.max(0, Math.min(initialIndex, docList.length - 1)));
+    setPreviewTabMode('viewer');
+    setPreviewZoom(100);
+    setPreviewDocError(false);
+    setPreviewModalOpen(true);
+  };
+
+  const handleToggleDocStatus = (docIndex: number, newStatus: 'Verified' | 'Rejected' | 'Pending') => {
+    if (!currentApp || !previewDocList[docIndex]) return;
+    const targetDoc = previewDocList[docIndex];
+
+    const updatedDocs = previewDocList.map((d, i) =>
+      i === docIndex ? { ...d, status: newStatus } : d
+    );
+    setPreviewDocList(updatedDocs);
+
+    // Update in application documents
+    setApplications((prev) =>
+      prev.map((app) =>
+        app.id === currentApp.id ? { ...app, documents: updatedDocs } : app
+      )
+    );
+
+    triggerToast(`Document "${targetDoc.name}" marked as ${newStatus}.`, 'success');
+  };
+
+  const activeDoc = previewDocList[activeDocIndex] || null;
+  const activeDocUrl = activeDoc ? getResolvedDocUrl(activeDoc) : '';
+
   return (
     <div
       style={{
         marginLeft: isCollapsed ? '80px' : '256px',
         width: isCollapsed ? 'calc(100% - 80px)' : 'calc(100% - 256px)',
       }}
-      className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 px-4 sm:px-6 pb-6 pt-28 sm:pt-32 transition-all duration-300 box-border flex flex-col font-sans relative"
+      className="min-h-screen bg-slate-50/50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 p-6 pt-24 transition-all duration-300 box-border flex flex-col font-sans"
     >
+      {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed top-20 right-6 z-50 animate-in fade-in slide-in-from-top-4 duration-300">
+        <div className="fixed top-20 right-6 z-70 animate-in fade-in slide-in-from-top-4 duration-300">
           <div
-            className={`px-4 py-3 rounded-xl shadow-lg border flex items-center gap-3 text-xs font-semibold ${toastMessage.type === 'success'
-              ? 'bg-emerald-950 text-emerald-200 border-emerald-800'
-              : toastMessage.type === 'warning'
+            className={`px-4 py-3 rounded-2xl shadow-xl border flex items-center gap-3 text-xs font-bold ${
+              toastMessage.type === 'success'
+                ? 'bg-emerald-950 text-emerald-200 border-emerald-800'
+                : toastMessage.type === 'warning'
                 ? 'bg-amber-950 text-amber-200 border-amber-800'
                 : 'bg-rose-950 text-rose-200 border-rose-800'
-              }`}
+            }`}
           >
             <span>{toastMessage.type === 'success' ? '✓' : 'ℹ'}</span>
             <span>{toastMessage.text}</span>
@@ -652,97 +906,295 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         </div>
       )}
 
-      <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+      {/* Main Admin Header Card */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6 bg-white dark:bg-slate-900/80 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs backdrop-blur-md">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
-            <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 tracking-wider uppercase">
-              OFFICE OF THE CITY ASSESSOR &amp; TREASURER
+          <div className="flex flex-wrap items-center gap-2 mb-1">
+            <span className="h-2 w-2 rounded-full bg-blue-600 animate-pulse"></span>
+            <span className="text-[11px] font-semibold tracking-wider text-blue-600 dark:text-blue-400 uppercase">
+              Office of the City Assessor &amp; Treasury
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 ml-2">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              LIVE REAL-TIME SYNC
             </span>
           </div>
-          <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white mt-1">
-            Real Property Tax &amp; Assessment Management Hub
-          </h1>
+          <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+            Real Property Tax &amp; Assessment Hub
+          </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             QC E-Services RPT Search DB, Group Bill Sets, Assessment Valuation &amp; Electronic Official Receipts
           </p>
         </div>
 
-        <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-950 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-x-auto">
+        <div className="flex flex-wrap items-center gap-2.5">
           <button
-            onClick={() => switchMainViewTab('master')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${mainViewTab === 'master'
-              ? 'bg-blue-600 text-white shadow-md'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
+            onClick={refreshAllData}
+            className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold px-4 py-2.5 rounded-xl transition-all border border-slate-200 dark:border-slate-700 cursor-pointer flex items-center gap-2 shadow-xs"
           >
-            <span>Master Database ({masterProperties.length})</span>
+            <i className="fa-solid fa-arrows-rotate text-[11px]"></i> Refresh List
           </button>
           <button
-            onClick={() => switchMainViewTab('queue')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${mainViewTab === 'queue'
-              ? 'bg-blue-600 text-white shadow-md'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
+            onClick={handleExportMasterCSV}
+            className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold px-4 py-2.5 rounded-xl transition-all border border-slate-200 dark:border-slate-700 cursor-pointer flex items-center gap-2 shadow-xs"
           >
-            <span>Citizen Applications ({applications.length})</span>
+            <i className="fa-solid fa-download text-[11px]"></i> Export Masterlist
           </button>
           <button
-            onClick={() => switchMainViewTab('payments')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${mainViewTab === 'payments'
-              ? 'bg-blue-600 text-white shadow-md'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
+            onClick={() => {
+              setEditingProperty({
+                taxDeclarationNumber: '',
+                newPspin: '09-021-009-166- - -',
+                ownerName: '',
+                barangay: '',
+                propertyType: 'Residential',
+                marketValue: 1000000,
+                assessedValue: 200000,
+                basicTax: 3000,
+                sefTax: 2000,
+                totalAssessment: 5000,
+                paymentStatus: 'Unpaid',
+                status: 'Active',
+              });
+              setIsPropertyModalOpen(true);
+            }}
+            className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-md cursor-pointer flex items-center gap-2"
           >
-            <span>Payment Ledger ({paymentsLedger.length})</span>
-          </button>
-          <button
-            onClick={() => switchMainViewTab('citizenAudit')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${mainViewTab === 'citizenAudit'
-              ? 'bg-blue-600 text-white shadow-md'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-          >
-            <span>Audit Trail ({citizenAuditTrail.length})</span>
+            <i className="fa-solid fa-plus text-[11px]"></i> New Assessment Record
           </button>
         </div>
       </div>
 
+      {/* KPI Summary Metrics Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs">
+          <div className="flex justify-between items-start">
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Registered Parcels</p>
+            <span className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400">
+              <i className="fa-solid fa-file-contract text-xs"></i>
+            </span>
+          </div>
+          <h4 className="text-2xl font-bold text-slate-900 dark:text-white mt-3">{metrics.totalMaster}</h4>
+          <p className="mt-2 text-[11px] text-slate-400">In LGU Master Registry</p>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs">
+          <div className="flex justify-between items-start">
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Citizen Applications</p>
+            <span className="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400">
+              <i className="fa-solid fa-clock-rotate-left text-xs"></i>
+            </span>
+          </div>
+          <h4 className="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-3">{metrics.activeApps}</h4>
+          <p className="mt-2 text-[11px] text-slate-400">Under evaluation / review</p>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs">
+          <div className="flex justify-between items-start">
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">RPT Revenue Settled</p>
+            <span className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400">
+              <i className="fa-solid fa-peso-sign text-xs"></i>
+            </span>
+          </div>
+          <h4 className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-3">
+            {formatCurrency(metrics.totalPaidRevenue)}
+          </h4>
+          <p className="mt-2 text-[11px] text-slate-400">Official e-Receipts verified</p>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs">
+          <div className="flex justify-between items-start">
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Pending Assessment Balances</p>
+            <span className="p-2 rounded-xl bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400">
+              <i className="fa-solid fa-triangle-exclamation text-xs"></i>
+            </span>
+          </div>
+          <h4 className="text-2xl font-bold text-rose-600 dark:text-rose-400 mt-3">
+            {formatCurrency(metrics.pendingBalance)}
+          </h4>
+          <p className="mt-2 text-[11px] text-slate-400">{metrics.unpaidCount} unpaid property balances</p>
+        </div>
+      </div>
+
+      {/* Main View Navigation Tabs */}
+      <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-4 mb-6">
+        <button
+          onClick={() => switchMainViewTab('master')}
+          className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+            mainViewTab === 'master'
+              ? 'bg-blue-600 text-white shadow-md'
+              : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+          }`}
+        >
+          <i className="fa-solid fa-database text-xs"></i>
+          <span>Master Database</span>
+          <span className={`px-2 py-0.5 rounded-full text-[10px] ${mainViewTab === 'master' ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
+            {masterProperties.length}
+          </span>
+        </button>
+
+        <button
+          onClick={() => switchMainViewTab('queue')}
+          className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+            mainViewTab === 'queue'
+              ? 'bg-blue-600 text-white shadow-md'
+              : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+          }`}
+        >
+          <i className="fa-solid fa-list-check text-xs"></i>
+          <span>Citizen Applications</span>
+          <span className={`px-2 py-0.5 rounded-full text-[10px] ${mainViewTab === 'queue' ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
+            {applications.length}
+          </span>
+        </button>
+
+        <button
+          onClick={() => switchMainViewTab('payments')}
+          className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+            mainViewTab === 'payments'
+              ? 'bg-blue-600 text-white shadow-md'
+              : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+          }`}
+        >
+          <i className="fa-solid fa-receipt text-xs"></i>
+          <span>Payment Ledger</span>
+          <span className={`px-2 py-0.5 rounded-full text-[10px] ${mainViewTab === 'payments' ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
+            {paymentsLedger.length}
+          </span>
+        </button>
+
+        <button
+          onClick={() => switchMainViewTab('citizenAudit')}
+          className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+            mainViewTab === 'citizenAudit'
+              ? 'bg-blue-600 text-white shadow-md'
+              : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+          }`}
+        >
+          <i className="fa-solid fa-shield-halved text-xs"></i>
+          <span>Audit Trail</span>
+          <span className={`px-2 py-0.5 rounded-full text-[10px] ${mainViewTab === 'citizenAudit' ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
+            {citizenAuditTrail.length}
+          </span>
+        </button>
+      </div>
+
+      {/* ============================================================ */}
+      {/* 1. MASTER DATABASE VIEW TAB */}
+      {/* ============================================================ */}
       {mainViewTab === 'master' && (
-        <div className="space-y-6">
-          <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3 w-full sm:w-auto">
-              <input
-                type="text"
-                value={masterSearch}
-                onChange={(e) => setMasterSearch(e.target.value)}
-                placeholder="Search TDN, Owner, PSPIN, Barangay..."
-                className="w-full sm:w-72 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3.5 py-2 text-xs text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-blue-500"
-              />
+        <section className="bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-xs space-y-5">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            {/* Master Subtab Switcher: Active vs Archiver */}
+            <div className="flex space-x-1 bg-slate-200/60 dark:bg-slate-800/60 p-1.5 rounded-xl w-fit">
+              <button
+                onClick={() => setMasterTab('Active')}
+                className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-2 ${
+                  masterTab === 'Active'
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                    : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                }`}
+              >
+                <i className="fa-solid fa-list-check text-xs"></i>
+                <span>Active Registry</span>
+                <span className="px-1.5 py-0.2 bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 rounded text-[10px]">
+                  {masterProperties.filter((p) => p.status !== 'Archived').length}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setMasterTab('Archived')}
+                className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-2 ${
+                  masterTab === 'Archived'
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                    : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                }`}
+              >
+                <i className="fa-solid fa-box-archive text-xs"></i>
+                <span>Archiver</span>
+                <span className="px-1.5 py-0.2 bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded text-[10px]">
+                  {masterProperties.filter((p) => p.status === 'Archived').length}
+                </span>
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2 text-xs text-slate-500">
+              <span>Show entries:</span>
+              <select
+                value={masterEntriesPerPage}
+                onChange={(e) => {
+                  setMasterEntriesPerPage(Number(e.target.value));
+                  setMasterCurrentPage(1);
+                }}
+                className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-2 py-1 text-xs outline-none font-semibold text-slate-700 dark:text-slate-300"
+              >
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Master Filters Bar */}
+          <div className="p-4 bg-slate-50/70 dark:bg-slate-950/60 rounded-2xl border border-slate-200/80 dark:border-slate-800 grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="flex flex-col gap-1.5 text-xs">
+              <label className="font-semibold text-slate-700 dark:text-slate-300">Search Records</label>
+              <div className="relative">
+                <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                <input
+                  type="text"
+                  value={masterSearch}
+                  onChange={(e) => {
+                    setMasterSearch(e.target.value);
+                    setMasterCurrentPage(1);
+                  }}
+                  placeholder="Search TDN, Owner, PSPIN, Barangay..."
+                  className="w-full pl-8 pr-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white outline-none focus:border-blue-500 transition-all text-xs"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5 text-xs">
+              <label className="font-semibold text-slate-700 dark:text-slate-300">Property Type</label>
               <select
                 value={masterTypeFilter}
-                onChange={(e) => setMasterTypeFilter(e.target.value)}
-                className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-semibold outline-none text-slate-700 dark:text-slate-300"
+                onChange={(e) => {
+                  setMasterTypeFilter(e.target.value);
+                  setMasterCurrentPage(1);
+                }}
+                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white outline-none focus:border-blue-500 transition-all text-xs font-semibold"
               >
-                <option value="ALL">All Types</option>
-                <option value="Land">Land</option>
-                <option value="Building">Building</option>
-                <option value="Commercial">Commercial</option>
+                <option value="ALL">All Property Types</option>
                 <option value="Residential">Residential</option>
+                <option value="Commercial">Commercial</option>
+                <option value="Industrial">Industrial</option>
+                <option value="Building">Building</option>
+                <option value="Land">Land</option>
               </select>
+            </div>
+
+            <div className="flex flex-col gap-1.5 text-xs">
+              <label className="font-semibold text-slate-700 dark:text-slate-300">Payment Status</label>
               <select
                 value={masterStatusFilter}
-                onChange={(e) => setMasterStatusFilter(e.target.value)}
-                className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-semibold outline-none text-slate-700 dark:text-slate-300"
+                onChange={(e) => {
+                  setMasterStatusFilter(e.target.value);
+                  setMasterCurrentPage(1);
+                }}
+                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white outline-none focus:border-blue-500 transition-all text-xs font-semibold"
               >
-                <option value="ALL">All Status</option>
+                <option value="ALL">All Payment Statuses</option>
                 <option value="Paid">Paid</option>
                 <option value="Unpaid">Unpaid</option>
               </select>
             </div>
-
           </div>
 
+          {/* Master Table */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
@@ -751,24 +1203,26 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                     <th className="p-4">Tax Declaration No.</th>
                     <th className="p-4">Owner Name</th>
                     <th className="p-4">NewPSPIN</th>
-                    <th className="p-4">Barangay / Location</th>
+                    <th className="p-4">Barangay</th>
                     <th className="p-4">Type</th>
                     <th className="p-4 text-right">Assessed Value</th>
                     <th className="p-4 text-right">Tax Due</th>
-                    <th className="p-4 text-center">Status</th>
+                    <th className="p-4 text-center">Payment</th>
                     <th className="p-4 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {filteredMasterProperties.length === 0 ? (
+                  {paginatedMasterProperties.length === 0 ? (
                     <tr>
                       <td colSpan={9} className="p-8 text-center text-slate-400 italic">
-                        No property assessment records match your search filter.
+                        {masterTab === 'Active'
+                          ? 'No active property assessment records match your search filter.'
+                          : 'No archived records found in the archiver.'}
                       </td>
                     </tr>
                   ) : (
-                    filteredMasterProperties.map((prop) => (
-                      <tr key={prop.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition">
+                    paginatedMasterProperties.map((prop) => (
+                      <tr key={prop.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition">
                         <td className="p-4 font-mono font-bold text-blue-600 dark:text-blue-400">
                           {prop.taxDeclarationNumber}
                         </td>
@@ -794,30 +1248,61 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                         </td>
                         <td className="p-4 text-center">
                           <span
-                            className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${prop.paymentStatus === 'Paid'
-                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
-                              : 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
-                              }`}
+                            className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                              prop.paymentStatus === 'Paid'
+                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                                : 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
+                            }`}
                           >
                             {prop.paymentStatus}
                           </span>
                         </td>
-                        <td className="p-4 text-right space-x-2">
-                          <button
-                            onClick={() => {
-                              setEditingProperty(prop);
-                              setIsPropertyModalOpen(true);
-                            }}
-                            className="text-blue-600 hover:text-blue-800 font-bold cursor-pointer"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDeleteMasterProperty(prop.id, prop.taxDeclarationNumber)}
-                            className="text-rose-600 hover:text-rose-800 font-bold cursor-pointer"
-                          >
-                            Delete
-                          </button>
+                        <td className="p-4 text-right space-x-1.5 whitespace-nowrap">
+                          {masterTab === 'Active' ? (
+                            <>
+                              <button
+                                onClick={() => {
+                                  setEditingProperty(prop);
+                                  setIsPropertyModalOpen(true);
+                                }}
+                                className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 transition cursor-pointer"
+                                title="Edit Property"
+                              >
+                                <i className="fa-solid fa-pen-to-square mr-1"></i> Edit
+                              </button>
+                              <button
+                                onClick={() => handleArchiveMasterProperty(prop)}
+                                className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 hover:bg-amber-100 transition cursor-pointer"
+                                title="Move to Archiver"
+                              >
+                                <i className="fa-solid fa-box-archive mr-1"></i> Archive
+                              </button>
+                              <button
+                                onClick={() => handleDeleteMasterProperty(prop.id, prop.taxDeclarationNumber)}
+                                className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 hover:bg-rose-100 transition cursor-pointer"
+                                title="Delete Property"
+                              >
+                                <i className="fa-solid fa-trash-can mr-1"></i> Delete
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => handleRestoreMasterProperty(prop)}
+                                className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 transition cursor-pointer"
+                                title="Restore to Active"
+                              >
+                                <i className="fa-solid fa-rotate-left mr-1"></i> Restore
+                              </button>
+                              <button
+                                onClick={() => handleDeleteMasterProperty(prop.id, prop.taxDeclarationNumber)}
+                                className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 hover:bg-rose-100 transition cursor-pointer"
+                                title="Permanent Delete"
+                              >
+                                <i className="fa-solid fa-trash-can mr-1"></i> Permanent Delete
+                              </button>
+                            </>
+                          )}
                         </td>
                       </tr>
                     ))
@@ -825,48 +1310,106 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                 </tbody>
               </table>
             </div>
+
+            {/* Pagination Controls */}
+            <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row justify-between items-center gap-3 text-xs text-slate-500">
+              <div>
+                Showing{' '}
+                <strong className="text-slate-800 dark:text-slate-200">
+                  {filteredMasterProperties.length === 0
+                    ? 0
+                    : (masterCurrentPage - 1) * masterEntriesPerPage + 1}
+                </strong>{' '}
+                to{' '}
+                <strong className="text-slate-800 dark:text-slate-200">
+                  {Math.min(masterCurrentPage * masterEntriesPerPage, filteredMasterProperties.length)}
+                </strong>{' '}
+                of <strong className="text-slate-800 dark:text-slate-200">{filteredMasterProperties.length}</strong>{' '}
+                records
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  disabled={masterCurrentPage <= 1}
+                  onClick={() => setMasterCurrentPage((p) => Math.max(1, p - 1))}
+                  className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 cursor-pointer font-semibold"
+                >
+                  Previous
+                </button>
+                <span className="font-bold text-slate-800 dark:text-slate-200">
+                  Page {masterCurrentPage} of {masterTotalPages}
+                </span>
+                <button
+                  disabled={masterCurrentPage >= masterTotalPages}
+                  onClick={() => setMasterCurrentPage((p) => Math.min(masterTotalPages, p + 1))}
+                  className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 cursor-pointer font-semibold"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
+        </section>
       )}
 
+      {/* ============================================================ */}
+      {/* 2. CITIZEN APPLICATIONS VIEW TAB */}
+      {/* ============================================================ */}
       {mainViewTab === 'queue' && (
-        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden gap-6 h-[calc(100vh-22rem)] min-h-0 w-full">
-
-          <div className="w-full lg:w-[420px] xl:w-[460px] flex-shrink-0 flex flex-col gap-4 min-h-0 h-1/2 lg:h-full">
-            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col gap-3">
-              <div className="flex gap-2">
+        <div className="flex-1 flex flex-col lg:flex-row gap-6 min-h-[680px]">
+          {/* Left Column: Applications List & Queue Subtab */}
+          <div className="w-full lg:w-[420px] xl:w-[460px] flex-shrink-0 flex flex-col gap-4">
+            <div className="bg-white dark:bg-slate-900/80 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col gap-3">
+              {/* Queue Subtabs: Active vs Archiver */}
+              <div className="flex space-x-1 bg-slate-200/60 dark:bg-slate-800/60 p-1.5 rounded-xl w-full">
                 <button
                   onClick={() => setQueueTab('Active')}
-                  className={`px-4 py-2 text-xs font-semibold rounded-lg border transition-colors cursor-pointer ${queueTab === 'Active'
-                    ? 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-600'
-                    : 'text-slate-500 border-transparent'
-                    }`}
+                  className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                    queueTab === 'Active'
+                      ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                      : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                  }`}
                 >
-                  Active Processing
+                  <i className="fa-solid fa-list-check text-xs"></i>
+                  <span>Active Processing</span>
+                  <span className="px-1.5 py-0.2 bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 rounded text-[10px]">
+                    {applications.filter((a) => a.status !== 'Archived').length}
+                  </span>
                 </button>
+
                 <button
                   onClick={() => setQueueTab('Archived')}
-                  className={`px-4 py-2 text-xs font-semibold rounded-lg border transition-colors cursor-pointer ${queueTab === 'Archived'
-                    ? 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-600'
-                    : 'text-slate-500 border-transparent'
-                    }`}
+                  className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                    queueTab === 'Archived'
+                      ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                      : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                  }`}
                 >
-                  System Archiver
+                  <i className="fa-solid fa-box-archive text-xs"></i>
+                  <span>Archiver</span>
+                  <span className="px-1.5 py-0.2 bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded text-[10px]">
+                    {applications.filter((a) => a.status === 'Archived').length}
+                  </span>
                 </button>
               </div>
 
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search applications..."
-                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-slate-200 outline-none"
-              />
+              {/* Search & Filter */}
+              <div className="relative">
+                <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search application reference or applicant..."
+                  className="w-full pl-8 pr-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-800 dark:text-slate-200 outline-none"
+                />
+              </div>
+
               <div className="flex gap-2">
                 <select
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="w-1/2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-2 py-1.5 text-[11px] font-semibold text-slate-700 dark:text-slate-300 outline-none"
+                  className="w-1/2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-2.5 py-1.5 text-[11px] font-semibold text-slate-700 dark:text-slate-300 outline-none"
                 >
                   <option value="ALL">All Services</option>
                   <option value="Transfer of Ownership">Transfer of Ownership</option>
@@ -875,48 +1418,96 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                   <option value="Correction / Updating / Revision">Correction</option>
                   <option value="Declaration of New / Undeclared Land">Undeclared Land</option>
                 </select>
+
                 <select
                   value={selectedStatusFilter}
                   onChange={(e) => setSelectedStatusFilter(e.target.value)}
-                  className="w-1/2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-2 py-1.5 text-[11px] font-semibold text-slate-700 dark:text-slate-300 outline-none"
+                  className="w-1/2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-2.5 py-1.5 text-[11px] font-semibold text-slate-700 dark:text-slate-300 outline-none"
                 >
-                  <option value="ALL">All Status</option>
+                  <option value="ALL">All Statuses</option>
                   <option value="Submitted">Submitted</option>
                   <option value="Under Evaluation">Under Evaluation</option>
                   <option value="For Payment">For Payment</option>
                   <option value="Payment Completed">Payment Completed</option>
-                  <option value="Field Inspection Scheduled">Field Inspection</option>
-                  <option value="Ready for Release">Ready for Release</option>
                   <option value="Approved">Approved</option>
                   <option value="Rejected">Rejected</option>
                 </select>
               </div>
             </div>
 
-            <div className="flex-1 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden flex flex-col min-h-0">
-              <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800 p-2 space-y-1">
+            {/* Applications List Scroll Area */}
+            <div className="flex-1 bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs overflow-hidden flex flex-col min-h-[480px]">
+              <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800 p-3 space-y-2">
                 {filteredApplications.length === 0 ? (
-                  <div className="p-8 text-center text-slate-400 text-xs">No applications found.</div>
+                  <div className="p-8 text-center text-slate-400 text-xs italic">
+                    {queueTab === 'Active'
+                      ? 'No active citizen applications found matching criteria.'
+                      : 'No archived applications currently stored in archiver.'}
+                  </div>
                 ) : (
                   filteredApplications.map((app) => (
                     <div
                       key={app.id}
                       onClick={() => setSelectedAppId(app.id)}
-                      className={`p-3 rounded-xl border transition cursor-pointer ${currentApp?.id === app.id
-                        ? 'bg-blue-50/60 dark:bg-blue-950/40 border-blue-300 dark:border-blue-800'
-                        : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50'
-                        }`}
+                      className={`p-3.5 rounded-xl border transition cursor-pointer flex flex-col gap-1.5 ${
+                        currentApp?.id === app.id
+                          ? 'bg-blue-50/70 dark:bg-blue-950/40 border-blue-400 dark:border-blue-700 shadow-xs'
+                          : 'border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                      }`}
                     >
                       <div className="flex justify-between items-start">
                         <span className="font-mono font-bold text-xs text-blue-600 dark:text-blue-400">
                           {app.referenceNumber}
                         </span>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            app.status === 'Approved'
+                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                              : app.status === 'Archived'
+                              ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                              : app.status === 'Rejected'
+                              ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
+                              : 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
+                          }`}
+                        >
                           {app.status}
                         </span>
                       </div>
-                      <p className="font-bold text-xs text-slate-900 dark:text-white mt-1">{app.applicantName}</p>
-                      <p className="text-[11px] text-slate-500 truncate">{app.category}</p>
+
+                      <div className="flex justify-between items-end">
+                        <div>
+                          <p className="font-bold text-xs text-slate-900 dark:text-white">{app.applicantName}</p>
+                          <p className="text-[11px] text-slate-500 truncate max-w-[220px]">{app.category}</p>
+                        </div>
+
+                        <div className="flex items-center gap-1">
+                          {queueTab === 'Active' ? (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleArchiveApplication(app);
+                              }}
+                              className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 rounded-lg transition"
+                              title="Archive Application"
+                            >
+                              <i className="fa-solid fa-box-archive text-xs"></i>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRestoreApplication(app);
+                              }}
+                              className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-lg transition"
+                              title="Restore Application"
+                            >
+                              <i className="fa-solid fa-rotate-left text-xs"></i>
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   ))
                 )}
@@ -924,45 +1515,98 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
             </div>
           </div>
 
-          <div className="flex-1 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col overflow-hidden min-h-0 h-1/2 lg:h-full">
+          {/* Right Column: Application Details & Verification Panel */}
+          <div className="flex-1 bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col overflow-hidden min-h-[680px]">
             {!currentApp ? (
-              <div className="flex-1 flex items-center justify-center p-8 text-center text-xs text-slate-400">
-                Select an application from the queue to review documents and update evaluation status.
+              <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-xs text-slate-400">
+                <i className="fa-solid fa-file-circle-check text-4xl text-slate-300 dark:text-slate-700 mb-3"></i>
+                <span>Select an application from the queue to review documents and proceed with assessment.</span>
               </div>
             ) : (
               <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                {/* Header & Main Actions */}
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 dark:border-slate-800 pb-4">
                   <div>
-                    <span className="text-[10px] font-bold uppercase text-blue-600 dark:text-blue-400">
-                      CONTROL NUMBER
+                    <span className="text-[10px] font-bold uppercase text-blue-600 dark:text-blue-400 tracking-wider">
+                      CONTROL REFERENCE NUMBER
                     </span>
-                    <h2 className="text-lg font-black font-mono text-slate-900 dark:text-white">
+                    <h2 className="text-xl font-black font-mono text-slate-900 dark:text-white">
                       {currentApp.referenceNumber}
                     </h2>
-                    <p className="text-xs text-slate-500 font-semibold">{currentApp.category}</p>
+                    <p className="text-xs text-slate-500 font-semibold mt-0.5">
+                      {currentApp.category} • Filed on {currentApp.submissionDate || 'N/A'}
+                    </p>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={handleDigitalRelease}
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition cursor-pointer shadow-sm"
-                    >
-                      ✓ Approve &amp; Issue Digital Certificate
-                    </button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {queueTab === 'Active' ? (
+                      <>
+                        <button
+                          onClick={handleDigitalRelease}
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition cursor-pointer shadow-sm flex items-center gap-1.5"
+                        >
+                          <i className="fa-solid fa-stamp text-xs"></i> Approve &amp; Issue Certificate
+                        </button>
+
+                        <button
+                          onClick={() => handleArchiveApplication(currentApp)}
+                          className="bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 hover:bg-amber-100 border border-amber-200 dark:border-amber-800 font-bold text-xs px-3.5 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5"
+                        >
+                          <i className="fa-solid fa-box-archive text-xs"></i> Move to Archiver
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => handleRestoreApplication(currentApp)}
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition cursor-pointer shadow-sm flex items-center gap-1.5"
+                        >
+                          <i className="fa-solid fa-rotate-left text-xs"></i> Restore Application
+                        </button>
+
+                        <button
+                          onClick={() => handlePermanentDeleteApplication(currentApp.id, currentApp.referenceNumber)}
+                          className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition cursor-pointer shadow-sm flex items-center gap-1.5"
+                        >
+                          <i className="fa-solid fa-trash-can text-xs"></i> Permanent Delete
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
 
-                <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2">
-                  <span className="text-[10px] font-bold uppercase text-slate-400 block">Advance Assessor Workflow:</span>
+                {/* Applicant & Property Details Card */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-slate-50/70 dark:bg-slate-950/50 rounded-2xl border border-slate-200/80 dark:border-slate-800 text-xs">
+                  <div>
+                    <span className="text-[10px] font-bold uppercase text-slate-400 block mb-1">Applicant Details</span>
+                    <p className="font-bold text-slate-900 dark:text-white text-sm">{currentApp.applicantName}</p>
+                    <p className="text-slate-500 mt-0.5">Email: {currentApp.applicantEmail || 'Not provided'}</p>
+                    <p className="text-slate-500">Phone: {currentApp.applicantPhone || 'Not provided'}</p>
+                  </div>
+
+                  <div>
+                    <span className="text-[10px] font-bold uppercase text-slate-400 block mb-1">Target Property</span>
+                    <p className="font-mono font-bold text-slate-900 dark:text-white">
+                      TDN: {currentApp.propertyDetails.titleNumber || 'Pending'}
+                    </p>
+                    <p className="font-mono text-slate-500 text-[11px]">PIN: {currentApp.propertyDetails.pin || 'Pending'}</p>
+                    <p className="text-slate-500 mt-0.5">{currentApp.propertyDetails.address || 'Address unrecorded'}</p>
+                  </div>
+                </div>
+
+                {/* Workflow Status Advance Toolbar */}
+                <div className="p-4 bg-slate-50 dark:bg-slate-950/60 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2">
+                  <span className="text-[10px] font-bold uppercase text-slate-400 block">Assessor Workflow Stage:</span>
                   <div className="flex flex-wrap gap-2">
                     {(['For Review', 'Under Evaluation', 'For Compliance', 'Processing', 'Approved', 'Ready for Release', 'Rejected'] as ExtendedStatusType[]).map((st) => (
                       <button
                         key={st}
                         onClick={() => handleUpdateStatus(st)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer border ${currentApp.status === st
-                          ? 'bg-blue-600 text-white border-blue-600'
-                          : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-blue-400'
-                          }`}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer border ${
+                          currentApp.status === st
+                            ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                            : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-blue-400'
+                        }`}
                       >
                         {st}
                       </button>
@@ -970,27 +1614,22 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                   </div>
                 </div>
 
-                <div className="p-4 bg-blue-50 dark:bg-blue-950/30 rounded-2xl border border-blue-200 dark:border-blue-900 space-y-3">
+                {/* Assessment Billing / Service Fee Card */}
+                <div className="p-5 bg-blue-50/60 dark:bg-blue-950/30 rounded-2xl border border-blue-200 dark:border-blue-900 space-y-3">
                   <div>
-                    <h3 className="text-xs font-black uppercase tracking-wide text-blue-900 dark:text-blue-200">
-                      RPT Service Assessment / Payment Bill
+                    <h3 className="text-xs font-black uppercase tracking-wide text-blue-900 dark:text-blue-200 flex items-center gap-2">
+                      <i className="fa-solid fa-calculator text-blue-600"></i>
+                      RPT Service Assessment &amp; Payment Billing
                     </h3>
-                    <p className="text-[11px] text-blue-700 dark:text-blue-300 mt-1">
-                      Enter the assessed fee for the selected RPT service. Once posted, the citizen can pay the assessed amount online through PayMongo.
-                    </p>
-                  </div>
-
-                  <div className="mb-2 px-3 py-2 bg-white/70 dark:bg-slate-900/50 rounded-lg border border-blue-100 dark:border-blue-900">
-                    <span className="text-[10px] font-bold uppercase text-slate-500">RPT Service</span>
-                    <p className="text-sm font-black text-[#0B3B60] dark:text-white">
-                      {currentApp.category || currentApp.service || 'Real Property Tax Service'}
+                    <p className="text-[11px] text-blue-700 dark:text-blue-300 mt-0.5">
+                      Assign statutory evaluation fees. Once posted, the citizen can settle this payment via PayMongo.
                     </p>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-end">
                     <div>
                       <label className="block text-[10px] font-bold uppercase text-slate-600 dark:text-slate-300 mb-1">
-                        Assessed Service Fee
+                        Assessed Service Fee (₱)
                       </label>
                       <div className="relative">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">₱</span>
@@ -1001,7 +1640,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                           value={rptServiceAmountInput}
                           onChange={(e) => setRptServiceAmountInput(e.target.value)}
                           placeholder="0.00"
-                          className="w-full bg-white dark:bg-slate-900 border border-blue-200 dark:border-slate-700 rounded-xl pl-7 pr-3 py-2.5 text-sm font-black outline-none focus:ring-2 focus:ring-blue-400"
+                          className="w-full bg-white dark:bg-slate-900 border border-blue-200 dark:border-slate-700 rounded-xl pl-7 pr-3 py-2.5 text-sm font-black outline-none focus:ring-2 focus:ring-blue-400 text-slate-900 dark:text-white"
                         />
                       </div>
                     </div>
@@ -1009,63 +1648,95 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                     <button
                       type="button"
                       onClick={() => void handleSetRPTServiceForPayment()}
-                      className="bg-[#1D3F99] hover:bg-[#17357F] text-white font-extrabold text-xs px-5 py-2.5 rounded-xl shadow-sm transition"
+                      className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl shadow-md transition cursor-pointer"
                     >
-                      {currentApp.paymentStatus === 'Paid'
-                        ? 'Payment Recorded'
-                        : 'Post Service Bill / For Payment'}
+                      {currentApp.paymentStatus === 'Paid' ? 'Payment Recorded' : 'Post Service Assessment Bill'}
                     </button>
                   </div>
 
                   {Number(currentApp.paymentAmount || 0) > 0 && (
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px]">
-                      <div className="bg-white/80 dark:bg-slate-900/60 rounded-lg p-2">
-                        <span className="text-slate-500 block">Amount</span>
-                        <strong>{formatCurrency(Number(currentApp.paymentAmount))}</strong>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px] pt-1">
+                      <div className="bg-white/90 dark:bg-slate-900/80 rounded-xl p-2.5 border border-blue-100 dark:border-blue-900/50">
+                        <span className="text-slate-400 block">Amount</span>
+                        <strong className="font-mono text-slate-900 dark:text-white">{formatCurrency(Number(currentApp.paymentAmount))}</strong>
                       </div>
-                      <div className="bg-white/80 dark:bg-slate-900/60 rounded-lg p-2">
-                        <span className="text-slate-500 block">Payment</span>
-                        <strong>{currentApp.paymentStatus || 'Pending'}</strong>
+                      <div className="bg-white/90 dark:bg-slate-900/80 rounded-xl p-2.5 border border-blue-100 dark:border-blue-900/50">
+                        <span className="text-slate-400 block">Payment Status</span>
+                        <strong className="text-emerald-600 dark:text-emerald-400">{currentApp.paymentStatus || 'Pending'}</strong>
                       </div>
-                      <div className="bg-white/80 dark:bg-slate-900/60 rounded-lg p-2">
-                        <span className="text-slate-500 block">Reference</span>
-                        <strong className="font-mono">{currentApp.paymentReference || '—'}</strong>
+                      <div className="bg-white/90 dark:bg-slate-900/80 rounded-xl p-2.5 border border-blue-100 dark:border-blue-900/50">
+                        <span className="text-slate-400 block">Payment Reference</span>
+                        <strong className="font-mono text-slate-900 dark:text-white">{currentApp.paymentReference || '—'}</strong>
                       </div>
-                      <div className="bg-white/80 dark:bg-slate-900/60 rounded-lg p-2">
-                        <span className="text-slate-500 block">eOR</span>
-                        <strong className="font-mono">{currentApp.officialReceiptNumber || '—'}</strong>
+                      <div className="bg-white/90 dark:bg-slate-900/80 rounded-xl p-2.5 border border-blue-100 dark:border-blue-900/50">
+                        <span className="text-slate-400 block">Official eOR</span>
+                        <strong className="font-mono text-slate-900 dark:text-white">{currentApp.officialReceiptNumber || '—'}</strong>
                       </div>
                     </div>
                   )}
                 </div>
 
+                {/* Documentary Verification Vault Section */}
                 <div className="space-y-3">
-                  <h3 className="text-xs font-bold uppercase text-slate-700 dark:text-slate-300">
-                    Documentary Verification Vault
-                  </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {currentApp.documents.map((doc) => (
-                      <div
-                        key={doc.id}
-                        className="p-4 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50 dark:bg-slate-950/40 space-y-2"
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-xs font-bold uppercase text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                      <i className="fa-solid fa-folder-open text-blue-600"></i>
+                      Documentary Verification Vault ({currentApp.documents.length})
+                    </h3>
+
+                    {currentApp.documents.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => handleOpenDocPreview(currentApp.documents, 0)}
+                        className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer flex items-center gap-1"
                       >
-                        <div className="flex justify-between items-start">
-                          <span className="font-bold text-xs text-slate-800 dark:text-slate-200 truncate max-w-[180px]">
-                            {doc.name}
-                          </span>
-                          <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950 px-2 py-0.5 rounded">
-                            {doc.type}
-                          </span>
-                        </div>
-                        <button
-                          onClick={() => handleOpenPreview(doc)}
-                          className="w-full py-1.5 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-300 transition cursor-pointer"
-                        >
-                          Inspect Document
-                        </button>
-                      </div>
-                    ))}
+                        <i className="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> Open Document Inspector
+                      </button>
+                    )}
                   </div>
+
+                  {currentApp.documents.length === 0 ? (
+                    <div className="p-6 text-center text-xs text-slate-400 bg-slate-50 dark:bg-slate-950/50 rounded-xl border border-slate-200 dark:border-slate-800">
+                      No documents currently attached to this filing.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {currentApp.documents.map((doc, idx) => (
+                        <div
+                          key={doc.id || idx}
+                          className="p-4 border border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50 dark:bg-slate-950/40 space-y-2.5 hover:border-blue-300 transition"
+                        >
+                          <div className="flex justify-between items-start">
+                            <div className="flex items-center gap-2 min-w-0 pr-2">
+                              <i className={`fa-solid ${doc.type === 'PDF' ? 'fa-file-pdf text-rose-500' : 'fa-file-image text-blue-500'} text-base shrink-0`}></i>
+                              <span className="font-bold text-xs text-slate-800 dark:text-slate-200 truncate" title={doc.name}>
+                                {doc.name}
+                              </span>
+                            </div>
+                            <span
+                              className={`text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                                doc.status === 'Verified'
+                                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                                  : doc.status === 'Rejected'
+                                  ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+                                  : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                              }`}
+                            >
+                              {doc.status}
+                            </span>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => handleOpenDocPreview(currentApp.documents, idx)}
+                            className="w-full py-2 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 transition cursor-pointer flex items-center justify-center gap-2 shadow-xs"
+                          >
+                            <i className="fa-solid fa-eye text-xs"></i> Inspect Document
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -1073,119 +1744,147 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         </div>
       )}
 
+      {/* ============================================================ */}
+      {/* 3. PAYMENT LEDGER VIEW TAB */}
+      {/* ============================================================ */}
       {mainViewTab === 'payments' && (
-        <div className="space-y-6">
-          <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center justify-between">
-            <input
-              type="text"
-              value={paymentSearch}
-              onChange={(e) => setPaymentSearch(e.target.value)}
-              placeholder="Search OR No., TDN, Payor..."
-              className="w-72 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3.5 py-2 text-xs text-slate-800 dark:text-slate-200 outline-none"
-            />
-            <span className="text-xs font-bold text-slate-500">
-              Total Real Property Tax Revenue Settled: <strong className="text-emerald-600 dark:text-emerald-400 font-mono">{formatCurrency(paymentsLedger.reduce((sum, p) => sum + p.amountPaid, 0))}</strong>
-            </span>
+        <section className="bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-xs space-y-5">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="relative w-full sm:w-80">
+              <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+              <input
+                type="text"
+                value={paymentSearch}
+                onChange={(e) => setPaymentSearch(e.target.value)}
+                placeholder="Search OR No., TDN, Payor..."
+                className="w-full pl-8 pr-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-800 dark:text-slate-200 outline-none"
+              />
+            </div>
+
+            <div className="text-xs text-slate-500 font-semibold">
+              Total Real Property Tax Revenue Settled:{' '}
+              <strong className="text-emerald-600 dark:text-emerald-400 font-mono text-sm ml-1">
+                {formatCurrency(paymentsLedger.reduce((sum, p) => sum + (p.amountPaid || 0), 0))}
+              </strong>
+            </div>
           </div>
 
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead className="bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-800">
-                <tr>
-                  <th className="p-4">Official Receipt (eOR)</th>
-                  <th className="p-4">Tax Declaration No.</th>
-                  <th className="p-4">Payor / Property Owner</th>
-                  <th className="p-4">Payment Method</th>
-                  <th className="p-4">Coverage</th>
-                  <th className="p-4">Payment Date</th>
-                  <th className="p-4 text-right">Amount Settled</th>
-                  <th className="p-4 text-center">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {paymentsLedger.length === 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-800">
                   <tr>
-                    <td colSpan={8} className="p-8 text-center text-slate-400 italic">
-                      No online payments recorded yet.
-                    </td>
+                    <th className="p-4">Official Receipt (eOR)</th>
+                    <th className="p-4">Tax Declaration No.</th>
+                    <th className="p-4">Payor / Property Owner</th>
+                    <th className="p-4">Payment Method</th>
+                    <th className="p-4">Coverage</th>
+                    <th className="p-4">Payment Date</th>
+                    <th className="p-4 text-right">Amount Settled</th>
+                    <th className="p-4 text-center">Status</th>
                   </tr>
-                ) : (
-                  paymentsLedger.map((pay) => (
-                    <tr key={pay.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition">
-                      <td className="p-4 font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                        {pay.officialReceiptNumber}
-                      </td>
-                      <td className="p-4 font-mono font-bold text-[#0B3B60] dark:text-sky-400">
-                        {pay.taxDeclarationNumber}
-                      </td>
-                      <td className="p-4 font-semibold text-slate-900 dark:text-white">
-                        {pay.ownerName}
-                      </td>
-                      <td className="p-4 text-slate-600 dark:text-slate-300">
-                        {pay.paymentMethod}
-                      </td>
-                      <td className="p-4 text-slate-500">
-                        {pay.quarterCoverage || 'Full Year'}
-                      </td>
-                      <td className="p-4 font-mono text-slate-500">
-                        {new Date(pay.paymentDate).toLocaleDateString()}
-                      </td>
-                      <td className="p-4 text-right font-mono font-black text-slate-900 dark:text-white">
-                        {formatCurrency(pay.amountPaid)}
-                      </td>
-                      <td className="p-4 text-center">
-                        <span className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 px-2.5 py-1 rounded-full text-[10px] font-bold">
-                          ✓ {pay.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {paymentsLedger
+                    .filter((pay) => {
+                      const lower = paymentSearch.toLowerCase();
+                      return (
+                        !lower ||
+                        pay.officialReceiptNumber.toLowerCase().includes(lower) ||
+                        pay.taxDeclarationNumber.toLowerCase().includes(lower) ||
+                        pay.ownerName.toLowerCase().includes(lower)
+                      );
+                    })
+                    .map((pay) => (
+                      <tr key={pay.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition">
+                        <td className="p-4 font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                          {pay.officialReceiptNumber}
+                        </td>
+                        <td className="p-4 font-mono font-bold text-blue-600 dark:text-blue-400">
+                          {pay.taxDeclarationNumber}
+                        </td>
+                        <td className="p-4 font-semibold text-slate-900 dark:text-white">
+                          {pay.ownerName}
+                        </td>
+                        <td className="p-4 text-slate-600 dark:text-slate-300">
+                          {pay.paymentMethod}
+                        </td>
+                        <td className="p-4 text-slate-500">
+                          {pay.quarterCoverage || 'Full Year'}
+                        </td>
+                        <td className="p-4 font-mono text-slate-500">
+                          {pay.paymentDate ? new Date(pay.paymentDate).toLocaleDateString() : 'N/A'}
+                        </td>
+                        <td className="p-4 text-right font-mono font-black text-slate-900 dark:text-white">
+                          {formatCurrency(pay.amountPaid)}
+                        </td>
+                        <td className="p-4 text-center">
+                          <span className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 px-2.5 py-1 rounded-full text-[10px] font-bold">
+                            ✓ {pay.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        </section>
       )}
 
+      {/* ============================================================ */}
+      {/* 4. AUDIT TRAIL VIEW TAB */}
+      {/* ============================================================ */}
       {mainViewTab === 'citizenAudit' && (
-        <div className="flex-1 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs p-6 space-y-4">
-          <h2 className="text-lg font-black text-slate-900 dark:text-white">Archived &amp; Certified Applications</h2>
-          <p className="text-xs text-slate-500">
-            Immutable log of all released Tax Declarations and Certified True Copies.
-          </p>
+        <section className="bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs p-6 space-y-4">
+          <div>
+            <h2 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+              <i className="fa-solid fa-shield-halved text-emerald-600"></i>
+              Archived &amp; Certified Applications Audit Trail
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Immutable cryptographic ledger of all released Tax Declarations and Certified True Copies.
+            </p>
+          </div>
 
           {citizenAuditTrail.length === 0 ? (
             <div className="p-8 text-center text-slate-400 text-xs italic bg-slate-50 dark:bg-slate-950 rounded-xl">
-              No applications in the audit trail yet. Approved applications will appear here.
+              No applications in the audit trail yet. Approved applications will appear here once certificates are issued.
             </div>
           ) : (
-            <div className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl">
+            <div className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
               {citizenAuditTrail.map((app) => (
-                <div key={app.id} className="p-4 flex justify-between items-center text-xs">
+                <div key={app.id} className="p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 text-xs hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
                   <div>
                     <span className="font-mono font-bold text-blue-600 dark:text-blue-400">{app.referenceNumber}</span>
-                    <p className="font-semibold text-slate-800 dark:text-slate-200">{app.applicantName} • {app.category}</p>
+                    <p className="font-semibold text-slate-800 dark:text-slate-200 mt-0.5">{app.applicantName} • {app.category}</p>
+                    <p className="text-[11px] text-slate-400">Released: {app.digitalRelease?.releasedAt || app.submissionDate}</p>
                   </div>
-                  <span className="bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full font-bold text-[10px]">
+                  <span className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 px-3 py-1 rounded-full font-bold text-[10px] flex items-center gap-1">
                     ✓ Digital Certificate Issued
                   </span>
                 </div>
               ))}
             </div>
           )}
-        </div>
+        </section>
       )}
 
+      {/* ============================================================ */}
+      {/* ADD / EDIT MASTER PROPERTY RECORD MODAL */}
+      {/* ============================================================ */}
       {isPropertyModalOpen && editingProperty && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4">
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4">
           <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 sm:p-8 max-w-2xl w-full shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-              <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
+              <h3 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                <i className="fa-solid fa-landmark text-blue-600"></i>
                 {editingProperty.id ? 'Edit Property Assessment Record' : 'Add New Property Assessment Record'}
               </h3>
               <button
+                type="button"
                 onClick={() => setIsPropertyModalOpen(false)}
-                className="text-slate-400 hover:text-slate-700 font-bold text-lg cursor-pointer"
+                className="w-8 h-8 rounded-full flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer font-bold transition"
               >
                 ✕
               </button>
@@ -1200,7 +1899,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                     required
                     value={editingProperty.taxDeclarationNumber || ''}
                     onChange={(e) => setEditingProperty({ ...editingProperty, taxDeclarationNumber: e.target.value })}
-                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 font-mono font-bold outline-none"
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 font-mono font-bold outline-none text-slate-900 dark:text-white"
                   />
                 </div>
                 <div className="space-y-1">
@@ -1210,17 +1909,17 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                     required
                     value={editingProperty.newPspin || ''}
                     onChange={(e) => setEditingProperty({ ...editingProperty, newPspin: e.target.value })}
-                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 font-mono outline-none"
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 font-mono outline-none text-slate-900 dark:text-white"
                   />
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-1 sm:col-span-2">
                   <label className="font-bold text-slate-700 dark:text-slate-300">Owner Name / Corporation *</label>
                   <input
                     type="text"
                     required
                     value={editingProperty.ownerName || ''}
                     onChange={(e) => setEditingProperty({ ...editingProperty, ownerName: e.target.value })}
-                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 outline-none font-semibold"
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 outline-none font-semibold text-slate-900 dark:text-white"
                   />
                 </div>
                 <div className="space-y-1">
@@ -1232,7 +1931,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                       handleValuationChange(editingProperty.marketValue || 1000000, newType);
                       setEditingProperty((prev) => ({ ...prev, propertyType: newType }));
                     }}
-                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 outline-none font-semibold"
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 outline-none font-semibold text-slate-900 dark:text-white"
                   >
                     <option value="Residential">Residential</option>
                     <option value="Commercial">Commercial</option>
@@ -1248,16 +1947,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                     required
                     value={editingProperty.barangay || ''}
                     onChange={(e) => setEditingProperty({ ...editingProperty, barangay: e.target.value })}
-                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 outline-none"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="font-bold text-slate-700 dark:text-slate-300">Lot Area (sqm)</label>
-                  <input
-                    type="number"
-                    value={editingProperty.lotAreaSqm || 0}
-                    onChange={(e) => setEditingProperty({ ...editingProperty, lotAreaSqm: Number(e.target.value) })}
-                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 outline-none font-mono"
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 outline-none text-slate-900 dark:text-white"
                   />
                 </div>
                 <div className="space-y-1">
@@ -1266,7 +1956,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                     type="number"
                     value={editingProperty.marketValue || 0}
                     onChange={(e) => handleValuationChange(Number(e.target.value), editingProperty.propertyType || 'Residential')}
-                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 outline-none font-mono font-bold"
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 outline-none font-mono font-bold text-slate-900 dark:text-white"
                   />
                 </div>
                 <div className="space-y-1">
@@ -1275,7 +1965,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                     type="number"
                     value={editingProperty.assessedValue || 0}
                     readOnly
-                    className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 outline-none font-mono font-bold"
+                    className="w-full bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 outline-none font-mono font-bold text-slate-900 dark:text-white"
                   />
                 </div>
                 <div className="space-y-1">
@@ -1284,7 +1974,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                     type="number"
                     value={editingProperty.basicTax || 0}
                     onChange={(e) => setEditingProperty({ ...editingProperty, basicTax: Number(e.target.value) })}
-                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 outline-none font-mono"
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 outline-none font-mono text-slate-900 dark:text-white"
                   />
                 </div>
                 <div className="space-y-1">
@@ -1293,15 +1983,15 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                     type="number"
                     value={editingProperty.sefTax || 0}
                     onChange={(e) => setEditingProperty({ ...editingProperty, sefTax: Number(e.target.value) })}
-                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 outline-none font-mono"
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 outline-none font-mono text-slate-900 dark:text-white"
                   />
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-1 sm:col-span-2">
                   <label className="font-bold text-slate-700 dark:text-slate-300">Payment Status</label>
                   <select
                     value={editingProperty.paymentStatus || 'Unpaid'}
                     onChange={(e) => setEditingProperty({ ...editingProperty, paymentStatus: e.target.value })}
-                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 outline-none font-semibold"
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 outline-none font-semibold text-slate-900 dark:text-white"
                   >
                     <option value="Unpaid">Unpaid</option>
                     <option value="Paid">Paid</option>
@@ -1329,73 +2019,366 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         </div>
       )}
 
-      {previewDocUrl && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-4xl h-[85vh] shadow-2xl overflow-hidden flex flex-col">
-            <div className="p-4 bg-slate-900 text-white flex justify-between items-center border-b border-slate-800">
-              <div className="flex items-center gap-2 min-w-0 pr-2">
-                <span className="text-xs uppercase font-bold text-blue-400 shrink-0">Document Inspector</span>
-                <span className="text-xs text-slate-300 truncate max-w-md">({previewDocTitle})</span>
+      {/* ============================================================ */}
+      {/* OVERHAULED DOCUMENT PREVIEW POP-UP TAB MODAL */}
+      {/* ============================================================ */}
+      {previewModalOpen && activeDoc && (
+        <div className="fixed inset-0 z-60 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-5xl h-[88vh] shadow-2xl flex flex-col overflow-hidden">
+            {/* Modal Header */}
+            <div className="px-6 py-4 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex flex-wrap justify-between items-center gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                  <i className={`fa-solid ${activeDoc.type === 'PDF' ? 'fa-file-pdf text-rose-500' : 'fa-file-image text-blue-600'} text-base`}></i>
+                </div>
+                <div className="min-w-0">
+                  <h4 className="font-bold text-slate-900 dark:text-white text-sm truncate max-w-md" title={activeDoc.name}>
+                    {activeDoc.name}
+                  </h4>
+                  <p className="text-[11px] text-slate-400">
+                    Application {currentApp?.referenceNumber} • Document {activeDocIndex + 1} of {previewDocList.length}
+                  </p>
+                </div>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
+
+              {/* Header Action Tools */}
+              <div className="flex items-center gap-2">
+                {/* Mode Tabs: Viewer vs Details */}
+                <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => setPreviewTabMode('viewer')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                      previewTabMode === 'viewer'
+                        ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                        : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    <i className="fa-solid fa-eye text-xs"></i>
+                    <span>Viewer</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPreviewTabMode('details')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                      previewTabMode === 'details'
+                        ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                        : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    <i className="fa-solid fa-circle-info text-xs"></i>
+                    <span>Details &amp; Audit</span>
+                  </button>
+                </div>
+
+                {activeDocUrl && (
+                  <a
+                    href={activeDocUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold transition"
+                    title="Open in New Tab"
+                  >
+                    <i className="fa-solid fa-arrow-up-right-from-square"></i>
+                  </a>
+                )}
+
                 <button
                   type="button"
                   onClick={() => {
-                    setPreviewDocUrl(null);
+                    setPreviewModalOpen(false);
                     setPreviewDocError(false);
                   }}
-                  className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-semibold cursor-pointer transition"
+                  className="w-9 h-9 rounded-xl flex items-center justify-center bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 hover:text-slate-900 dark:hover:text-white cursor-pointer font-bold text-base transition"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {/* Document Tabs Strip (Switch between attached documents) */}
+            {previewDocList.length > 1 && (
+              <div className="px-6 py-2.5 bg-slate-50 dark:bg-slate-950/60 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2 overflow-x-auto">
+                <span className="text-[10px] font-bold uppercase text-slate-400 shrink-0 mr-1">
+                  Attached Files:
+                </span>
+                {previewDocList.map((doc, idx) => (
+                  <button
+                    key={doc.id || idx}
+                    type="button"
+                    onClick={() => {
+                      setActiveDocIndex(idx);
+                      setPreviewDocError(false);
+                      setPreviewZoom(100);
+                    }}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-2 shrink-0 cursor-pointer ${
+                      activeDocIndex === idx
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    <i className={`fa-solid ${doc.type === 'PDF' ? 'fa-file-pdf' : 'fa-file-image'} text-[11px]`}></i>
+                    <span className="truncate max-w-[150px]">{doc.name}</span>
+                    <span
+                      className={`text-[9px] px-1.5 py-0.2 rounded-full font-extrabold ${
+                        doc.status === 'Verified'
+                          ? 'bg-emerald-500/20 text-emerald-300'
+                          : doc.status === 'Rejected'
+                          ? 'bg-rose-500/20 text-rose-300'
+                          : 'bg-amber-500/20 text-amber-300'
+                      }`}
+                    >
+                      {doc.status}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Modal Body Canvas */}
+            <div className="flex-1 bg-slate-100 dark:bg-slate-950 overflow-hidden flex flex-col min-h-0 relative">
+              {previewTabMode === 'viewer' ? (
+                <div className="flex-1 overflow-auto flex items-center justify-center p-4 min-h-0 relative">
+                  {/* Floating Zoom Controls for Image Viewer */}
+                  {!activeDocUrl.toLowerCase().includes('.pdf') && !activeDocUrl.startsWith('data:application/pdf') && !previewDocError && (
+                    <div className="absolute bottom-6 right-6 z-10 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-2xl border border-slate-200 dark:border-slate-800 p-1.5 flex items-center gap-1 shadow-lg">
+                      <button
+                        type="button"
+                        onClick={() => setPreviewZoom((z) => Math.max(50, z - 25))}
+                        className="w-8 h-8 rounded-xl flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 cursor-pointer font-bold text-xs"
+                        title="Zoom Out"
+                      >
+                        <i className="fa-solid fa-minus"></i>
+                      </button>
+                      <span className="text-[11px] font-mono font-bold px-2 text-slate-700 dark:text-slate-300 min-w-[48px] text-center">
+                        {previewZoom}%
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setPreviewZoom((z) => Math.min(250, z + 25))}
+                        className="w-8 h-8 rounded-xl flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 cursor-pointer font-bold text-xs"
+                        title="Zoom In"
+                      >
+                        <i className="fa-solid fa-plus"></i>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPreviewZoom(100)}
+                        className="px-2.5 py-1 text-[11px] font-bold rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 cursor-pointer"
+                        title="Reset Zoom"
+                      >
+                        Reset
+                      </button>
+                    </div>
+                  )}
+
+                  {activeDocUrl.toLowerCase().includes('.pdf') || activeDocUrl.startsWith('data:application/pdf') ? (
+                    <iframe
+                      src={activeDocUrl}
+                      title={activeDoc.name}
+                      className="w-full h-full border-0 rounded-2xl bg-white shadow-md"
+                    />
+                  ) : previewDocError ? (
+                    <div className="text-center p-8 max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-xl space-y-4">
+                      <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 flex items-center justify-center text-xl">
+                        <i className="fa-solid fa-file-circle-question"></i>
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">Inline Preview Fallback</h4>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                          File <span className="font-mono font-bold text-slate-700 dark:text-slate-300">"{activeDoc.name}"</span> could not be rendered as a direct raster image. Official archive certificate generated.
+                        </p>
+                      </div>
+                      <div className="pt-2 flex justify-center gap-2">
+                        <a
+                          href={activeDocUrl}
+                          download={activeDoc.name}
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl transition shadow-md"
+                        >
+                          <i className="fa-solid fa-download text-xs"></i> Download File
+                        </a>
+                      </div>
+                    </div>
+                  ) : (
+                    <img
+                      src={activeDocUrl}
+                      alt={activeDoc.name}
+                      style={{ transform: `scale(${previewZoom / 100})`, transformOrigin: 'center center' }}
+                      onError={() => {
+                        if (activeDocUrl && !activeDocUrl.startsWith('data:image/svg+xml')) {
+                          activeDoc.url = createDocumentFallbackSvg(activeDoc.name, activeDoc.status);
+                          setPreviewDocError(false);
+                        } else {
+                          setPreviewDocError(true);
+                        }
+                      }}
+                      className="max-w-full max-h-[72vh] object-contain rounded-2xl shadow-md transition-transform duration-150"
+                    />
+                  )}
+                </div>
+              ) : (
+                /* Document Details & Verification Metadata Tab */
+                <div className="p-8 overflow-y-auto space-y-6 max-w-3xl mx-auto w-full">
+                  <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-xs space-y-4">
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                      <i className="fa-solid fa-shield-halved text-blue-600"></i>
+                      Document Metadata &amp; Compliance Summary
+                    </h3>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                      <div>
+                        <span className="text-slate-400 block text-[10px] font-bold uppercase">Document Title</span>
+                        <strong className="text-slate-800 dark:text-slate-200">{activeDoc.name}</strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block text-[10px] font-bold uppercase">Format / MIME Category</span>
+                        <strong className="text-blue-600 dark:text-blue-400">{activeDoc.type} Document</strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block text-[10px] font-bold uppercase">Associated Application</span>
+                        <strong className="font-mono text-slate-800 dark:text-slate-200">{currentApp.referenceNumber}</strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block text-[10px] font-bold uppercase">Applicant Name</span>
+                        <strong className="text-slate-800 dark:text-slate-200">{currentApp.applicantName}</strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block text-[10px] font-bold uppercase">Upload Timestamp</span>
+                        <strong className="text-slate-800 dark:text-slate-200">{activeDoc.uploadedAt || currentApp.submissionDate || 'N/A'}</strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block text-[10px] font-bold uppercase">Verification Status</span>
+                        <span
+                          className={`inline-block mt-0.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                            activeDoc.status === 'Verified'
+                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                              : activeDoc.status === 'Rejected'
+                              ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+                              : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                          }`}
+                        >
+                          {activeDoc.status}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-xs space-y-3">
+                    <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase">
+                      Assessor Verification Decision
+                    </h4>
+                    <p className="text-xs text-slate-500">
+                      Update the regulatory compliance status of this document. Changes are recorded in the application audit log.
+                    </p>
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleDocStatus(activeDocIndex, 'Verified')}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                          activeDoc.status === 'Verified'
+                            ? 'bg-emerald-600 text-white shadow-sm'
+                            : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+                        }`}
+                      >
+                        <i className="fa-solid fa-check"></i> Mark as Verified
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleToggleDocStatus(activeDocIndex, 'Rejected')}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                          activeDoc.status === 'Rejected'
+                            ? 'bg-rose-600 text-white shadow-sm'
+                            : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
+                        }`}
+                      >
+                        <i className="fa-solid fa-xmark"></i> Flag as Rejected
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleToggleDocStatus(activeDocIndex, 'Pending')}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                          activeDoc.status === 'Pending'
+                            ? 'bg-amber-600 text-white shadow-sm'
+                            : 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
+                        }`}
+                      >
+                        <i className="fa-solid fa-hourglass-half"></i> Set as Pending
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer Controls */}
+            <div className="px-6 py-3.5 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex flex-wrap justify-between items-center gap-3">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleToggleDocStatus(activeDocIndex, 'Verified')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                    activeDoc.status === 'Verified'
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 border border-emerald-200 dark:border-emerald-800'
+                  }`}
+                >
+                  <i className="fa-solid fa-check text-xs"></i> Verified
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleToggleDocStatus(activeDocIndex, 'Rejected')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                    activeDoc.status === 'Rejected'
+                      ? 'bg-rose-600 text-white'
+                      : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 hover:bg-rose-100 border border-rose-200 dark:border-rose-800'
+                  }`}
+                >
+                  <i className="fa-solid fa-xmark text-xs"></i> Rejected
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={activeDocIndex <= 0}
+                  onClick={() => {
+                    setActiveDocIndex((i) => Math.max(0, i - 1));
+                    setPreviewDocError(false);
+                    setPreviewZoom(100);
+                  }}
+                  className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs transition cursor-pointer"
+                >
+                  <i className="fa-solid fa-chevron-left mr-1"></i> Prev
+                </button>
+
+                <button
+                  type="button"
+                  disabled={activeDocIndex >= previewDocList.length - 1}
+                  onClick={() => {
+                    setActiveDocIndex((i) => Math.min(previewDocList.length - 1, i + 1));
+                    setPreviewDocError(false);
+                    setPreviewZoom(100);
+                  }}
+                  className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs transition cursor-pointer"
+                >
+                  Next <i className="fa-solid fa-chevron-right ml-1"></i>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPreviewModalOpen(false);
+                    setPreviewDocError(false);
+                  }}
+                  className="px-4 py-1.5 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold rounded-xl text-xs cursor-pointer transition"
                 >
                   Close
                 </button>
               </div>
-            </div>
-            <div className="flex-1 bg-slate-100 dark:bg-slate-950 overflow-auto flex items-center justify-center p-4">
-              {previewDocUrl.toLowerCase().includes('.pdf') || previewDocUrl.startsWith('data:application/pdf') ? (
-                <iframe
-                  src={previewDocUrl}
-                  title={previewDocTitle}
-                  className="w-full h-full border-0 rounded-xl bg-white shadow-md"
-                />
-              ) : previewDocError ? (
-                <div className="text-center p-8 max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl space-y-4">
-                  <div className="w-12 h-12 mx-auto rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 flex items-center justify-center">
-                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">Document Preview Unavailable</h4>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                      The file <span className="font-mono font-semibold text-slate-700 dark:text-slate-300">"{previewDocTitle}"</span> could not be loaded directly in the inline viewer.
-                    </p>
-                  </div>
-                  <div className="pt-2">
-                    <a
-                      href={previewDocUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      download={previewDocTitle}
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl transition shadow-md"
-                    >
-                      Download File
-                    </a>
-                  </div>
-                </div>
-              ) : (
-                <img
-                  src={previewDocUrl}
-                  alt={previewDocTitle}
-                  onError={() => {
-                    if (previewDocUrl && !previewDocUrl.startsWith('data:image/svg+xml')) {
-                      setPreviewDocUrl(createDocumentFallbackSvg(previewDocTitle));
-                    } else {
-                      setPreviewDocError(true);
-                    }
-                  }}
-                  className="max-w-full max-h-[75vh] object-contain rounded-xl shadow-lg"
-                />
-              )}
             </div>
           </div>
         </div>

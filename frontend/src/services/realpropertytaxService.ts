@@ -501,10 +501,17 @@ export const deleteLguMasterRptRecord =
   async (
     id: string | number
   ): Promise<any> => {
+    const token =
+      localStorage.getItem("token") ||
+      sessionStorage.getItem("token");
+    const headers: HeadersInit = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
     const response = await fetch(
       `${API_BASE_URL}/lgu-rpt-records/${id}`,
       {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers
       }
     );
 
@@ -517,6 +524,41 @@ export const deleteLguMasterRptRecord =
       throw new Error(
         errData.message ||
         'Failed to delete assessment record'
+      );
+    }
+
+    return await response.json();
+  };
+
+export const deleteRptApplication =
+  async (
+    id: string | number
+  ): Promise<any> => {
+    const token =
+      localStorage.getItem("token") ||
+      sessionStorage.getItem("token");
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json'
+    };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const response = await fetch(
+      `${API_BASE_URL}/citizen-rpt-applications/${id}`,
+      {
+        method: 'DELETE',
+        headers
+      }
+    );
+
+    if (!response.ok) {
+      const errData =
+        await response
+          .json()
+          .catch(() => ({}));
+
+      throw new Error(
+        errData.message ||
+        'Failed to delete RPT application'
       );
     }
 
