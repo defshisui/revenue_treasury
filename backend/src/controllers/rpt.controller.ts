@@ -361,8 +361,7 @@ export async function updateRptApplicationStatus(
     assignedOfficer,
     paymentAmount,
     paymentStatus,
-    paymentDueDate,
-    adminEmail
+    paymentDueDate
   } = req.body;
 
   const numericPaymentAmount =
@@ -419,7 +418,7 @@ export async function updateRptApplicationStatus(
     await recordAudit(
       req,
       'AUD-RPT-STATUS',
-      adminEmail || 'admin@gov.ph',
+      'admin@gov.ph',
       'Admin',
       'RPT Module',
       'RPT_STATUS_UPDATED',

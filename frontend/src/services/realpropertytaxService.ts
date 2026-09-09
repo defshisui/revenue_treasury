@@ -530,7 +530,6 @@ export const updateRptApplicationStatus =
     status: string,
     notes?: string,
     options?: {
-      adminEmail?: string;
       paymentAmount?: number;
       paymentStatus?: string;
       paymentDueDate?: string;
