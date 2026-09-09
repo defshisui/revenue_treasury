@@ -304,6 +304,13 @@ export async function deleteRptApplication(
 ): Promise<void> {
   const { id } = req.params;
 
+  const authenticatedUser = (
+    req as Request & { user?: { email?: string; } }
+  ).user;
+  const authenticatedEmail = String(
+    authenticatedUser?.email || ''
+  ).trim().toLowerCase();
+
   try {
     const result = await pool.query(
       `DELETE FROM rpt_applications
@@ -322,7 +329,7 @@ export async function deleteRptApplication(
     await recordAudit(
       req,
       'AUD-RPT-DELETE',
-      'admin@gov.ph',
+      authenticatedEmail || 'admin@gov.ph',
       'Admin',
       'RPT Module',
       'RPT_APPLICATION_DELETED',
@@ -354,6 +361,13 @@ export async function updateRptApplicationStatus(
   res: Response
 ): Promise<void> {
   const { id } = req.params;
+
+  const authenticatedUser = (
+    req as Request & { user?: { email?: string; } }
+  ).user;
+  const authenticatedEmail = String(
+    authenticatedUser?.email || ''
+  ).trim().toLowerCase();
 
   const {
     status,
@@ -418,7 +432,7 @@ export async function updateRptApplicationStatus(
     await recordAudit(
       req,
       'AUD-RPT-STATUS',
-      'admin@gov.ph',
+      authenticatedEmail || 'admin@gov.ph',
       'Admin',
       'RPT Module',
       'RPT_STATUS_UPDATED',
@@ -640,6 +654,13 @@ export async function createLguRptRecord(
 ): Promise<void> {
   const data = req.body;
 
+  const authenticatedUser = (
+    req as Request & { user?: { email?: string; } }
+  ).user;
+  const authenticatedEmail = String(
+    authenticatedUser?.email || ''
+  ).trim().toLowerCase();
+
   try {
     const result = await pool.query(
       `INSERT INTO lgu_rpt_records (
@@ -738,7 +759,7 @@ export async function createLguRptRecord(
     await recordAudit(
       req,
       'AUD-RPT-CREATE',
-      'admin@gov.ph',
+      authenticatedEmail || 'admin@gov.ph',
       'Admin',
       'RPT Module',
       'RPT_RECORD_CREATED',
