@@ -469,14 +469,19 @@ export const updateLguMasterRptRecord =
     id: string | number,
     record: any
   ): Promise<any> => {
+    const token =
+      localStorage.getItem("token") ||
+      sessionStorage.getItem("token");
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json'
+    };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
     const response = await fetch(
       `${API_BASE_URL}/lgu-rpt-records/${id}`,
       {
         method: 'PUT',
-        headers: {
-          'Content-Type':
-            'application/json'
-        },
+        headers,
         body: JSON.stringify(record)
       }
     );
@@ -576,16 +581,25 @@ export const updateRptApplicationStatus =
       paymentStatus?: string;
       paymentDueDate?: string;
       assignedOfficer?: string;
+      officialReceiptNumber?: string;
+      paymentMethod?: string;
+      paymentReference?: string;
+      paymentDate?: string;
     }
   ): Promise<any> => {
+    const token =
+      localStorage.getItem("token") ||
+      sessionStorage.getItem("token");
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json'
+    };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
     const response = await fetch(
       `${API_BASE_URL}/citizen-rpt-applications/${id}/status`,
       {
         method: 'PATCH',
-        headers: {
-          'Content-Type':
-            'application/json'
-        },
+        headers,
         body: JSON.stringify({
           status,
           notes,

@@ -375,7 +375,11 @@ export async function updateRptApplicationStatus(
     assignedOfficer,
     paymentAmount,
     paymentStatus,
-    paymentDueDate
+    paymentDueDate,
+    officialReceiptNumber,
+    paymentMethod,
+    paymentReference,
+    paymentDate
   } = req.body;
 
   const numericPaymentAmount =
@@ -399,6 +403,13 @@ export async function updateRptApplicationStatus(
     return;
   }
 
+  // If payment status is marked Paid/Settled and status was For Payment, promote to Payment Completed
+  const finalStatus =
+    status ||
+    ((paymentStatus === 'Paid' || paymentStatus === 'Settled')
+      ? 'Payment Completed'
+      : undefined);
+
   try {
     const result = await pool.query(
       `UPDATE rpt_applications
@@ -408,16 +419,27 @@ export async function updateRptApplicationStatus(
          assigned_officer = COALESCE($3, assigned_officer),
          payment_amount = COALESCE($4, payment_amount),
          payment_status = COALESCE($5, payment_status),
-         payment_due_date = COALESCE($6, payment_due_date)
-       WHERE id = $7
+         payment_due_date = COALESCE($6, payment_due_date),
+         official_receipt_number = COALESCE($7, official_receipt_number),
+         payment_method = COALESCE($8, payment_method),
+         payment_reference = COALESCE($9, payment_reference),
+         payment_date = CASE 
+           WHEN $5 IN ('Paid', 'Settled') THEN COALESCE($10, payment_date, NOW())
+           ELSE payment_date
+         END
+       WHERE id = $11
        RETURNING *`,
       [
-        status,
+        finalStatus,
         notes,
         assignedOfficer,
         numericPaymentAmount,
         paymentStatus,
         paymentDueDate || null,
+        officialReceiptNumber || null,
+        paymentMethod || null,
+        paymentReference || null,
+        paymentDate || null,
         id
       ]
     );
@@ -794,6 +816,10 @@ export async function updateLguRptRecord(
   const { id } = req.params;
   const data = req.body;
 
+  const isPaid = data.paymentStatus === 'Paid' || data.paymentStatus === 'Settled';
+  const computedBalance = isPaid && data.balance === undefined ? 0 : data.balance;
+  const computedStatus = isPaid && !data.status ? 'Paid' : data.status;
+
   try {
     const result = await pool.query(
       `UPDATE lgu_rpt_records
@@ -809,8 +835,18 @@ export async function updateLguRptRecord(
          totalAssessment = COALESCE($9, totalAssessment),
          balance = COALESCE($10, balance),
          status = COALESCE($11, status),
-         paymentStatus = COALESCE($12, paymentStatus)
-       WHERE id = $13
+         paymentStatus = COALESCE($12, paymentStatus),
+         amountPaid = CASE
+           WHEN $12 IN ('Paid', 'Settled') AND $13::numeric IS NULL THEN COALESCE(totalAssessment, 0)
+           ELSE COALESCE($13, amountPaid)
+         END,
+         officialReceiptNumber = COALESCE($14, officialReceiptNumber),
+         paymentMethod = COALESCE($15, paymentMethod),
+         paymentDate = CASE
+           WHEN $12 IN ('Paid', 'Settled') THEN COALESCE($16, paymentDate, NOW())
+           ELSE paymentDate
+         END
+       WHERE id = $17
        RETURNING *`,
       [
         data.ownerName,
@@ -822,9 +858,13 @@ export async function updateLguRptRecord(
         data.penalty,
         data.discount,
         data.totalAssessment,
-        data.balance,
-        data.status,
+        computedBalance,
+        computedStatus,
         data.paymentStatus,
+        data.amountPaid !== undefined ? data.amountPaid : null,
+        data.officialReceiptNumber || null,
+        data.paymentMethod || null,
+        data.paymentDate || null,
         id
       ]
     );

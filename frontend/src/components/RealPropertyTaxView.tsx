@@ -199,6 +199,16 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     type: 'success' | 'warning' | 'error';
   } | null>(null);
 
+  // Treasury Cashier In-Person Settlement Modal State
+  const [isCashierSettleModalOpen, setIsCashierSettleModalOpen] = useState<boolean>(false);
+  const [cashierOrNumber, setCashierOrNumber] = useState<string>('');
+  const [cashierPaymentMethod, setCashierPaymentMethod] = useState<string>('Treasury Cashier (Cash)');
+  const [cashierPaymentAmount, setCashierPaymentAmount] = useState<number>(0);
+  const [isSubmittingSettle, setIsSubmittingSettle] = useState<boolean>(false);
+
+  // Payments Ledger Category Filter
+  const [ledgerCategoryFilter, setLedgerCategoryFilter] = useState<'ALL' | 'MASTER' | 'APPLICATION'>('ALL');
+
   const triggerToast = (text: string, type: 'success' | 'warning' | 'error') => {
     setToastMessage({ text, type });
     setTimeout(() => {
@@ -212,34 +222,41 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
   const loadMasterRecords = useCallback(async () => {
     try {
       const records = await getLguMasterRptRecords();
-      const mapped: LguMasterProperty[] = records.map((r: any) => ({
-        id: r.id,
-        propertyIndexNumber: r.property_index_number || r.propertyIndexNumber || '',
-        newPspin: r.new_pspin || r.newPspin || '09-021-009-166- - -',
-        taxDeclarationNumber: r.tax_declaration_number || r.taxDeclarationNumber || '',
-        ownerName: r.owner_name || r.ownerName || '',
-        ownerAddress: r.owner_address || r.ownerAddress || '',
-        contactInfo: r.contact_info || r.contactInfo || '',
-        barangay: r.barangay || '',
-        location: r.location || '',
-        propertyType: r.property_type || r.propertyType || 'Residential',
-        lotAreaSqm: Number(r.lot_area_sqm || r.lotAreaSqm || 0),
-        marketValue: Number(r.market_value || r.marketValue || 0),
-        assessedValue: Number(r.assessed_value || r.assessedValue || 0),
-        billingYear: Number(r.billing_year || r.billingYear || 2025),
-        billExpiryDate: r.bill_expiry_date || r.billExpiryDate || '2025-10-31',
-        basicTax: Number(r.basic_tax || r.basicTax || 0),
-        sefTax: Number(r.sef_tax || r.sefTax || 0),
-        shttcApplied: Number(r.shttc_applied || r.shttcApplied || 0),
-        penalty: Number(r.penalty || 0),
-        discount: Number(r.discount || 0),
-        totalAssessment: Number(r.total_assessment || r.totalAssessment || 0),
-        amountPaid: Number(r.amount_paid || r.amountPaid || 0),
-        balance: Number(r.balance || 0),
-        delinquentStatus: Boolean(r.delinquent_status || r.delinquentStatus),
-        status: r.status || 'Active',
-        paymentStatus: r.payment_status || r.paymentStatus || 'Unpaid',
-      }));
+      const mapped: LguMasterProperty[] = records.map((r: any) => {
+        const rawPaymentStatus = String(r.payment_status || r.paymentStatus || '').trim().toLowerCase();
+        const balance = Number(r.balance || 0);
+        const amountPaid = Number(r.amount_paid || r.amountPaid || 0);
+        const isPaid = rawPaymentStatus === 'paid' || rawPaymentStatus === 'settled' || (balance <= 0 && amountPaid > 0);
+
+        return {
+          id: r.id,
+          propertyIndexNumber: r.property_index_number || r.propertyIndexNumber || '',
+          newPspin: r.new_pspin || r.newPspin || '09-021-009-166- - -',
+          taxDeclarationNumber: r.tax_declaration_number || r.taxDeclarationNumber || '',
+          ownerName: r.owner_name || r.ownerName || '',
+          ownerAddress: r.owner_address || r.ownerAddress || '',
+          contactInfo: r.contact_info || r.contactInfo || '',
+          barangay: r.barangay || '',
+          location: r.location || '',
+          propertyType: r.property_type || r.propertyType || 'Residential',
+          lotAreaSqm: Number(r.lot_area_sqm || r.lotAreaSqm || 0),
+          marketValue: Number(r.market_value || r.marketValue || 0),
+          assessedValue: Number(r.assessed_value || r.assessedValue || 0),
+          billingYear: Number(r.billing_year || r.billingYear || 2025),
+          billExpiryDate: r.bill_expiry_date || r.billExpiryDate || '2025-10-31',
+          basicTax: Number(r.basic_tax || r.basicTax || 0),
+          sefTax: Number(r.sef_tax || r.sefTax || 0),
+          shttcApplied: Number(r.shttc_applied || r.shttcApplied || 0),
+          penalty: Number(r.penalty || 0),
+          discount: Number(r.discount || 0),
+          totalAssessment: Number(r.total_assessment || r.totalAssessment || 0),
+          amountPaid,
+          balance,
+          delinquentStatus: Boolean(r.delinquent_status || r.delinquentStatus),
+          status: r.status || 'Active',
+          paymentStatus: isPaid ? 'Paid' : 'Unpaid',
+        };
+      });
       setMasterProperties(mapped);
     } catch (e) {
       console.error('Failed to load master records:', e);
@@ -254,11 +271,11 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         setPaymentsLedger(
           data.map((p: any) => ({
             id: p.id,
-            taxDeclarationNumber: p.tax_declaration_number || p.taxDeclarationNumber,
-            ownerName: p.owner_name || p.ownerName,
-            amountPaid: Number(p.amount_paid || p.amountPaid || 0),
-            officialReceiptNumber: p.official_receipt_number || p.officialReceiptNumber,
-            paymentDate: p.payment_date || p.paymentDate,
+            taxDeclarationNumber: p.tax_declaration_number || p.taxDeclarationNumber || 'N/A',
+            ownerName: p.owner_name || p.ownerName || 'Unknown Payor',
+            amountPaid: Number(p.amount_paid || p.amount || p.amountPaid || 0),
+            officialReceiptNumber: p.official_receipt_number || p.officialReceiptNumber || `OR-${p.id}`,
+            paymentDate: p.payment_date || p.paymentDate || '',
             paymentMethod: p.payment_method || p.paymentMethod || 'Online Gateway',
             quarterCoverage: p.quarter_coverage || p.quarterCoverage || 'Full Year',
             paymentOption: p.payment_option || p.paymentOption || 'Full',
@@ -290,6 +307,30 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
           rawDocs = Object.values(rawDocs);
         }
 
+        const rawPaymentStatus = String(item.payment_status || item.paymentStatus || '').trim().toLowerCase();
+        const itemStatus = String(item.status || '').trim();
+        const rawPaymentAmount = Number(
+          item.payment_amount !== undefined
+            ? item.payment_amount
+            : item.paymentAmount !== undefined
+            ? item.paymentAmount
+            : 0
+        );
+        const isPaymentSettled =
+          ['paid', 'settled', 'payment completed'].includes(rawPaymentStatus) ||
+          itemStatus === 'Payment Completed';
+        const isPaymentPending =
+          !isPaymentSettled &&
+          (itemStatus === 'For Payment' ||
+            ['pending', 'pending payment'].includes(rawPaymentStatus) ||
+            rawPaymentAmount > 0);
+        const resolvedPaymentStatus: 'Paid' | 'Pending' | 'For Payment' | 'Payment Completed' | 'Unpaid' =
+          isPaymentSettled
+            ? 'Paid'
+            : isPaymentPending
+            ? 'Pending'
+            : 'Unpaid';
+
         return {
           ...item,
           id: item.id || `RPT-${Math.random().toString(36).substring(2, 9)}`,
@@ -301,6 +342,13 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
           category: item.service || 'Transfer of Ownership',
           submissionDate: item.filedDate || '',
           penaltyFee: item.penalty ? Number(item.penalty) : 0,
+          paymentStatus: resolvedPaymentStatus,
+          paymentAmount: rawPaymentAmount,
+          paymentReference: item.payment_reference || item.paymentReference || '',
+          officialReceiptNumber: item.official_receipt_number || item.officialReceiptNumber || '',
+          paymentMethod: item.payment_method || item.paymentMethod || '',
+          paymentDate: item.payment_date || item.paymentDate || '',
+          paymentDueDate: item.payment_due_date || item.paymentDueDate || '',
           propertyDetails: item.propertyDetails || {
             pin: item.pin || '',
             titleNumber: item.taxDeclarationNumber || '',
@@ -409,24 +457,65 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
   const metrics = useMemo(() => {
     const activeMaster = masterProperties.filter((p) => p.status !== 'Archived');
     const totalMaster = activeMaster.length;
-    const activeApps = applications.filter((a) => a.status !== 'Archived').length;
-    const totalPaidRevenue = paymentsLedger.reduce((sum, p) => sum + (p.amountPaid || 0), 0);
+    const settledMasterCount = activeMaster.filter((p) => p.paymentStatus === 'Paid').length;
+    const pendingMasterCount = activeMaster.filter((p) => p.paymentStatus !== 'Paid').length;
 
-    let pendingBalance = 0;
-    let unpaidCount = 0;
-    activeMaster.forEach((p) => {
+    const nonArchivedApps = applications.filter((a) => a.status !== 'Archived');
+    const totalApps = nonArchivedApps.length;
+    const settledApps = nonArchivedApps.filter(
+      (a) => a.paymentStatus === 'Paid' || a.status === 'Payment Completed'
+    );
+    const settledAppsCount = settledApps.length;
+    const settledAppRevenue = settledApps.reduce((sum, a) => sum + Number(a.paymentAmount || 0), 0);
+
+    const pendingPaymentApps = nonArchivedApps.filter(
+      (a) =>
+        a.paymentStatus !== 'Paid' &&
+        a.status !== 'Payment Completed' &&
+        (a.status === 'For Payment' ||
+          a.paymentStatus === 'Pending' ||
+          Number(a.paymentAmount || 0) > 0)
+    );
+    const pendingPaymentAppsCount = pendingPaymentApps.length;
+    const pendingAppFees = pendingPaymentApps.reduce(
+      (sum, a) => sum + Number(a.paymentAmount || 0),
+      0
+    );
+
+    const underReviewAppsCount = nonArchivedApps.filter(
+      (a) =>
+        !['Approved', 'Payment Completed', 'Ready for Release', 'Rejected'].includes(a.status as string) &&
+        a.status !== 'For Payment'
+    ).length;
+
+    const masterPaidRevenue = paymentsLedger.reduce((sum, p) => sum + (p.amountPaid || 0), 0);
+    const totalPaidRevenue = masterPaidRevenue + settledAppRevenue;
+
+    const pendingMasterBalance = activeMaster.reduce((sum, p) => {
       if (p.paymentStatus !== 'Paid') {
-        pendingBalance += p.balance || p.totalAssessment || 0;
-        unpaidCount++;
+        return sum + (p.balance || p.totalAssessment || 0);
       }
-    });
+      return sum;
+    }, 0);
+
+    const totalPendingReceivables = pendingMasterBalance + pendingAppFees;
 
     return {
       totalMaster,
-      activeApps,
+      settledMasterCount,
+      pendingMasterCount,
+      activeApps: totalApps,
+      settledAppsCount,
+      settledAppRevenue,
+      pendingPaymentAppsCount,
+      pendingAppFees,
+      underReviewAppsCount,
+      masterPaidRevenue,
       totalPaidRevenue,
-      pendingBalance,
-      unpaidCount,
+      pendingBalance: pendingMasterBalance,
+      totalPendingReceivables,
+      totalSettledReceipts: paymentsLedger.length + settledAppsCount,
+      unpaidCount: pendingMasterCount,
     };
   }, [masterProperties, applications, paymentsLedger]);
 
@@ -440,15 +529,25 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
       if (masterTab === 'Active' && isArchived) return false;
       if (masterTab === 'Archived' && !isArchived) return false;
 
+      const isSettled = p.paymentStatus === 'Paid';
       const matchesSearch =
         !lowerSearch ||
         p.taxDeclarationNumber.toLowerCase().includes(lowerSearch) ||
         p.ownerName.toLowerCase().includes(lowerSearch) ||
         p.newPspin.toLowerCase().includes(lowerSearch) ||
-        p.barangay.toLowerCase().includes(lowerSearch);
+        p.barangay.toLowerCase().includes(lowerSearch) ||
+        (lowerSearch === 'settled' && isSettled) ||
+        (lowerSearch === 'pending' && !isSettled);
 
       const matchesType = masterTypeFilter === 'ALL' || p.propertyType === masterTypeFilter;
-      const matchesStatus = masterStatusFilter === 'ALL' || p.paymentStatus === masterStatusFilter;
+      let matchesStatus = true;
+      if (masterStatusFilter === 'Paid' || masterStatusFilter === 'Settled') {
+        matchesStatus = isSettled;
+      } else if (masterStatusFilter === 'Unpaid' || masterStatusFilter === 'Pending') {
+        matchesStatus = !isSettled;
+      } else if (masterStatusFilter !== 'ALL') {
+        matchesStatus = p.paymentStatus === masterStatusFilter;
+      }
 
       return matchesSearch && matchesType && matchesStatus;
     });
@@ -471,14 +570,32 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
       if (queueTab === 'Active' && isArchived) return false;
       if (queueTab === 'Archived' && !isArchived) return false;
 
+      const isSettled = app.paymentStatus === 'Paid' || app.status === 'Payment Completed';
+      const isPending =
+        !isSettled &&
+        (app.status === 'For Payment' ||
+          app.paymentStatus === 'Pending' ||
+          Number(app.paymentAmount || 0) > 0);
+
       const matchesSearch =
         !lowerSearch ||
         app.referenceNumber.toLowerCase().includes(lowerSearch) ||
         app.applicantName.toLowerCase().includes(lowerSearch) ||
-        app.propertyDetails.address.toLowerCase().includes(lowerSearch);
+        app.propertyDetails.address.toLowerCase().includes(lowerSearch) ||
+        (lowerSearch === 'settled' && isSettled) ||
+        (lowerSearch === 'pending' && isPending) ||
+        Boolean(app.officialReceiptNumber && app.officialReceiptNumber.toLowerCase().includes(lowerSearch));
 
       const matchesCategory = selectedCategory === 'ALL' || app.category === selectedCategory;
-      const matchesStatus = selectedStatusFilter === 'ALL' || app.status === selectedStatusFilter;
+
+      let matchesStatus = true;
+      if (selectedStatusFilter === 'PENDING_PAYMENT') {
+        matchesStatus = isPending;
+      } else if (selectedStatusFilter === 'SETTLED_PAYMENT') {
+        matchesStatus = isSettled;
+      } else if (selectedStatusFilter !== 'ALL') {
+        matchesStatus = app.status === selectedStatusFilter;
+      }
 
       return matchesSearch && matchesCategory && matchesStatus;
     });
@@ -751,6 +868,156 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     }
   };
 
+  const handleOpenCashierSettleModal = (app: ExtendedApplicationRecord) => {
+    const fee = Number(app.paymentAmount || rptServiceAmountInput || 0);
+    const autoOr = `eOR-RPT-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
+    setCashierOrNumber(app.officialReceiptNumber || autoOr);
+    setCashierPaymentMethod('Treasury Cashier (Cash)');
+    setCashierPaymentAmount(fee);
+    setIsCashierSettleModalOpen(true);
+  };
+
+  const handleConfirmCashierSettlement = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentApp) return;
+    if (cashierPaymentAmount <= 0) {
+      triggerToast('Please enter a valid assessment fee amount to settle.', 'warning');
+      return;
+    }
+    if (!cashierOrNumber.trim()) {
+      triggerToast('Please enter an Official Receipt (eOR) Number.', 'warning');
+      return;
+    }
+
+    setIsSubmittingSettle(true);
+    try {
+      const nowIso = new Date().toISOString();
+      const result = await updateRptApplicationStatus(
+        String(currentApp.id),
+        'Payment Completed',
+        `Payment settled over the counter: ${cashierOrNumber} via ${cashierPaymentMethod}`,
+        {
+          paymentAmount: cashierPaymentAmount,
+          paymentStatus: 'Paid',
+          officialReceiptNumber: cashierOrNumber.trim(),
+          paymentMethod: cashierPaymentMethod,
+          paymentReference: `MANUAL-${Date.now()}`,
+          paymentDate: nowIso,
+        }
+      );
+
+      const serverRecord = result?.record;
+      setApplications((prev) =>
+        prev.map((app) =>
+          app.id === currentApp.id
+            ? {
+                ...app,
+                ...(serverRecord || {}),
+                status: 'Payment Completed',
+                paymentStatus: 'Paid',
+                paymentAmount: cashierPaymentAmount,
+                officialReceiptNumber: cashierOrNumber.trim(),
+                paymentMethod: cashierPaymentMethod,
+                paymentDate: nowIso,
+              }
+            : app
+        )
+      );
+
+      setIsCashierSettleModalOpen(false);
+      triggerToast(`Payment Settled: Official e-OR ${cashierOrNumber} recorded!`, 'success');
+      loadPayments();
+    } catch (err: any) {
+      triggerToast(err?.message || 'Failed to record settlement.', 'error');
+    } finally {
+      setIsSubmittingSettle(false);
+    }
+  };
+
+  const handleQuickSettleMasterProperty = async (prop: LguMasterProperty) => {
+    try {
+      const autoOr = `eOR-RPT-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
+      await updateLguMasterRptRecord(prop.id, {
+        paymentStatus: 'Paid',
+        status: 'Paid',
+        balance: 0,
+        amountPaid: prop.totalAssessment,
+        officialReceiptNumber: autoOr,
+        paymentMethod: 'Treasury Cashier (Cash)',
+        paymentDate: new Date().toISOString(),
+      });
+
+      setMasterProperties((prev) =>
+        prev.map((p) =>
+          p.id === prop.id
+            ? {
+                ...p,
+                paymentStatus: 'Paid',
+                status: 'Paid',
+                balance: 0,
+                amountPaid: p.totalAssessment,
+              }
+            : p
+        )
+      );
+
+      triggerToast(`Assessment for ${prop.taxDeclarationNumber} settled successfully!`, 'success');
+      loadPayments();
+    } catch (err: any) {
+      triggerToast(err?.message || 'Failed to settle property assessment.', 'error');
+    }
+  };
+
+  const combinedSettledPayments = useMemo(() => {
+    const list: Array<{
+      id: string | number;
+      receiptNumber: string;
+      identifier: string;
+      payor: string;
+      paymentMethod: string;
+      category: string;
+      paymentDate: string;
+      amount: number;
+      type: 'MASTER' | 'APPLICATION';
+    }> = [];
+
+    paymentsLedger.forEach((p) => {
+      list.push({
+        id: `PAY-${p.id}`,
+        receiptNumber: p.officialReceiptNumber || `OR-${p.id}`,
+        identifier: p.taxDeclarationNumber || '—',
+        payor: p.ownerName,
+        paymentMethod: p.paymentMethod || 'Online Gateway',
+        category: `Annual Property Tax (${p.quarterCoverage || 'Full Year'})`,
+        paymentDate: p.paymentDate || '',
+        amount: Number(p.amountPaid || 0),
+        type: 'MASTER',
+      });
+    });
+
+    applications.forEach((a) => {
+      if (a.paymentStatus === 'Paid' || a.status === 'Payment Completed') {
+        list.push({
+          id: `APP-PAY-${a.id}`,
+          receiptNumber: a.officialReceiptNumber || `eOR-RPT-${a.id.toString().slice(0, 8)}`,
+          identifier: a.referenceNumber || a.propertyDetails?.titleNumber || '—',
+          payor: a.applicantName,
+          paymentMethod: a.paymentMethod || 'Treasury / PayMongo',
+          category: `Service Fee (${a.category})`,
+          paymentDate: a.paymentDate || a.submissionDate || '',
+          amount: Number(a.paymentAmount || 0),
+          type: 'APPLICATION',
+        });
+      }
+    });
+
+    return list.sort((a, b) => {
+      const dateA = a.paymentDate ? new Date(a.paymentDate).getTime() : 0;
+      const dateB = b.paymentDate ? new Date(b.paymentDate).getTime() : 0;
+      return dateB - dateA;
+    });
+  }, [paymentsLedger, applications]);
+
   const handleDigitalRelease = async () => {
     if (!currentApp) return;
     const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 16);
@@ -978,7 +1245,14 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
             </span>
           </div>
           <h4 className="text-2xl font-bold text-slate-900 dark:text-white mt-3">{metrics.totalMaster}</h4>
-          <p className="mt-2 text-[11px] text-slate-400">In LGU Master Registry</p>
+          <div className="flex flex-wrap items-center gap-1.5 mt-2">
+            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60">
+              <i className="fa-solid fa-circle-check text-[9px]"></i> {metrics.settledMasterCount} Settled
+            </span>
+            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800/60">
+              <i className="fa-solid fa-clock text-[9px]"></i> {metrics.pendingMasterCount} Pending
+            </span>
+          </div>
         </div>
 
         <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs">
@@ -989,7 +1263,14 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
             </span>
           </div>
           <h4 className="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-3">{metrics.activeApps}</h4>
-          <p className="mt-2 text-[11px] text-slate-400">Under evaluation / review</p>
+          <div className="flex flex-wrap items-center gap-1.5 mt-2">
+            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/60">
+              <i className="fa-solid fa-hourglass-half text-[9px]"></i> {metrics.pendingPaymentAppsCount} Awaiting Pay
+            </span>
+            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60">
+              <i className="fa-solid fa-circle-check text-[9px]"></i> {metrics.settledAppsCount} Settled
+            </span>
+          </div>
         </div>
 
         <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs">
@@ -1002,20 +1283,24 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
           <h4 className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-3">
             {formatCurrency(metrics.totalPaidRevenue)}
           </h4>
-          <p className="mt-2 text-[11px] text-slate-400">Official e-Receipts verified</p>
+          <p className="mt-2 text-[11px] text-slate-400">
+            {metrics.totalSettledReceipts} verified e-Receipts settled
+          </p>
         </div>
 
         <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs">
           <div className="flex justify-between items-start">
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Pending Assessment Balances</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Pending Receivables &amp; Fees</p>
             <span className="p-2 rounded-xl bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400">
               <i className="fa-solid fa-triangle-exclamation text-xs"></i>
             </span>
           </div>
           <h4 className="text-2xl font-bold text-rose-600 dark:text-rose-400 mt-3">
-            {formatCurrency(metrics.pendingBalance)}
+            {formatCurrency(metrics.totalPendingReceivables)}
           </h4>
-          <p className="mt-2 text-[11px] text-slate-400">{metrics.unpaidCount} unpaid property balances</p>
+          <p className="mt-2 text-[11px] text-slate-400">
+            {metrics.pendingMasterCount} unpaid parcels · {metrics.pendingPaymentAppsCount} pending fees
+          </p>
         </div>
       </div>
 
@@ -1187,9 +1472,9 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                 }}
                 className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white outline-none focus:border-blue-500 transition-all text-xs font-semibold"
               >
-                <option value="ALL">All Payment Statuses</option>
-                <option value="Paid">Paid</option>
-                <option value="Unpaid">Unpaid</option>
+                <option value="ALL">All Payment Statuses (All)</option>
+                <option value="Paid">✓ Settled (Paid)</option>
+                <option value="Unpaid">⏳ Pending (Unpaid)</option>
               </select>
             </div>
           </div>
@@ -1207,7 +1492,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                     <th className="p-4">Type</th>
                     <th className="p-4 text-right">Assessed Value</th>
                     <th className="p-4 text-right">Tax Due</th>
-                    <th className="p-4 text-center">Payment</th>
+                    <th className="p-4 text-center">Payment Status</th>
                     <th className="p-4 text-right">Actions</th>
                   </tr>
                 </thead>
@@ -1247,19 +1532,28 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                           {formatCurrency(prop.balance || prop.totalAssessment)}
                         </td>
                         <td className="p-4 text-center">
-                          <span
-                            className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                              prop.paymentStatus === 'Paid'
-                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
-                                : 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
-                            }`}
-                          >
-                            {prop.paymentStatus}
-                          </span>
+                          {prop.paymentStatus === 'Paid' ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800">
+                              <i className="fa-solid fa-circle-check text-[9px]"></i> Settled
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200/80 dark:border-rose-800">
+                              <i className="fa-solid fa-clock text-[9px]"></i> Pending
+                            </span>
+                          )}
                         </td>
                         <td className="p-4 text-right space-x-1.5 whitespace-nowrap">
                           {masterTab === 'Active' ? (
                             <>
+                              {prop.paymentStatus !== 'Paid' && (
+                                <button
+                                  onClick={() => handleQuickSettleMasterProperty(prop)}
+                                  className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 transition cursor-pointer"
+                                  title="Quick Settle Assessment"
+                                >
+                                  <i className="fa-solid fa-cash-register mr-1"></i> Settle
+                                </button>
+                              )}
                               <button
                                 onClick={() => {
                                   setEditingProperty(prop);
@@ -1424,8 +1718,9 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                   onChange={(e) => setSelectedStatusFilter(e.target.value)}
                   className="w-1/2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-2.5 py-1.5 text-[11px] font-semibold text-slate-700 dark:text-slate-300 outline-none"
                 >
-                  <option value="ALL">All Statuses</option>
-                  <option value="Submitted">Submitted</option>
+                  <option value="ALL">All Applications</option>
+                  <option value="PENDING_PAYMENT">⏳ Pending Payment</option>
+                  <option value="SETTLED_PAYMENT">✓ Settled Payment</option>
                   <option value="Under Evaluation">Under Evaluation</option>
                   <option value="For Payment">For Payment</option>
                   <option value="Payment Completed">Payment Completed</option>
@@ -1459,19 +1754,30 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                         <span className="font-mono font-bold text-xs text-blue-600 dark:text-blue-400">
                           {app.referenceNumber}
                         </span>
-                        <span
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                            app.status === 'Approved'
-                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
-                              : app.status === 'Archived'
-                              ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
-                              : app.status === 'Rejected'
-                              ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
-                              : 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
-                          }`}
-                        >
-                          {app.status}
-                        </span>
+                        <div className="flex items-center gap-1">
+                          {app.paymentStatus === 'Paid' || app.status === 'Payment Completed' ? (
+                            <span className="inline-flex items-center gap-1 text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                              <i className="fa-solid fa-circle-check text-[8px]"></i> Settled
+                            </span>
+                          ) : app.status === 'For Payment' || (Number(app.paymentAmount || 0) > 0 && app.paymentStatus === 'Pending') ? (
+                            <span className="inline-flex items-center gap-1 text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                              <i className="fa-solid fa-hourglass-half text-[8px]"></i> Due: {formatCurrency(app.paymentAmount || 0)}
+                            </span>
+                          ) : null}
+                          <span
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                              app.status === 'Approved'
+                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                                : app.status === 'Archived'
+                                ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                                : app.status === 'Rejected'
+                                ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
+                                : 'bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300'
+                            }`}
+                          >
+                            {app.status}
+                          </span>
+                        </div>
                       </div>
 
                       <div className="flex justify-between items-end">
@@ -1614,67 +1920,147 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                   </div>
                 </div>
 
-                {/* Assessment Billing / Service Fee Card */}
-                <div className="p-5 bg-blue-50/60 dark:bg-blue-950/30 rounded-2xl border border-blue-200 dark:border-blue-900 space-y-3">
-                  <div>
-                    <h3 className="text-xs font-black uppercase tracking-wide text-blue-900 dark:text-blue-200 flex items-center gap-2">
-                      <i className="fa-solid fa-calculator text-blue-600"></i>
-                      RPT Service Assessment &amp; Payment Billing
-                    </h3>
-                    <p className="text-[11px] text-blue-700 dark:text-blue-300 mt-0.5">
-                      Assign statutory evaluation fees. Once posted, the citizen can settle this payment via PayMongo.
-                    </p>
-                  </div>
+                {/* Assessment Billing / Service Fee Card with Pending & Settled Detection */}
+                {currentApp.paymentStatus === 'Paid' || currentApp.status === 'Payment Completed' ? (
+                  <div className="p-5 bg-emerald-50/70 dark:bg-emerald-950/30 rounded-2xl border border-emerald-200 dark:border-emerald-800/80 space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-emerald-100 dark:border-emerald-900/60">
+                      <div className="flex items-center gap-2.5">
+                        <span className="p-2 rounded-xl bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300">
+                          <i className="fa-solid fa-circle-check text-sm"></i>
+                        </span>
+                        <div>
+                          <h3 className="text-xs font-black uppercase tracking-wide text-emerald-900 dark:text-emerald-200">
+                            Payment Settled &amp; Verified
+                          </h3>
+                          <p className="text-[11px] text-emerald-700 dark:text-emerald-400">
+                            Official electronic receipt generated and transaction recorded in Treasury Ledger.
+                          </p>
+                        </div>
+                      </div>
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-emerald-600 text-white shadow-xs">
+                        <i className="fa-solid fa-check-double text-[10px]"></i> Settled: {formatCurrency(Number(currentApp.paymentAmount))}
+                      </span>
+                    </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-end">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px]">
+                      <div className="bg-white/90 dark:bg-slate-900/80 rounded-xl p-2.5 border border-emerald-100 dark:border-emerald-900/50">
+                        <span className="text-slate-400 block">Amount Settled</span>
+                        <strong className="font-mono text-slate-900 dark:text-white text-xs">{formatCurrency(Number(currentApp.paymentAmount))}</strong>
+                      </div>
+                      <div className="bg-white/90 dark:bg-slate-900/80 rounded-xl p-2.5 border border-emerald-100 dark:border-emerald-900/50">
+                        <span className="text-slate-400 block">Official e-OR No.</span>
+                        <strong className="font-mono text-emerald-600 dark:text-emerald-400 text-xs">{currentApp.officialReceiptNumber || 'eOR-VERIFIED'}</strong>
+                      </div>
+                      <div className="bg-white/90 dark:bg-slate-900/80 rounded-xl p-2.5 border border-emerald-100 dark:border-emerald-900/50">
+                        <span className="text-slate-400 block">Payment Method</span>
+                        <strong className="text-slate-900 dark:text-white">{currentApp.paymentMethod || 'PayMongo / Gateway'}</strong>
+                      </div>
+                      <div className="bg-white/90 dark:bg-slate-900/80 rounded-xl p-2.5 border border-emerald-100 dark:border-emerald-900/50">
+                        <span className="text-slate-400 block">Date Settled</span>
+                        <strong className="font-mono text-slate-900 dark:text-white">
+                          {currentApp.paymentDate ? new Date(currentApp.paymentDate).toLocaleDateString() : 'Confirmed'}
+                        </strong>
+                      </div>
+                    </div>
+                  </div>
+                ) : Number(currentApp.paymentAmount || 0) > 0 || currentApp.status === 'For Payment' ? (
+                  <div className="p-5 bg-amber-50/70 dark:bg-amber-950/30 rounded-2xl border border-amber-200 dark:border-amber-900/70 space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-amber-200/60 dark:border-amber-900/60">
+                      <div className="flex items-center gap-2.5">
+                        <span className="p-2 rounded-xl bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300">
+                          <i className="fa-solid fa-hourglass-half text-sm"></i>
+                        </span>
+                        <div>
+                          <h3 className="text-xs font-black uppercase tracking-wide text-amber-900 dark:text-amber-200">
+                            Payment Pending from Citizen
+                          </h3>
+                          <p className="text-[11px] text-amber-700 dark:text-amber-400">
+                            Assessment posted. Awaiting citizen payment or record an in-person cashier settlement below.
+                          </p>
+                        </div>
+                      </div>
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-amber-500 text-white shadow-xs">
+                        <i className="fa-solid fa-clock text-[10px]"></i> Fee Due: {formatCurrency(Number(currentApp.paymentAmount || rptServiceAmountInput || 0))}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-3 items-end pt-1">
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-slate-600 dark:text-slate-300 mb-1">
+                          Modify Assessment Fee (₱)
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">₱</span>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={rptServiceAmountInput}
+                            onChange={(e) => setRptServiceAmountInput(e.target.value)}
+                            placeholder="0.00"
+                            className="w-full bg-white dark:bg-slate-900 border border-amber-200 dark:border-slate-700 rounded-xl pl-7 pr-3 py-2.5 text-sm font-black outline-none focus:ring-2 focus:ring-amber-400 text-slate-900 dark:text-white"
+                          />
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => void handleSetRPTServiceForPayment()}
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-xs transition cursor-pointer flex items-center gap-1.5"
+                      >
+                        <i className="fa-solid fa-arrows-rotate text-[11px]"></i> Update Bill
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleOpenCashierSettleModal(currentApp)}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl shadow-md transition cursor-pointer flex items-center gap-2"
+                      >
+                        <i className="fa-solid fa-cash-register text-xs"></i> Record Cashier Settlement
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-5 bg-blue-50/60 dark:bg-blue-950/30 rounded-2xl border border-blue-200 dark:border-blue-900 space-y-3">
                     <div>
-                      <label className="block text-[10px] font-bold uppercase text-slate-600 dark:text-slate-300 mb-1">
-                        Assessed Service Fee (₱)
-                      </label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">₱</span>
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={rptServiceAmountInput}
-                          onChange={(e) => setRptServiceAmountInput(e.target.value)}
-                          placeholder="0.00"
-                          className="w-full bg-white dark:bg-slate-900 border border-blue-200 dark:border-slate-700 rounded-xl pl-7 pr-3 py-2.5 text-sm font-black outline-none focus:ring-2 focus:ring-blue-400 text-slate-900 dark:text-white"
-                        />
-                      </div>
+                      <h3 className="text-xs font-black uppercase tracking-wide text-blue-900 dark:text-blue-200 flex items-center gap-2">
+                        <i className="fa-solid fa-calculator text-blue-600"></i>
+                        RPT Service Assessment &amp; Payment Billing
+                      </h3>
+                      <p className="text-[11px] text-blue-700 dark:text-blue-300 mt-0.5">
+                        Assign statutory evaluation fees. Once posted, the citizen can settle this payment via PayMongo or at the City Hall counter.
+                      </p>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => void handleSetRPTServiceForPayment()}
-                      className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl shadow-md transition cursor-pointer"
-                    >
-                      {currentApp.paymentStatus === 'Paid' ? 'Payment Recorded' : 'Post Service Assessment Bill'}
-                    </button>
+                    <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-end">
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-slate-600 dark:text-slate-300 mb-1">
+                          Assessed Service Fee (₱)
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">₱</span>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={rptServiceAmountInput}
+                            onChange={(e) => setRptServiceAmountInput(e.target.value)}
+                            placeholder="0.00"
+                            className="w-full bg-white dark:bg-slate-900 border border-blue-200 dark:border-slate-700 rounded-xl pl-7 pr-3 py-2.5 text-sm font-black outline-none focus:ring-2 focus:ring-blue-400 text-slate-900 dark:text-white"
+                          />
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => void handleSetRPTServiceForPayment()}
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl shadow-md transition cursor-pointer flex items-center gap-1.5"
+                      >
+                        <i className="fa-solid fa-file-invoice-dollar"></i> Post Service Assessment Bill
+                      </button>
+                    </div>
                   </div>
-
-                  {Number(currentApp.paymentAmount || 0) > 0 && (
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px] pt-1">
-                      <div className="bg-white/90 dark:bg-slate-900/80 rounded-xl p-2.5 border border-blue-100 dark:border-blue-900/50">
-                        <span className="text-slate-400 block">Amount</span>
-                        <strong className="font-mono text-slate-900 dark:text-white">{formatCurrency(Number(currentApp.paymentAmount))}</strong>
-                      </div>
-                      <div className="bg-white/90 dark:bg-slate-900/80 rounded-xl p-2.5 border border-blue-100 dark:border-blue-900/50">
-                        <span className="text-slate-400 block">Payment Status</span>
-                        <strong className="text-emerald-600 dark:text-emerald-400">{currentApp.paymentStatus || 'Pending'}</strong>
-                      </div>
-                      <div className="bg-white/90 dark:bg-slate-900/80 rounded-xl p-2.5 border border-blue-100 dark:border-blue-900/50">
-                        <span className="text-slate-400 block">Payment Reference</span>
-                        <strong className="font-mono text-slate-900 dark:text-white">{currentApp.paymentReference || '—'}</strong>
-                      </div>
-                      <div className="bg-white/90 dark:bg-slate-900/80 rounded-xl p-2.5 border border-blue-100 dark:border-blue-900/50">
-                        <span className="text-slate-400 block">Official eOR</span>
-                        <strong className="font-mono text-slate-900 dark:text-white">{currentApp.officialReceiptNumber || '—'}</strong>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                )}
 
                 {/* Documentary Verification Vault Section */}
                 <div className="space-y-3">
@@ -1749,24 +2135,72 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
       {/* ============================================================ */}
       {mainViewTab === 'payments' && (
         <section className="bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-xs space-y-5">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="relative w-full sm:w-80">
-              <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-              <input
-                type="text"
-                value={paymentSearch}
-                onChange={(e) => setPaymentSearch(e.target.value)}
-                placeholder="Search OR No., TDN, Payor..."
-                className="w-full pl-8 pr-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-800 dark:text-slate-200 outline-none"
-              />
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            {/* Category Filter Tabs */}
+            <div className="flex space-x-1 bg-slate-200/60 dark:bg-slate-800/60 p-1.5 rounded-xl w-full sm:w-auto">
+              <button
+                onClick={() => setLedgerCategoryFilter('ALL')}
+                className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                  ledgerCategoryFilter === 'ALL'
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                    : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                }`}
+              >
+                <i className="fa-solid fa-receipt text-xs"></i>
+                <span>All Settled</span>
+                <span className="px-1.5 py-0.2 bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 rounded text-[10px]">
+                  {combinedSettledPayments.length}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setLedgerCategoryFilter('MASTER')}
+                className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                  ledgerCategoryFilter === 'MASTER'
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                    : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                }`}
+              >
+                <i className="fa-solid fa-landmark text-xs"></i>
+                <span>Annual Taxes</span>
+                <span className="px-1.5 py-0.2 bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 rounded text-[10px]">
+                  {paymentsLedger.length}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setLedgerCategoryFilter('APPLICATION')}
+                className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                  ledgerCategoryFilter === 'APPLICATION'
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                    : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                }`}
+              >
+                <i className="fa-solid fa-file-invoice text-xs"></i>
+                <span>Application Fees</span>
+                <span className="px-1.5 py-0.2 bg-purple-100 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300 rounded text-[10px]">
+                  {combinedSettledPayments.filter((p) => p.type === 'APPLICATION').length}
+                </span>
+              </button>
             </div>
 
-            <div className="text-xs text-slate-500 font-semibold">
-              Total Real Property Tax Revenue Settled:{' '}
-              <strong className="text-emerald-600 dark:text-emerald-400 font-mono text-sm ml-1">
-                {formatCurrency(paymentsLedger.reduce((sum, p) => sum + (p.amountPaid || 0), 0))}
+            <div className="text-xs text-slate-500 font-semibold flex items-center gap-2">
+              <span>Total Settled Revenue:</span>
+              <strong className="text-emerald-600 dark:text-emerald-400 font-mono text-base">
+                {formatCurrency(metrics.totalPaidRevenue)}
               </strong>
             </div>
+          </div>
+
+          <div className="relative w-full sm:w-80">
+            <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+            <input
+              type="text"
+              value={paymentSearch}
+              onChange={(e) => setPaymentSearch(e.target.value)}
+              placeholder="Search OR No., TDN, Reference, Payor..."
+              className="w-full pl-8 pr-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-800 dark:text-slate-200 outline-none"
+            />
           </div>
 
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
@@ -1775,52 +2209,62 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                 <thead className="bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-800">
                   <tr>
                     <th className="p-4">Official Receipt (eOR)</th>
-                    <th className="p-4">Tax Declaration No.</th>
+                    <th className="p-4">TDN / Reference No.</th>
                     <th className="p-4">Payor / Property Owner</th>
+                    <th className="p-4">Revenue Stream</th>
                     <th className="p-4">Payment Method</th>
-                    <th className="p-4">Coverage</th>
                     <th className="p-4">Payment Date</th>
                     <th className="p-4 text-right">Amount Settled</th>
                     <th className="p-4 text-center">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {paymentsLedger
+                  {combinedSettledPayments
                     .filter((pay) => {
+                      if (ledgerCategoryFilter !== 'ALL' && pay.type !== ledgerCategoryFilter) return false;
                       const lower = paymentSearch.toLowerCase();
                       return (
                         !lower ||
-                        pay.officialReceiptNumber.toLowerCase().includes(lower) ||
-                        pay.taxDeclarationNumber.toLowerCase().includes(lower) ||
-                        pay.ownerName.toLowerCase().includes(lower)
+                        pay.receiptNumber.toLowerCase().includes(lower) ||
+                        pay.identifier.toLowerCase().includes(lower) ||
+                        pay.payor.toLowerCase().includes(lower) ||
+                        pay.paymentMethod.toLowerCase().includes(lower)
                       );
                     })
                     .map((pay) => (
                       <tr key={pay.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition">
                         <td className="p-4 font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                          {pay.officialReceiptNumber}
+                          {pay.receiptNumber}
                         </td>
                         <td className="p-4 font-mono font-bold text-blue-600 dark:text-blue-400">
-                          {pay.taxDeclarationNumber}
+                          {pay.identifier}
                         </td>
                         <td className="p-4 font-semibold text-slate-900 dark:text-white">
-                          {pay.ownerName}
+                          {pay.payor}
+                        </td>
+                        <td className="p-4 text-slate-600 dark:text-slate-300">
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              pay.type === 'MASTER'
+                                ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300'
+                                : 'bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300'
+                            }`}
+                          >
+                            {pay.category}
+                          </span>
                         </td>
                         <td className="p-4 text-slate-600 dark:text-slate-300">
                           {pay.paymentMethod}
                         </td>
-                        <td className="p-4 text-slate-500">
-                          {pay.quarterCoverage || 'Full Year'}
-                        </td>
                         <td className="p-4 font-mono text-slate-500">
-                          {pay.paymentDate ? new Date(pay.paymentDate).toLocaleDateString() : 'N/A'}
+                          {pay.paymentDate ? new Date(pay.paymentDate).toLocaleDateString() : 'Recorded'}
                         </td>
                         <td className="p-4 text-right font-mono font-black text-slate-900 dark:text-white">
-                          {formatCurrency(pay.amountPaid)}
+                          {formatCurrency(pay.amount)}
                         </td>
                         <td className="p-4 text-center">
-                          <span className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 px-2.5 py-1 rounded-full text-[10px] font-bold">
-                            ✓ {pay.status}
+                          <span className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 px-2.5 py-1 rounded-full text-[10px] font-extrabold flex items-center justify-center gap-1">
+                            <i className="fa-solid fa-circle-check text-[9px]"></i> Settled
                           </span>
                         </td>
                       </tr>
@@ -1993,8 +2437,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                     onChange={(e) => setEditingProperty({ ...editingProperty, paymentStatus: e.target.value })}
                     className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 outline-none font-semibold text-slate-900 dark:text-white"
                   >
-                    <option value="Unpaid">Unpaid</option>
-                    <option value="Paid">Paid</option>
+                    <option value="Unpaid">⏳ Pending (Unpaid)</option>
+                    <option value="Paid">✓ Settled (Paid)</option>
                   </select>
                 </div>
               </div>
@@ -2380,6 +2824,137 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cashier In-Person Settlement Modal */}
+      {isCashierSettleModalOpen && currentApp && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl p-6 space-y-5">
+            <div className="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <span className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400">
+                  <i className="fa-solid fa-cash-register text-sm"></i>
+                </span>
+                <div>
+                  <h3 className="font-extrabold text-base text-slate-900 dark:text-white">
+                    Record Over-The-Counter Settlement
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Issue an Official Receipt (eOR) and mark application as settled.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCashierSettleModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 cursor-pointer font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleConfirmCashierSettlement} className="space-y-4 text-xs">
+              <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1 text-slate-700 dark:text-slate-300">
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Application Reference:</span>
+                  <span className="font-mono font-bold text-blue-600 dark:text-blue-400">{currentApp.referenceNumber}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Applicant:</span>
+                  <span className="font-bold">{currentApp.applicantName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Service:</span>
+                  <span>{currentApp.category}</span>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-bold text-slate-700 dark:text-slate-300">
+                  Settlement Amount (₱) *
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  step="0.01"
+                  required
+                  value={cashierPaymentAmount}
+                  onChange={(e) => setCashierPaymentAmount(Number(e.target.value))}
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 outline-none font-black text-sm text-slate-900 dark:text-white font-mono"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-bold text-slate-700 dark:text-slate-300">
+                  Official Receipt (eOR) Number *
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    required
+                    value={cashierOrNumber}
+                    onChange={(e) => setCashierOrNumber(e.target.value)}
+                    placeholder="eOR-RPT-2025-XXXXXX"
+                    className="flex-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 outline-none font-mono font-bold text-slate-900 dark:text-white text-xs"
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setCashierOrNumber(
+                        `eOR-RPT-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`
+                      )
+                    }
+                    className="px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl text-[11px] font-bold text-slate-700 dark:text-slate-300 cursor-pointer"
+                  >
+                    Auto Generate
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-bold text-slate-700 dark:text-slate-300">
+                  Payment Collection Method *
+                </label>
+                <select
+                  value={cashierPaymentMethod}
+                  onChange={(e) => setCashierPaymentMethod(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 outline-none font-semibold text-slate-900 dark:text-white"
+                >
+                  <option value="Treasury Cashier (Cash)">Treasury Cashier (Cash)</option>
+                  <option value="Treasury POS (Debit/Credit Card)">Treasury POS (Debit/Credit Card)</option>
+                  <option value="Manager's Check / Cashier Check">Manager's Check / Cashier Check</option>
+                  <option value="LandBank LGU Deposit">LandBank LGU Deposit</option>
+                  <option value="Online e-Payment Verification">Online e-Payment Verification</option>
+                </select>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsCashierSettleModalOpen(false)}
+                  className="px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingSettle}
+                  className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold cursor-pointer shadow-md disabled:opacity-50 flex items-center gap-2"
+                >
+                  {isSubmittingSettle ? (
+                    <>
+                      <i className="fa-solid fa-spinner fa-spin"></i> Processing...
+                    </>
+                  ) : (
+                    <>
+                      <i className="fa-solid fa-circle-check"></i> Settle &amp; Issue e-OR
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
