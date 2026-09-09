@@ -148,11 +148,11 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
   isCollapsed,
 }) => {
   // Navigation tabs
-  const [mainViewTab, setMainViewTab] = useState<'master' | 'queue' | 'payments' | 'citizenAudit'>(
-    () => (localStorage.getItem('rpt_admin_tab') as 'master' | 'queue' | 'payments' | 'citizenAudit') || 'master'
+  const [mainViewTab, setMainViewTab] = useState<'master' | 'queue' | 'payments'>(
+    () => (localStorage.getItem('rpt_admin_tab') as 'master' | 'queue' | 'payments') || 'master'
   );
 
-  const switchMainViewTab = (tab: 'master' | 'queue' | 'payments' | 'citizenAudit') => {
+  const switchMainViewTab = (tab: 'master' | 'queue' | 'payments') => {
     setMainViewTab(tab);
     localStorage.setItem('rpt_admin_tab', tab);
   };
@@ -178,7 +178,6 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
 
   // Applications queue state
   const [applications, setApplications] = useState<ExtendedApplicationRecord[]>([]);
-  const [citizenAuditTrail, setCitizenAuditTrail] = useState<ExtendedApplicationRecord[]>([]);
   const [selectedAppId, setSelectedAppId] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
@@ -289,8 +288,6 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     }
   }, []);
 
-  const AUDIT_STATUSES = ['Digital Certificate Issued', 'Completed'];
-
   const loadApplications = useCallback(async () => {
     try {
       const data = await getRPTApplications();
@@ -391,15 +388,10 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         };
       });
 
-      // Split into Audit Trail vs Applications (Archived remains in applications!)
-      const auditApps = mapped.filter((a) => AUDIT_STATUSES.includes(a.status as string));
-      const activeApps = mapped.filter((a) => !AUDIT_STATUSES.includes(a.status as string));
+      setApplications(mapped);
 
-      setApplications(activeApps);
-      setCitizenAuditTrail(auditApps);
-
-      if (activeApps.length > 0 && !selectedAppId) {
-        setSelectedAppId(activeApps[0].id);
+      if (mapped.length > 0 && !selectedAppId) {
+        setSelectedAppId(mapped[0].id);
       }
     } catch (err) {
       console.error('Failed to load RPT applications:', err);
@@ -1044,10 +1036,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
       console.error('Failed to persist Digital Certificate Issued status:', err);
     }
 
-    setApplications((prev) => prev.filter((a) => a.id !== currentApp.id));
-    setCitizenAuditTrail((prev) => [releasedApp, ...prev]);
-    switchMainViewTab('citizenAudit');
-    triggerToast(`Digital Tax Certificate issued for ${currentApp.referenceNumber}. Transferred to Audit Trail.`, 'success');
+    setApplications((prev) => prev.map((a) => a.id === currentApp.id ? releasedApp : a));
+    triggerToast(`Digital Tax Certificate issued for ${currentApp.referenceNumber}.`, 'success');
   };
 
   // -------------------------------------------------------------
@@ -1306,20 +1296,6 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
           <span>Payment Ledger</span>
           <span className={`px-2 py-0.5 rounded-full text-[10px] ${mainViewTab === 'payments' ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
             {paymentsLedger.length}
-          </span>
-        </button>
-
-        <button
-          onClick={() => switchMainViewTab('citizenAudit')}
-          className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${mainViewTab === 'citizenAudit'
-            ? 'bg-blue-600 text-white shadow-md'
-            : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
-            }`}
-        >
-          <i className="fa-solid fa-shield-halved text-xs"></i>
-          <span>Audit Trail</span>
-          <span className={`px-2 py-0.5 rounded-full text-[10px] ${mainViewTab === 'citizenAudit' ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
-            {citizenAuditTrail.length}
           </span>
         </button>
       </div>
@@ -2440,7 +2416,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                     setPreviewModalOpen(false);
                     setPreviewDocError(false);
                   }}
-                  className="w-9 h-9 rounded-xl flex items-center justify-center bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 hover:text-slate-900 dark:hover:text-white cursor-pointer font-bold text-base transition"
+                  className="w-9 h-9 rounded-xl flex items-center justify-center bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-50 hover:text-slate-900 dark:hover:text-white cursor-pointer font-bold text-base transition"
                 >
                   ✕
                 </button>
