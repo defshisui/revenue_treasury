@@ -1770,28 +1770,11 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                                 </button>
                               )}
                               <button
-                                onClick={() => {
-                                  setEditingProperty(prop);
-                                  setIsPropertyModalOpen(true);
-                                }}
-                                className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 transition cursor-pointer"
-                                title="Edit Property"
-                              >
-                                <i className="fa-solid fa-pen-to-square mr-1"></i> Edit
-                              </button>
-                              <button
                                 onClick={() => handleArchiveMasterProperty(prop)}
                                 className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 hover:bg-amber-100 transition cursor-pointer"
                                 title="Move to Archiver"
                               >
                                 <i className="fa-solid fa-box-archive mr-1"></i> Archive
-                              </button>
-                              <button
-                                onClick={() => handleDeleteMasterProperty(prop)}
-                                className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 hover:bg-rose-100 transition cursor-pointer"
-                                title="Delete Property"
-                              >
-                                <i className="fa-solid fa-trash-can mr-1"></i> Delete
                               </button>
                             </>
                           ) : (
