@@ -1581,7 +1581,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
       </div>
 
       {/* ============================================================ */}
-      {/* 1. MASTER DATABASE VIEW TAB */}
+      {/* 1. MASTER DATABASE VIEW TABS */}
       {/* ============================================================ */}
       {mainViewTab === 'master' && (
         <section className="bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-xs space-y-5">
