@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import type { StatusType } from '../types/treasury';
 import {
   getRPTApplications,
@@ -218,6 +218,28 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     }, 4000);
   };
 
+  // In-app confirmation modal (replaces window.confirm's native dialog)
+  const [confirmState, setConfirmState] = useState<{
+    message: string;
+    tone: 'default' | 'danger';
+  } | null>(null);
+  const confirmResolverRef = useRef<((value: boolean) => void) | null>(null);
+
+  const confirmAction = (message: string, tone: 'default' | 'danger' = 'default'): Promise<boolean> => {
+    return new Promise((resolve) => {
+      confirmResolverRef.current = resolve;
+      setConfirmState({ message, tone });
+    });
+  };
+
+  const resolveConfirm = (result: boolean) => {
+    setConfirmState(null);
+    if (confirmResolverRef.current) {
+      confirmResolverRef.current(result);
+      confirmResolverRef.current = null;
+    }
+  };
+
   // -------------------------------------------------------------
   // Data Fetching
   // -------------------------------------------------------------
@@ -269,7 +291,14 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     try {
       const response = await fetch(`${API_BASE_URL}/citizen-rpt-payments`);
       if (response.ok) {
-        const data = await response.json();
+        const raw = await response.json();
+        const data: any[] = Array.isArray(raw)
+          ? raw
+          : Array.isArray(raw?.data)
+            ? raw.data
+            : Array.isArray(raw?.records)
+              ? raw.records
+              : [];
         setPaymentsLedger(
           data.map((p: any) => ({
             id: p.id,
@@ -290,6 +319,28 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
       console.error('Failed to load payments ledger:', e);
     }
   }, []);
+
+  const recordPaymentLedgerEntry = async (payload: {
+    taxDeclarationNumber: string;
+    ownerName: string;
+    amountPaid: number;
+    officialReceiptNumber: string;
+    paymentDate: string;
+    paymentMethod: string;
+    quarterCoverage?: string;
+    paymentOption?: string;
+    status?: string;
+  }) => {
+    const response = await fetch(`${API_BASE_URL}/citizen-rpt-payments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) {
+      throw new Error(`Payment ledger entry could not be recorded (HTTP ${response.status}).`);
+    }
+    return response.json().catch(() => null);
+  };
 
   const loadApplications = useCallback(async () => {
     try {
@@ -393,13 +444,11 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
 
       setApplications(mapped);
 
-      if (mapped.length > 0 && !selectedAppId) {
-        setSelectedAppId(mapped[0].id);
-      }
+      setSelectedAppId((prev) => (prev ? prev : mapped.length > 0 ? mapped[0].id : prev));
     } catch (err) {
       console.error('Failed to load RPT applications:', err);
     }
-  }, [selectedAppId]);
+  }, []);
 
   const refreshAllData = useCallback(async () => {
     await Promise.all([loadMasterRecords(), loadPayments(), loadApplications()]);
@@ -630,7 +679,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
   };
 
   const handleArchiveMasterProperty = async (prop: LguMasterProperty) => {
-    if (window.confirm(`Are you sure you want to move assessment record ${prop.taxDeclarationNumber} to the Archiver?`)) {
+    if (await confirmAction(`Are you sure you want to move assessment record ${prop.taxDeclarationNumber} to the Archiver?`)) {
       try {
         await updateLguMasterRptRecord(prop.id, { status: 'Archived' });
         setMasterProperties((prev) =>
@@ -644,7 +693,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
   };
 
   const handleRestoreMasterProperty = async (prop: LguMasterProperty) => {
-    if (window.confirm(`Are you sure you want to restore assessment record ${prop.taxDeclarationNumber} to Active?`)) {
+    if (await confirmAction(`Are you sure you want to restore assessment record ${prop.taxDeclarationNumber} to Active?`)) {
       try {
         await updateLguMasterRptRecord(prop.id, { status: 'Active' });
         setMasterProperties((prev) =>
@@ -658,7 +707,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
   };
 
   const handleDeleteMasterProperty = async (prop: LguMasterProperty) => {
-    if (!window.confirm(`WARNING: Are you sure you want to PERMANENTLY delete assessment record ${prop.taxDeclarationNumber}? A backup CSV will be downloaded first. This action cannot be undone.`)) {
+    if (!(await confirmAction(`WARNING: Are you sure you want to PERMANENTLY delete assessment record ${prop.taxDeclarationNumber}? A backup CSV will be downloaded first. This action cannot be undone.`, 'danger'))) {
       return;
     }
 
@@ -689,7 +738,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         `QC_RPT_Backup_${prop.taxDeclarationNumber}`
       );
 
-      if (!window.confirm(`Backup CSV for ${prop.taxDeclarationNumber} has been downloaded. Proceed with PERMANENT deletion?`)) {
+      if (!(await confirmAction(`Backup CSV for ${prop.taxDeclarationNumber} has been downloaded. Proceed with PERMANENT deletion?`, 'danger'))) {
         triggerToast('Deletion cancelled. Backup CSV was saved to your downloads.', 'warning');
         return;
       }
@@ -813,7 +862,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
   };
 
   const handleArchiveApplication = async (app: ExtendedApplicationRecord) => {
-    if (window.confirm(`Are you sure you want to move application ${app.referenceNumber} to the Archiver?`)) {
+    if (await confirmAction(`Are you sure you want to move application ${app.referenceNumber} to the Archiver?`)) {
       try {
         await updateRptApplicationStatus(String(app.id), 'Archived');
         setApplications((prev) =>
@@ -827,7 +876,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
   };
 
   const handleRestoreApplication = async (app: ExtendedApplicationRecord) => {
-    if (window.confirm(`Are you sure you want to restore application ${app.referenceNumber}?`)) {
+    if (await confirmAction(`Are you sure you want to restore application ${app.referenceNumber}?`)) {
       try {
         await updateRptApplicationStatus(String(app.id), 'Under Evaluation');
         setApplications((prev) =>
@@ -841,7 +890,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
   };
 
   const handlePermanentDeleteApplication = async (app: ExtendedApplicationRecord) => {
-    if (!window.confirm(`WARNING: Are you sure you want to PERMANENTLY delete application ${app.referenceNumber}? A backup CSV will be downloaded first. This action cannot be undone.`)) {
+    if (!(await confirmAction(`WARNING: Are you sure you want to PERMANENTLY delete application ${app.referenceNumber}? A backup CSV will be downloaded first. This action cannot be undone.`, 'danger'))) {
       return;
     }
 
@@ -870,7 +919,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         `QC_RPT_Application_Backup_${app.referenceNumber}`
       );
 
-      if (!window.confirm(`Backup CSV for ${app.referenceNumber} has been downloaded. Proceed with PERMANENT deletion?`)) {
+      if (!(await confirmAction(`Backup CSV for ${app.referenceNumber} has been downloaded. Proceed with PERMANENT deletion?`, 'danger'))) {
         triggerToast('Deletion cancelled. Backup CSV was saved to your downloads.', 'warning');
         return;
       }
@@ -1000,14 +1049,16 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
   const handleQuickSettleMasterProperty = async (prop: LguMasterProperty) => {
     try {
       const autoOr = `eOR-RPT-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
+      const paymentDate = new Date().toISOString();
+      const paymentMethod = 'Treasury Cashier (Cash)';
+
       await updateLguMasterRptRecord(prop.id, {
         paymentStatus: 'Paid',
-        status: 'Paid',
         balance: 0,
         amountPaid: prop.totalAssessment,
         officialReceiptNumber: autoOr,
-        paymentMethod: 'Treasury Cashier (Cash)',
-        paymentDate: new Date().toISOString(),
+        paymentMethod,
+        paymentDate,
       });
 
       setMasterProperties((prev) =>
@@ -1016,13 +1067,28 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
             ? {
               ...p,
               paymentStatus: 'Paid',
-              status: 'Paid',
               balance: 0,
               amountPaid: p.totalAssessment,
             }
             : p
         )
       );
+
+      try {
+        await recordPaymentLedgerEntry({
+          taxDeclarationNumber: prop.taxDeclarationNumber,
+          ownerName: prop.ownerName,
+          amountPaid: prop.totalAssessment,
+          officialReceiptNumber: autoOr,
+          paymentDate,
+          paymentMethod,
+          quarterCoverage: 'Full Year',
+          paymentOption: 'Full',
+          status: 'Verified',
+        });
+      } catch (ledgerErr) {
+        console.error('Failed to record payment ledger entry for', prop.taxDeclarationNumber, ledgerErr);
+      }
 
       triggerToast(`Assessment for ${prop.taxDeclarationNumber} settled successfully!`, 'success');
       loadPayments();
@@ -1238,6 +1304,54 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                 }`}
             ></i>
             <span>{toastMessage.text}</span>
+          </div>
+        </div>
+      )}
+
+      {/* In-App Confirmation Modal (replaces window.confirm) */}
+      {confirmState && (
+        <div className="fixed inset-0 z-70 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md shadow-2xl p-6 space-y-5">
+            <div className="flex items-start gap-3">
+              <span
+                className={`p-2.5 rounded-xl ${confirmState.tone === 'danger'
+                  ? 'bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400'
+                  : 'bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400'
+                  }`}
+              >
+                <i
+                  className={`fa-solid ${confirmState.tone === 'danger' ? 'fa-triangle-exclamation' : 'fa-circle-question'} text-sm`}
+                ></i>
+              </span>
+              <div className="flex-1 pt-0.5">
+                <h3 className="font-extrabold text-sm text-slate-900 dark:text-white">
+                  {confirmState.tone === 'danger' ? 'Confirm Permanent Action' : 'Please Confirm'}
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
+                  {confirmState.message}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => resolveConfirm(false)}
+                className="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs cursor-pointer transition hover:bg-slate-50 dark:hover:bg-slate-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => resolveConfirm(true)}
+                className={`px-5 py-2 rounded-xl text-white font-bold text-xs cursor-pointer shadow-md transition ${confirmState.tone === 'danger'
+                  ? 'bg-rose-600 hover:bg-rose-700'
+                  : 'bg-blue-600 hover:bg-blue-700'
+                  }`}
+              >
+                {confirmState.tone === 'danger' ? 'Yes, Proceed' : 'Confirm'}
+              </button>
+            </div>
           </div>
         </div>
       )}
