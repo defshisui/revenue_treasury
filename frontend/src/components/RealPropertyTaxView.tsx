@@ -268,7 +268,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
           ownerAddress: r.owner_address || r.ownerAddress || '',
           contactInfo: r.contact_info || r.contactInfo || '',
           barangay: r.barangay || '',
-          location: r.location || '',
+          location: r.property_location || r.propertyLocation || r.location || '',
           propertyType: r.property_type || r.propertyType || 'Residential',
           lotAreaSqm: Number(r.lot_area_sqm || r.lotAreaSqm || 0),
           marketValue: Number(r.market_value || r.marketValue || 0),
@@ -758,7 +758,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     }
   };
 
-  const handleValuationChange = (marketVal: number, propType: string) => {
+  const computeTaxBreakdown = (marketVal: number, propType: string) => {
     let assessmentLevel = 0.2;
     if (propType === 'Commercial') assessmentLevel = 0.5;
     else if (propType === 'Industrial') assessmentLevel = 0.5;
@@ -768,6 +768,12 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     const basicTax = assessedVal * 0.015;
     const sefTax = assessedVal * 0.01;
     const totalDue = basicTax + sefTax;
+
+    return { assessedVal, basicTax, sefTax, totalDue };
+  };
+
+  const handleValuationChange = (marketVal: number, propType: string) => {
+    const { assessedVal, basicTax, sefTax, totalDue } = computeTaxBreakdown(marketVal, propType);
 
     setEditingProperty((prev) => ({
       ...prev,
@@ -1193,21 +1199,56 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         )
         : undefined;
 
-      const masterPayload = {
-        taxDeclarationNumber: tdn || `TDN-${currentApp.referenceNumber}`,
-        ownerName: currentApp.applicantName,
-        propertyLocation: currentApp.propertyDetails?.address || '',
-        barangay: rawApp.barangay || '',
-        propertyType: rawApp.property_type || 'Residential',
-        assessedValue: currentApp.propertyDetails?.currentValuation || 0,
-        status: 'Active',
-        paymentStatus: currentApp.paymentStatus === 'Paid' ? 'Paid' : 'Unpaid',
-      };
+      const propertyType = rawApp.property_type || existingMasterRecord?.propertyType || 'Residential';
+      const marketValue =
+        currentApp.propertyDetails?.currentValuation ||
+        existingMasterRecord?.marketValue ||
+        0;
+      const { assessedVal, basicTax, sefTax, totalDue } = computeTaxBreakdown(marketValue, propertyType);
+      const resolvedPaymentStatus = currentApp.paymentStatus === 'Paid' ? 'Paid' : 'Unpaid';
 
       if (existingMasterRecord) {
-        await updateLguMasterRptRecord(existingMasterRecord.id, masterPayload as any);
+        // Existing parcel: only refresh ownership/payment info, keep its
+        // existing tax breakdown untouched rather than recomputing it from
+        // this application (which may just be for a certified copy, not a
+        // reassessment).
+        const updatePayload = {
+          ownerName: currentApp.applicantName,
+          propertyLocation: currentApp.propertyDetails?.address || existingMasterRecord.location,
+          barangay: rawApp.barangay || existingMasterRecord.barangay,
+          propertyType,
+          paymentStatus: resolvedPaymentStatus,
+          basicTax: existingMasterRecord.basicTax,
+          sefTax: existingMasterRecord.sefTax,
+          penalty: existingMasterRecord.penalty,
+          discount: existingMasterRecord.discount,
+          totalAssessment: existingMasterRecord.totalAssessment,
+          balance: resolvedPaymentStatus === 'Paid' ? 0 : existingMasterRecord.balance,
+          status: 'Active',
+        };
+        await updateLguMasterRptRecord(existingMasterRecord.id, updatePayload as any);
       } else {
-        await createLguMasterRptRecord(masterPayload as any);
+        // New parcel: create a full record with a computed tax breakdown so
+        // it isn't dropped into the registry with zeroed-out assessment data.
+        const createPayload = {
+          taxDeclarationNumber: tdn || `TDN-${currentApp.referenceNumber}`,
+          pin: currentApp.propertyDetails?.pin || '',
+          ownerName: currentApp.applicantName,
+          propertyLocation: currentApp.propertyDetails?.address || '',
+          barangay: rawApp.barangay || '',
+          propertyType,
+          lotAreaSqM: currentApp.propertyDetails?.lotAreaSqM || 0,
+          marketValue,
+          assessedValue: assessedVal,
+          basicTax,
+          sefTax,
+          totalAssessment: totalDue,
+          balance: resolvedPaymentStatus === 'Paid' ? 0 : totalDue,
+          amountPaid: resolvedPaymentStatus === 'Paid' ? totalDue : 0,
+          status: 'Active',
+          paymentStatus: resolvedPaymentStatus,
+        };
+        await createLguMasterRptRecord(createPayload as any);
       }
 
       await loadMasterRecords();
@@ -1221,13 +1262,17 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         `Digital Tax Certificate issued for ${currentApp.referenceNumber}. Record moved to the Master Database and removed from the active queue.`,
         'success'
       );
-    } catch (err) {
+    } catch (err: any) {
+      const detail =
+        err?.response?.data?.message ||
+        err?.message ||
+        'Unknown error';
       console.error('Failed to move released application into the Master Database:', err);
       setApplications((prev) =>
         prev.map((a) => (a.id === currentApp.id ? releasedApp : a))
       );
       triggerToast(
-        `Certificate issued for ${currentApp.referenceNumber}, but it could not be moved into the Master Database automatically.`,
+        `Certificate issued for ${currentApp.referenceNumber}, but it could not be moved into the Master Database automatically (${detail}).`,
         'warning'
       );
     }
