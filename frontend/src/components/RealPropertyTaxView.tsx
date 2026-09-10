@@ -2501,7 +2501,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
       {/* ============================================================ */}
       {/* OVERHAULED DOCUMENT PREVIEW POP-UP TAB MODAL */}
       {/* ============================================================ */}
-      {previewModalOpen && activeDoc && (
+      {previewModalOpen && activeDoc && currentApp && (
         <div className="fixed inset-0 z-60 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-5xl h-[88vh] shadow-2xl flex flex-col overflow-hidden">
             {/* Modal Header */}
