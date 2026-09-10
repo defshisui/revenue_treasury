@@ -213,7 +213,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
 
   const [rptSearchStep, setRptSearchStep] = useState<1 | 2 | 3>(1);
 
-  const [searchTdnInput, setSearchTdnInput] = useState<string>("F-021-01491");
+  const [searchTdnInput, setSearchTdnInput] = useState<string>("");
   const [searchType, setSearchType] = useState<string>("Tax Declaration No. (TDN)");
   const [assessmentYear, setAssessmentYear] = useState<string>("All Years");
   const [dailySearchQuota, setDailySearchQuota] = useState<number>(20);

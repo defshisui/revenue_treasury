@@ -132,30 +132,7 @@ export default function TreasuryHeader({
           throw new Error("Failed to fetch logs");
         }
       } catch (e) {
-
-        const mockLogs = [
-          { id: '1', module: 'User Management', message: 'System User changed their password.', time: '2 mins ago' },
-          { id: '2', module: 'User Management', message: 'Admin archived account for john.doe', time: '1 hour ago' },
-          { id: '3', module: 'User Management', message: 'New personnel logged into the system.', time: '2 hours ago' },
-          { id: '4', module: 'Tax Assessment', message: 'New Business Tax Assessment filed (TRK-9182)', time: '3 hours ago' },
-          { id: '5', module: 'Property Tax', message: 'Payment received for Property PIN-123', time: '5 hours ago' },
-          { id: '6', module: 'Appointments', message: 'Citizen cancelled their appointment schedule.', time: '1 day ago' },
-        ];
-
-        const filtered = mockLogs.filter(log => {
-          const isAccountRelated = log.module === 'User Management';
-          return activeRole.toLowerCase() === 'admin' ? isAccountRelated : !isAccountRelated;
-        });
-
-        const incoming = filtered.map(log => ({
-          ...log,
-          read: readIdsRef.current.has(log.id)
-        }));
-
-        const visible = isClearedAllRef.current
-          ? []
-          : incoming.filter((n: AppNotification) => !clearedIdsRef.current.has(n.id));
-        setNotifications(visible);
+        setNotifications([]);
       }
     };
 

@@ -133,128 +133,17 @@ export interface PaymentRequestPayload {
 
 import { API_BASE_URL } from '../config/api';
 
-const USE_MOCK_DATA = import.meta.env.VITE_RPT_USE_MOCK !== "false";
+const USE_MOCK_DATA = import.meta.env.VITE_RPT_USE_MOCK === "true";
 
-const demoProperties: RPTProperty[] = [
-  {
-    id: "demo-property-1",
-    taxDeclarationNumber: "DEMO-001",
-    referenceNumber: "RPT-DEMO-001",
-    ownerName: "Sample Citizen",
-    location: "Sample property location",
-    barangay: "Sample Barangay",
-    propertyType: "Residential",
-    landArea: 120,
-    marketValue: 850000,
-    assessedValue: 170000,
-    taxStatus: "Unpaid",
-    currentAmountDue: 2500,
-    outstandingBalance: 2500,
-    lastPaymentDate: null,
-  },
-  {
-    id: "demo-property-2",
-    taxDeclarationNumber: "DEMO-002",
-    referenceNumber: "RPT-DEMO-002",
-    ownerName: "Sample Citizen",
-    location: "Sample property location",
-    barangay: "Sample Barangay",
-    propertyType: "Vacant Land",
-    landArea: 90,
-    marketValue: null,
-    assessedValue: null,
-    taxStatus: "Paid",
-    currentAmountDue: 0,
-    outstandingBalance: 0,
-    lastPaymentDate: "2026-02-05",
-  },
-];
+const demoProperties: RPTProperty[] = [];
 
-const demoTaxDetails: Record<string, RPTTaxDetail> = {
-  "demo-property-1": {
-    propertyId: "demo-property-1",
-    billingYear: "2026",
-    assessmentLevel: "Official value pending API connection",
-    assessedValue: 170000,
-    applicableTaxInfo: "Demo data only. Final tax data must be supplied by the RPT API.",
-    currentAmountDue: 2500,
-    previousBalance: 0,
-    penaltiesInterest: 0,
-    totalAmountPayable: 2500,
-    paymentStatus: "Unpaid",
-    dueDate: "2026-12-31",
-  },
-  "demo-property-2": {
-    propertyId: "demo-property-2",
-    billingYear: "2026",
-    assessmentLevel: null,
-    assessedValue: null,
-    applicableTaxInfo: null,
-    currentAmountDue: 0,
-    previousBalance: 0,
-    penaltiesInterest: 0,
-    totalAmountPayable: 0,
-    paymentStatus: "Paid",
-    dueDate: null,
-  },
-};
+const demoTaxDetails: Record<string, RPTTaxDetail> = {};
 
-let demoPayments: RPTPayment[] = [
-  {
-    id: "demo-payment-1",
-    paymentReference: "RPT-DEMO-PENDING-001",
-    propertyId: "demo-property-1",
-    taxDeclarationNumber: "DEMO-001",
-    propertyLabel: "DEMO-001 · Sample property location",
-    paymentDate: null,
-    amount: 2500,
-    paymentMethod: "GCash",
-    status: "Pending Payment",
-    officialReceiptNumber: null,
-  },
-];
+let demoPayments: RPTPayment[] = [];
 
-let demoApplications: RPTApplication[] = [
-  {
-    id: "demo-application-1",
-    controlNumber: "RPT-DEMO-APP-001",
-    transactionType: "Certified True Copy of Tax Declaration",
-    propertyId: "demo-property-1",
-    taxDeclarationNumber: "DEMO-001",
-    dateSubmitted: "2026-08-10",
-    status: "For Compliance",
-    lastUpdated: "2026-08-14",
-    remarks: "Demo record for interface testing only.",
-    requiredAction: "Attach the requested proof of authority, then resubmit.",
-    missingRequirements: ["Proof of authority / authorization document"],
-    statusHistory: [
-      { status: "Submitted", date: "2026-08-10", remarks: "Demo submission received." },
-      { status: "For Review", date: "2026-08-11", remarks: "Demo review started." },
-      { status: "For Compliance", date: "2026-08-14", remarks: "Demo compliance notice created." },
-    ],
-  },
-];
+let demoApplications: RPTApplication[] = [];
 
-let demoNotifications: RPTNotification[] = [
-  {
-    id: "demo-notification-1",
-    type: "application",
-    title: "Demo compliance notice",
-    message: "A sample application has a missing-document action for UI testing.",
-    createdAt: "2026-08-14",
-    isRead: false,
-    targetPath: "/citizen-rpt/applications",
-  },
-  {
-    id: "demo-notification-2",
-    type: "payment",
-    title: "Demo payment remains pending",
-    message: "No payment is marked paid until a gateway and backend confirm it.",
-    createdAt: "2026-08-13",
-    isRead: true,
-    targetPath: "/citizen-rpt/payments",
-  },
-];
+let demoNotifications: RPTNotification[] = [];
 
 function waitForDemo<T>(value: T): Promise<T> {
   return new Promise((resolve) => window.setTimeout(() => resolve(value), 180));
