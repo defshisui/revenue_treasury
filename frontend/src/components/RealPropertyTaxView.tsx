@@ -245,7 +245,14 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
   // -------------------------------------------------------------
   const loadMasterRecords = useCallback(async () => {
     try {
-      const records = await getLguMasterRptRecords();
+      const raw = await getLguMasterRptRecords();
+      const records: any[] = Array.isArray(raw)
+        ? raw
+        : Array.isArray((raw as any)?.data)
+          ? (raw as any).data
+          : Array.isArray((raw as any)?.records)
+            ? (raw as any).records
+            : [];
       const mapped: LguMasterProperty[] = records.map((r: any) => {
         const rawPaymentStatus = String(r.payment_status || r.paymentStatus || '').trim().toLowerCase();
         const balance = Number(r.balance || 0);
@@ -255,7 +262,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         return {
           id: r.id,
           propertyIndexNumber: r.property_index_number || r.propertyIndexNumber || '',
-          newPspin: r.new_pspin || r.newPspin || '09-021-009-166- - -',
+          newPspin: r.new_pspin || r.newPspin || '',
           taxDeclarationNumber: r.tax_declaration_number || r.taxDeclarationNumber || '',
           ownerName: r.owner_name || r.ownerName || '',
           ownerAddress: r.owner_address || r.ownerAddress || '',
@@ -1390,7 +1397,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
             onClick={() => {
               setEditingProperty({
                 taxDeclarationNumber: '',
-                newPspin: '09-021-009-166- - -',
+                newPspin: '',
                 ownerName: '',
                 barangay: '',
                 propertyType: 'Residential',
@@ -1475,9 +1482,6 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         >
           <i className="fa-solid fa-database text-xs"></i>
           <span>Master Database</span>
-          <span className={`px-2 py-0.5 rounded-full text-[10px] ${mainViewTab === 'master' ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
-            {masterProperties.length}
-          </span>
         </button>
 
         <button
@@ -1489,9 +1493,6 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         >
           <i className="fa-solid fa-list-check text-xs"></i>
           <span>Citizen Applications</span>
-          <span className={`px-2 py-0.5 rounded-full text-[10px] ${mainViewTab === 'queue' ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
-            {applications.length}
-          </span>
         </button>
 
         <button
@@ -1503,9 +1504,6 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         >
           <i className="fa-solid fa-receipt text-xs"></i>
           <span>Payment Ledger</span>
-          <span className={`px-2 py-0.5 rounded-full text-[10px] ${mainViewTab === 'payments' ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
-            {paymentsLedger.length}
-          </span>
         </button>
       </div>
 
@@ -1526,9 +1524,6 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
               >
                 <i className="fa-solid fa-list-check text-xs"></i>
                 <span>Active Registry</span>
-                <span className="px-1.5 py-0.2 bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 rounded text-[10px]">
-                  {masterProperties.filter((p) => p.status !== 'Archived').length}
-                </span>
               </button>
 
               <button
@@ -1540,9 +1535,6 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
               >
                 <i className="fa-solid fa-box-archive text-xs"></i>
                 <span>Archiver</span>
-                <span className="px-1.5 py-0.2 bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded text-[10px]">
-                  {masterProperties.filter((p) => p.status === 'Archived').length}
-                </span>
               </button>
             </div>
 
@@ -1805,9 +1797,6 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                 >
                   <i className="fa-solid fa-list-check text-xs"></i>
                   <span>Active Processing</span>
-                  <span className="px-1.5 py-0.2 bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 rounded text-[10px]">
-                    {applications.filter((a) => a.status !== 'Archived').length}
-                  </span>
                 </button>
 
                 <button
@@ -1819,9 +1808,6 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                 >
                   <i className="fa-solid fa-box-archive text-xs"></i>
                   <span>Archiver</span>
-                  <span className="px-1.5 py-0.2 bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded text-[10px]">
-                    {applications.filter((a) => a.status === 'Archived').length}
-                  </span>
                 </button>
               </div>
 
@@ -2281,9 +2267,6 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
               >
                 <i className="fa-solid fa-receipt text-xs"></i>
                 <span>All Settled</span>
-                <span className="px-1.5 py-0.2 bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 rounded text-[10px]">
-                  {combinedSettledPayments.length}
-                </span>
               </button>
 
               <button
@@ -2295,9 +2278,6 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
               >
                 <i className="fa-solid fa-landmark text-xs"></i>
                 <span>Annual Taxes</span>
-                <span className="px-1.5 py-0.2 bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 rounded text-[10px]">
-                  {paymentsLedger.length}
-                </span>
               </button>
 
               <button
@@ -2309,9 +2289,6 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
               >
                 <i className="fa-solid fa-file-invoice text-xs"></i>
                 <span>Application Fees</span>
-                <span className="px-1.5 py-0.2 bg-purple-100 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300 rounded text-[10px]">
-                  {combinedSettledPayments.filter((p) => p.type === 'APPLICATION').length}
-                </span>
               </button>
             </div>
 
