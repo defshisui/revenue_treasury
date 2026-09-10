@@ -1367,7 +1367,6 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6 bg-white dark:bg-slate-900/80 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs backdrop-blur-md">
         <div>
           <div className="flex flex-wrap items-center gap-2 mb-1">
-            <span className="h-2 w-2 rounded-full bg-blue-600"></span>
             <span className="text-[11px] font-semibold tracking-wider text-blue-600 dark:text-blue-400 uppercase">
               Office of the City Assessor &amp; Treasury
             </span>
