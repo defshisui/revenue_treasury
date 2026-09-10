@@ -367,16 +367,8 @@ export default function CityOwnedMarketAdmin({
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8 bg-white dark:bg-slate-900/60 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs backdrop-blur-md">
         <div>
           <div className="flex flex-wrap items-center gap-2 mb-1">
-            <span className="h-2 w-2 rounded-full bg-blue-600 animate-pulse"></span>
             <span className="text-[11px] font-semibold tracking-wider text-blue-600 dark:text-blue-400 uppercase">
               Market Development & Administration Department
-            </span>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 ml-2">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-              </span>
-              LIVE REAL-TIME SYNC
             </span>
           </div>
           <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">

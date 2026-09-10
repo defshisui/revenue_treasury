@@ -436,14 +436,19 @@ export const createLguMasterRptRecord =
   async (
     record: any
   ): Promise<any> => {
+    const token =
+      localStorage.getItem("token") ||
+      sessionStorage.getItem("token");
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json'
+    };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
     const response = await fetch(
       `${API_BASE_URL}/lgu-rpt-records`,
       {
         method: 'POST',
-        headers: {
-          'Content-Type':
-            'application/json'
-        },
+        headers,
         body: JSON.stringify(record)
       }
     );

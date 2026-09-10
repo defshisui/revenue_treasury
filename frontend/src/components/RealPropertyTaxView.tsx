@@ -1508,28 +1508,6 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
           >
             <i className="fa-solid fa-arrows-rotate text-[11px]"></i> Refresh List
           </button>
-          <button
-            onClick={() => {
-              setEditingProperty({
-                taxDeclarationNumber: '',
-                newPspin: '',
-                ownerName: '',
-                barangay: '',
-                propertyType: 'Residential',
-                marketValue: 1000000,
-                assessedValue: 200000,
-                basicTax: 3000,
-                sefTax: 2000,
-                totalAssessment: 5000,
-                paymentStatus: 'Unpaid',
-                status: 'Active',
-              });
-              setIsPropertyModalOpen(true);
-            }}
-            className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-md cursor-pointer flex items-center gap-2"
-          >
-            <i className="fa-solid fa-plus text-[11px]"></i> New Assessment Record
-          </button>
         </div>
       </div>
 
