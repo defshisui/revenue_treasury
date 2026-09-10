@@ -781,9 +781,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
   };
 
   const handleExportMasterCSV = () => {
-    const list = masterTab === 'Active'
-      ? masterProperties.filter((p) => p.status !== 'Archived')
-      : filteredMasterProperties;
+    const list = filteredMasterProperties;
 
     if (list.length === 0) {
       triggerToast('No records available to export.', 'warning');
@@ -1422,7 +1420,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs">
           <div className="flex justify-between items-start">
             <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Registered Parcels</p>
-            <span className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400">
+            <span className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
               <i className="fa-solid fa-file-contract text-xs"></i>
             </span>
           </div>
@@ -1432,7 +1430,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs">
           <div className="flex justify-between items-start">
             <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Citizen Applications</p>
-            <span className="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400">
+            <span className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
               <i className="fa-solid fa-clock-rotate-left text-xs"></i>
             </span>
           </div>
@@ -1442,7 +1440,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs">
           <div className="flex justify-between items-start">
             <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">RPT Revenue Settled</p>
-            <span className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400">
+            <span className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
               <i className="fa-solid fa-peso-sign text-xs"></i>
             </span>
           </div>
@@ -1457,7 +1455,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs">
           <div className="flex justify-between items-start">
             <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Pending Receivables &amp; Fees</p>
-            <span className="p-2 rounded-xl bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400">
+            <span className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
               <i className="fa-solid fa-triangle-exclamation text-xs"></i>
             </span>
           </div>
