@@ -832,6 +832,78 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
   // -------------------------------------------------------------
   // Citizen Application Operations (Status, Archive, Restore, Delete)
   // -------------------------------------------------------------
+
+  // Pushes an application's property info into the Master Database:
+  // updates the parcel if its TDN already exists there (e.g. an
+  // ownership transfer), or creates a new parcel record if not.
+  // Throws on failure so callers can decide how to report it.
+  const syncApplicationToMaster = async (app: ExtendedApplicationRecord) => {
+    const rawApp = app as unknown as Record<string, any>;
+    const tdn = String(
+      app.propertyDetails?.titleNumber || rawApp.tax_declaration_number || ''
+    ).trim();
+
+    const existingMasterRecord = tdn
+      ? masterProperties.find(
+        (p) => p.taxDeclarationNumber.trim().toLowerCase() === tdn.toLowerCase()
+      )
+      : undefined;
+
+    const propertyType = rawApp.property_type || existingMasterRecord?.propertyType || 'Residential';
+    const marketValue =
+      app.propertyDetails?.currentValuation ||
+      existingMasterRecord?.marketValue ||
+      0;
+    const { assessedVal, basicTax, sefTax, totalDue } = computeTaxBreakdown(marketValue, propertyType);
+    const resolvedPaymentStatus = app.paymentStatus === 'Paid' ? 'Paid' : 'Unpaid';
+
+    if (existingMasterRecord) {
+      // Existing parcel: only refresh ownership/payment info, keep its
+      // existing tax breakdown untouched rather than recomputing it from
+      // this application (which may just be for a certified copy, not a
+      // reassessment).
+      const updatePayload = {
+        ownerName: app.applicantName,
+        propertyLocation: app.propertyDetails?.address || existingMasterRecord.location,
+        barangay: rawApp.barangay || existingMasterRecord.barangay,
+        propertyType,
+        paymentStatus: resolvedPaymentStatus,
+        basicTax: existingMasterRecord.basicTax,
+        sefTax: existingMasterRecord.sefTax,
+        penalty: existingMasterRecord.penalty,
+        discount: existingMasterRecord.discount,
+        totalAssessment: existingMasterRecord.totalAssessment,
+        balance: resolvedPaymentStatus === 'Paid' ? 0 : existingMasterRecord.balance,
+        status: 'Active',
+      };
+      await updateLguMasterRptRecord(existingMasterRecord.id, updatePayload as any);
+    } else {
+      // New parcel: create a full record with a computed tax breakdown so
+      // it isn't dropped into the registry with zeroed-out assessment data.
+      const createPayload = {
+        taxDeclarationNumber: tdn || `TDN-${app.referenceNumber}`,
+        pin: app.propertyDetails?.pin || '',
+        ownerName: app.applicantName,
+        propertyLocation: app.propertyDetails?.address || '',
+        barangay: rawApp.barangay || '',
+        propertyType,
+        lotAreaSqM: app.propertyDetails?.lotAreaSqM || 0,
+        marketValue,
+        assessedValue: assessedVal,
+        basicTax,
+        sefTax,
+        totalAssessment: totalDue,
+        balance: resolvedPaymentStatus === 'Paid' ? 0 : totalDue,
+        amountPaid: resolvedPaymentStatus === 'Paid' ? totalDue : 0,
+        status: 'Active',
+        paymentStatus: resolvedPaymentStatus,
+      };
+      await createLguMasterRptRecord(createPayload as any);
+    }
+
+    await loadMasterRecords();
+  };
+
   const handleUpdateStatus = async (newStatus: ExtendedStatusType) => {
     if (!currentApp) return;
 
@@ -866,6 +938,27 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
       );
 
       triggerToast(`Application workflow advanced to "${newStatus}".`, 'success');
+
+      // As soon as an application is Approved, push its property info into
+      // the Master Database (creating the parcel, or updating it if the
+      // TDN already exists there). This does not remove the application
+      // from the active queue — that still happens at certificate release.
+      if (newStatus === 'Approved') {
+        try {
+          await syncApplicationToMaster(currentApp);
+          triggerToast(
+            `${currentApp.referenceNumber} recorded in the Master Database.`,
+            'success'
+          );
+        } catch (syncErr: any) {
+          const detail = syncErr?.response?.data?.message || syncErr?.message || 'Unknown error';
+          console.error('Failed to sync approved application to Master Database:', syncErr);
+          triggerToast(
+            `Application approved, but it could not be recorded in the Master Database automatically (${detail}).`,
+            'warning'
+          );
+        }
+      }
     } catch (error: any) {
       console.error('Failed to update status:', error);
       triggerToast(error?.message || 'Failed to update application status.', 'error');
@@ -1184,74 +1277,11 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
       console.error('Failed to persist Digital Certificate Issued status:', err);
     }
 
-    // Carry the approved application's property info into the Master Database
-    // (updating the parcel if it's already registered, or creating it if not),
-    // then take the application out of the active Citizen Applications queue.
+    // Re-confirm the parcel is recorded in the Master Database (in case it
+    // was never Approved through the normal workflow step), then take the
+    // application out of the active Citizen Applications queue.
     try {
-      const rawApp = currentApp as unknown as Record<string, any>;
-      const tdn = String(
-        currentApp.propertyDetails?.titleNumber || rawApp.tax_declaration_number || ''
-      ).trim();
-
-      const existingMasterRecord = tdn
-        ? masterProperties.find(
-          (p) => p.taxDeclarationNumber.trim().toLowerCase() === tdn.toLowerCase()
-        )
-        : undefined;
-
-      const propertyType = rawApp.property_type || existingMasterRecord?.propertyType || 'Residential';
-      const marketValue =
-        currentApp.propertyDetails?.currentValuation ||
-        existingMasterRecord?.marketValue ||
-        0;
-      const { assessedVal, basicTax, sefTax, totalDue } = computeTaxBreakdown(marketValue, propertyType);
-      const resolvedPaymentStatus = currentApp.paymentStatus === 'Paid' ? 'Paid' : 'Unpaid';
-
-      if (existingMasterRecord) {
-        // Existing parcel: only refresh ownership/payment info, keep its
-        // existing tax breakdown untouched rather than recomputing it from
-        // this application (which may just be for a certified copy, not a
-        // reassessment).
-        const updatePayload = {
-          ownerName: currentApp.applicantName,
-          propertyLocation: currentApp.propertyDetails?.address || existingMasterRecord.location,
-          barangay: rawApp.barangay || existingMasterRecord.barangay,
-          propertyType,
-          paymentStatus: resolvedPaymentStatus,
-          basicTax: existingMasterRecord.basicTax,
-          sefTax: existingMasterRecord.sefTax,
-          penalty: existingMasterRecord.penalty,
-          discount: existingMasterRecord.discount,
-          totalAssessment: existingMasterRecord.totalAssessment,
-          balance: resolvedPaymentStatus === 'Paid' ? 0 : existingMasterRecord.balance,
-          status: 'Active',
-        };
-        await updateLguMasterRptRecord(existingMasterRecord.id, updatePayload as any);
-      } else {
-        // New parcel: create a full record with a computed tax breakdown so
-        // it isn't dropped into the registry with zeroed-out assessment data.
-        const createPayload = {
-          taxDeclarationNumber: tdn || `TDN-${currentApp.referenceNumber}`,
-          pin: currentApp.propertyDetails?.pin || '',
-          ownerName: currentApp.applicantName,
-          propertyLocation: currentApp.propertyDetails?.address || '',
-          barangay: rawApp.barangay || '',
-          propertyType,
-          lotAreaSqM: currentApp.propertyDetails?.lotAreaSqM || 0,
-          marketValue,
-          assessedValue: assessedVal,
-          basicTax,
-          sefTax,
-          totalAssessment: totalDue,
-          balance: resolvedPaymentStatus === 'Paid' ? 0 : totalDue,
-          amountPaid: resolvedPaymentStatus === 'Paid' ? totalDue : 0,
-          status: 'Active',
-          paymentStatus: resolvedPaymentStatus,
-        };
-        await createLguMasterRptRecord(createPayload as any);
-      }
-
-      await loadMasterRecords();
+      await syncApplicationToMaster(currentApp);
 
       await updateRptApplicationStatus(String(currentApp.id), 'Archived');
       setApplications((prev) =>
@@ -1259,7 +1289,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
       );
 
       triggerToast(
-        `Digital Tax Certificate issued for ${currentApp.referenceNumber}. Record moved to the Master Database and removed from the active queue.`,
+        `Digital Tax Certificate issued for ${currentApp.referenceNumber}. Record confirmed in the Master Database and removed from the active queue.`,
         'success'
       );
     } catch (err: any) {
