@@ -591,7 +591,7 @@ export async function searchRptByTdn(
       `SELECT *
        FROM lgu_rpt_records
        WHERE LOWER(
-         REPLACE(taxDeclarationNumber, ' ', '')
+         REPLACE(tax_declaration_number, ' ', '')
        )
        =
        LOWER(
@@ -614,6 +614,7 @@ export async function searchRptByTdn(
       directResult.rows[0];
 
     const ownerName =
+      matchedRecord.owner_name ||
       matchedRecord.ownerName ||
       matchedRecord.ownername;
 
@@ -622,7 +623,7 @@ export async function searchRptByTdn(
        FROM lgu_rpt_records
        WHERE
        (
-         LOWER(TRIM(ownerName))
+         LOWER(TRIM(owner_name))
          =
          LOWER(TRIM($1))
        )
@@ -633,7 +634,7 @@ export async function searchRptByTdn(
              =
              SUBSTRING($2 FROM 1 FOR 10)
        )
-       ORDER BY taxDeclarationNumber`,
+       ORDER BY tax_declaration_number`,
       [
         ownerName || '',
         matchedRecord.pin || ''
@@ -771,33 +772,47 @@ export async function createLguRptRecord(
     authenticatedUser?.email || ''
   ).trim().toLowerCase();
 
+  const tdn = data.tax_declaration_number || data.taxDeclarationNumber;
+  if (!tdn) {
+    res.status(400).json({ message: 'Tax declaration number is required' });
+    return;
+  }
+
+  let resolvedPaymentStatus = String(data.payment_status || data.paymentStatus || 'Unpaid').trim();
+  if (resolvedPaymentStatus === 'Payment Completed' || resolvedPaymentStatus === 'Settled') {
+    resolvedPaymentStatus = 'Paid';
+  } else if (resolvedPaymentStatus === 'Pending') {
+    resolvedPaymentStatus = 'Pending Payment';
+  } else if (!['Unpaid', 'Pending Payment', 'Partially Paid', 'Paid'].includes(resolvedPaymentStatus)) {
+    resolvedPaymentStatus = 'Unpaid';
+  }
+
   try {
     const result = await pool.query(
       `INSERT INTO lgu_rpt_records (
-        taxDeclarationNumber,
+        tax_declaration_number,
         pin,
         new_pspin,
-        ownerName,
-        propertyLocation,
+        owner_name,
+        property_location,
         barangay,
-        propertyType,
-        billingYear,
+        property_type,
+        billing_year,
         quarter,
         bill_expiry_date,
         lot_area_sqm,
         market_value,
         assessed_value,
-        basicTax,
-        sefTax,
+        basic_tax,
+        sef_tax,
         shttc_applied,
         penalty,
         discount,
-        totalAssessment,
-        amountPaid,
+        total_assessment,
+        amount_paid,
         balance,
         status,
-        paymentStatus,
-        amountDue,
+        payment_status,
         quarterly_amounts
       )
       VALUES (
@@ -824,44 +839,35 @@ export async function createLguRptRecord(
         $21,
         $22,
         $23,
-        $24,
-        $25::jsonb
+        $24::jsonb
       )
       RETURNING *`,
       [
-        data.taxDeclarationNumber,
+        tdn,
         data.pin || null,
-        data.newPspin || null,
-        data.ownerName,
-        data.propertyLocation || null,
-        data.barangay || null,
-        data.propertyType ||
-        'Residential',
-        data.billingYear || 2025,
+        data.newPspin || data.new_pspin || null,
+        data.ownerName || data.owner_name || 'Taxpayer',
+        data.propertyLocation || data.property_location || data.location || 'N/A',
+        data.barangay || 'Central',
+        data.propertyType || data.property_type || 'Residential',
+        data.billingYear || data.billing_year || 2025,
         data.quarter || 'Q1-Q4',
-        data.billExpiryDate ||
-        '2025-10-31',
-        data.lotAreaSqM || 0,
-        data.marketValue || 0,
-        data.assessedValue || 0,
-        data.basicTax || 0,
-        data.sefTax || 0,
-        data.shttcApplied || 0,
+        data.billExpiryDate || data.bill_expiry_date || '2025-10-31',
+        data.lotAreaSqM || data.lotAreaSqm || data.lot_area_sqm || 0,
+        data.marketValue || data.market_value || 0,
+        data.assessedValue || data.assessed_value || 0,
+        data.basicTax || data.basic_tax || 0,
+        data.sefTax || data.sef_tax || 0,
+        data.shttcApplied || data.shttc_applied || 0,
         data.penalty || 0,
         data.discount || 0,
-        data.totalAssessment || 0,
-        data.amountPaid || 0,
-        data.balance ||
-        data.totalAssessment ||
-        0,
-        data.status || 'Unpaid',
-        data.paymentStatus ||
-        'Unpaid',
-        data.amountDue ||
-        data.totalAssessment ||
-        0,
+        data.totalAssessment || data.total_assessment || 0,
+        data.amountPaid || data.amount_paid || 0,
+        data.balance !== undefined ? data.balance : (data.totalAssessment || data.total_assessment || 0),
+        data.status || 'Active',
+        resolvedPaymentStatus,
         JSON.stringify(
-          data.quarterlyAmounts || {}
+          data.quarterlyAmounts || data.quarterly_amounts || {}
         )
       ]
     );
@@ -875,7 +881,7 @@ export async function createLguRptRecord(
       'RPT_RECORD_CREATED',
       'INFO',
       null,
-      `Created assessment record for TDN: ${data.taxDeclarationNumber}`
+      `Created assessment record for TDN: ${tdn}`
     );
 
     res.status(201).json({
@@ -904,55 +910,67 @@ export async function updateLguRptRecord(
   const { id } = req.params;
   const data = req.body;
 
-  const isPaid = data.paymentStatus === 'Paid' || data.paymentStatus === 'Settled';
+  const rawPaymentStatus = data.payment_status || data.paymentStatus;
+  const isPaid = rawPaymentStatus === 'Paid' || rawPaymentStatus === 'Settled' || rawPaymentStatus === 'Payment Completed';
   const computedBalance = isPaid && data.balance === undefined ? 0 : data.balance;
   const computedStatus = isPaid && !data.status ? 'Paid' : data.status;
+
+  let resolvedPaymentStatus: string | null = null;
+  if (rawPaymentStatus) {
+    if (isPaid) resolvedPaymentStatus = 'Paid';
+    else if (rawPaymentStatus === 'Pending') resolvedPaymentStatus = 'Pending Payment';
+    else if (['Unpaid', 'Pending Payment', 'Partially Paid', 'Paid'].includes(rawPaymentStatus)) {
+      resolvedPaymentStatus = rawPaymentStatus;
+    } else {
+      resolvedPaymentStatus = 'Unpaid';
+    }
+  }
 
   try {
     const result = await pool.query(
       `UPDATE lgu_rpt_records
        SET
-         ownerName = COALESCE($1, ownerName),
-         propertyLocation = COALESCE($2, propertyLocation),
+         owner_name = COALESCE($1, owner_name),
+         property_location = COALESCE($2, property_location),
          barangay = COALESCE($3, barangay),
-         propertyType = COALESCE($4, propertyType),
-         basicTax = COALESCE($5, basicTax),
-         sefTax = COALESCE($6, sefTax),
+         property_type = COALESCE($4, property_type),
+         basic_tax = COALESCE($5, basic_tax),
+         sef_tax = COALESCE($6, sef_tax),
          penalty = COALESCE($7, penalty),
          discount = COALESCE($8, discount),
-         totalAssessment = COALESCE($9, totalAssessment),
+         total_assessment = COALESCE($9, total_assessment),
          balance = COALESCE($10, balance),
          status = COALESCE($11, status),
-         paymentStatus = COALESCE($12, paymentStatus),
-         amountPaid = CASE
-           WHEN $12 IN ('Paid', 'Settled') AND $13::numeric IS NULL THEN COALESCE(totalAssessment, 0)
-           ELSE COALESCE($13, amountPaid)
+         payment_status = COALESCE($12, payment_status),
+         amount_paid = CASE
+           WHEN $12::text IN ('Paid', 'Settled') AND $13::numeric IS NULL THEN COALESCE(total_assessment, 0)
+           ELSE COALESCE($13, amount_paid)
          END,
-         officialReceiptNumber = COALESCE($14, officialReceiptNumber),
-         paymentMethod = COALESCE($15, paymentMethod),
-         paymentDate = CASE
-           WHEN $12 IN ('Paid', 'Settled') THEN COALESCE($16, paymentDate, NOW())
-           ELSE paymentDate
+         official_receipt_number = COALESCE($14, official_receipt_number),
+         payment_method = COALESCE($15, payment_method),
+         payment_date = CASE
+           WHEN $12::text IN ('Paid', 'Settled') THEN COALESCE($16, payment_date, NOW())
+           ELSE payment_date
          END
        WHERE id = $17
        RETURNING *`,
       [
-        data.ownerName,
-        data.propertyLocation,
-        data.barangay,
-        data.propertyType,
-        data.basicTax,
-        data.sefTax,
-        data.penalty,
-        data.discount,
-        data.totalAssessment,
-        computedBalance,
-        computedStatus,
-        data.paymentStatus,
-        data.amountPaid !== undefined ? data.amountPaid : null,
-        data.officialReceiptNumber || null,
-        data.paymentMethod || null,
-        data.paymentDate || null,
+        data.ownerName || data.owner_name || null,
+        data.propertyLocation || data.property_location || data.location || null,
+        data.barangay || null,
+        data.propertyType || data.property_type || null,
+        data.basicTax !== undefined ? data.basicTax : (data.basic_tax !== undefined ? data.basic_tax : null),
+        data.sefTax !== undefined ? data.sefTax : (data.sef_tax !== undefined ? data.sef_tax : null),
+        data.penalty !== undefined ? data.penalty : null,
+        data.discount !== undefined ? data.discount : null,
+        data.totalAssessment !== undefined ? data.totalAssessment : (data.total_assessment !== undefined ? data.total_assessment : null),
+        computedBalance !== undefined ? computedBalance : null,
+        computedStatus || null,
+        resolvedPaymentStatus,
+        data.amountPaid !== undefined ? data.amountPaid : (data.amount_paid !== undefined ? data.amount_paid : null),
+        data.officialReceiptNumber || data.official_receipt_number || null,
+        data.paymentMethod || data.payment_method || null,
+        data.paymentDate || data.payment_date || null,
         id
       ]
     );
@@ -1105,8 +1123,8 @@ export async function createRptPayment(
       await pool.query(
         `UPDATE lgu_rpt_records
          SET
-           amountPaid =
-             amountPaid + $1,
+           amount_paid =
+             amount_paid + $1,
 
            balance =
              GREATEST(
@@ -1121,21 +1139,21 @@ export async function createRptPayment(
                ELSE 'Partially Paid'
              END,
 
-           paymentStatus =
+           payment_status =
              CASE
                WHEN balance - $1 <= 0
                  THEN 'Paid'
                ELSE 'Partially Paid'
              END,
 
-           paymentMethod = $2,
-           officialReceiptNumber = $3,
-           paymentReference = $4,
-           paymentDate = NOW()
+           payment_method = $2,
+           official_receipt_number = $3,
+           payment_reference = $4,
+           payment_date = NOW()
 
          WHERE LOWER(
            REPLACE(
-             taxDeclarationNumber,
+             tax_declaration_number,
              ' ',
              ''
            )
@@ -1330,8 +1348,8 @@ export async function createGroupRptPayment(
       await pool.query(
         `UPDATE lgu_rpt_records
          SET
-           amountPaid =
-             amountPaid + $1,
+           amount_paid =
+             amount_paid + $1,
 
            balance =
              GREATEST(
@@ -1346,21 +1364,21 @@ export async function createGroupRptPayment(
                ELSE 'Partially Paid'
              END,
 
-           paymentStatus =
+           payment_status =
              CASE
                WHEN balance - $1 <= 0
                  THEN 'Paid'
                ELSE 'Partially Paid'
              END,
 
-           paymentMethod = $2,
-           officialReceiptNumber = $3,
-           paymentReference = $4,
-           paymentDate = NOW()
+           payment_method = $2,
+           official_receipt_number = $3,
+           payment_reference = $4,
+           payment_date = NOW()
 
          WHERE LOWER(
            REPLACE(
-             taxDeclarationNumber,
+             tax_declaration_number,
              ' ',
              ''
            )

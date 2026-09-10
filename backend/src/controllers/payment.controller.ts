@@ -1,4 +1,4 @@
-﻿import type { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 import pool from '../db.js';
 import { PayMongoService } from '../services/paymongo.service.js';
 import { recordAudit } from './audit.controller.js';
@@ -335,14 +335,14 @@ export async function verifySession(req: Request, res: Response): Promise<void> 
       await pool.query(
         `UPDATE lgu_rpt_records
          SET balance = 0,
-             amountPaid = totalAssessment,
+             amount_paid = total_assessment,
              status = 'Paid',
-             paymentStatus = 'Paid',
-             paymentMethod = $1,
-             officialReceiptNumber = $2,
-             paymentReference = $3,
-             paymentDate = NOW()
-         WHERE taxDeclarationNumber ILIKE $4`,
+             payment_status = 'Paid',
+             payment_method = $1,
+             official_receipt_number = $2,
+             payment_reference = $3,
+             payment_date = NOW()
+         WHERE tax_declaration_number ILIKE $4`,
         [formattedPaymentMethod, officialReceiptNumber, paymentReference, metadata.taxDeclarationNumber]
       );
 
@@ -715,14 +715,14 @@ export async function handlePayMongoWebhook(
         await pool.query(
           `UPDATE lgu_rpt_records
            SET balance = 0,
-               amountPaid = totalAssessment,
+               amount_paid = total_assessment,
                status = 'Paid',
-               paymentStatus = 'Paid',
-               paymentMethod = $1,
-               officialReceiptNumber = $2,
-               paymentReference = $3,
-               paymentDate = NOW()
-           WHERE taxDeclarationNumber ILIKE $4`,
+               payment_status = 'Paid',
+               payment_method = $1,
+               official_receipt_number = $2,
+               payment_reference = $3,
+               payment_date = NOW()
+           WHERE tax_declaration_number ILIKE $4`,
           [formattedPaymentMethod, officialReceiptNumber, paymentReference, tdn]
         );
       }
@@ -856,14 +856,14 @@ export async function handlePayMongoWebhook(
         UPDATE lgu_rpt_records
         SET
           balance = 0,
-          amountPaid = totalAssessment,
+          amount_paid = total_assessment,
           status = 'Paid',
-          paymentStatus = 'Paid',
-          paymentMethod = $1,
-          officialReceiptNumber = $2,
-          paymentReference = $3,
-          paymentDate = NOW()
-        WHERE taxDeclarationNumber ILIKE $4
+          payment_status = 'Paid',
+          payment_method = $1,
+          official_receipt_number = $2,
+          payment_reference = $3,
+          payment_date = NOW()
+        WHERE tax_declaration_number ILIKE $4
         `,
         [
           formattedPaymentMethod,
@@ -1296,12 +1296,12 @@ export async function getQrPaymentStatus(
           UPDATE lgu_rpt_records
           SET
             balance = 0,
-            amountPaid = totalAssessment,
+            amount_paid = total_assessment,
             status = 'Paid',
-            paymentStatus = 'Paid',
-            paymentMethod = 'PayMongo (QR Ph)',
-            paymentDate = NOW()
-          WHERE taxDeclarationNumber ILIKE $1
+            payment_status = 'Paid',
+            payment_method = 'PayMongo (QR Ph)',
+            payment_date = NOW()
+          WHERE tax_declaration_number ILIKE $1
           RETURNING *
           `,
           [tdn]
