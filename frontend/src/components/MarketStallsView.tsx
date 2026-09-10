@@ -494,9 +494,6 @@ export default function MarketStallsView({
         <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs">
           <div className="flex justify-between items-start">
             <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Total Registered Stalls</p>
-            <span className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400">
-              <i className="fa-solid fa-store text-xs"></i>
-            </span>
           </div>
           <h4 className="text-2xl font-bold text-slate-900 dark:text-white mt-3">{metrics.totalStalls}</h4>
           <div className="mt-2 text-[11px] text-blue-600 dark:text-blue-400 font-medium flex items-center gap-1">
@@ -507,9 +504,6 @@ export default function MarketStallsView({
         <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs">
           <div className="flex justify-between items-start">
             <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Occupied / Leased</p>
-            <span className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400">
-              <i className="fa-solid fa-circle-check text-xs"></i>
-            </span>
           </div>
           <h4 className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-3">{metrics.occupied}</h4>
           <p className="mt-2 text-[11px] text-slate-400">Active lease accounts</p>
@@ -518,9 +512,6 @@ export default function MarketStallsView({
         <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs">
           <div className="flex justify-between items-start">
             <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Vacant & Ready</p>
-            <span className="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400">
-              <i className="fa-solid fa-door-open text-xs"></i>
-            </span>
           </div>
           <h4 className="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-3">{metrics.vacant}</h4>
           <p className="mt-2 text-[11px] text-slate-400">Available for assignment</p>
@@ -529,9 +520,6 @@ export default function MarketStallsView({
         <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs">
           <div className="flex justify-between items-start">
             <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Delinquent Accounts</p>
-            <span className="p-2 rounded-xl bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400">
-              <i className="fa-solid fa-triangle-exclamation text-xs"></i>
-            </span>
           </div>
           <h4 className="text-2xl font-bold text-rose-600 dark:text-rose-400 mt-3">{metrics.delinquent}</h4>
           <p className="mt-2 text-[11px] text-slate-400">Requires treasury notice</p>
@@ -540,9 +528,6 @@ export default function MarketStallsView({
         <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs sm:col-span-2 lg:col-span-1">
           <div className="flex justify-between items-start">
             <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Total Receivables</p>
-            <span className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400">
-              <i className="fa-solid fa-peso-sign text-xs"></i>
-            </span>
           </div>
           <h4 className="text-xl font-bold text-slate-900 dark:text-white mt-3 truncate">
             ₱{metrics.totalCollectible.toLocaleString("en-PH", { minimumFractionDigits: 2 })}

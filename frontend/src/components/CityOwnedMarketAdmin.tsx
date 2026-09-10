@@ -399,9 +399,6 @@ export default function CityOwnedMarketAdmin({
         <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs">
           <div className="flex justify-between items-start">
             <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Total Lease Records</p>
-            <span className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400">
-              <i className="fa-solid fa-file-contract text-xs"></i>
-            </span>
           </div>
           <h4 className="text-2xl font-bold text-slate-900 dark:text-white mt-3">{metrics.total}</h4>
           <p className="mt-2 text-[11px] text-slate-400">Total registered stalls</p>
@@ -410,9 +407,6 @@ export default function CityOwnedMarketAdmin({
         <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs">
           <div className="flex justify-between items-start">
             <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Active Leases</p>
-            <span className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400">
-              <i className="fa-solid fa-circle-check text-xs"></i>
-            </span>
           </div>
           <h4 className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-3">{metrics.active}</h4>
           <p className="mt-2 text-[11px] text-slate-400">Currently operating</p>
@@ -421,9 +415,6 @@ export default function CityOwnedMarketAdmin({
         <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs">
           <div className="flex justify-between items-start">
             <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Pending Payments</p>
-            <span className="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400">
-              <i className="fa-solid fa-clock-rotate-left text-xs"></i>
-            </span>
           </div>
           <h4 className="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-3">{metrics.pendingPayment}</h4>
           <p className="mt-2 text-[11px] text-slate-400">Requires verification</p>
@@ -432,9 +423,6 @@ export default function CityOwnedMarketAdmin({
         <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs">
           <div className="flex justify-between items-start">
             <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Total Revenue Due</p>
-            <span className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400">
-              <i className="fa-solid fa-peso-sign text-xs"></i>
-            </span>
           </div>
           <h4 className="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-3">₱{metrics.totalRevenueDue.toLocaleString()}</h4>
           <p className="mt-2 text-[11px] text-slate-400">Accumulated billings</p>
