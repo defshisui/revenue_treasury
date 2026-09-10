@@ -591,7 +591,7 @@ export async function searchRptByTdn(
       `SELECT *
        FROM lgu_rpt_records
        WHERE LOWER(
-         REPLACE(taxDeclarationNumber, ' ', '')
+         REPLACE("taxDeclarationNumber", ' ', '')
        )
        =
        LOWER(
@@ -614,15 +614,15 @@ export async function searchRptByTdn(
       directResult.rows[0];
 
     const ownerName =
-      matchedRecord.ownername ||
-      matchedRecord.ownerName;
+      matchedRecord.ownerName ||
+      matchedRecord.ownername;
 
     const associatedResult = await pool.query(
       `SELECT *
        FROM lgu_rpt_records
        WHERE
        (
-         LOWER(TRIM(ownerName))
+         LOWER(TRIM("ownerName"))
          =
          LOWER(TRIM($1))
        )
@@ -633,7 +633,7 @@ export async function searchRptByTdn(
              =
              SUBSTRING($2 FROM 1 FOR 10)
        )
-       ORDER BY taxDeclarationNumber`,
+       ORDER BY "taxDeclarationNumber"`,
       [
         ownerName || '',
         matchedRecord.pin || ''
@@ -774,30 +774,30 @@ export async function createLguRptRecord(
   try {
     const result = await pool.query(
       `INSERT INTO lgu_rpt_records (
-        taxDeclarationNumber,
+        "taxDeclarationNumber",
         pin,
         new_pspin,
-        ownerName,
-        propertyLocation,
+        "ownerName",
+        "propertyLocation",
         barangay,
-        propertyType,
-        billingYear,
+        "propertyType",
+        "billingYear",
         quarter,
         bill_expiry_date,
         lot_area_sqm,
         market_value,
         assessed_value,
-        basicTax,
-        sefTax,
+        "basicTax",
+        "sefTax",
         shttc_applied,
         penalty,
         discount,
-        totalAssessment,
-        amountPaid,
+        "totalAssessment",
+        "amountPaid",
         balance,
         status,
-        paymentStatus,
-        amountDue,
+        "paymentStatus",
+        "amountDue",
         quarterly_amounts
       )
       VALUES (
@@ -912,27 +912,27 @@ export async function updateLguRptRecord(
     const result = await pool.query(
       `UPDATE lgu_rpt_records
        SET
-         ownerName = COALESCE($1, ownerName),
-         propertyLocation = COALESCE($2, propertyLocation),
+         "ownerName" = COALESCE($1, "ownerName"),
+         "propertyLocation" = COALESCE($2, "propertyLocation"),
          barangay = COALESCE($3, barangay),
-         propertyType = COALESCE($4, propertyType),
-         basicTax = COALESCE($5, basicTax),
-         sefTax = COALESCE($6, sefTax),
+         "propertyType" = COALESCE($4, "propertyType"),
+         "basicTax" = COALESCE($5, "basicTax"),
+         "sefTax" = COALESCE($6, "sefTax"),
          penalty = COALESCE($7, penalty),
          discount = COALESCE($8, discount),
-         totalAssessment = COALESCE($9, totalAssessment),
+         "totalAssessment" = COALESCE($9, "totalAssessment"),
          balance = COALESCE($10, balance),
          status = COALESCE($11, status),
-         paymentStatus = COALESCE($12, paymentStatus),
-         amountPaid = CASE
-           WHEN $12 IN ('Paid', 'Settled') AND $13::numeric IS NULL THEN COALESCE(totalAssessment, 0)
-           ELSE COALESCE($13, amountPaid)
+         "paymentStatus" = COALESCE($12, "paymentStatus"),
+         "amountPaid" = CASE
+           WHEN $12 IN ('Paid', 'Settled') AND $13::numeric IS NULL THEN COALESCE("totalAssessment", 0)
+           ELSE COALESCE($13, "amountPaid")
          END,
-         officialReceiptNumber = COALESCE($14, officialReceiptNumber),
-         paymentMethod = COALESCE($15, paymentMethod),
-         paymentDate = CASE
-           WHEN $12 IN ('Paid', 'Settled') THEN COALESCE($16, paymentDate, NOW())
-           ELSE paymentDate
+         "officialReceiptNumber" = COALESCE($14, "officialReceiptNumber"),
+         "paymentMethod" = COALESCE($15, "paymentMethod"),
+         "paymentDate" = CASE
+           WHEN $12 IN ('Paid', 'Settled') THEN COALESCE($16, "paymentDate", NOW())
+           ELSE "paymentDate"
          END
        WHERE id = $17
        RETURNING *`,
@@ -1105,8 +1105,8 @@ export async function createRptPayment(
       await pool.query(
         `UPDATE lgu_rpt_records
          SET
-           amountPaid =
-             amountPaid + $1,
+           "amountPaid" =
+             "amountPaid" + $1,
 
            balance =
              GREATEST(
@@ -1121,21 +1121,21 @@ export async function createRptPayment(
                ELSE 'Partially Paid'
              END,
 
-           paymentStatus =
+           "paymentStatus" =
              CASE
                WHEN balance - $1 <= 0
                  THEN 'Paid'
                ELSE 'Partially Paid'
              END,
 
-           paymentMethod = $2,
-           officialReceiptNumber = $3,
-           paymentReference = $4,
-           paymentDate = NOW()
+           "paymentMethod" = $2,
+           "officialReceiptNumber" = $3,
+           "paymentReference" = $4,
+           "paymentDate" = NOW()
 
          WHERE LOWER(
            REPLACE(
-             taxDeclarationNumber,
+             "taxDeclarationNumber",
              ' ',
              ''
            )
@@ -1330,8 +1330,8 @@ export async function createGroupRptPayment(
       await pool.query(
         `UPDATE lgu_rpt_records
          SET
-           amountPaid =
-             amountPaid + $1,
+           "amountPaid" =
+             "amountPaid" + $1,
 
            balance =
              GREATEST(
@@ -1346,21 +1346,21 @@ export async function createGroupRptPayment(
                ELSE 'Partially Paid'
              END,
 
-           paymentStatus =
+           "paymentStatus" =
              CASE
                WHEN balance - $1 <= 0
                  THEN 'Paid'
                ELSE 'Partially Paid'
              END,
 
-           paymentMethod = $2,
-           officialReceiptNumber = $3,
-           paymentReference = $4,
-           paymentDate = NOW()
+           "paymentMethod" = $2,
+           "officialReceiptNumber" = $3,
+           "paymentReference" = $4,
+           "paymentDate" = NOW()
 
          WHERE LOWER(
            REPLACE(
-             taxDeclarationNumber,
+             "taxDeclarationNumber",
              ' ',
              ''
            )
