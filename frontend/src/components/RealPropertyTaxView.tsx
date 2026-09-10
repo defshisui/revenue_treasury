@@ -148,11 +148,11 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
   isCollapsed,
 }) => {
   // Navigation tabs
-  const [mainViewTab, setMainViewTab] = useState<'master' | 'queue' | 'payments'>(
-    () => (localStorage.getItem('rpt_admin_tab') as 'master' | 'queue' | 'payments') || 'master'
+  const [mainViewTab, setMainViewTab] = useState<'master' | 'queue' | 'payments' | 'citizenAudit'>(
+    () => (localStorage.getItem('rpt_admin_tab') as 'master' | 'queue' | 'payments' | 'citizenAudit') || 'master'
   );
 
-  const switchMainViewTab = (tab: 'master' | 'queue' | 'payments') => {
+  const switchMainViewTab = (tab: 'master' | 'queue' | 'payments' | 'citizenAudit') => {
     setMainViewTab(tab);
     localStorage.setItem('rpt_admin_tab', tab);
   };
@@ -178,6 +178,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
 
   // Applications queue state
   const [applications, setApplications] = useState<ExtendedApplicationRecord[]>([]);
+  const [citizenAuditTrail, setCitizenAuditTrail] = useState<ExtendedApplicationRecord[]>([]);
   const [selectedAppId, setSelectedAppId] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
@@ -288,6 +289,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     }
   }, []);
 
+  const AUDIT_STATUSES = ['Digital Certificate Issued', 'Completed'];
+
   const loadApplications = useCallback(async () => {
     try {
       const data = await getRPTApplications();
@@ -388,10 +391,15 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         };
       });
 
-      setApplications(mapped);
+      // Split into Audit Trail vs Applications (Archived remains in applications!)
+      const auditApps = mapped.filter((a) => AUDIT_STATUSES.includes(a.status as string));
+      const activeApps = mapped.filter((a) => !AUDIT_STATUSES.includes(a.status as string));
 
-      if (mapped.length > 0 && !selectedAppId) {
-        setSelectedAppId(mapped[0].id);
+      setApplications(activeApps);
+      setCitizenAuditTrail(auditApps);
+
+      if (activeApps.length > 0 && !selectedAppId) {
+        setSelectedAppId(activeApps[0].id);
       }
     } catch (err) {
       console.error('Failed to load RPT applications:', err);
@@ -407,34 +415,11 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     loadMasterRecords();
     loadPayments();
     loadApplications();
-
-    const intervalId = setInterval(() => {
-      loadMasterRecords();
-      loadPayments();
-      loadApplications();
-    }, 5000);
-
-    const handleFocus = () => {
-      loadMasterRecords();
-      loadPayments();
-      loadApplications();
-    };
-
-    window.addEventListener('focus', handleFocus);
-    window.addEventListener('visibilitychange', handleFocus);
-    window.addEventListener('db_treasury_updated', handleFocus);
-
-    return () => {
-      clearInterval(intervalId);
-      window.removeEventListener('focus', handleFocus);
-      window.removeEventListener('visibilitychange', handleFocus);
-      window.removeEventListener('db_treasury_updated', handleFocus);
-    };
   }, [loadMasterRecords, loadPayments, loadApplications]);
 
   // Current selected application
   const currentApp = useMemo(() => {
-    return applications.find((app) => app.id === selectedAppId) || applications[0];
+    return applications.find((app) => app.id === selectedAppId);
   }, [applications, selectedAppId]);
 
   useEffect(() => {
@@ -593,6 +578,13 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     });
   }, [applications, searchTerm, selectedCategory, selectedStatusFilter, queueTab]);
 
+  useEffect(() => {
+    const stillValid = filteredApplications.some((app) => app.id === selectedAppId);
+    if (!stillValid) {
+      setSelectedAppId(filteredApplications.length > 0 ? filteredApplications[0].id : '');
+    }
+  }, [queueTab, filteredApplications, selectedAppId]);
+
   // -------------------------------------------------------------
   // Master Property Operations (Create/Edit, Archive, Restore, Delete)
   // -------------------------------------------------------------
@@ -620,6 +612,26 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     } catch (err: any) {
       triggerToast(err.message || 'Failed to save property record.', 'error');
     }
+  };
+
+  const downloadSingleRecordCSV = (
+    headers: string[],
+    row: (string | number)[],
+    filenamePrefix: string
+  ) => {
+    const csvContent =
+      'data:text/csv;charset=utf-8,' +
+      [headers.join(','), row.join(',')].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute(
+      'download',
+      `${filenamePrefix}_${new Date().toISOString().slice(0, 10)}.csv`
+    );
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleArchiveMasterProperty = async (prop: LguMasterProperty) => {
@@ -650,15 +662,48 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     }
   };
 
-  const handleDeleteMasterProperty = async (id: string | number, tdn: string) => {
-    if (window.confirm(`WARNING: Are you sure you want to PERMANENTLY delete assessment record ${tdn}? This action cannot be undone.`)) {
-      try {
-        await deleteLguMasterRptRecord(id);
-        setMasterProperties((prev) => prev.filter((p) => p.id !== id));
-        triggerToast(`Assessment record ${tdn} permanently deleted.`, 'success');
-      } catch (err: any) {
-        triggerToast(err.message || 'Failed to delete record.', 'error');
+  const handleDeleteMasterProperty = async (prop: LguMasterProperty) => {
+    if (!window.confirm(`WARNING: Are you sure you want to PERMANENTLY delete assessment record ${prop.taxDeclarationNumber}? A backup CSV will be downloaded first. This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      downloadSingleRecordCSV(
+        [
+          'Tax Declaration No.',
+          'Owner Name',
+          'NewPSPIN',
+          'Barangay',
+          'Property Type',
+          'Assessed Value',
+          'Tax Due',
+          'Payment Status',
+          'Record Status',
+        ],
+        [
+          `"${prop.taxDeclarationNumber}"`,
+          `"${prop.ownerName}"`,
+          `"${prop.newPspin}"`,
+          `"${prop.barangay}"`,
+          `"${prop.propertyType}"`,
+          prop.assessedValue || 0,
+          prop.balance || prop.totalAssessment || 0,
+          `"${prop.paymentStatus}"`,
+          `"${prop.status}"`,
+        ],
+        `QC_RPT_Backup_${prop.taxDeclarationNumber}`
+      );
+
+      if (!window.confirm(`Backup CSV for ${prop.taxDeclarationNumber} has been downloaded. Proceed with PERMANENT deletion?`)) {
+        triggerToast('Deletion cancelled. Backup CSV was saved to your downloads.', 'warning');
+        return;
       }
+
+      await deleteLguMasterRptRecord(prop.id);
+      setMasterProperties((prev) => prev.filter((p) => p.id !== prop.id));
+      triggerToast(`Assessment record ${prop.taxDeclarationNumber} permanently deleted.`, 'success');
+    } catch (err: any) {
+      triggerToast(err.message || 'Failed to delete record.', 'error');
     }
   };
 
@@ -800,19 +845,50 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     }
   };
 
-  const handlePermanentDeleteApplication = async (appId: string, refNum: string) => {
-    if (window.confirm(`WARNING: Are you sure you want to PERMANENTLY delete application ${refNum}? This action cannot be undone.`)) {
-      try {
-        await deleteRptApplication(appId);
-        setApplications((prev) => prev.filter((a) => a.id !== appId));
-        if (selectedAppId === appId) {
-          const remaining = applications.filter((a) => a.id !== appId);
-          setSelectedAppId(remaining.length > 0 ? remaining[0].id : '');
-        }
-        triggerToast(`Application ${refNum} permanently deleted.`, 'success');
-      } catch (err: any) {
-        triggerToast(err.message || 'Failed to delete application.', 'error');
+  const handlePermanentDeleteApplication = async (app: ExtendedApplicationRecord) => {
+    if (!window.confirm(`WARNING: Are you sure you want to PERMANENTLY delete application ${app.referenceNumber}? A backup CSV will be downloaded first. This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      downloadSingleRecordCSV(
+        [
+          'Reference Number',
+          'Applicant Name',
+          'Category',
+          'TDN',
+          'Payment Amount',
+          'Payment Status',
+          'Official Receipt No.',
+          'Status',
+        ],
+        [
+          `"${app.referenceNumber}"`,
+          `"${app.applicantName}"`,
+          `"${app.category}"`,
+          `"${app.propertyDetails?.titleNumber || ''}"`,
+          app.paymentAmount || 0,
+          `"${app.paymentStatus || ''}"`,
+          `"${app.officialReceiptNumber || ''}"`,
+          `"${app.status}"`,
+        ],
+        `QC_RPT_Application_Backup_${app.referenceNumber}`
+      );
+
+      if (!window.confirm(`Backup CSV for ${app.referenceNumber} has been downloaded. Proceed with PERMANENT deletion?`)) {
+        triggerToast('Deletion cancelled. Backup CSV was saved to your downloads.', 'warning');
+        return;
       }
+
+      await deleteRptApplication(app.id);
+      setApplications((prev) => prev.filter((a) => a.id !== app.id));
+      if (selectedAppId === app.id) {
+        const remaining = applications.filter((a) => a.id !== app.id);
+        setSelectedAppId(remaining.length > 0 ? remaining[0].id : '');
+      }
+      triggerToast(`Application ${app.referenceNumber} permanently deleted.`, 'success');
+    } catch (err: any) {
+      triggerToast(err.message || 'Failed to delete application.', 'error');
     }
   };
 
@@ -1036,8 +1112,10 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
       console.error('Failed to persist Digital Certificate Issued status:', err);
     }
 
-    setApplications((prev) => prev.map((a) => a.id === currentApp.id ? releasedApp : a));
-    triggerToast(`Digital Tax Certificate issued for ${currentApp.referenceNumber}.`, 'success');
+    setApplications((prev) => prev.filter((a) => a.id !== currentApp.id));
+    setCitizenAuditTrail((prev) => [releasedApp, ...prev]);
+    switchMainViewTab('citizenAudit');
+    triggerToast(`Digital Tax Certificate issued for ${currentApp.referenceNumber}. Transferred to Audit Trail.`, 'success');
   };
 
   // -------------------------------------------------------------
@@ -1156,7 +1234,14 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                 : 'bg-rose-950 text-rose-200 border-rose-800'
               }`}
           >
-            <span>{toastMessage.type === 'success' ? '✓' : 'ℹ'}</span>
+            <i
+              className={`fa-solid ${toastMessage.type === 'success'
+                ? 'fa-circle-check'
+                : toastMessage.type === 'warning'
+                  ? 'fa-triangle-exclamation'
+                  : 'fa-circle-exclamation'
+                }`}
+            ></i>
             <span>{toastMessage.text}</span>
           </div>
         </div>
@@ -1166,16 +1251,9 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6 bg-white dark:bg-slate-900/80 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs backdrop-blur-md">
         <div>
           <div className="flex flex-wrap items-center gap-2 mb-1">
-            <span className="h-2 w-2 rounded-full bg-blue-600 animate-pulse"></span>
+            <span className="h-2 w-2 rounded-full bg-blue-600"></span>
             <span className="text-[11px] font-semibold tracking-wider text-blue-600 dark:text-blue-400 uppercase">
               Office of the City Assessor &amp; Treasury
-            </span>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 ml-2">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-              </span>
-              LIVE REAL-TIME SYNC
             </span>
           </div>
           <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
@@ -1198,6 +1276,28 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
             className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold px-4 py-2.5 rounded-xl transition-all border border-slate-200 dark:border-slate-700 cursor-pointer flex items-center gap-2 shadow-xs"
           >
             <i className="fa-solid fa-download text-[11px]"></i> Export Masterlist
+          </button>
+          <button
+            onClick={() => {
+              setEditingProperty({
+                taxDeclarationNumber: '',
+                newPspin: '09-021-009-166- - -',
+                ownerName: '',
+                barangay: '',
+                propertyType: 'Residential',
+                marketValue: 1000000,
+                assessedValue: 200000,
+                basicTax: 3000,
+                sefTax: 2000,
+                totalAssessment: 5000,
+                paymentStatus: 'Unpaid',
+                status: 'Active',
+              });
+              setIsPropertyModalOpen(true);
+            }}
+            className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-md cursor-pointer flex items-center gap-2"
+          >
+            <i className="fa-solid fa-plus text-[11px]"></i> New Assessment Record
           </button>
         </div>
       </div>
@@ -1296,6 +1396,20 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
           <span>Payment Ledger</span>
           <span className={`px-2 py-0.5 rounded-full text-[10px] ${mainViewTab === 'payments' ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
             {paymentsLedger.length}
+          </span>
+        </button>
+
+        <button
+          onClick={() => switchMainViewTab('citizenAudit')}
+          className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${mainViewTab === 'citizenAudit'
+            ? 'bg-blue-600 text-white shadow-md'
+            : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+            }`}
+        >
+          <i className="fa-solid fa-shield-halved text-xs"></i>
+          <span>Audit Trail</span>
+          <span className={`px-2 py-0.5 rounded-full text-[10px] ${mainViewTab === 'citizenAudit' ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
+            {citizenAuditTrail.length}
           </span>
         </button>
       </div>
@@ -1404,8 +1518,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                 className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white outline-none focus:border-blue-500 transition-all text-xs font-semibold"
               >
                 <option value="ALL">All Payment Statuses (All)</option>
-                <option value="Paid">✓ Settled (Paid)</option>
-                <option value="Unpaid">⏳ Pending (Unpaid)</option>
+                <option value="Paid">Settled (Paid)</option>
+                <option value="Unpaid">Pending (Unpaid)</option>
               </select>
             </div>
           </div>
@@ -1474,7 +1588,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                           )}
                         </td>
                         <td className="p-4 text-right space-x-1.5 whitespace-nowrap">
-                          {masterTab === 'Active' ? (
+                          {prop.status !== 'Archived' ? (
                             <>
                               {prop.paymentStatus !== 'Paid' && (
                                 <button
@@ -1503,7 +1617,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                                 <i className="fa-solid fa-box-archive mr-1"></i> Archive
                               </button>
                               <button
-                                onClick={() => handleDeleteMasterProperty(prop.id, prop.taxDeclarationNumber)}
+                                onClick={() => handleDeleteMasterProperty(prop)}
                                 className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 hover:bg-rose-100 transition cursor-pointer"
                                 title="Delete Property"
                               >
@@ -1520,7 +1634,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                                 <i className="fa-solid fa-rotate-left mr-1"></i> Restore
                               </button>
                               <button
-                                onClick={() => handleDeleteMasterProperty(prop.id, prop.taxDeclarationNumber)}
+                                onClick={() => handleDeleteMasterProperty(prop)}
                                 className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 hover:bg-rose-100 transition cursor-pointer"
                                 title="Permanent Delete"
                               >
@@ -1648,8 +1762,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                   className="w-1/2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-2.5 py-1.5 text-[11px] font-semibold text-slate-700 dark:text-slate-300 outline-none"
                 >
                   <option value="ALL">All Applications</option>
-                  <option value="PENDING_PAYMENT">⏳ Pending Payment</option>
-                  <option value="SETTLED_PAYMENT">✓ Settled Payment</option>
+                  <option value="PENDING_PAYMENT">Pending Payment</option>
+                  <option value="SETTLED_PAYMENT">Settled Payment</option>
                   <option value="Under Evaluation">Under Evaluation</option>
                   <option value="For Payment">For Payment</option>
                   <option value="Payment Completed">Payment Completed</option>
@@ -1714,7 +1828,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                         </div>
 
                         <div className="flex items-center gap-1">
-                          {queueTab === 'Active' ? (
+                          {app.status !== 'Archived' ? (
                             <button
                               type="button"
                               onClick={(e) => {
@@ -1772,7 +1886,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">
-                    {queueTab === 'Active' ? (
+                    {currentApp.status !== 'Archived' ? (
                       <>
                         <button
                           onClick={handleDigitalRelease}
@@ -1798,7 +1912,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                         </button>
 
                         <button
-                          onClick={() => handlePermanentDeleteApplication(currentApp.id, currentApp.referenceNumber)}
+                          onClick={() => handlePermanentDeleteApplication(currentApp)}
                           className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition cursor-pointer shadow-sm flex items-center gap-1.5"
                         >
                           <i className="fa-solid fa-trash-can text-xs"></i> Permanent Delete
@@ -2197,6 +2311,43 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         </section>
       )}
 
+      {/* ============================================================ */}
+      {/* 4. AUDIT TRAIL VIEW TAB */}
+      {/* ============================================================ */}
+      {mainViewTab === 'citizenAudit' && (
+        <section className="bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs p-6 space-y-4">
+          <div>
+            <h2 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+              <i className="fa-solid fa-shield-halved text-emerald-600"></i>
+              Archived &amp; Certified Applications Audit Trail
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Immutable cryptographic ledger of all released Tax Declarations and Certified True Copies.
+            </p>
+          </div>
+
+          {citizenAuditTrail.length === 0 ? (
+            <div className="p-8 text-center text-slate-400 text-xs italic bg-slate-50 dark:bg-slate-950 rounded-xl">
+              No applications in the audit trail yet. Approved applications will appear here once certificates are issued.
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
+              {citizenAuditTrail.map((app) => (
+                <div key={app.id} className="p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 text-xs hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
+                  <div>
+                    <span className="font-mono font-bold text-blue-600 dark:text-blue-400">{app.referenceNumber}</span>
+                    <p className="font-semibold text-slate-800 dark:text-slate-200 mt-0.5">{app.applicantName} • {app.category}</p>
+                    <p className="text-[11px] text-slate-400">Released: {app.digitalRelease?.releasedAt || app.submissionDate}</p>
+                  </div>
+                  <span className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 px-3 py-1 rounded-full font-bold text-[10px] flex items-center gap-1">
+                    <i className="fa-solid fa-circle-check text-[9px]"></i> Digital Certificate Issued
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       {/* ============================================================ */}
       {/* ADD / EDIT MASTER PROPERTY RECORD MODAL */}
@@ -2214,7 +2365,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                 onClick={() => setIsPropertyModalOpen(false)}
                 className="w-8 h-8 rounded-full flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer font-bold transition"
               >
-                ✕
+                <i className="fa-solid fa-xmark"></i>
               </button>
             </div>
 
@@ -2321,8 +2472,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                     onChange={(e) => setEditingProperty({ ...editingProperty, paymentStatus: e.target.value })}
                     className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 outline-none font-semibold text-slate-900 dark:text-white"
                   >
-                    <option value="Unpaid">⏳ Pending (Unpaid)</option>
-                    <option value="Paid">✓ Settled (Paid)</option>
+                    <option value="Unpaid">Pending (Unpaid)</option>
+                    <option value="Paid">Settled (Paid)</option>
                   </select>
                 </div>
               </div>
@@ -2416,9 +2567,9 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                     setPreviewModalOpen(false);
                     setPreviewDocError(false);
                   }}
-                  className="w-9 h-9 rounded-xl flex items-center justify-center bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-50 hover:text-slate-900 dark:hover:text-white cursor-pointer font-bold text-base transition"
+                  className="w-9 h-9 rounded-xl flex items-center justify-center bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 hover:text-slate-900 dark:hover:text-white cursor-pointer font-bold text-base transition"
                 >
-                  ✕
+                  <i className="fa-solid fa-xmark"></i>
                 </button>
               </div>
             </div>
@@ -2725,7 +2876,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                 onClick={() => setIsCashierSettleModalOpen(false)}
                 className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 cursor-pointer font-bold"
               >
-                ✕
+                <i className="fa-solid fa-xmark"></i>
               </button>
             </div>
 
