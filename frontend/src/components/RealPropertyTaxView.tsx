@@ -392,13 +392,13 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         return {
           ...item,
           id: item.id || `RPT-${Math.random().toString(36).substring(2, 9)}`,
-          applicantName: item.applicantName || item.ownerName || 'Unknown Applicant',
+          applicantName: item.applicant_name || item.applicantName || item.owner_name || item.ownerName || 'Unknown Applicant',
           status: item.status || 'Under Evaluation',
-          referenceNumber: item.controlNumber || item.referenceNumber || `REF-${item.id}`,
+          referenceNumber: item.control_number || item.controlNumber || item.referenceNumber || `REF-${item.id}`,
           applicantEmail: item.email || '',
-          applicantPhone: item.mobileNumber || '',
+          applicantPhone: item.mobile_number || item.mobileNumber || '',
           category: item.service || 'Transfer of Ownership',
-          submissionDate: item.filedDate || '',
+          submissionDate: item.filed_date || item.filedDate || '',
           penaltyFee: item.penalty ? Number(item.penalty) : 0,
           paymentStatus: resolvedPaymentStatus,
           paymentAmount: rawPaymentAmount,
@@ -409,10 +409,10 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
           paymentDueDate: item.payment_due_date || item.paymentDueDate || '',
           propertyDetails: item.propertyDetails || {
             pin: item.pin || '',
-            titleNumber: item.taxDeclarationNumber || '',
-            lotAreaSqM: item.lotAreaSqM || 0,
-            address: item.propertyLocation || '',
-            currentValuation: item.currentValuation || 0,
+            titleNumber: item.tax_declaration_number || item.taxDeclarationNumber || '',
+            lotAreaSqM: item.lot_area_sqm || item.lotAreaSqM || 0,
+            address: item.property_location || item.propertyLocation || '',
+            currentValuation: item.current_valuation || item.currentValuation || 0,
           },
           documents: (Array.isArray(rawDocs) ? rawDocs : []).reduce((acc: ApplicationDocument[], doc: any, idx: number) => {
             if (!doc) return acc;
@@ -780,11 +780,11 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     }));
   };
 
-  const handleExportMasterCSV = () => {
-    const list = filteredMasterProperties;
+  const handleExportArchivedCSV = () => {
+    const list = masterProperties.filter((p) => p.status === 'Archived');
 
     if (list.length === 0) {
-      triggerToast('No records available to export.', 'warning');
+      triggerToast('No archived records available to export.', 'warning');
       return;
     }
 
@@ -816,11 +816,11 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `QC_RPT_Master_Assessment_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', `QC_RPT_Archived_Assessment_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    triggerToast('Master assessment CSV exported successfully.', 'success');
+    triggerToast('Archived assessment CSV exported successfully.', 'success');
   };
 
   // -------------------------------------------------------------
@@ -1178,10 +1178,59 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
       console.error('Failed to persist Digital Certificate Issued status:', err);
     }
 
-    setApplications((prev) =>
-      prev.map((a) => (a.id === currentApp.id ? releasedApp : a))
-    );
-    triggerToast(`Digital Tax Certificate issued for ${currentApp.referenceNumber}.`, 'success');
+    // Carry the approved application's property info into the Master Database
+    // (updating the parcel if it's already registered, or creating it if not),
+    // then take the application out of the active Citizen Applications queue.
+    try {
+      const rawApp = currentApp as unknown as Record<string, any>;
+      const tdn = String(
+        currentApp.propertyDetails?.titleNumber || rawApp.tax_declaration_number || ''
+      ).trim();
+
+      const existingMasterRecord = tdn
+        ? masterProperties.find(
+          (p) => p.taxDeclarationNumber.trim().toLowerCase() === tdn.toLowerCase()
+        )
+        : undefined;
+
+      const masterPayload = {
+        taxDeclarationNumber: tdn || `TDN-${currentApp.referenceNumber}`,
+        ownerName: currentApp.applicantName,
+        propertyLocation: currentApp.propertyDetails?.address || '',
+        barangay: rawApp.barangay || '',
+        propertyType: rawApp.property_type || 'Residential',
+        assessedValue: currentApp.propertyDetails?.currentValuation || 0,
+        status: 'Active',
+        paymentStatus: currentApp.paymentStatus === 'Paid' ? 'Paid' : 'Unpaid',
+      };
+
+      if (existingMasterRecord) {
+        await updateLguMasterRptRecord(existingMasterRecord.id, masterPayload as any);
+      } else {
+        await createLguMasterRptRecord(masterPayload as any);
+      }
+
+      await loadMasterRecords();
+
+      await updateRptApplicationStatus(String(currentApp.id), 'Archived');
+      setApplications((prev) =>
+        prev.map((a) => (a.id === currentApp.id ? { ...releasedApp, status: 'Archived' } : a))
+      );
+
+      triggerToast(
+        `Digital Tax Certificate issued for ${currentApp.referenceNumber}. Record moved to the Master Database and removed from the active queue.`,
+        'success'
+      );
+    } catch (err) {
+      console.error('Failed to move released application into the Master Database:', err);
+      setApplications((prev) =>
+        prev.map((a) => (a.id === currentApp.id ? releasedApp : a))
+      );
+      triggerToast(
+        `Certificate issued for ${currentApp.referenceNumber}, but it could not be moved into the Master Database automatically.`,
+        'warning'
+      );
+    }
   };
 
   // -------------------------------------------------------------
@@ -1385,12 +1434,6 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
             <i className="fa-solid fa-arrows-rotate text-[11px]"></i> Refresh List
           </button>
           <button
-            onClick={handleExportMasterCSV}
-            className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold px-4 py-2.5 rounded-xl transition-all border border-slate-200 dark:border-slate-700 cursor-pointer flex items-center gap-2 shadow-xs"
-          >
-            <i className="fa-solid fa-download text-[11px]"></i> Export Masterlist
-          </button>
-          <button
             onClick={() => {
               setEditingProperty({
                 taxDeclarationNumber: '',
@@ -1418,32 +1461,17 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
       {/* KPI Summary Metrics Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs">
-          <div className="flex justify-between items-start">
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Registered Parcels</p>
-            <span className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
-              <i className="fa-solid fa-file-contract text-xs"></i>
-            </span>
-          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Registered Parcels</p>
           <h4 className="text-2xl font-bold text-slate-900 dark:text-white mt-3">{metrics.totalMaster}</h4>
         </div>
 
         <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs">
-          <div className="flex justify-between items-start">
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Citizen Applications</p>
-            <span className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
-              <i className="fa-solid fa-clock-rotate-left text-xs"></i>
-            </span>
-          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Citizen Applications</p>
           <h4 className="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-3">{metrics.activeApps}</h4>
         </div>
 
         <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs">
-          <div className="flex justify-between items-start">
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">RPT Revenue Settled</p>
-            <span className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
-              <i className="fa-solid fa-peso-sign text-xs"></i>
-            </span>
-          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">RPT Revenue Settled</p>
           <h4 className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-3">
             {formatCurrency(metrics.totalPaidRevenue)}
           </h4>
@@ -1453,12 +1481,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         </div>
 
         <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs">
-          <div className="flex justify-between items-start">
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Pending Receivables &amp; Fees</p>
-            <span className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
-              <i className="fa-solid fa-triangle-exclamation text-xs"></i>
-            </span>
-          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Pending Receivables &amp; Fees</p>
           <h4 className="text-2xl font-bold text-rose-600 dark:text-rose-400 mt-3">
             {formatCurrency(metrics.totalPendingReceivables)}
           </h4>
@@ -1535,21 +1558,31 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
               </button>
             </div>
 
-            <div className="flex items-center gap-2 text-xs text-slate-500">
-              <span>Show entries:</span>
-              <select
-                value={masterEntriesPerPage}
-                onChange={(e) => {
-                  setMasterEntriesPerPage(Number(e.target.value));
-                  setMasterCurrentPage(1);
-                }}
-                className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-2 py-1 text-xs outline-none font-semibold text-slate-700 dark:text-slate-300"
-              >
-                <option value={5}>5</option>
-                <option value={10}>10</option>
-                <option value={25}>25</option>
-                <option value={50}>50</option>
-              </select>
+            <div className="flex items-center gap-3">
+              {masterTab === 'Archived' && (
+                <button
+                  onClick={handleExportArchivedCSV}
+                  className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold px-3.5 py-2 rounded-xl transition-all border border-slate-200 dark:border-slate-700 cursor-pointer flex items-center gap-2"
+                >
+                  <i className="fa-solid fa-download text-[11px]"></i> Export Archived List
+                </button>
+              )}
+              <div className="flex items-center gap-2 text-xs text-slate-500">
+                <span>Show entries:</span>
+                <select
+                  value={masterEntriesPerPage}
+                  onChange={(e) => {
+                    setMasterEntriesPerPage(Number(e.target.value));
+                    setMasterCurrentPage(1);
+                  }}
+                  className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-2 py-1 text-xs outline-none font-semibold text-slate-700 dark:text-slate-300"
+                >
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                </select>
+              </div>
             </div>
           </div>
 
