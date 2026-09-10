@@ -148,11 +148,14 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
   isCollapsed,
 }) => {
   // Navigation tabs
-  const [mainViewTab, setMainViewTab] = useState<'master' | 'queue' | 'payments' | 'citizenAudit'>(
-    () => (localStorage.getItem('rpt_admin_tab') as 'master' | 'queue' | 'payments' | 'citizenAudit') || 'master'
+  const [mainViewTab, setMainViewTab] = useState<'master' | 'queue' | 'payments'>(
+    () => {
+      const stored = localStorage.getItem('rpt_admin_tab');
+      return stored === 'master' || stored === 'queue' || stored === 'payments' ? stored : 'master';
+    }
   );
 
-  const switchMainViewTab = (tab: 'master' | 'queue' | 'payments' | 'citizenAudit') => {
+  const switchMainViewTab = (tab: 'master' | 'queue' | 'payments') => {
     setMainViewTab(tab);
     localStorage.setItem('rpt_admin_tab', tab);
   };
@@ -178,7 +181,6 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
 
   // Applications queue state
   const [applications, setApplications] = useState<ExtendedApplicationRecord[]>([]);
-  const [citizenAuditTrail, setCitizenAuditTrail] = useState<ExtendedApplicationRecord[]>([]);
   const [selectedAppId, setSelectedAppId] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
@@ -289,8 +291,6 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     }
   }, []);
 
-  const AUDIT_STATUSES = ['Digital Certificate Issued', 'Completed'];
-
   const loadApplications = useCallback(async () => {
     try {
       const data = await getRPTApplications();
@@ -391,15 +391,10 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         };
       });
 
-      // Split into Audit Trail vs Applications (Archived remains in applications!)
-      const auditApps = mapped.filter((a) => AUDIT_STATUSES.includes(a.status as string));
-      const activeApps = mapped.filter((a) => !AUDIT_STATUSES.includes(a.status as string));
+      setApplications(mapped);
 
-      setApplications(activeApps);
-      setCitizenAuditTrail(auditApps);
-
-      if (activeApps.length > 0 && !selectedAppId) {
-        setSelectedAppId(activeApps[0].id);
+      if (mapped.length > 0 && !selectedAppId) {
+        setSelectedAppId(mapped[0].id);
       }
     } catch (err) {
       console.error('Failed to load RPT applications:', err);
@@ -1112,10 +1107,10 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
       console.error('Failed to persist Digital Certificate Issued status:', err);
     }
 
-    setApplications((prev) => prev.filter((a) => a.id !== currentApp.id));
-    setCitizenAuditTrail((prev) => [releasedApp, ...prev]);
-    switchMainViewTab('citizenAudit');
-    triggerToast(`Digital Tax Certificate issued for ${currentApp.referenceNumber}. Transferred to Audit Trail.`, 'success');
+    setApplications((prev) =>
+      prev.map((a) => (a.id === currentApp.id ? releasedApp : a))
+    );
+    triggerToast(`Digital Tax Certificate issued for ${currentApp.referenceNumber}.`, 'success');
   };
 
   // -------------------------------------------------------------
@@ -1396,20 +1391,6 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
           <span>Payment Ledger</span>
           <span className={`px-2 py-0.5 rounded-full text-[10px] ${mainViewTab === 'payments' ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
             {paymentsLedger.length}
-          </span>
-        </button>
-
-        <button
-          onClick={() => switchMainViewTab('citizenAudit')}
-          className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${mainViewTab === 'citizenAudit'
-            ? 'bg-blue-600 text-white shadow-md'
-            : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
-            }`}
-        >
-          <i className="fa-solid fa-shield-halved text-xs"></i>
-          <span>Audit Trail</span>
-          <span className={`px-2 py-0.5 rounded-full text-[10px] ${mainViewTab === 'citizenAudit' ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
-            {citizenAuditTrail.length}
           </span>
         </button>
       </div>
@@ -2308,44 +2289,6 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
               </table>
             </div>
           </div>
-        </section>
-      )}
-
-      {/* ============================================================ */}
-      {/* 4. AUDIT TRAIL VIEW TAB */}
-      {/* ============================================================ */}
-      {mainViewTab === 'citizenAudit' && (
-        <section className="bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs p-6 space-y-4">
-          <div>
-            <h2 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
-              <i className="fa-solid fa-shield-halved text-emerald-600"></i>
-              Archived &amp; Certified Applications Audit Trail
-            </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Immutable cryptographic ledger of all released Tax Declarations and Certified True Copies.
-            </p>
-          </div>
-
-          {citizenAuditTrail.length === 0 ? (
-            <div className="p-8 text-center text-slate-400 text-xs italic bg-slate-50 dark:bg-slate-950 rounded-xl">
-              No applications in the audit trail yet. Approved applications will appear here once certificates are issued.
-            </div>
-          ) : (
-            <div className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
-              {citizenAuditTrail.map((app) => (
-                <div key={app.id} className="p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 text-xs hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
-                  <div>
-                    <span className="font-mono font-bold text-blue-600 dark:text-blue-400">{app.referenceNumber}</span>
-                    <p className="font-semibold text-slate-800 dark:text-slate-200 mt-0.5">{app.applicantName} • {app.category}</p>
-                    <p className="text-[11px] text-slate-400">Released: {app.digitalRelease?.releasedAt || app.submissionDate}</p>
-                  </div>
-                  <span className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 px-3 py-1 rounded-full font-bold text-[10px] flex items-center gap-1">
-                    <i className="fa-solid fa-circle-check text-[9px]"></i> Digital Certificate Issued
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
         </section>
       )}
 
