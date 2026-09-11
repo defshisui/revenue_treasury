@@ -208,7 +208,7 @@ export function RealPropertyTaxHub() {
 export default function RealPropertyApplication({ isCollapsed = false }: { isCollapsed?: boolean }) {
   const location = useLocation();
 
-  const [activePortalTab, setActivePortalTab] = useState<"search" | "application" | "status" | "summary">("search");
+  const [activePortalTab, setActivePortalTab] = useState<"search" | "application" | "summary">("search");
 
 
   const [rptSearchStep, setRptSearchStep] = useState<1 | 2 | 3>(1);
@@ -337,6 +337,23 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
     }, []);
   };
 
+  const getAppForTdn = (tdn: string): RPTApplicationRecord | null => {
+    if (!tdn) return null;
+    const matches = applications.filter((app) => app.taxDeclarationNumber === tdn);
+    if (matches.length === 0) return null;
+    // Most recently filed application takes priority when there are several for the same TDN.
+    return matches.reduce((latest, app) => ((app.filedDate || "") > (latest.filedDate || "") ? app : latest), matches[0]);
+  };
+
+  const getAppStatusBadgeClass = (status?: string): string => {
+    if (status === "Approved" || status === "Ready for Release" || status === "Payment Completed" || status === "Completed") {
+      return "bg-emerald-100 text-emerald-800";
+    }
+    if (status === "Rejected") return "bg-rose-100 text-rose-800";
+    if (status === "For Payment") return "bg-blue-100 text-blue-800";
+    return "bg-amber-100 text-amber-800";
+  };
+
   const createDocumentFallbackSvg = (title: string) => {
     const cleanTitle = title.replace(/^\d+-\d+-/, '').replace(/\.[^/.]+$/, '').replace(/[._-]/g, ' ');
     const ext = (title.split('.').pop() || 'DOC').toUpperCase();
@@ -432,7 +449,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
 
     const params = new URLSearchParams(location.search);
     const viewParam = params.get("view");
-    if (viewParam === "status") setActivePortalTab("status");
+    if (viewParam === "status") setActivePortalTab("search");
     else if (viewParam === "form") setActivePortalTab("application");
     else if (viewParam === "summary") setActivePortalTab("summary");
 
@@ -929,7 +946,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
       showToast("Application submitted successfully to the City Assessor's Office!", "success");
       setAppNotice(`Application created with Control No: ${payload.controlNumber}`);
       loadApplications();
-      setActivePortalTab("status");
+      setActivePortalTab("search");
     } catch (err: any) {
       setAppNotice("Failed to submit application: " + err.message);
     } finally {
@@ -1353,10 +1370,10 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                     <div className="rpt-nav-row border-b pb-4 flex items-center gap-6">
                       <button
                         type="button"
-                        onClick={() => setActivePortalTab("status")}
+                        onClick={() => setActivePortalTab("application")}
                         className="rpt-nav-button cursor-pointer"
                       >
-                        MY APPLICATIONS
+                        + NEW SERVICE REQUEST
                       </button>
                     </div>
 
@@ -1438,6 +1455,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                             <th>YEAR</th>
                             <th>ASSESSED</th>
                             <th>TAX DUE</th>
+                            <th>STATUS</th>
                             <th>VIEW</th>
                           </tr>
                         </thead>
@@ -1446,6 +1464,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                             associatedProperties
                               .filter((property) => assessmentYear === "All Years" || String(property.billingYear) === assessmentYear)
                               .map((property) => {
+                                const matchedApp = getAppForTdn(property.taxDeclarationNumber);
                                 return (
                                   <tr key={property.taxDeclarationNumber} className="hover:bg-slate-50 transition">
                                     <td className="font-mono font-black">{property.taxDeclarationNumber}</td>
@@ -1454,6 +1473,24 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                                     <td>{property.billingYear || "—"}</td>
                                     <td className="font-bold">{formatCurrency(property.assessedValue)}</td>
                                     <td className="font-bold">{formatCurrency(property.balance || property.totalAssessment)}</td>
+                                    <td>
+                                      {matchedApp ? (
+                                        <div className="flex items-center gap-2">
+                                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${getAppStatusBadgeClass(matchedApp.status)}`}>
+                                            {matchedApp.status}
+                                          </span>
+                                          <button
+                                            type="button"
+                                            onClick={() => setSelectedAppDetail(matchedApp)}
+                                            className="rpt-link cursor-pointer text-[10px]"
+                                          >
+                                            View Details
+                                          </button>
+                                        </div>
+                                      ) : (
+                                        <span className="text-[10px] text-slate-400 italic">No Application</span>
+                                      )}
+                                    </td>
                                     <td>
                                       <button
                                         type="button"
@@ -1471,7 +1508,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                               })
                           ) : (
                             <tr>
-                              <td colSpan={7} className="px-4 py-10 text-center rpt-empty italic">
+                              <td colSpan={8} className="px-4 py-10 text-center rpt-empty italic">
                                 Search for a Tax Declaration Number to view real property tax records.
                               </td>
                             </tr>
@@ -1957,127 +1994,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
           )}
 
 
-          {activePortalTab === "status" && (
-            <div className="rpt-main-shell p-6 sm:p-8 space-y-6">
-
-              <div className="mb-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActivePortalTab("search");
-                    setRptSearchStep(1);
-                  }}
-                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-xl text-xs transition-colors cursor-pointer inline-block border-0"
-                >
-                  &larr; Back to Previous Page
-                </button>
-              </div>
-
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
-                <div>
-                  <h2 className="text-xl font-extrabold text-[#0B3B60]">Real Property Applications Status</h2>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Track the evaluation progress and digital certificate release of your submitted applications.
-                  </p>
-                </div>
-                <button
-                  onClick={() => setActivePortalTab("application")}
-                  className="bg-[#0284C7] hover:bg-sky-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition cursor-pointer"
-                >
-                  + New Service Request
-                </button>
-              </div>
-
-              {rptServicePaymentNotice && (
-                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-emerald-800 font-semibold">
-                  ✓ {rptServicePaymentNotice}
-                </div>
-              )}
-
-              {applications.length === 0 ? (
-                <div className="p-12 text-center text-slate-400 text-xs italic bg-slate-50 rounded-2xl border border-dashed">
-                  No submitted applications found. Click "+ New Service Request" to submit one.
-                </div>
-              ) : (
-                <div className="overflow-x-auto rounded-2xl border border-slate-200">
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead className="bg-[#F8FAFC] text-slate-700 font-bold border-b border-slate-200">
-                      <tr>
-                        <th className="p-4">Control No.</th>
-                        <th className="p-4">Service</th>
-                        <th className="p-4">Owner / Applicant</th>
-                        <th className="p-4">Location</th>
-                        <th className="p-4">Status</th>
-                        <th className="p-4">Payment</th>
-                        <th className="p-4">Documents</th>
-                        <th className="p-4">Filed Date</th>
-                        <th className="p-4 text-right">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 bg-white">
-                      {applications.map((app) => (
-                        <tr key={app.id} className="hover:bg-slate-50 transition">
-                          <td className="p-4 font-mono font-extrabold text-[#0B3B60]">{app.controlNumber}</td>
-                          <td className="p-4 font-semibold text-slate-800">{app.service}</td>
-                          <td className="p-4 text-slate-600">{app.ownerName || app.applicantName}</td>
-                          <td className="p-4 text-slate-600 truncate max-w-xs">{app.propertyLocation}</td>
-                          <td className="p-4">
-                            <span
-                              className={`px-3 py-1 rounded-full text-[10px] font-bold ${app.status === "Approved" || app.status === "Ready for Release" || app.status === "Payment Completed"
-                                ? "bg-emerald-100 text-emerald-800"
-                                : app.status === "Rejected"
-                                  ? "bg-rose-100 text-rose-800"
-                                  : app.status === "For Payment"
-                                    ? "bg-blue-100 text-blue-800"
-                                    : "bg-amber-100 text-amber-800"
-                                }`}
-                            >
-                              {app.status}
-                            </span>
-                          </td>
-                          <td className="p-4">
-                            {app.service === "Transfer of Ownership" && Number(app.paymentAmount || 0) > 0 ? (
-                              <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${app.paymentStatus === "Paid" ? "bg-emerald-100 text-emerald-800" : "bg-blue-100 text-blue-800"}`}>
-                                {app.paymentStatus === "Paid" ? "PAID" : `₱${Number(app.paymentAmount).toLocaleString("en-PH", { minimumFractionDigits: 2 })} DUE`}
-                              </span>
-                            ) : (
-                              <span className="text-[10px] text-slate-400">Not assessed</span>
-                            )}
-                          </td>
-                          <td className="p-4">
-                            {(() => {
-                              const docs = getAppDocumentsList(app);
-                              if (docs.length === 0) return <span className="text-[10px] text-slate-400">None</span>;
-                              return (
-                                <button
-                                  type="button"
-                                  onClick={() => setSelectedAppDetail(app)}
-                                  className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-sky-50 text-[#0284C7] hover:bg-sky-100 border border-sky-200 transition cursor-pointer"
-                                  title="View application documents"
-                                >
-                                  {docs.length} Document{docs.length > 1 ? 's' : ''}
-                                </button>
-                              );
-                            })()}
-                          </td>
-                          <td className="p-4 font-mono text-slate-500">{app.filedDate}</td>
-                          <td className="p-4 text-right">
-                            <button
-                              onClick={() => setSelectedAppDetail(app)}
-                              className="text-xs font-bold text-[#0284C7] hover:underline cursor-pointer"
-                            >
-                              View Details
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
 
           {activePortalTab === "summary" && (
             <div className="rpt-main-shell p-6 sm:p-8 space-y-6">
