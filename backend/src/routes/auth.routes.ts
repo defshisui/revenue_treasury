@@ -12,14 +12,14 @@ import {
 const router = Router();
 
 router.post('/login', login);
-router.post('/auth/verify-login-otp', verifyLoginOtp);
+router.post('/verify-login-otp', verifyLoginOtp);
 
-router.post('/auth/register-init', initiateRegister);
-router.post('/auth/verify-register-otp', verifyRegisterOtp);
+router.post('/register-init', initiateRegister);
+router.post('/verify-register-otp', verifyRegisterOtp);
 
-router.post('/auth/resend-otp', resendOtp);
+router.post('/resend-otp', resendOtp);
 
-router.post('/auth/forgot-password/init', initiateForgotPassword);
-router.post('/auth/forgot-password/reset', resetPassword);
+router.post('/forgot-password/init', initiateForgotPassword);
+router.post('/forgot-password/reset', resetPassword);
 
 export default router;
