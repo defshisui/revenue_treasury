@@ -351,7 +351,7 @@ export default function MarketLeaseSearch() {
             <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 font-['Segoe_UI',Tahoma,Geneva,Verdana,sans-serif]">
                 <div className="w-full bg-white border border-slate-300 rounded-lg shadow-md overflow-hidden flex flex-col pb-5">
                     <div className="flex justify-between items-center p-[20px_24px] border-b-2 border-slate-200">
-                        <h2 className="text-[1.1rem] font-bold text-slate-800 tracking-[0.5px] border-l-4 border-blue-800 pl-3 uppercase">
+                        <h2 className="text-[1.1rem] font-bold text-slate-800 tracking-[0.5px] uppercase">
                             My Active Market Leases
                         </h2>
                         <button
