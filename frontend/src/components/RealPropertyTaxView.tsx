@@ -31,7 +31,6 @@ type ExtendedStatusType =
 export interface LguMasterProperty {
   id: number | string;
   propertyIndexNumber: string;
-  newPspin: string;
   taxDeclarationNumber: string;
   ownerName: string;
   ownerAddress: string;
@@ -262,7 +261,6 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         return {
           id: r.id,
           propertyIndexNumber: r.property_index_number || r.propertyIndexNumber || '',
-          newPspin: r.new_pspin || r.newPspin || '',
           taxDeclarationNumber: r.tax_declaration_number || r.taxDeclarationNumber || '',
           ownerName: r.owner_name || r.ownerName || '',
           ownerAddress: r.owner_address || r.ownerAddress || '',
@@ -562,7 +560,6 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         !lowerSearch ||
         p.taxDeclarationNumber.toLowerCase().includes(lowerSearch) ||
         p.ownerName.toLowerCase().includes(lowerSearch) ||
-        p.newPspin.toLowerCase().includes(lowerSearch) ||
         p.barangay.toLowerCase().includes(lowerSearch) ||
         (lowerSearch === 'settled' && isSettled) ||
         (lowerSearch === 'pending' && !isSettled);
@@ -688,7 +685,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
   const handleArchiveMasterProperty = async (prop: LguMasterProperty) => {
     if (await confirmAction(`Are you sure you want to move assessment record ${prop.taxDeclarationNumber} to the Archiver?`)) {
       try {
-        await updateLguMasterRptRecord(prop.id, { status: 'Archived' });
+        await updateLguMasterRptRecord(prop.id, { ...prop, status: 'Archived' });
         setMasterProperties((prev) =>
           prev.map((p) => (p.id === prop.id ? { ...p, status: 'Archived' } : p))
         );
@@ -702,7 +699,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
   const handleRestoreMasterProperty = async (prop: LguMasterProperty) => {
     if (await confirmAction(`Are you sure you want to restore assessment record ${prop.taxDeclarationNumber} to Active?`)) {
       try {
-        await updateLguMasterRptRecord(prop.id, { status: 'Active' });
+        await updateLguMasterRptRecord(prop.id, { ...prop, status: 'Active' });
         setMasterProperties((prev) =>
           prev.map((p) => (p.id === prop.id ? { ...p, status: 'Active' } : p))
         );
@@ -723,7 +720,6 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         [
           'Tax Declaration No.',
           'Owner Name',
-          'NewPSPIN',
           'Barangay',
           'Property Type',
           'Assessed Value',
@@ -734,7 +730,6 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         [
           `"${prop.taxDeclarationNumber}"`,
           `"${prop.ownerName}"`,
-          `"${prop.newPspin}"`,
           `"${prop.barangay}"`,
           `"${prop.propertyType}"`,
           prop.assessedValue || 0,
@@ -797,7 +792,6 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     const headers = [
       'Tax Declaration No.',
       'Owner Name',
-      'NewPSPIN',
       'Barangay',
       'Property Type',
       'Assessed Value',
@@ -809,7 +803,6 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     const rows = list.map((p) => [
       `"${p.taxDeclarationNumber}"`,
       `"${p.ownerName}"`,
-      `"${p.newPspin}"`,
       `"${p.barangay}"`,
       `"${p.propertyType}"`,
       p.assessedValue || 0,
@@ -850,36 +843,45 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
       : undefined;
 
     const propertyType = rawApp.property_type || existingMasterRecord?.propertyType || 'Residential';
-    const marketValue =
-      app.propertyDetails?.currentValuation ||
-      existingMasterRecord?.marketValue ||
-      0;
-    const { assessedVal, basicTax, sefTax, totalDue } = computeTaxBreakdown(marketValue, propertyType);
-    const resolvedPaymentStatus = app.paymentStatus === 'Paid' ? 'Paid' : 'Unpaid';
 
     if (existingMasterRecord) {
-      // Existing parcel: only refresh ownership/payment info, keep its
-      // existing tax breakdown untouched rather than recomputing it from
-      // this application (which may just be for a certified copy, not a
-      // reassessment).
+      // Existing parcel: only refresh ownership/location info. Its tax
+      // breakdown AND its RPT payment status belong to the master record
+      // alone — this application's own payment (a document/certificate
+      // fee) is a separate transaction and must never mark the parcel's
+      // real property tax as settled or touch its assessed value/tax due.
       const updatePayload = {
         ownerName: app.applicantName,
         propertyLocation: app.propertyDetails?.address || existingMasterRecord.location,
         barangay: rawApp.barangay || existingMasterRecord.barangay,
         propertyType,
-        paymentStatus: resolvedPaymentStatus,
+        marketValue: existingMasterRecord.marketValue,
+        assessedValue: existingMasterRecord.assessedValue,
         basicTax: existingMasterRecord.basicTax,
         sefTax: existingMasterRecord.sefTax,
         penalty: existingMasterRecord.penalty,
         discount: existingMasterRecord.discount,
         totalAssessment: existingMasterRecord.totalAssessment,
-        balance: resolvedPaymentStatus === 'Paid' ? 0 : existingMasterRecord.balance,
+        balance: existingMasterRecord.balance,
+        amountPaid: existingMasterRecord.amountPaid,
+        paymentStatus: existingMasterRecord.paymentStatus,
         status: 'Active',
       };
       await updateLguMasterRptRecord(existingMasterRecord.id, updatePayload as any);
     } else {
-      // New parcel: create a full record with a computed tax breakdown so
-      // it isn't dropped into the registry with zeroed-out assessment data.
+      // New parcel: we can only create a real assessment record if we
+      // actually know its market value. An application's document/CTC
+      // payment is not a property valuation and must never be used to
+      // fabricate a zeroed-out assessment that then gets marked "Paid".
+      const marketValue = app.propertyDetails?.currentValuation || 0;
+      if (marketValue <= 0) {
+        throw new Error(
+          'No market valuation on file for this property. Enter its market value in the Master Database before this application can be recorded there.'
+        );
+      }
+
+      const { assessedVal, basicTax, sefTax, totalDue } = computeTaxBreakdown(marketValue, propertyType);
+
       const createPayload = {
         taxDeclarationNumber: tdn || `TDN-${app.referenceNumber}`,
         pin: app.propertyDetails?.pin || '',
@@ -893,16 +895,21 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         basicTax,
         sefTax,
         totalAssessment: totalDue,
-        balance: resolvedPaymentStatus === 'Paid' ? 0 : totalDue,
-        amountPaid: resolvedPaymentStatus === 'Paid' ? totalDue : 0,
+        balance: totalDue,
+        amountPaid: 0,
         status: 'Active',
-        paymentStatus: resolvedPaymentStatus,
+        // Always starts Unpaid: this application's own payment is for the
+        // certificate/document service, not a settlement of real property
+        // tax. Settling the actual RPT happens separately, on the master
+        // record itself (cashier settle / quick settle).
+        paymentStatus: 'Unpaid',
       };
       await createLguMasterRptRecord(createPayload as any);
     }
 
     await loadMasterRecords();
   };
+
 
   const handleUpdateStatus = async (newStatus: ExtendedStatusType) => {
     if (!currentApp) return;
@@ -1157,6 +1164,14 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
       const paymentMethod = 'Treasury Cashier (Cash)';
 
       await updateLguMasterRptRecord(prop.id, {
+        marketValue: prop.marketValue,
+        assessedValue: prop.assessedValue,
+        basicTax: prop.basicTax,
+        sefTax: prop.sefTax,
+        shttcApplied: prop.shttcApplied,
+        penalty: prop.penalty,
+        discount: prop.discount,
+        totalAssessment: prop.totalAssessment,
         paymentStatus: 'Paid',
         balance: 0,
         amountPaid: prop.totalAssessment,
@@ -1702,7 +1717,6 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                   <tr>
                     <th className="p-4">Tax Declaration No.</th>
                     <th className="p-4">Owner Name</th>
-                    <th className="p-4">NewPSPIN</th>
                     <th className="p-4">Barangay</th>
                     <th className="p-4">Type</th>
                     <th className="p-4 text-right">Assessed Value</th>
@@ -1714,7 +1728,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                   {paginatedMasterProperties.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="p-8 text-center text-slate-400 italic">
+                      <td colSpan={8} className="p-8 text-center text-slate-400 italic">
                         {masterTab === 'Active'
                           ? 'No active property assessment records match your search filter.'
                           : 'No archived records found in the archiver.'}
@@ -1728,9 +1742,6 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                         </td>
                         <td className="p-4 font-semibold text-slate-900 dark:text-white">
                           {prop.ownerName}
-                        </td>
-                        <td className="p-4 font-mono text-slate-500 text-[11px]">
-                          {prop.newPspin}
                         </td>
                         <td className="p-4 text-slate-600 dark:text-slate-300">
                           {prop.barangay}
@@ -1770,11 +1781,28 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                                 </button>
                               )}
                               <button
+                                onClick={() => {
+                                  setEditingProperty(prop);
+                                  setIsPropertyModalOpen(true);
+                                }}
+                                className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 transition cursor-pointer"
+                                title="Edit Property"
+                              >
+                                <i className="fa-solid fa-pen-to-square mr-1"></i> Edit
+                              </button>
+                              <button
                                 onClick={() => handleArchiveMasterProperty(prop)}
                                 className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 hover:bg-amber-100 transition cursor-pointer"
                                 title="Move to Archiver"
                               >
                                 <i className="fa-solid fa-box-archive mr-1"></i> Archive
+                              </button>
+                              <button
+                                onClick={() => handleDeleteMasterProperty(prop)}
+                                className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 hover:bg-rose-100 transition cursor-pointer"
+                                title="Delete Property"
+                              >
+                                <i className="fa-solid fa-trash-can mr-1"></i> Delete
                               </button>
                             </>
                           ) : (
@@ -2479,16 +2507,6 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                     value={editingProperty.taxDeclarationNumber || ''}
                     onChange={(e) => setEditingProperty({ ...editingProperty, taxDeclarationNumber: e.target.value })}
                     className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 font-mono font-bold outline-none text-slate-900 dark:text-white"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="font-bold text-slate-700 dark:text-slate-300">NewPSPIN *</label>
-                  <input
-                    type="text"
-                    required
-                    value={editingProperty.newPspin || ''}
-                    onChange={(e) => setEditingProperty({ ...editingProperty, newPspin: e.target.value })}
-                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 font-mono outline-none text-slate-900 dark:text-white"
                   />
                 </div>
                 <div className="space-y-1 sm:col-span-2">
