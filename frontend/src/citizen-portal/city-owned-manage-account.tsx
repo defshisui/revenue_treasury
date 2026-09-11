@@ -437,7 +437,6 @@ export default function MarketLeaseSearch() {
                         </div>
                     </div>
                     <div className="p-[16px_24px] font-bold text-[0.9rem] text-slate-800 flex justify-between items-center">
-                        <span>Due Date: 08/20/2026</span>
                         <span className="text-[0.75rem] font-medium text-slate-500 bg-slate-100 px-3 py-1 rounded-full border border-slate-200 shadow-sm">
                             Showing {filteredLeases.length} results
                         </span>
