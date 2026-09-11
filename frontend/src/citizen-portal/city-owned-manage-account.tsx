@@ -346,48 +346,48 @@ export default function MarketLeaseSearch() {
         window.history.back();
     };
     return (
-        <div className="w-full min-h-screen bg-[#eef2f6] text-[#1a202c] flex flex-col pb-12">
+        <div className="w-full min-h-screen bg-slate-100 text-slate-800 flex flex-col antialiased relative">
             <UnifiedHeader />
-            <main className="flex-grow p-[30px_40px] flex justify-center mt-6 font-['Segoe_UI',Tahoma,Geneva,Verdana,sans-serif]">
-                <div className="w-full max-w-[1400px] bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] overflow-hidden flex flex-col pb-5">
-                    <div className="flex justify-between items-center p-[20px_24px] border-b-2 border-[#e2e8f0]">
-                        <h2 className="text-[1.1rem] font-bold text-[#1a202c] tracking-[0.5px] border-l-4 border-[#0a369d] pl-3 uppercase">
+            <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 font-['Segoe_UI',Tahoma,Geneva,Verdana,sans-serif]">
+                <div className="w-full bg-white border border-slate-300 rounded-lg shadow-md overflow-hidden flex flex-col pb-5">
+                    <div className="flex justify-between items-center p-[20px_24px] border-b-2 border-slate-200">
+                        <h2 className="text-[1.1rem] font-bold text-slate-800 tracking-[0.5px] border-l-4 border-blue-800 pl-3 uppercase">
                             My Active Market Leases
                         </h2>
                         <button
                             onClick={handleBack}
-                            className="flex items-center gap-2 px-4 py-2 bg-white border border-[#cbd5e1] hover:bg-[#edf2f7] text-[#1a202c] rounded-md text-[0.85rem] font-semibold transition-colors cursor-pointer"
+                            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 hover:bg-slate-100 text-slate-800 rounded-md text-[0.85rem] font-semibold transition-colors cursor-pointer"
                         >
                             <span>&larr;</span> Back
                         </button>
                     </div>
-                    <div className="p-6 bg-white grid grid-cols-1 lg:grid-cols-3 gap-x-6 gap-y-5 items-end border-b border-[#e2e8f0]">
+                    <div className="p-6 bg-white grid grid-cols-1 lg:grid-cols-3 gap-x-6 gap-y-5 items-end border-b border-slate-200">
                         <div className="flex flex-col gap-[6px]">
-                            <label htmlFor="leaseId" className="text-[0.85rem] font-semibold text-[#1a202c]">Lease ID</label>
+                            <label htmlFor="leaseId" className="text-[0.85rem] font-semibold text-slate-800">Lease ID</label>
                             <input
                                 type="text" id="leaseId" value={leaseId} onChange={(e) => setLeaseId(e.target.value)}
-                                className="w-full px-[14px] py-[10px] border border-[#cbd5e1] rounded-md text-[0.9rem] outline-none transition-all bg-white text-[#1a202c] focus:border-[#3182ce] focus:ring-[3px] focus:ring-[#3182ce]/15"
+                                className="w-full px-[14px] py-[10px] border border-slate-300 rounded-md text-[0.9rem] outline-none transition-all bg-white text-slate-800 focus:border-blue-800 focus:ring-[3px] focus:ring-blue-800/15"
                             />
                         </div>
                         <div className="flex flex-col gap-[6px]">
-                            <label htmlFor="firstName" className="text-[0.85rem] font-semibold text-[#1a202c]">First Name of Stallholder</label>
+                            <label htmlFor="firstName" className="text-[0.85rem] font-semibold text-slate-800">First Name of Stallholder</label>
                             <input
                                 type="text" id="firstName" value={firstName} readOnly disabled
-                                className="w-full px-[14px] py-[10px] border border-[#cbd5e1] rounded-md text-[0.9rem] outline-none transition-all bg-slate-100 text-slate-500 cursor-not-allowed"
+                                className="w-full px-[14px] py-[10px] border border-slate-300 rounded-md text-[0.9rem] outline-none transition-all bg-slate-100 text-slate-500 cursor-not-allowed"
                             />
                         </div>
                         <div className="flex flex-col gap-[6px]">
-                            <label htmlFor="lastName" className="text-[0.85rem] font-semibold text-[#1a202c]">Last Name of Stallholder</label>
+                            <label htmlFor="lastName" className="text-[0.85rem] font-semibold text-slate-800">Last Name of Stallholder</label>
                             <input
                                 type="text" id="lastName" value={lastName} readOnly disabled
-                                className="w-full px-[14px] py-[10px] border border-[#cbd5e1] rounded-md text-[0.9rem] outline-none transition-all bg-slate-100 text-slate-500 cursor-not-allowed"
+                                className="w-full px-[14px] py-[10px] border border-slate-300 rounded-md text-[0.9rem] outline-none transition-all bg-slate-100 text-slate-500 cursor-not-allowed"
                             />
                         </div>
                         <div className="flex flex-col gap-[6px]">
-                            <label htmlFor="marketName" className="text-[0.85rem] font-semibold text-[#1a202c]">Name of City Market</label>
+                            <label htmlFor="marketName" className="text-[0.85rem] font-semibold text-slate-800">Name of City Market</label>
                             <select
                                 id="marketName" value={marketName} onChange={(e) => setMarketName(e.target.value)}
-                                className="w-full px-[14px] py-[10px] border border-[#cbd5e1] rounded-md text-[0.9rem] outline-none transition-all bg-white text-[#718096] appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.36%22%20height%3D%22292.36%22%3E%3Cpath%20fill%3D%22%23718096%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[length:10px] bg-[position:right_14px_center] pr-[35px] focus:border-[#3182ce] focus:ring-[3px] focus:ring-[#3182ce]/15"
+                                className="w-full px-[14px] py-[10px] border border-slate-300 rounded-md text-[0.9rem] outline-none transition-all bg-white text-slate-500 appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.36%22%20height%3D%22292.36%22%3E%3Cpath%20fill%3D%22%23718096%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[length:10px] bg-[position:right_14px_center] pr-[35px] focus:border-blue-800 focus:ring-[3px] focus:ring-blue-800/15"
                             >
                                 <option value="">-- All Markets --</option>
                                 <option value="Galas City-Owned Market">Galas City-Owned Market</option>
@@ -401,10 +401,10 @@ export default function MarketLeaseSearch() {
                             </select>
                         </div>
                         <div className="flex flex-col gap-[6px]">
-                            <label htmlFor="leaseStatus" className="text-[0.85rem] font-semibold text-[#1a202c]">Lease Status</label>
+                            <label htmlFor="leaseStatus" className="text-[0.85rem] font-semibold text-slate-800">Lease Status</label>
                             <select
                                 id="leaseStatus" value={leaseStatus} onChange={(e) => setLeaseStatus(e.target.value)}
-                                className="w-full px-[14px] py-[10px] border border-[#cbd5e1] rounded-md text-[0.9rem] outline-none transition-all bg-white text-[#718096] appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.36%22%20height%3D%22292.36%22%3E%3Cpath%20fill%3D%22%23718096%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[length:10px] bg-[position:right_14px_center] pr-[35px] focus:border-[#3182ce] focus:ring-[3px] focus:ring-[#3182ce]/15"
+                                className="w-full px-[14px] py-[10px] border border-slate-300 rounded-md text-[0.9rem] outline-none transition-all bg-white text-slate-500 appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.36%22%20height%3D%22292.36%22%3E%3Cpath%20fill%3D%22%23718096%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[length:10px] bg-[position:right_14px_center] pr-[35px] focus:border-blue-800 focus:ring-[3px] focus:ring-blue-800/15"
                             >
                                 <option value="">-- All Statuses --</option>
                                 <option value="Active">Active</option>
@@ -415,10 +415,10 @@ export default function MarketLeaseSearch() {
                             </select>
                         </div>
                         <div className="flex flex-col gap-[6px]">
-                            <label htmlFor="paymentStatus" className="text-[0.85rem] font-semibold text-[#1a202c]">Payment Status</label>
+                            <label htmlFor="paymentStatus" className="text-[0.85rem] font-semibold text-slate-800">Payment Status</label>
                             <select
                                 id="paymentStatus" value={paymentStatus} onChange={(e) => setPaymentStatus(e.target.value)}
-                                className="w-full px-[14px] py-[10px] border border-[#cbd5e1] rounded-md text-[0.9rem] outline-none transition-all bg-white text-[#718096] appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.36%22%20height%3D%22292.36%22%3E%3Cpath%20fill%3D%22%23718096%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[length:10px] bg-[position:right_14px_center] pr-[35px] focus:border-[#3182ce] focus:ring-[3px] focus:ring-[#3182ce]/15"
+                                className="w-full px-[14px] py-[10px] border border-slate-300 rounded-md text-[0.9rem] outline-none transition-all bg-white text-slate-500 appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.36%22%20height%3D%22292.36%22%3E%3Cpath%20fill%3D%22%23718096%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[length:10px] bg-[position:right_14px_center] pr-[35px] focus:border-blue-800 focus:ring-[3px] focus:ring-blue-800/15"
                             >
                                 <option value="">-- All Payment Statuses --</option>
                                 <option value="Pending Payment">Pending Payment</option>
@@ -430,48 +430,48 @@ export default function MarketLeaseSearch() {
                         <div className="flex justify-end col-span-1 lg:col-span-3">
                             <button
                                 onClick={handleSearch}
-                                className="bg-[#0b2545] text-white border-none px-8 py-[10px] rounded-md font-semibold cursor-pointer transition-colors text-[0.9rem] hover:bg-[#13315c]"
+                                className="bg-blue-900 text-white border-none px-8 py-[10px] rounded-md font-semibold cursor-pointer transition-colors text-[0.9rem] hover:bg-blue-950"
                             >
                                 Search
                             </button>
                         </div>
                     </div>
-                    <div className="p-[16px_24px] font-bold text-[0.9rem] text-[#1a202c] flex justify-between items-center">
+                    <div className="p-[16px_24px] font-bold text-[0.9rem] text-slate-800 flex justify-between items-center">
                         <span>Due Date: 08/20/2026</span>
                         <span className="text-[0.75rem] font-medium text-slate-500 bg-slate-100 px-3 py-1 rounded-full border border-slate-200 shadow-sm">
                             Showing {filteredLeases.length} results
                         </span>
                     </div>
-                    <div className="w-full overflow-x-auto min-h-[280px] bg-[#f8fafc] border-t border-b border-[#cbd5e1] flex flex-col justify-start">
+                    <div className="w-full overflow-x-auto min-h-[280px] bg-slate-50 border-t border-b border-slate-300 flex flex-col justify-start">
                         <table className="w-full border-collapse text-left whitespace-nowrap">
                             <thead>
                                 <tr>
-                                    <th className="bg-[#0b2545] text-white text-[0.75rem] uppercase tracking-[0.5px] p-[12px_14px] font-bold border-r border-white/10">LEASE ID</th>
-                                    <th className="bg-[#0b2545] text-white text-[0.75rem] uppercase tracking-[0.5px] p-[12px_14px] font-bold border-r border-white/10">FIRST NAME</th>
-                                    <th className="bg-[#0b2545] text-white text-[0.75rem] uppercase tracking-[0.5px] p-[12px_14px] font-bold border-r border-white/10">LAST NAME</th>
-                                    <th className="bg-[#0b2545] text-white text-[0.75rem] uppercase tracking-[0.5px] p-[12px_14px] font-bold border-r border-white/10">NAME OF CITY MARKET</th>
-                                    <th className="bg-[#0b2545] text-white text-[0.75rem] uppercase tracking-[0.5px] p-[12px_14px] font-bold border-r border-white/10">SECTION</th>
-                                    <th className="bg-[#0b2545] text-white text-[0.75rem] uppercase tracking-[0.5px] p-[12px_14px] font-bold border-r border-white/10">STALL NO.</th>
-                                    <th className="bg-[#0b2545] text-white text-[0.75rem] uppercase tracking-[0.5px] p-[12px_14px] font-bold border-r border-white/10">LEASE STATUS</th>
-                                    <th className="bg-[#0b2545] text-white text-[0.75rem] uppercase tracking-[0.5px] p-[12px_14px] font-bold border-r border-white/10">AMOUNT TO BE PAID</th>
-                                    <th className="bg-[#0b2545] text-white text-[0.75rem] uppercase tracking-[0.5px] p-[12px_14px] font-bold border-r border-white/10">HELPER APPROVAL</th>
-                                    <th className="bg-[#0b2545] text-white text-[0.75rem] uppercase tracking-[0.5px] p-[12px_14px] font-bold border-r border-white/10">ADVANCE PAYMENT</th>
-                                    <th className="bg-[#0b2545] text-white text-[0.75rem] uppercase tracking-[0.5px] p-[12px_14px] font-bold border-r border-white/10">PAYMENT STATUS</th>
-                                    <th className="bg-[#0b2545] text-white text-[0.75rem] uppercase tracking-[0.5px] p-[12px_14px] font-bold">ACTION</th>
+                                    <th className="bg-blue-900 text-white text-[0.75rem] uppercase tracking-[0.5px] p-[12px_14px] font-bold border-r border-white/10">LEASE ID</th>
+                                    <th className="bg-blue-900 text-white text-[0.75rem] uppercase tracking-[0.5px] p-[12px_14px] font-bold border-r border-white/10">FIRST NAME</th>
+                                    <th className="bg-blue-900 text-white text-[0.75rem] uppercase tracking-[0.5px] p-[12px_14px] font-bold border-r border-white/10">LAST NAME</th>
+                                    <th className="bg-blue-900 text-white text-[0.75rem] uppercase tracking-[0.5px] p-[12px_14px] font-bold border-r border-white/10">NAME OF CITY MARKET</th>
+                                    <th className="bg-blue-900 text-white text-[0.75rem] uppercase tracking-[0.5px] p-[12px_14px] font-bold border-r border-white/10">SECTION</th>
+                                    <th className="bg-blue-900 text-white text-[0.75rem] uppercase tracking-[0.5px] p-[12px_14px] font-bold border-r border-white/10">STALL NO.</th>
+                                    <th className="bg-blue-900 text-white text-[0.75rem] uppercase tracking-[0.5px] p-[12px_14px] font-bold border-r border-white/10">LEASE STATUS</th>
+                                    <th className="bg-blue-900 text-white text-[0.75rem] uppercase tracking-[0.5px] p-[12px_14px] font-bold border-r border-white/10">AMOUNT TO BE PAID</th>
+                                    <th className="bg-blue-900 text-white text-[0.75rem] uppercase tracking-[0.5px] p-[12px_14px] font-bold border-r border-white/10">HELPER APPROVAL</th>
+                                    <th className="bg-blue-900 text-white text-[0.75rem] uppercase tracking-[0.5px] p-[12px_14px] font-bold border-r border-white/10">ADVANCE PAYMENT</th>
+                                    <th className="bg-blue-900 text-white text-[0.75rem] uppercase tracking-[0.5px] p-[12px_14px] font-bold border-r border-white/10">PAYMENT STATUS</th>
+                                    <th className="bg-blue-900 text-white text-[0.75rem] uppercase tracking-[0.5px] p-[12px_14px] font-bold">ACTION</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {isLoading ? (
                                     <tr>
-                                        <td colSpan={12} className="p-[16px_14px] text-[0.85rem] border-b border-[#e2e8f0] bg-white text-center">
-                                            <div className="text-center p-[50px_20px] text-[#718096]">
+                                        <td colSpan={12} className="p-[16px_14px] text-[0.85rem] border-b border-slate-200 bg-white text-center">
+                                            <div className="text-center p-[50px_20px] text-slate-500">
                                                 <p className="font-semibold animate-pulse">Loading lease records...</p>
                                             </div>
                                         </td>
                                     </tr>
                                 ) : filteredLeases.length > 0 ? (
                                     filteredLeases.map((lease) => (
-                                        <tr key={lease.leaseId} className="border-b border-[#e2e8f0] bg-white hover:bg-slate-50 transition-colors text-[0.85rem] text-[#1a202c]">
+                                        <tr key={lease.leaseId} className="border-b border-slate-200 bg-white hover:bg-slate-50 transition-colors text-[0.85rem] text-slate-800">
                                             <td className="p-[12px_14px] font-medium text-blue-800">{lease.leaseId}</td>
                                             <td className="p-[12px_14px] capitalize">{lease.firstName}</td>
                                             <td className="p-[12px_14px] capitalize">{lease.lastName}</td>
@@ -511,9 +511,9 @@ export default function MarketLeaseSearch() {
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan={12} className="p-[16px_14px] text-[0.85rem] border-b border-[#e2e8f0] bg-white text-center">
-                                            <div className="text-center p-[50px_20px] text-[#718096]">
-                                                <div className="w-[40px] h-[40px] mx-auto mb-[10px] opacity-30 bg-[#94a3b8] rounded-[6px]"></div>
+                                        <td colSpan={12} className="p-[16px_14px] text-[0.85rem] border-b border-slate-200 bg-white text-center">
+                                            <div className="text-center p-[50px_20px] text-slate-500">
+                                                <div className="w-[40px] h-[40px] mx-auto mb-[10px] opacity-30 bg-slate-400 rounded-[6px]"></div>
                                                 <p>No Active Leases Found for Your Account</p>
                                             </div>
                                         </td>
@@ -523,13 +523,13 @@ export default function MarketLeaseSearch() {
                         </table>
                     </div>
                     <div className="flex flex-col gap-4 p-[20px_24px_10px_24px]">
-                        <div className="flex justify-between items-center text-[0.85rem] text-[#718096]">
+                        <div className="flex justify-between items-center text-[0.85rem] text-slate-500">
                             <div>
                                 Show{' '}
                                 <select
                                     value={entriesCount}
                                     onChange={(e) => setEntriesCount(e.target.value)}
-                                    className="p-[4px_8px] border border-[#cbd5e1] rounded-[4px] outline-none text-[#1a202c] bg-white w-auto inline-block"
+                                    className="p-[4px_8px] border border-slate-300 rounded-[4px] outline-none text-slate-800 bg-white w-auto inline-block"
                                 >
                                     <option value="0">0</option>
                                     <option value="10">10</option>
@@ -538,15 +538,15 @@ export default function MarketLeaseSearch() {
                                 of {filteredLeases.length} entries
                             </div>
                             <div className="flex items-center gap-1">
-                                <button className="bg-white border border-[#cbd5e1] p-[6px_12px] rounded-[4px] cursor-pointer text-[#1a202c] text-[0.85rem] opacity-40 cursor-not-allowed" disabled>&laquo;</button>
-                                <button className="bg-white border border-[#cbd5e1] p-[6px_12px] rounded-[4px] cursor-pointer text-[#1a202c] text-[0.85rem] opacity-40 cursor-not-allowed" disabled>&lsaquo;</button>
-                                <button className="border p-[6px_12px] rounded-[4px] cursor-pointer text-[0.85rem] bg-[#0b2545] text-white border-[#0b2545]">1</button>
-                                <button className="bg-white border border-[#cbd5e1] p-[6px_12px] rounded-[4px] cursor-pointer text-[#1a202c] text-[0.85rem] opacity-40 cursor-not-allowed" disabled>&rsaquo;</button>
-                                <button className="bg-white border border-[#cbd5e1] p-[6px_12px] rounded-[4px] cursor-pointer text-[#1a202c] text-[0.85rem] opacity-40 cursor-not-allowed" disabled>&raquo;</button>
+                                <button className="bg-white border border-slate-300 p-[6px_12px] rounded-[4px] cursor-pointer text-slate-800 text-[0.85rem] opacity-40 cursor-not-allowed" disabled>&laquo;</button>
+                                <button className="bg-white border border-slate-300 p-[6px_12px] rounded-[4px] cursor-pointer text-slate-800 text-[0.85rem] opacity-40 cursor-not-allowed" disabled>&lsaquo;</button>
+                                <button className="border p-[6px_12px] rounded-[4px] cursor-pointer text-[0.85rem] bg-blue-900 text-white border-blue-900">1</button>
+                                <button className="bg-white border border-slate-300 p-[6px_12px] rounded-[4px] cursor-pointer text-slate-800 text-[0.85rem] opacity-40 cursor-not-allowed" disabled>&rsaquo;</button>
+                                <button className="bg-white border border-slate-300 p-[6px_12px] rounded-[4px] cursor-pointer text-slate-800 text-[0.85rem] opacity-40 cursor-not-allowed" disabled>&raquo;</button>
                             </div>
                         </div>
                         <div>
-                            <label className="flex items-center gap-2 text-[0.85rem] text-[#1a202c] cursor-pointer select-none">
+                            <label className="flex items-center gap-2 text-[0.85rem] text-slate-800 cursor-pointer select-none">
                                 <input
                                     type="checkbox"
                                     checked={showInactive}
@@ -559,7 +559,6 @@ export default function MarketLeaseSearch() {
                     </div>
                 </div>
             </main>
-            <UnifiedFooter />
 
             {isDetailsOpen && selectedLease && (
                 <div className="fixed inset-0 z-[70] bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
@@ -980,6 +979,7 @@ export default function MarketLeaseSearch() {
                     </div>
                 </div>
             )}
+            <UnifiedFooter />
         </div>
     );
 }
