@@ -16,7 +16,7 @@ router.post('/auth/verify-login-otp', verifyLoginOtp);
 router.post('/auth/register-init', initiateRegister);
 router.post('/auth/verify-register-otp', verifyRegisterOtp);
 
-router.post('/api/auth/resend-otp', resendOtp);
+router.post(['/auth/resend-otp', '/api/auth/resend-otp'], resendOtp);
 
 router.post('/api/auth/forgot-password/init', initiateForgotPassword);
 router.post('/api/auth/forgot-password/reset', resetPassword);
