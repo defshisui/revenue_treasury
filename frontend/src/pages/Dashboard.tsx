@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
+import type { FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLockout } from "../hooks/useLockout";
 import { useLogin } from "../hooks/useLogin";
 import { useRegister } from "../hooks/useRegister";
 import { getEncryptedItem } from "../citizen-portal/citizenSecurity";
+import { API_BASE_URL } from "../config/api";
 import systemLogo from "../assets/logo-system.png";
 
 export default function Login() {
@@ -83,6 +85,120 @@ export default function Login() {
     };
   }, []);
 
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [fpStep, setFpStep] = useState<"email" | "reset" | "success">("email");
+  const [fpEmail, setFpEmail] = useState("");
+  const [fpOtp, setFpOtp] = useState("");
+  const [fpNewPassword, setFpNewPassword] = useState("");
+  const [fpConfirmPassword, setFpConfirmPassword] = useState("");
+  const [fpShowNewPassword, setFpShowNewPassword] = useState(false);
+  const [fpError, setFpError] = useState("");
+  const [fpNotice, setFpNotice] = useState("");
+  const [fpSubmitting, setFpSubmitting] = useState(false);
+  const [fpResendCooldown, setFpResendCooldown] = useState(0);
+
+  useEffect(() => {
+    if (fpResendCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setFpResendCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [fpResendCooldown]);
+
+  const closeForgotPasswordModal = () => {
+    setShowForgotPassword(false);
+    setFpStep("email");
+    setFpEmail("");
+    setFpOtp("");
+    setFpNewPassword("");
+    setFpConfirmPassword("");
+    setFpShowNewPassword(false);
+    setFpError("");
+    setFpNotice("");
+    setFpResendCooldown(0);
+    setFpSubmitting(false);
+  };
+
+  const handleForgotPasswordInit = async (e: FormEvent) => {
+    e.preventDefault();
+    setFpError("");
+    setFpSubmitting(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/auth/forgot-password/init`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: fpEmail.trim().toLowerCase() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setFpError(data.message || "Failed to send verification code.");
+        return;
+      }
+      setFpNotice(data.message || "If an account exists for that email, a verification code has been sent.");
+      setFpStep("reset");
+      setFpResendCooldown(data.retryAfterSeconds || 60);
+    } catch (err) {
+      setFpError("Network error. Please try again.");
+    } finally {
+      setFpSubmitting(false);
+    }
+  };
+
+  const handleForgotPasswordReset = async (e: FormEvent) => {
+    e.preventDefault();
+    setFpError("");
+    if (fpNewPassword !== fpConfirmPassword) {
+      setFpError("Passwords do not match.");
+      return;
+    }
+    setFpSubmitting(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/auth/forgot-password/reset`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: fpEmail.trim().toLowerCase(),
+          otp: fpOtp,
+          newPassword: fpNewPassword,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setFpError(data.message || "Failed to reset password.");
+        return;
+      }
+      setFpStep("success");
+    } catch (err) {
+      setFpError("Network error. Please try again.");
+    } finally {
+      setFpSubmitting(false);
+    }
+  };
+
+  const handleForgotPasswordResend = async () => {
+    if (fpResendCooldown > 0 || fpSubmitting) return;
+    setFpError("");
+    setFpSubmitting(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/auth/resend-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: fpEmail.trim().toLowerCase(), purpose: "FORGOT_PASSWORD" }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setFpError(data.message || "Failed to resend verification code.");
+        return;
+      }
+      setFpNotice(data.message || "A new verification code has been sent.");
+      setFpResendCooldown(data.retryAfterSeconds || 60);
+    } catch (err) {
+      setFpError("Network error. Please try again.");
+    } finally {
+      setFpSubmitting(false);
+    }
+  };
+
   return (
     <main className="min-h-screen w-full grid grid-cols-1 lg:grid-cols-2 bg-[#F4F6F8]">
 
@@ -154,6 +270,13 @@ export default function Login() {
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">PASSWORD</label>
+                      <button
+                        type="button"
+                        onClick={() => setShowForgotPassword(true)}
+                        className="text-xs font-bold text-blue-600 hover:text-blue-700 cursor-pointer"
+                      >
+                        Forgot Password?
+                      </button>
                     </div>
                     <div className={`relative flex items-center bg-[#EBF2FE] rounded-2xl px-4 py-3.5 transition-all ${isErrorState ? 'ring-2 ring-rose-500' : 'focus-within:ring-2 focus-within:ring-blue-600'}`}>
                       <input
@@ -608,6 +731,190 @@ export default function Login() {
           </div>
         )}
       </section>
+
+      {showForgotPassword && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4">
+          <div className="relative w-full max-w-[440px] bg-white rounded-3xl p-8 sm:p-10 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <button
+              type="button"
+              onClick={closeForgotPasswordModal}
+              aria-label="Close"
+              className="absolute top-5 right-5 text-slate-400 hover:text-slate-700 font-bold text-lg cursor-pointer"
+            >
+              ✕
+            </button>
+
+            {fpStep === "email" && (
+              <>
+                <div className="mb-7 pr-8">
+                  <h2 className="text-2xl font-bold tracking-tight text-slate-900">Forgot Password</h2>
+                  <p className="text-sm text-slate-500 mt-1.5">
+                    Enter your account email and we'll send you a verification code to reset your password.
+                  </p>
+                </div>
+
+                {fpError && (
+                  <div role="alert" className="mb-5 bg-rose-50 border border-rose-200 text-rose-700 p-4 rounded-2xl text-sm font-semibold">
+                    {fpError}
+                  </div>
+                )}
+
+                <form onSubmit={handleForgotPasswordInit} className="space-y-5">
+                  <div className="space-y-2">
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">EMAIL ADDRESS</label>
+                    <div className="relative flex items-center bg-[#EBF2FE] rounded-2xl px-4 py-3.5 focus-within:ring-2 focus-within:ring-blue-600 transition-all">
+                      <input
+                        type="email"
+                        required
+                        disabled={fpSubmitting}
+                        placeholder="name@email.com"
+                        value={fpEmail}
+                        onChange={(e) => setFpEmail(e.target.value)}
+                        className="w-full bg-transparent text-sm text-slate-900 placeholder-slate-400 focus:outline-none font-medium disabled:opacity-50"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={fpSubmitting}
+                    className="w-full bg-[#2563EB] hover:bg-blue-700 text-white font-bold py-3.5 px-4 rounded-2xl text-base shadow-md transition-all duration-200 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    {fpSubmitting ? "Sending Code..." : "Send Verification Code"}
+                  </button>
+                </form>
+              </>
+            )}
+
+            {fpStep === "reset" && (
+              <>
+                <div className="mb-7 pr-8">
+                  <h2 className="text-2xl font-bold tracking-tight text-slate-900">Reset Password</h2>
+                  <p className="text-sm text-slate-500 mt-1.5">
+                    Enter the 6-digit code sent to <strong className="text-slate-800 font-mono">{fpEmail}</strong> along with your new password.
+                  </p>
+                </div>
+
+                {fpNotice && (
+                  <div className="mb-5 p-3.5 bg-blue-50/80 border border-blue-200 rounded-2xl text-xs font-semibold text-blue-900 flex items-center gap-2">
+                    <span>ℹ️</span>
+                    <span>{fpNotice}</span>
+                  </div>
+                )}
+
+                {fpError && (
+                  <div role="alert" className="mb-5 bg-rose-50 border border-rose-200 text-rose-700 p-4 rounded-2xl text-sm font-semibold">
+                    {fpError}
+                  </div>
+                )}
+
+                <form onSubmit={handleForgotPasswordReset} className="space-y-5">
+                  <div className="space-y-2 text-center">
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      ENTER 6-DIGIT CODE
+                    </label>
+                    <input
+                      type="text"
+                      maxLength={6}
+                      required
+                      autoFocus
+                      placeholder="••••••"
+                      value={fpOtp}
+                      onChange={(e) => setFpOtp(e.target.value.replace(/\D/g, ""))}
+                      className="w-full text-center text-3xl font-mono font-black tracking-[12px] text-[#0B3B60] bg-[#EBF2FE] border-2 border-blue-200 focus:border-blue-600 focus:ring-4 focus:ring-blue-100 rounded-2xl py-3.5 px-4 outline-none transition"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-end text-xs border-t border-slate-100 pt-3">
+                    <button
+                      type="button"
+                      disabled={fpResendCooldown > 0 || fpSubmitting}
+                      onClick={handleForgotPasswordResend}
+                      className="font-bold text-blue-600 hover:text-blue-800 disabled:text-slate-400 disabled:cursor-not-allowed cursor-pointer transition"
+                    >
+                      {fpSubmitting
+                        ? "Sending..."
+                        : fpResendCooldown > 0
+                          ? `Resend in ${fpResendCooldown}s`
+                          : "Resend Code"}
+                    </button>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">NEW PASSWORD</label>
+                    <div className="relative flex items-center bg-[#EBF2FE] rounded-2xl px-4 py-3.5 focus-within:ring-2 focus-within:ring-blue-600 transition-all">
+                      <input
+                        type={fpShowNewPassword ? "text" : "password"}
+                        required
+                        disabled={fpSubmitting}
+                        placeholder="••••••••••••••"
+                        value={fpNewPassword}
+                        onChange={(e) => setFpNewPassword(e.target.value)}
+                        className="w-full bg-transparent text-sm text-slate-900 placeholder-slate-400 focus:outline-none font-medium pr-10 disabled:opacity-50"
+                      />
+                      <button
+                        type="button"
+                        disabled={fpSubmitting}
+                        onClick={() => setFpShowNewPassword(!fpShowNewPassword)}
+                        className="absolute right-4 text-slate-500 hover:text-slate-800 text-xs font-bold cursor-pointer disabled:opacity-50"
+                      >
+                        {fpShowNewPassword ? "Hide" : "Show"}
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-slate-400">
+                      At least 8 characters, with an uppercase letter, lowercase letter, number, and symbol.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">CONFIRM NEW PASSWORD</label>
+                    <div className="relative flex items-center bg-[#EBF2FE] rounded-2xl px-4 py-3.5 focus-within:ring-2 focus-within:ring-blue-600 transition-all">
+                      <input
+                        type={fpShowNewPassword ? "text" : "password"}
+                        required
+                        disabled={fpSubmitting}
+                        placeholder="••••••••••••••"
+                        value={fpConfirmPassword}
+                        onChange={(e) => setFpConfirmPassword(e.target.value)}
+                        className="w-full bg-transparent text-sm text-slate-900 placeholder-slate-400 focus:outline-none font-medium disabled:opacity-50"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={fpSubmitting || fpOtp.trim().length !== 6}
+                    className="w-full bg-[#2563EB] hover:bg-blue-700 text-white font-bold py-3.5 px-4 rounded-2xl text-base shadow-md transition-all duration-200 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    {fpSubmitting ? "Resetting Password..." : "Reset Password"}
+                  </button>
+                </form>
+              </>
+            )}
+
+            {fpStep === "success" && (
+              <div className="space-y-6 text-center">
+                <div className="size-14 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center text-2xl mx-auto shadow-xs">
+                  ✓
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold tracking-tight text-slate-900">Password Reset</h2>
+                  <p className="text-sm text-slate-500 mt-1.5">
+                    Your password has been reset successfully. You can now sign in with your new password.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={closeForgotPasswordModal}
+                  className="w-full bg-[#2563EB] hover:bg-blue-700 text-white font-bold py-3.5 px-4 rounded-2xl text-base shadow-md transition-all duration-200 cursor-pointer"
+                >
+                  Back to Sign In
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </main>
   );
 }

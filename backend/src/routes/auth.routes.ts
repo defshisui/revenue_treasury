@@ -5,6 +5,8 @@ import {
   initiateRegister,
   verifyRegisterOtp,
   resendOtp,
+  initiateForgotPassword,
+  resetPassword,
 } from '../controllers/auth.controller.js';
 
 const router = Router();
@@ -16,5 +18,8 @@ router.post('/auth/register-init', initiateRegister);
 router.post('/auth/verify-register-otp', verifyRegisterOtp);
 
 router.post('/auth/resend-otp', resendOtp);
+
+router.post('/auth/forgot-password/init', initiateForgotPassword);
+router.post('/auth/forgot-password/reset', resetPassword);
 
 export default router;

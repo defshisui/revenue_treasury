@@ -960,13 +960,13 @@ export async function resendOtp(
   if (
     !email ||
     !purpose ||
-    !['LOGIN', 'REGISTER'].includes(
+    !['LOGIN', 'REGISTER', 'FORGOT_PASSWORD'].includes(
       purpose
     )
   ) {
     res.status(400).json({
       message:
-        'Email and valid purpose (LOGIN or REGISTER) are required.',
+        'Email and valid purpose (LOGIN, REGISTER, or FORGOT_PASSWORD) are required.',
     });
 
     return;
@@ -1084,6 +1084,7 @@ export async function resendOtp(
       purpose as
       | 'LOGIN'
       | 'REGISTER'
+      | 'FORGOT_PASSWORD'
     );
 
     res.status(200).json({
@@ -1102,6 +1103,274 @@ export async function resendOtp(
       message:
         error?.message ||
         'Failed to resend verification code.',
+    });
+  }
+}
+
+export async function initiateForgotPassword(
+  req: Request,
+  res: Response
+): Promise<void> {
+  const { email } = req.body;
+
+  if (!email) {
+    res.status(400).json({
+      message: 'Email address is required.',
+    });
+    return;
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+
+  const genericResponse = {
+    message:
+      'If an account exists for that email, a verification code has been sent.',
+  };
+
+  try {
+    const userRes = await pool.query(
+      'SELECT * FROM users WHERE email ILIKE $1',
+      [normalizedEmail]
+    );
+
+    if (userRes.rows.length === 0) {
+      // Do not reveal whether the email is registered.
+      res.status(200).json(genericResponse);
+      return;
+    }
+
+    const user = userRes.rows[0];
+
+    const recentRes = await pool.query(
+      `SELECT * FROM otp_verifications
+       WHERE email ILIKE $1
+       AND purpose = 'FORGOT_PASSWORD'
+       ORDER BY id DESC
+       LIMIT 1`,
+      [normalizedEmail]
+    );
+
+    if (recentRes.rows.length > 0) {
+      const recent = recentRes.rows[0];
+
+      const elapsedSeconds = Math.floor(
+        (Date.now() - new Date(recent.created_at).getTime()) / 1000
+      );
+
+      const remainingCooldown =
+        OTP_RESEND_COOLDOWN_SECONDS - elapsedSeconds;
+
+      if (remainingCooldown > 0) {
+        res.status(429).json({
+          message: `Please wait ${remainingCooldown} seconds before requesting a new code.`,
+          retryAfterSeconds: remainingCooldown,
+        });
+        return;
+      }
+    }
+
+    const plainOtp = Math.floor(
+      100000 + Math.random() * 900000
+    ).toString();
+
+    const otpHash = await bcrypt.hash(plainOtp, 10);
+
+    const expiresAt = new Date(
+      Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000
+    );
+
+    await pool.query(
+      `UPDATE otp_verifications
+       SET used = true
+       WHERE email ILIKE $1
+       AND purpose = 'FORGOT_PASSWORD'
+       AND used = false`,
+      [normalizedEmail]
+    );
+
+    await pool.query(
+      `INSERT INTO otp_verifications
+       (user_id, email, otp_hash, purpose, expires_at, attempts, used, created_at)
+       VALUES ($1, $2, $3, 'FORGOT_PASSWORD', $4, 0, false, NOW())`,
+      [user.id, normalizedEmail, otpHash, expiresAt]
+    );
+
+    await EmailService.sendOtpEmail(
+      normalizedEmail,
+      plainOtp,
+      'FORGOT_PASSWORD'
+    );
+
+    await recordAudit(
+      req,
+      'AUD-' + Math.floor(100000 + Math.random() * 900000),
+      user.email,
+      user.role || 'citizen',
+      'Authentication',
+      'FORGOT_PASSWORD_OTP_SENT',
+      'INFO',
+      null,
+      'Password reset OTP dispatched via Nodemailer'
+    );
+
+    res.status(200).json(genericResponse);
+  } catch (error: any) {
+    console.error('Initiate Forgot Password Error:', error);
+
+    res.status(500).json({
+      message:
+        error?.message ||
+        'Failed to process password reset request.',
+    });
+  }
+}
+
+export async function resetPassword(
+  req: Request,
+  res: Response
+): Promise<void> {
+  const { email, otp, newPassword } = req.body;
+
+  if (!email || !otp || !newPassword) {
+    res.status(400).json({
+      message:
+        'Email, verification code, and new password are required.',
+    });
+    return;
+  }
+
+  if (!isStrongPassword(newPassword)) {
+    res.status(400).json({
+      message:
+        'Password must be at least 8 characters and include an uppercase letter, lowercase letter, number, and special character.',
+    });
+    return;
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+  const inputOtp = String(otp).trim();
+
+  try {
+    const otpRes = await pool.query(
+      `SELECT * FROM otp_verifications
+       WHERE email ILIKE $1
+       AND purpose = 'FORGOT_PASSWORD'
+       AND used = false
+       ORDER BY id DESC
+       LIMIT 1`,
+      [normalizedEmail]
+    );
+
+    if (otpRes.rows.length === 0) {
+      res.status(400).json({
+        message:
+          'No active verification code found. Please request a new code.',
+      });
+      return;
+    }
+
+    const otpRecord = otpRes.rows[0];
+
+    if (new Date(otpRecord.expires_at).getTime() < Date.now()) {
+      await pool.query(
+        'UPDATE otp_verifications SET used = true WHERE id = $1',
+        [otpRecord.id]
+      );
+
+      res.status(400).json({
+        message:
+          'Verification code has expired. Please request a new one.',
+      });
+      return;
+    }
+
+    if (otpRecord.attempts >= 5) {
+      await pool.query(
+        'UPDATE otp_verifications SET used = true WHERE id = $1',
+        [otpRecord.id]
+      );
+
+      res.status(429).json({
+        message:
+          'Maximum verification attempts exceeded. Please request a new code.',
+      });
+      return;
+    }
+
+    const isOtpValid = await bcrypt.compare(
+      inputOtp,
+      otpRecord.otp_hash
+    );
+
+    if (!isOtpValid) {
+      const newAttempts = otpRecord.attempts + 1;
+
+      await pool.query(
+        'UPDATE otp_verifications SET attempts = $1 WHERE id = $2',
+        [newAttempts, otpRecord.id]
+      );
+
+      const remaining = Math.max(0, 5 - newAttempts);
+
+      res.status(400).json({
+        message: `Invalid verification code. Attempts remaining: ${remaining}`,
+        remainingAttempts: remaining,
+      });
+      return;
+    }
+
+    await pool.query(
+      'UPDATE otp_verifications SET used = true WHERE id = $1',
+      [otpRecord.id]
+    );
+
+    const userRes = await pool.query(
+      'SELECT * FROM users WHERE email ILIKE $1',
+      [normalizedEmail]
+    );
+
+    if (userRes.rows.length === 0) {
+      res.status(404).json({
+        message: 'User account not found.',
+      });
+      return;
+    }
+
+    const user = userRes.rows[0];
+
+    const newPasswordHash = await bcrypt.hash(
+      newPassword.trim(),
+      10
+    );
+
+    await pool.query(
+      'UPDATE users SET password = $1 WHERE id = $2',
+      [newPasswordHash, user.id]
+    );
+
+    loginAttemptsTracker.delete(normalizedEmail);
+
+    await recordAudit(
+      req,
+      'AUD-' + Math.floor(100000 + Math.random() * 900000),
+      user.email,
+      user.role || 'citizen',
+      'Authentication',
+      'PASSWORD_RESET_SUCCESS',
+      'INFO',
+      null,
+      'Password reset successfully via forgot-password OTP flow'
+    );
+
+    res.status(200).json({
+      message:
+        'Password reset successfully. You can now sign in with your new password.',
+    });
+  } catch (error: any) {
+    console.error('Reset Password Error:', error);
+
+    res.status(500).json({
+      message: error?.message || 'Failed to reset password.',
     });
   }
 }

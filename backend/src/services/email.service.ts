@@ -245,17 +245,21 @@ export class EmailService {
   public static async sendOtpEmail(
     toEmail: string,
     otp: string,
-    purpose: 'REGISTER' | 'LOGIN'
+    purpose: 'REGISTER' | 'LOGIN' | 'FORGOT_PASSWORD'
   ): Promise<{ success: boolean; messageId?: string }> {
     const actionTitle =
       purpose === 'LOGIN'
         ? 'Sign-In Authentication'
-        : 'Account Registration';
+        : purpose === 'FORGOT_PASSWORD'
+          ? 'Password Reset Request'
+          : 'Account Registration';
 
     const actionSubtitle =
       purpose === 'LOGIN'
         ? 'sign in to your GovServe Treasury account'
-        : 'complete your citizen registration';
+        : purpose === 'FORGOT_PASSWORD'
+          ? 'reset your GovServe Treasury account password'
+          : 'complete your citizen registration';
 
 
     if (process.env.DEV_OTP_CONSOLE === 'true' || process.env.BYPASS_EMAIL === 'true') {
