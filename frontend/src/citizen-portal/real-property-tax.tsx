@@ -208,7 +208,9 @@ export function RealPropertyTaxHub() {
 export default function RealPropertyApplication({ isCollapsed = false }: { isCollapsed?: boolean }) {
   const location = useLocation();
 
-  const [activePortalTab, setActivePortalTab] = useState<"search" | "application" | "summary">("search");
+  const [activePortalTab, setActivePortalTab] = useState<"search" | "summary">("search");
+  const [isServiceRequestModalOpen, setIsServiceRequestModalOpen] = useState(false);
+
 
 
   const [rptSearchStep, setRptSearchStep] = useState<1 | 2 | 3>(1);
@@ -450,7 +452,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
     const params = new URLSearchParams(location.search);
     const viewParam = params.get("view");
     if (viewParam === "status") setActivePortalTab("search");
-    else if (viewParam === "form") setActivePortalTab("application");
+    else if (viewParam === "form") setIsServiceRequestModalOpen(true);
     else if (viewParam === "summary") setActivePortalTab("summary");
 
     try {
@@ -946,7 +948,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
       showToast("Application submitted successfully to the City Assessor's Office!", "success");
       setAppNotice(`Application created with Control No: ${payload.controlNumber}`);
       loadApplications();
-      setActivePortalTab("search");
+      setIsServiceRequestModalOpen(false);
     } catch (err: any) {
       setAppNotice("Failed to submit application: " + err.message);
     } finally {
@@ -1370,10 +1372,10 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
                     <div className="rpt-nav-row border-b pb-4 flex items-center gap-6">
                       <button
                         type="button"
-                        onClick={() => setActivePortalTab("application")}
+                        onClick={() => setIsServiceRequestModalOpen(true)}
                         className="rpt-nav-button cursor-pointer"
                       >
-                        + NEW SERVICE REQUEST
+                        NEW SERVICE REQUEST
                       </button>
                     </div>
 
@@ -1741,255 +1743,256 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
             </div>
           )}
 
-          {activePortalTab === "application" && (
-            <div className="rpt-main-shell p-6 sm:p-8 space-y-8">
-              <div className="mb-1">
+          {isServiceRequestModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4">
+              <div className="relative bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-6 sm:p-8 space-y-8">
                 <button
                   type="button"
-                  onClick={() => window.history.back()}
-                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-xl text-xs transition-colors cursor-pointer inline-block border-0"
+                  onClick={() => setIsServiceRequestModalOpen(false)}
+                  aria-label="Close"
+                  className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 font-bold text-lg cursor-pointer"
                 >
-                  &larr; Back to Previous Page
+                  ✕
                 </button>
+
+                <div className="border-b border-slate-200 pb-4 pr-8">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-[#0284C7]">OFFICE OF THE CITY ASSESSOR</p>
+                  <h2 className="text-2xl font-extrabold text-[#0B3B60]">Real Property Tax Service Request</h2>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Submit a declaration, transfer of ownership, property reclassification, or correction directly for assessor evaluation.
+                  </p>
+                </div>
+
+                {appNotice && (
+                  <div className="p-4 bg-sky-50 border border-sky-200 rounded-2xl text-sky-900 text-xs font-bold">
+                    {appNotice}
+                  </div>
+                )}
+
+                <form onSubmit={handleAppSubmit} className="space-y-8">
+                  <div>
+                    <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-800 border-b border-slate-100 pb-2 mb-4">
+                      1. Transaction Details
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                      <div className="space-y-1.5">
+                        <label className="font-bold text-slate-700">Requested LGU Service *</label>
+                        <select
+                          value={appForm.service}
+                          onChange={(e) => setAppForm({ ...appForm, service: e.target.value })}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
+                        >
+                          {services.map((s) => (
+                            <option key={s} value={s}>{s}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="font-bold text-slate-700">Applying As *</label>
+                        <select
+                          value={appForm.applicantType}
+                          onChange={(e) => setAppForm({ ...appForm, applicantType: e.target.value as ApplicantType })}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
+                        >
+                          <option value="Property Owner">Property Owner</option>
+                          <option value="Authorized Representative">Authorized Representative</option>
+                          <option value="Corporation / Company">Corporation / Company</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-800 border-b border-slate-100 pb-2 mb-4">
+                      2. Applicant &amp; Owner Details
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                      <div className="space-y-1.5">
+                        <label className="font-bold text-slate-700">Owner Name / Company *</label>
+                        <input
+                          type="text"
+                          required
+                          value={appForm.ownerName}
+                          onChange={(e) => setAppForm({ ...appForm, ownerName: e.target.value })}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="font-bold text-slate-700">Applicant Full Name *</label>
+                        <input
+                          type="text"
+                          required
+                          value={appForm.applicantName}
+                          onChange={(e) => setAppForm({ ...appForm, applicantName: e.target.value })}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="font-bold text-slate-700">Email Address *</label>
+                        <input
+                          type="email"
+                          required
+                          value={appForm.email}
+                          onChange={(e) => setAppForm({ ...appForm, email: e.target.value })}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="font-bold text-slate-700">Mobile Number (PH) *</label>
+                        <input
+                          type="tel"
+                          inputMode="numeric"
+                          required
+                          maxLength={11}
+                          pattern="[0-9]{11}"
+                          placeholder="09171234567"
+                          value={appForm.mobileNumber}
+                          onChange={(e) =>
+                            setAppForm({
+                              ...appForm,
+                              mobileNumber: e.target.value.replace(/\D/g, "").slice(0, 11),
+                            })
+                          }
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="font-bold text-slate-700">TIN Number</label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={14}
+                          pattern="[0-9]{9,14}"
+                          placeholder="00000000000000"
+                          value={appForm.tin}
+                          onChange={(e) =>
+                            setAppForm({
+                              ...appForm,
+                              tin: e.target.value.replace(/\D/g, "").slice(0, 14),
+                            })
+                          }
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-800 border-b border-slate-100 pb-2 mb-4">
+                      3. Real Property Location &amp; Classification
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                      <div className="space-y-1.5">
+                        <label className="font-bold text-slate-700">Tax Declaration No. (if existing)</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. F-021-01491"
+                          value={appForm.taxDeclarationNumber}
+                          onChange={(e) => setAppForm({ ...appForm, taxDeclarationNumber: e.target.value })}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none font-mono"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="font-bold text-slate-700">Property Type *</label>
+                        <select
+                          value={appForm.propertyType}
+                          onChange={(e) => setAppForm({ ...appForm, propertyType: e.target.value })}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
+                        >
+                          <option value="Residential">Residential</option>
+                          <option value="Commercial">Commercial</option>
+                          <option value="Industrial">Industrial</option>
+                          <option value="Agricultural">Agricultural</option>
+                          <option value="Special">Special / Institutional</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="font-bold text-slate-700">Barangay *</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. Central, Diliman, Batasan"
+                          value={appForm.barangay}
+                          onChange={(e) => setAppForm({ ...appForm, barangay: e.target.value })}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
+                        />
+                      </div>
+                      <div className="md:col-span-3 space-y-1.5">
+                        <label className="font-bold text-slate-700">Complete Property Location Address *</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="House / Lot No., Street, Subdivision, Quezon City"
+                          value={appForm.propertyLocation}
+                          onChange={(e) => setAppForm({ ...appForm, propertyLocation: e.target.value })}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-800 border-b border-slate-100 pb-2 mb-4">
+                      4. Documentary Requirements (PDF / Images)
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
+                      <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+                        <span className="font-bold text-slate-800 block">Proof of Ownership *</span>
+                        <p className="text-[10px] text-slate-500">Deed of Absolute Sale, Transfer Certificate of Title (TCT)</p>
+                        <input
+                          type="file"
+                          required
+                          accept="image/*,.pdf"
+                          onChange={(e) => handleAppFileChange(e, "ownershipProof")}
+                          className="text-xs file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#0B3B60] file:text-white cursor-pointer"
+                        />
+                        {appDocuments.ownershipProof.name && (
+                          <p className="text-[11px] font-mono text-emerald-700 font-bold">✓ {appDocuments.ownershipProof.name}</p>
+                        )}
+                      </div>
+
+                      <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+                        <span className="font-bold text-slate-800 block">Valid Government ID *</span>
+                        <p className="text-[10px] text-slate-500">Passport, UMID, Driver's License of Owner/Applicant</p>
+                        <input
+                          type="file"
+                          required
+                          accept="image/*,.pdf"
+                          onChange={(e) => handleAppFileChange(e, "validId")}
+                          className="text-xs file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#0B3B60] file:text-white cursor-pointer"
+                        />
+                        {appDocuments.validId.name && (
+                          <p className="text-[11px] font-mono text-emerald-700 font-bold">✓ {appDocuments.validId.name}</p>
+                        )}
+                      </div>
+
+                      <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+                        <span className="font-bold text-slate-800 block">Latest Tax Receipt / Tax Dec</span>
+                        <p className="text-[10px] text-slate-500">Official Receipt or Copy of Previous Assessment</p>
+                        <input
+                          type="file"
+                          accept="image/*,.pdf"
+                          onChange={(e) => handleAppFileChange(e, "taxRecord")}
+                          className="text-xs file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#0B3B60] file:text-white cursor-pointer"
+                        />
+                        {appDocuments.taxRecord.name && (
+                          <p className="text-[11px] font-mono text-emerald-700 font-bold">✓ {appDocuments.taxRecord.name}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                    <button
+                      type="submit"
+                      disabled={isSubmittingApp}
+                      className="bg-[#0B3B60] hover:bg-[#082944] disabled:opacity-50 text-white font-extrabold px-8 py-3.5 rounded-2xl text-xs uppercase tracking-wider transition shadow-md cursor-pointer"
+                    >
+                      {isSubmittingApp ? "Submitting Application..." : "Submit to City Assessor →"}
+                    </button>
+                  </div>
+                </form>
               </div>
-
-              <div className="border-b border-slate-200 pb-4">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-[#0284C7]">OFFICE OF THE CITY ASSESSOR</p>
-                <h2 className="text-2xl font-extrabold text-[#0B3B60]">Real Property Tax Service Request</h2>
-                <p className="text-xs text-slate-500 mt-1">
-                  Submit a declaration, transfer of ownership, property reclassification, or correction directly for assessor evaluation.
-                </p>
-              </div>
-
-              {appNotice && (
-                <div className="p-4 bg-sky-50 border border-sky-200 rounded-2xl text-sky-900 text-xs font-bold">
-                  {appNotice}
-                </div>
-              )}
-
-              <form onSubmit={handleAppSubmit} className="space-y-8">
-                <div>
-                  <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-800 border-b border-slate-100 pb-2 mb-4">
-                    1. Transaction Details
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                    <div className="space-y-1.5">
-                      <label className="font-bold text-slate-700">Requested LGU Service *</label>
-                      <select
-                        value={appForm.service}
-                        onChange={(e) => setAppForm({ ...appForm, service: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
-                      >
-                        {services.map((s) => (
-                          <option key={s} value={s}>{s}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="font-bold text-slate-700">Applying As *</label>
-                      <select
-                        value={appForm.applicantType}
-                        onChange={(e) => setAppForm({ ...appForm, applicantType: e.target.value as ApplicantType })}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
-                      >
-                        <option value="Property Owner">Property Owner</option>
-                        <option value="Authorized Representative">Authorized Representative</option>
-                        <option value="Corporation / Company">Corporation / Company</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-800 border-b border-slate-100 pb-2 mb-4">
-                    2. Applicant &amp; Owner Details
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-                    <div className="space-y-1.5">
-                      <label className="font-bold text-slate-700">Owner Name / Company *</label>
-                      <input
-                        type="text"
-                        required
-                        value={appForm.ownerName}
-                        onChange={(e) => setAppForm({ ...appForm, ownerName: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="font-bold text-slate-700">Applicant Full Name *</label>
-                      <input
-                        type="text"
-                        required
-                        value={appForm.applicantName}
-                        onChange={(e) => setAppForm({ ...appForm, applicantName: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="font-bold text-slate-700">Email Address *</label>
-                      <input
-                        type="email"
-                        required
-                        value={appForm.email}
-                        onChange={(e) => setAppForm({ ...appForm, email: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="font-bold text-slate-700">Mobile Number (PH) *</label>
-                      <input
-                        type="tel"
-                        inputMode="numeric"
-                        required
-                        maxLength={11}
-                        pattern="[0-9]{11}"
-                        placeholder="09171234567"
-                        value={appForm.mobileNumber}
-                        onChange={(e) =>
-                          setAppForm({
-                            ...appForm,
-                            mobileNumber: e.target.value.replace(/\D/g, "").slice(0, 11),
-                          })
-                        }
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="font-bold text-slate-700">TIN Number</label>
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={14}
-                        pattern="[0-9]{9,14}"
-                        placeholder="00000000000000"
-                        value={appForm.tin}
-                        onChange={(e) =>
-                          setAppForm({
-                            ...appForm,
-                            tin: e.target.value.replace(/\D/g, "").slice(0, 14),
-                          })
-                        }
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-800 border-b border-slate-100 pb-2 mb-4">
-                    3. Real Property Location &amp; Classification
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-                    <div className="space-y-1.5">
-                      <label className="font-bold text-slate-700">Tax Declaration No. (if existing)</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. F-021-01491"
-                        value={appForm.taxDeclarationNumber}
-                        onChange={(e) => setAppForm({ ...appForm, taxDeclarationNumber: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none font-mono"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="font-bold text-slate-700">Property Type *</label>
-                      <select
-                        value={appForm.propertyType}
-                        onChange={(e) => setAppForm({ ...appForm, propertyType: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
-                      >
-                        <option value="Residential">Residential</option>
-                        <option value="Commercial">Commercial</option>
-                        <option value="Industrial">Industrial</option>
-                        <option value="Agricultural">Agricultural</option>
-                        <option value="Special">Special / Institutional</option>
-                      </select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="font-bold text-slate-700">Barangay *</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g. Central, Diliman, Batasan"
-                        value={appForm.barangay}
-                        onChange={(e) => setAppForm({ ...appForm, barangay: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
-                      />
-                    </div>
-                    <div className="md:col-span-3 space-y-1.5">
-                      <label className="font-bold text-slate-700">Complete Property Location Address *</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="House / Lot No., Street, Subdivision, Quezon City"
-                        value={appForm.propertyLocation}
-                        onChange={(e) => setAppForm({ ...appForm, propertyLocation: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-800 border-b border-slate-100 pb-2 mb-4">
-                    4. Documentary Requirements (PDF / Images)
-                  </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
-                    <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
-                      <span className="font-bold text-slate-800 block">Proof of Ownership *</span>
-                      <p className="text-[10px] text-slate-500">Deed of Absolute Sale, Transfer Certificate of Title (TCT)</p>
-                      <input
-                        type="file"
-                        required
-                        accept="image/*,.pdf"
-                        onChange={(e) => handleAppFileChange(e, "ownershipProof")}
-                        className="text-xs file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#0B3B60] file:text-white cursor-pointer"
-                      />
-                      {appDocuments.ownershipProof.name && (
-                        <p className="text-[11px] font-mono text-emerald-700 font-bold">✓ {appDocuments.ownershipProof.name}</p>
-                      )}
-                    </div>
-
-                    <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
-                      <span className="font-bold text-slate-800 block">Valid Government ID *</span>
-                      <p className="text-[10px] text-slate-500">Passport, UMID, Driver's License of Owner/Applicant</p>
-                      <input
-                        type="file"
-                        required
-                        accept="image/*,.pdf"
-                        onChange={(e) => handleAppFileChange(e, "validId")}
-                        className="text-xs file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#0B3B60] file:text-white cursor-pointer"
-                      />
-                      {appDocuments.validId.name && (
-                        <p className="text-[11px] font-mono text-emerald-700 font-bold">✓ {appDocuments.validId.name}</p>
-                      )}
-                    </div>
-
-                    <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
-                      <span className="font-bold text-slate-800 block">Latest Tax Receipt / Tax Dec</span>
-                      <p className="text-[10px] text-slate-500">Official Receipt or Copy of Previous Assessment</p>
-                      <input
-                        type="file"
-                        accept="image/*,.pdf"
-                        onChange={(e) => handleAppFileChange(e, "taxRecord")}
-                        className="text-xs file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#0B3B60] file:text-white cursor-pointer"
-                      />
-                      {appDocuments.taxRecord.name && (
-                        <p className="text-[11px] font-mono text-emerald-700 font-bold">✓ {appDocuments.taxRecord.name}</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
-                  <button
-                    type="submit"
-                    disabled={isSubmittingApp}
-                    className="bg-[#0B3B60] hover:bg-[#082944] disabled:opacity-50 text-white font-extrabold px-8 py-3.5 rounded-2xl text-xs uppercase tracking-wider transition shadow-md cursor-pointer"
-                  >
-                    {isSubmittingApp ? "Submitting Application..." : "Submit to City Assessor →"}
-                  </button>
-                </div>
-              </form>
             </div>
           )}
 
