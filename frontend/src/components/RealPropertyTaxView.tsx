@@ -143,6 +143,96 @@ function formatCurrency(val: number): string {
   }).format(val || 0);
 }
 
+// -------------------------------------------------------------
+// Real Property Tax Computation (Quezon City)
+// -------------------------------------------------------------
+// Assessment levels applied to Fair Market Value to arrive at Assessed
+// Value. These are the statutory MAXIMUMS under the Local Government
+// Code (RA 7160, Sec. 218). Quezon City's own Schedule of Fair Market
+// Values sets actual assessment levels per zone/classification, and has
+// historically been LOWER than these maximums for many zones (the city
+// scaled levels down when it raised FMVs under Ordinance SP-2016-556) —
+// so treat these as a reasonable default, not the official QC table.
+// Update this map once you have the current schedule from the QC
+// Assessor's Office if it differs.
+const ASSESSMENT_LEVELS: Record<string, number> = {
+  Residential: 0.20,
+  Commercial: 0.50,
+  Industrial: 0.50,
+  Building: 0.40,
+  Land: 0.20,
+};
+
+// Quezon City Revenue Code of 1993 (confirmed via the QC Assessor's
+// Office FAQ): basic RPT is 1.5% of assessed value for residential
+// property, and 2% for commercial, industrial, and special properties.
+// The 1% Special Education Fund (SEF) levy is flat across every
+// classification, on top of the basic tax (RA 7160, Sec. 235).
+// (These combine to QC's published "current-year" consolidated rates of
+// 2.5% residential / 3% commercial-industrial.)
+const BASIC_TAX_RATES: Record<string, number> = {
+  Residential: 0.015,
+  Commercial: 0.02,
+  Industrial: 0.02,
+  Building: 0.015,
+  Land: 0.015,
+};
+const SEF_TAX_RATE = 0.01;
+
+// 10% discount for settling the full-year bill on or before January 31
+// of the billing year (RA 7160, Sec. 251 / QC Revenue Code).
+const EARLY_PAYMENT_DISCOUNT_RATE = 0.10;
+// 2% penalty per month on unpaid tax once past the due date, capped at
+// 36 months / 72% total (RA 7160, Sec. 255).
+const MONTHLY_PENALTY_RATE = 0.02;
+const MAX_PENALTY_MONTHS = 36;
+const MS_PER_DAY = 1000 * 60 * 60 * 24;
+
+// Computes Assessed Value and the annual Basic Tax + SEF Tax from a
+// property's market value and classification.
+function computeTaxBreakdown(marketVal: number, propType: string) {
+  const assessmentLevel = ASSESSMENT_LEVELS[propType] ?? ASSESSMENT_LEVELS.Residential;
+  const assessedVal = marketVal * assessmentLevel;
+
+  const basicTaxRate = BASIC_TAX_RATES[propType] ?? BASIC_TAX_RATES.Residential;
+  const basicTax = assessedVal * basicTaxRate;
+  const sefTax = assessedVal * SEF_TAX_RATE;
+  const totalDue = basicTax + sefTax;
+
+  return { assessedVal, basicTax, sefTax, totalDue };
+}
+
+// Automatically works out the early-payment discount or the
+// delinquency penalty for a parcel's annual tax due, based on today's
+// date relative to its billing year and bill expiry date. Returns the
+// components separately so the UI can show how the final amount was
+// derived, rather than a single opaque number.
+function computeSurcharge(
+  totalAssessment: number,
+  billingYear: number,
+  billExpiryDate: string,
+  asOfDate: Date = new Date()
+): { discount: number; penalty: number; amountDue: number; monthsLate: number } {
+  const earlyPaymentDeadline = new Date(billingYear, 0, 31); // Jan 31
+
+  if (asOfDate.getTime() <= earlyPaymentDeadline.getTime()) {
+    const discount = totalAssessment * EARLY_PAYMENT_DISCOUNT_RATE;
+    return { discount, penalty: 0, amountDue: totalAssessment - discount, monthsLate: 0 };
+  }
+
+  const dueDate = billExpiryDate ? new Date(billExpiryDate) : null;
+  if (dueDate && asOfDate.getTime() > dueDate.getTime()) {
+    const monthsLate = Math.min(
+      MAX_PENALTY_MONTHS,
+      Math.ceil((asOfDate.getTime() - dueDate.getTime()) / (MS_PER_DAY * 30))
+    );
+    const penalty = totalAssessment * MONTHLY_PENALTY_RATE * monthsLate;
+    return { discount: 0, penalty, amountDue: totalAssessment + penalty, monthsLate };
+  }
+
+  return { discount: 0, penalty: 0, amountDue: totalAssessment, monthsLate: 0 };
+}
+
 export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
   isCollapsed,
 }) => {
@@ -753,20 +843,6 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     }
   };
 
-  const computeTaxBreakdown = (marketVal: number, propType: string) => {
-    let assessmentLevel = 0.2;
-    if (propType === 'Commercial') assessmentLevel = 0.5;
-    else if (propType === 'Industrial') assessmentLevel = 0.5;
-    else if (propType === 'Building') assessmentLevel = 0.4;
-
-    const assessedVal = marketVal * assessmentLevel;
-    const basicTax = assessedVal * 0.015;
-    const sefTax = assessedVal * 0.01;
-    const totalDue = basicTax + sefTax;
-
-    return { assessedVal, basicTax, sefTax, totalDue };
-  };
-
   const handleValuationChange = (marketVal: number, propType: string) => {
     const { assessedVal, basicTax, sefTax, totalDue } = computeTaxBreakdown(marketVal, propType);
 
@@ -1163,18 +1239,27 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
       const paymentDate = new Date().toISOString();
       const paymentMethod = 'Treasury Cashier (Cash)';
 
+      // Auto-apply the early-payment discount or delinquency penalty
+      // based on today's date vs. the parcel's billing year / due date,
+      // rather than always collecting the flat annual assessment.
+      const { discount, penalty, amountDue } = computeSurcharge(
+        prop.totalAssessment,
+        prop.billingYear,
+        prop.billExpiryDate
+      );
+
       await updateLguMasterRptRecord(prop.id, {
         marketValue: prop.marketValue,
         assessedValue: prop.assessedValue,
         basicTax: prop.basicTax,
         sefTax: prop.sefTax,
         shttcApplied: prop.shttcApplied,
-        penalty: prop.penalty,
-        discount: prop.discount,
+        penalty,
+        discount,
         totalAssessment: prop.totalAssessment,
         paymentStatus: 'Paid',
         balance: 0,
-        amountPaid: prop.totalAssessment,
+        amountPaid: amountDue,
         officialReceiptNumber: autoOr,
         paymentMethod,
         paymentDate,
@@ -1187,7 +1272,9 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
               ...p,
               paymentStatus: 'Paid',
               balance: 0,
-              amountPaid: p.totalAssessment,
+              amountPaid: amountDue,
+              penalty,
+              discount,
             }
             : p
         )
@@ -1197,7 +1284,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         await recordPaymentLedgerEntry({
           taxDeclarationNumber: prop.taxDeclarationNumber,
           ownerName: prop.ownerName,
-          amountPaid: prop.totalAssessment,
+          amountPaid: amountDue,
           officialReceiptNumber: autoOr,
           paymentDate,
           paymentMethod,
@@ -1755,7 +1842,28 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                           {formatCurrency(prop.assessedValue)}
                         </td>
                         <td className="p-4 text-right font-mono font-bold text-slate-900 dark:text-white">
-                          {formatCurrency(prop.balance || prop.totalAssessment)}
+                          {prop.paymentStatus === 'Paid' ? (
+                            formatCurrency(prop.totalAssessment)
+                          ) : (
+                            (() => {
+                              const surcharge = computeSurcharge(prop.totalAssessment, prop.billingYear, prop.billExpiryDate);
+                              return (
+                                <div>
+                                  <div>{formatCurrency(surcharge.amountDue)}</div>
+                                  {surcharge.penalty > 0 && (
+                                    <div className="text-[10px] font-semibold text-rose-500">
+                                      +{formatCurrency(surcharge.penalty)} penalty ({surcharge.monthsLate}mo late)
+                                    </div>
+                                  )}
+                                  {surcharge.discount > 0 && (
+                                    <div className="text-[10px] font-semibold text-emerald-500">
+                                      -{formatCurrency(surcharge.discount)} early discount
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()
+                          )}
                         </td>
                         <td className="p-4 text-center">
                           {prop.paymentStatus === 'Paid' ? (
