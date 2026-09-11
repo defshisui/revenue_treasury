@@ -15,6 +15,7 @@ import CityStallStatus from "./citizen-portal/city-owned-status";
 import CityStallManageAccount from "./citizen-portal/city-owned-manage-account";
 import PrivateManageAccount from "./citizen-portal/private-manage-account";
 import HawkerApplication from "./citizen-portal/hawker-application";
+import LandingPage from "./pages/LandingPage";
 
 import RealPropertyApplication, {
   RealPropertyTaxHub,
@@ -35,6 +36,11 @@ export default function App() {
 
           <Route
             path="/"
+            element={<LandingPage />}
+          />
+
+          <Route
+            path="/dashboard"
             element={<Dashboard />}
           />
 
