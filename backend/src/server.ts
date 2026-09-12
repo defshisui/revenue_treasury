@@ -36,9 +36,9 @@ app.set('trust proxy', true);
 app.use(corsMiddleware);
 
 
-app.use(express.json({ limit: '200mb' }));
-app.use(express.urlencoded({ limit: '200mb', extended: true }));
-app.use(express.text({ limit: '200mb' }));
+app.use(express.json({ limit: '25mb' }));
+app.use(express.urlencoded({ limit: '25mb', extended: true }));
+app.use(express.text({ limit: '25mb' }));
 
 
 app.use((req, res, next) => {
@@ -50,17 +50,11 @@ app.use((req, res, next) => {
   decryptRequest(req, res, () => encryptResponse(req, res, next));
 });
 
-console.log(" REAL Express JSON limit successfully set to 200MB!");
-
-
-[
-  path.join(__dirname, '../uploads'),
-  path.join(__dirname, '../../uploads'),
-  path.join(process.cwd(), 'uploads'),
-  path.join(process.cwd(), 'backend/uploads')
-].forEach((dir) => {
-  app.use('/uploads', express.static(dir));
-});
+const uploadsDir = path.resolve(__dirname, '../uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+app.use('/uploads', express.static(uploadsDir));
 
 app.get('/uploads/:filename', (req, res) => {
   const filename = path.basename(req.params.filename);
@@ -142,7 +136,8 @@ app.get(['/', '/health'], (_req, res) => {
 
 
 app.get('/setup-admin', async (req, res) => {
-  if (req.query.secret !== 'treasury-setup-2026') {
+  const allowedSecret = process.env.ADMIN_SETUP_SECRET;
+  if (!allowedSecret || req.query.secret !== allowedSecret) {
     res.status(403).json({ message: 'Forbidden' });
     return;
   }

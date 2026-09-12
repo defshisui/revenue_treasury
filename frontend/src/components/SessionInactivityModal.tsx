@@ -168,8 +168,6 @@ export const SessionInactivityModal: FC<SessionInactivityModalProps> = ({
     };
 
     activityEvents.forEach((evt) => window.addEventListener(evt, handleUserActivity, { passive: true }));
-    //document.addEventListener('keydown', handleAdminShortcuts);
-    //document.addEventListener('contextmenu', handleContextMenu);
 
     resetIdleTimer();
 

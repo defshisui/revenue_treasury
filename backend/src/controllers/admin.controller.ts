@@ -42,17 +42,12 @@ export async function updateAdminProfile(req: Request, res: Response): Promise<v
   }
 
   try {
-    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(30)`);
-    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS department VARCHAR(255)`);
-    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS address TEXT`);
-    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT`);
-
-    const existing = await pool.query('SELECT * FROM users WHERE email ILIKE $1', [currentEmail.trim()]);
+    const existing = await pool.query('SELECT * FROM users WHERE LOWER(email) = LOWER($1)', [currentEmail.trim()]);
     if (existing.rows.length === 0) { res.status(404).json({ message: 'User not found.' }); return; }
     const user = existing.rows[0];
 
     if (email.trim().toLowerCase() !== currentEmail.trim().toLowerCase()) {
-      const collision = await pool.query('SELECT id FROM users WHERE email ILIKE $1 AND id <> $2', [email.trim(), user.id]);
+      const collision = await pool.query('SELECT id FROM users WHERE LOWER(email) = LOWER($1) AND id <> $2', [email.trim(), user.id]);
       if (collision.rows.length > 0) {
         res.status(400).json({ message: 'Another account already uses that email address.' });
         return;
@@ -145,8 +140,7 @@ export async function updateAdminAvatar(req: Request, res: Response): Promise<vo
   }
 
   try {
-    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT`);
-    await pool.query('UPDATE users SET avatar = $1 WHERE email ILIKE $2', [avatar, email.trim()]);
+    await pool.query('UPDATE users SET avatar = $1 WHERE LOWER(email) = LOWER($2)', [avatar, email.trim()]);
     res.json({ message: 'Avatar updated successfully.' });
   } catch (err) {
     console.error('[updateAdminAvatar]', err);

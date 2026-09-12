@@ -1,6 +1,5 @@
 import Navbar from "../components/Navbar"
 import Header from "../components/Header"
-/*import PaymentForm from "../components/PaymentForm"*/
 
 export default function MarketRental()  {   
 
@@ -8,7 +7,6 @@ export default function MarketRental()  {
         <>
         <Navbar />
         <Header title="Market Rental Payment System" />
-        {/*<PaymentForm/>*/}
         </>
     )
 }

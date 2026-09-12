@@ -429,7 +429,6 @@ export default function CityOwnedMarketAdmin({
         </div>
       </div>
 
-      {/* Tabs Navigation */}
       <div className="flex space-x-1 bg-slate-200/50 dark:bg-slate-800/50 p-1.5 rounded-xl w-fit mb-6">
         <button
           onClick={() => setActiveTab("Active")}
@@ -699,7 +698,6 @@ export default function CityOwnedMarketAdmin({
         </div>
       </section>
 
-      {/* Edit / Review Modal */}
       {isModalOpen && selectedRecord && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-2xl w-full p-8 shadow-2xl border border-slate-200 dark:border-slate-800 my-8">

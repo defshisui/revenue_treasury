@@ -261,7 +261,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
   const [rptPaymentSuccessCountdown, setRptPaymentSuccessCountdown] = useState<number>(5);
   const [rptQrError, setRptQrError] = useState<string>("");
 
-  // --- Applications Queue (Assessor Request Form) ---
   const [applications, setApplications] = useState<RPTApplicationRecord[]>([]);
   const [appForm, setAppForm] = useState({
     service: services[0],
@@ -325,7 +324,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
     }
     if (!Array.isArray(raw)) return [];
     return raw.reduce((acc: Array<{ name: string; url: string }>, d: any) => {
-      // Skip null/undefined or empty entries — show only real uploaded documents
       if (!d) return acc;
       if (typeof d === 'string') {
         if (!d.trim()) return acc;
@@ -333,7 +331,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
         return acc;
       }
       const docName = d.name || d.fileName || '';
-      if (!docName) return acc; // skip entries with no real filename
+      if (!docName) return acc;
       acc.push({ name: docName, url: d.url || '' });
       return acc;
     }, []);
@@ -343,7 +341,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
     if (!tdn) return null;
     const matches = applications.filter((app) => app.taxDeclarationNumber === tdn);
     if (matches.length === 0) return null;
-    // Most recently filed application takes priority when there are several for the same TDN.
     return matches.reduce((latest, app) => ((app.filedDate || "") > (latest.filedDate || "") ? app : latest), matches[0]);
   };
 
@@ -2670,7 +2667,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
               </div>
             </div>
 
-            {/* Uploaded Documents Section */}
             <div className="pt-3 border-t border-slate-200 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-800 uppercase tracking-wide">

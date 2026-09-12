@@ -97,8 +97,6 @@ export function initCitizenSecurity(): () => void {
     }
   };
 
-  //document.addEventListener('contextmenu', handleContextMenu);
-  //document.addEventListener('keydown', handleKeyDown);
 
   const originalLog = console.log;
   const originalWarn = console.warn;

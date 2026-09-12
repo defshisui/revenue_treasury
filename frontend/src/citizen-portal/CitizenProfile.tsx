@@ -110,7 +110,7 @@ export default function CitizenProfile() {
           const target = parsed.user && typeof parsed.user === "object" ? parsed.user : parsed;
           target.avatar = base64;
           localStorage.setItem(storageKey, JSON.stringify(parsed));
-        } catch { /* ignore */ }
+        } catch { }
       }
 
       const token = getToken();
@@ -183,7 +183,7 @@ export default function CitizenProfile() {
           target.name = fullName;
           localStorage.setItem(storageKey, JSON.stringify(parsed));
           window.dispatchEvent(new Event("profileUpdated"));
-        } catch { /* ignore */ }
+        } catch { }
       }
 
       setStatus("Profile saved successfully.");

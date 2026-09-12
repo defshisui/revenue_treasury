@@ -31,7 +31,8 @@ export async function createUser(req: Request, res: Response): Promise<void> {
   }
 
   try {
-    const existing = await pool.query('SELECT * FROM users WHERE email ILIKE $1', [username.trim()]);
+    const cleanEmail = username.trim().toLowerCase();
+    const existing = await pool.query('SELECT id FROM users WHERE LOWER(email) = $1', [cleanEmail]);
     if (existing.rows.length > 0) {
       res.status(400).json({ message: 'A user with this email/username already exists.' });
       return;
@@ -65,14 +66,11 @@ export async function createUser(req: Request, res: Response): Promise<void> {
 
     const hashedPassword = await bcrypt.hash(password.trim(), 12);
 
-    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'Active'`);
-    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()`);
-
     const result = await pool.query(
       `INSERT INTO users (name, email, password, role, status, created_at)
        VALUES ($1, $2, $3, $4, $5, NOW())
        RETURNING id, name, email, role, status`,
-      [fullname.trim(), username.trim(), hashedPassword, role || 'treasury-staff', 'Active']
+      [fullname.trim(), cleanEmail, hashedPassword, role || 'treasury-staff', 'Active']
     );
     const newUser = result.rows[0];
 

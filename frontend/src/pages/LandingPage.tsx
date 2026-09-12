@@ -8,7 +8,6 @@ const features = [
     { iconClass: 'fa-solid fa-house', title: 'Market Stall Rental', description: 'Managing rental for market stall and hawker associations', tint: 'rose' },
 ] as const;
 
-// Colors matching the exact pastel backgrounds and vibrant text of the screenshot
 const TINT: Record<string, string> = {
     violet: 'bg-violet-50 text-violet-500',
     emerald: 'bg-emerald-50 text-emerald-500',
@@ -60,7 +59,6 @@ export function LandingPage() {
 
     return (
         <div className="relative min-h-screen overflow-x-hidden bg-white font-sans">
-            {/* Grid pattern overlay */}
             <div
                 className="pointer-events-none absolute inset-0 -z-20 opacity-[0.03]"
                 style={{
@@ -72,7 +70,6 @@ export function LandingPage() {
                 }}
             />
 
-            {/* Top navigation */}
             <header className="max-w-6xl mx-auto px-4 py-6">
                 <nav className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
@@ -88,7 +85,6 @@ export function LandingPage() {
                 </nav>
             </header>
 
-            {/* Hero Section */}
             <section className="max-w-6xl mx-auto px-4 pt-16 pb-20 text-center">
                 <div className="mx-auto max-w-3xl">
                     <h1 className="text-4xl font-extrabold leading-tight sm:text-5xl md:text-6xl tracking-tight text-slate-900">
@@ -113,7 +109,6 @@ export function LandingPage() {
                     </button>
                 </div>
 
-                {/* Feature Cards Grid */}
                 <div className="mt-20 flex flex-wrap justify-center gap-6 max-w-[900px] mx-auto text-left">
                     {features.map((f) => (
                         <div
@@ -129,7 +124,6 @@ export function LandingPage() {
                     ))}
                 </div>
 
-                {/* Stats Container */}
                 <div className="mt-12 max-w-[900px] mx-auto rounded-3xl border border-slate-200 bg-white shadow-sm">
                     <div className="grid grid-cols-2 gap-y-8 p-8 md:grid-cols-4 md:py-10">
                         {stats.map((stat) => (
@@ -144,7 +138,6 @@ export function LandingPage() {
                 </div>
             </section>
 
-            {/* Footer */}
             <footer className="border-t border-slate-100 bg-white">
                 <div className="max-w-6xl mx-auto px-4 py-8 text-center">
                     <p className="text-xs font-medium text-slate-400">

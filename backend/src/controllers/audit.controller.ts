@@ -30,10 +30,16 @@ export async function recordAudit(
   }
 }
 
-export async function getAuditLogs(_req: Request, res: Response): Promise<void> {
+export async function getAuditLogs(req: Request, res: Response): Promise<void> {
   try {
-    await pool.query('ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT FALSE');
-    const result = await pool.query('SELECT * FROM audit_logs ORDER BY timestamp DESC');
+    const page = Math.max(1, parseInt(String(req.query.page || '1'), 10) || 1);
+    const limit = Math.min(500, Math.max(1, parseInt(String(req.query.limit || '200'), 10) || 200));
+    const offset = (page - 1) * limit;
+
+    const result = await pool.query(
+      'SELECT * FROM audit_logs ORDER BY timestamp DESC LIMIT $1 OFFSET $2',
+      [limit, offset]
+    );
     const formatted = result.rows.map((row) => ({
       id: row.id.toString(),
       auditId: row.audit_id,
@@ -60,7 +66,6 @@ export async function toggleArchiveAuditLog(req: Request, res: Response): Promis
   const { id } = req.params;
   const { isArchived } = req.body;
   try {
-    await pool.query('ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT FALSE');
     const targetState = typeof isArchived === 'boolean' ? isArchived : true;
     const result = await pool.query(
       'UPDATE audit_logs SET is_archived = $1 WHERE id = $2 RETURNING *',

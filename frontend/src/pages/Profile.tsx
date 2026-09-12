@@ -240,7 +240,6 @@ export default function Profile() {
                 JSON.stringify(parsed)
               );
             } catch {
-              /* ignore */
             }
           }
         }

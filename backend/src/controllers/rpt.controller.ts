@@ -113,7 +113,14 @@ export async function getRptApplications(req: Request, res: Response): Promise<v
 
     const isStaff = ['admin', 'treasury-staff'].includes(role);
 
-    if (isStaff || !authenticatedUser || !email) {
+    if (!authenticatedUser || !email) {
+      res.status(401).json({
+        message: 'Authentication required to access RPT applications.'
+      });
+      return;
+    }
+
+    if (isStaff) {
       const result = await pool.query(
         `SELECT *
          FROM rpt_applications
@@ -124,25 +131,15 @@ export async function getRptApplications(req: Request, res: Response): Promise<v
       return;
     }
 
-    if (email) {
-      const result = await pool.query(
-        `SELECT *
-         FROM rpt_applications
-         WHERE LOWER(TRIM(email)) = $1
-         ORDER BY created_at DESC`,
-        [email]
-      );
-
-      res.json(result.rows);
-      return;
-    }
-
-    const fallbackResult = await pool.query(
+    const result = await pool.query(
       `SELECT *
        FROM rpt_applications
-       ORDER BY created_at DESC`
+       WHERE LOWER(TRIM(email)) = $1
+       ORDER BY created_at DESC`,
+      [email]
     );
-    res.json(fallbackResult.rows);
+
+    res.json(result.rows);
   } catch (err) {
     console.error('Error fetching RPT applications:', err);
     res.status(500).json({
@@ -1075,105 +1072,117 @@ export async function createRptPayment(
 
     const verifiedAmount = verification.amount as number;
 
-    await pool.query(
-      `INSERT INTO citizen_rpt_payments
-       (
-         rpt_record_id,
-         tax_declaration_number,
-         owner_name,
-         amount,
-         payment_method,
-         payment_reference,
-         official_receipt_number,
-         payment_date,
-         payment_option,
-         quarter_coverage,
-         paymongo_session_id
-       )
-       VALUES (
-         $1,
-         $2,
-         $3,
-         $4,
-         $5,
-         $6,
-         $7,
-         NOW(),
-         $8,
-         $9,
-         $10
-       )
-       RETURNING *`,
-      [
-        rptRecordId || null,
-        taxDeclarationNumber,
-        ownerName,
-        verifiedAmount,
-        paymentMethod,
-        paymentReference,
-        officialReceiptNumber,
-        paymentOption || 'Full',
-        quarterCoverage ||
-        '2025(Q1) - 2025(Q4)',
-        paymongoSessionId || null
-      ]
-    );
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
 
-    if (taxDeclarationNumber) {
-      await pool.query(
-        `UPDATE lgu_rpt_records
-         SET
-           amount_paid =
-             amount_paid + $1,
-
-           balance =
-             GREATEST(
-               0,
-               balance - $1
-             ),
-
-           status =
-             CASE
-               WHEN balance - $1 <= 0
-                 THEN 'Paid'
-               ELSE 'Partially Paid'
-             END,
-
-           payment_status =
-             CASE
-               WHEN balance - $1 <= 0
-                 THEN 'Paid'
-               ELSE 'Partially Paid'
-             END,
-
-           payment_method = $2,
-           official_receipt_number = $3,
-           payment_reference = $4,
-           payment_date = NOW()
-
-         WHERE LOWER(
-           REPLACE(
-             tax_declaration_number,
-             ' ',
-             ''
-           )
+      await client.query(
+        `INSERT INTO citizen_rpt_payments
+         (
+           rpt_record_id,
+           tax_declaration_number,
+           owner_name,
+           amount,
+           payment_method,
+           payment_reference,
+           official_receipt_number,
+           payment_date,
+           payment_option,
+           quarter_coverage,
+           paymongo_session_id
          )
-         =
-         LOWER(
-           REPLACE(
-             $5,
-             ' ',
-             ''
-           )
-         )`,
+         VALUES (
+           $1,
+           $2,
+           $3,
+           $4,
+           $5,
+           $6,
+           $7,
+           NOW(),
+           $8,
+           $9,
+           $10
+         )
+         RETURNING *`,
         [
+          rptRecordId || null,
+          taxDeclarationNumber,
+          ownerName,
           verifiedAmount,
           paymentMethod,
-          officialReceiptNumber,
           paymentReference,
-          taxDeclarationNumber
+          officialReceiptNumber,
+          paymentOption || 'Full',
+          quarterCoverage ||
+          '2025(Q1) - 2025(Q4)',
+          paymongoSessionId || null
         ]
       );
+
+      if (taxDeclarationNumber) {
+        await client.query(
+          `UPDATE lgu_rpt_records
+           SET
+             amount_paid =
+               amount_paid + $1,
+
+             balance =
+               GREATEST(
+                 0,
+                 balance - $1
+               ),
+
+             status =
+               CASE
+                 WHEN balance - $1 <= 0
+                   THEN 'Paid'
+                 ELSE 'Partially Paid'
+               END,
+
+             payment_status =
+               CASE
+                 WHEN balance - $1 <= 0
+                   THEN 'Paid'
+                 ELSE 'Partially Paid'
+               END,
+
+             payment_method = $2,
+             official_receipt_number = $3,
+             payment_reference = $4,
+             payment_date = NOW()
+
+           WHERE LOWER(
+             REPLACE(
+               tax_declaration_number,
+               ' ',
+               ''
+             )
+           )
+           =
+           LOWER(
+             REPLACE(
+               $5,
+               ' ',
+               ''
+             )
+           )`,
+          [
+            verifiedAmount,
+            paymentMethod,
+            officialReceiptNumber,
+            paymentReference,
+            taxDeclarationNumber
+          ]
+        );
+      }
+
+      await client.query('COMMIT');
+    } catch (txErr) {
+      await client.query('ROLLBACK');
+      throw txErr;
+    } finally {
+      client.release();
     }
 
     await recordAudit(
@@ -1282,135 +1291,147 @@ export async function createGroupRptPayment(
       paymentOption?: string;
     }> = [];
 
-    for (const item of items) {
-      const itemAmount = parseFloat(
-        item.totalAmount ||
-        item.amount ||
-        0
-      );
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
 
-      totalPaid += itemAmount;
+      for (const item of items) {
+        const itemAmount = parseFloat(
+          item.totalAmount ||
+          item.amount ||
+          0
+        );
 
-      const itemOR =
-        `${generatedGroupOR}-${item.taxDeclarationNumber}`;
+        totalPaid += itemAmount;
 
-      const itemRef =
-        `${groupPaymentRef}-${item.taxDeclarationNumber}`;
+        const itemOR =
+          `${generatedGroupOR}-${item.taxDeclarationNumber}`;
 
-      await pool.query(
-        `INSERT INTO citizen_rpt_payments
-         (
-           rpt_record_id,
-           tax_declaration_number,
-           owner_name,
-           amount,
-           payment_method,
-           payment_reference,
-           official_receipt_number,
-           payment_date,
-           payment_option,
-           quarter_coverage,
-           paymongo_session_id
-         )
-         VALUES (
-           $1,
-           $2,
-           $3,
-           $4,
-           $5,
-           $6,
-           $7,
-           NOW(),
-           $8,
-           $9,
-           $10
-         )`,
-        [
-          item.id || null,
-          item.taxDeclarationNumber,
-          item.ownerName ||
-          customerName ||
-          'Property Owner',
-          itemAmount,
-          paymentMethod ||
-          'Online Gateway',
-          itemRef,
-          itemOR,
-          item.selectedOption ||
-          'Full Payment',
-          item.billCoverage ||
-          '2025(Q1) - 2025(Q4)',
-          paymongoSessionId ||
-          null
-        ]
-      );
+        const itemRef =
+          `${groupPaymentRef}-${item.taxDeclarationNumber}`;
 
-      await pool.query(
-        `UPDATE lgu_rpt_records
-         SET
-           amount_paid =
-             amount_paid + $1,
-
-           balance =
-             GREATEST(
-               0,
-               balance - $1
-             ),
-
-           status =
-             CASE
-               WHEN balance - $1 <= 0
-                 THEN 'Paid'
-               ELSE 'Partially Paid'
-             END,
-
-           payment_status =
-             CASE
-               WHEN balance - $1 <= 0
-                 THEN 'Paid'
-               ELSE 'Partially Paid'
-             END,
-
-           payment_method = $2,
-           official_receipt_number = $3,
-           payment_reference = $4,
-           payment_date = NOW()
-
-         WHERE LOWER(
-           REPLACE(
+        await client.query(
+          `INSERT INTO citizen_rpt_payments
+           (
+             rpt_record_id,
              tax_declaration_number,
-             ' ',
-             ''
+             owner_name,
+             amount,
+             payment_method,
+             payment_reference,
+             official_receipt_number,
+             payment_date,
+             payment_option,
+             quarter_coverage,
+             paymongo_session_id
            )
-         )
-         =
-         LOWER(
-           REPLACE(
+           VALUES (
+             $1,
+             $2,
+             $3,
+             $4,
              $5,
-             ' ',
-             ''
-           )
-         )`,
-        [
-          itemAmount,
-          paymentMethod,
-          itemOR,
-          itemRef,
-          item.taxDeclarationNumber
-        ]
-      );
+             $6,
+             $7,
+             NOW(),
+             $8,
+             $9,
+             $10
+           )`,
+          [
+            item.id || null,
+            item.taxDeclarationNumber,
+            item.ownerName ||
+            customerName ||
+            'Property Owner',
+            itemAmount,
+            paymentMethod ||
+            'Online Gateway',
+            itemRef,
+            itemOR,
+            item.selectedOption ||
+            'Full Payment',
+            item.billCoverage ||
+            '2025(Q1) - 2025(Q4)',
+            paymongoSessionId ||
+            null
+          ]
+        );
 
-      processedItems.push({
-        taxDeclarationNumber:
-          item.taxDeclarationNumber,
-        ownerName:
-          item.ownerName,
-        amount: itemAmount,
-        officialReceiptNumber:
-          itemOR,
-        paymentOption:
-          item.selectedOption
-      });
+        await client.query(
+          `UPDATE lgu_rpt_records
+           SET
+             amount_paid =
+               amount_paid + $1,
+
+             balance =
+               GREATEST(
+                 0,
+                 balance - $1
+               ),
+
+             status =
+               CASE
+                 WHEN balance - $1 <= 0
+                   THEN 'Paid'
+                 ELSE 'Partially Paid'
+               END,
+
+             payment_status =
+               CASE
+                 WHEN balance - $1 <= 0
+                   THEN 'Paid'
+                 ELSE 'Partially Paid'
+               END,
+
+             payment_method = $2,
+             official_receipt_number = $3,
+             payment_reference = $4,
+             payment_date = NOW()
+
+           WHERE LOWER(
+             REPLACE(
+               tax_declaration_number,
+               ' ',
+               ''
+             )
+           )
+           =
+           LOWER(
+             REPLACE(
+               $5,
+               ' ',
+               ''
+             )
+           )`,
+          [
+            itemAmount,
+            paymentMethod,
+            itemOR,
+            itemRef,
+            item.taxDeclarationNumber
+          ]
+        );
+
+        processedItems.push({
+          taxDeclarationNumber:
+            item.taxDeclarationNumber,
+          ownerName:
+            item.ownerName,
+          amount: itemAmount,
+          officialReceiptNumber:
+            itemOR,
+          paymentOption:
+            item.selectedOption
+        });
+      }
+
+      await client.query('COMMIT');
+    } catch (txErr) {
+      await client.query('ROLLBACK');
+      throw txErr;
+    } finally {
+      client.release();
     }
 
     await recordAudit(

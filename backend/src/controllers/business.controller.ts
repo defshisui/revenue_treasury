@@ -48,7 +48,12 @@ export async function getBusinessAssessments(req: Request, res: Response): Promi
             }
         }
 
-        query += ' ORDER BY application_date DESC';
+        const pageNum = Math.max(1, parseInt(String(page || '1'), 10) || 1);
+        const limitNum = Math.min(200, Math.max(1, parseInt(String(limit || '50'), 10) || 50));
+        const offset = (pageNum - 1) * limitNum;
+
+        query += ` ORDER BY application_date DESC LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
+        params.push(limitNum, offset);
 
         const result = await pool.query(query, params);
 

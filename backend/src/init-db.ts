@@ -251,6 +251,25 @@ export async function initializeDatabase(): Promise<void> {
       CREATE INDEX IF NOT EXISTS
       idx_otp_verifications_created_at
       ON otp_verifications(created_at);
+
+      -- ==========================================================
+      -- BUSINESS ASSESSMENTS
+      -- ==========================================================
+      CREATE TABLE IF NOT EXISTS business_assessments (
+          id VARCHAR(100) PRIMARY KEY,
+          tracking_number VARCHAR(100) UNIQUE NOT NULL,
+          tax_bill_number VARCHAR(100) UNIQUE,
+          business_name VARCHAR(255) NOT NULL,
+          business_owner VARCHAR(255),
+          status VARCHAR(50) DEFAULT 'PENDING',
+          psic_code VARCHAR(50),
+          gross_sales NUMERIC(15, 2) DEFAULT 0,
+          tin VARCHAR(50),
+          email VARCHAR(255),
+          attachments JSONB DEFAULT '[]'::jsonb,
+          application_date TIMESTAMP DEFAULT NOW(),
+          created_at TIMESTAMP DEFAULT NOW()
+      );
     `);
 
 
@@ -259,6 +278,18 @@ export async function initializeDatabase(): Promise<void> {
       -- USERS
       ALTER TABLE users
       ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT TRUE;
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'Active';
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS phone VARCHAR(30);
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS department VARCHAR(255);
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS address TEXT;
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS avatar TEXT;
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
 
       -- AUDIT LOGS
       ALTER TABLE audit_logs
@@ -456,24 +487,57 @@ export async function initializeDatabase(): Promise<void> {
           END IF;
       END
       $$;
+
+      -- ==========================================================
+      -- PERFORMANCE INDEXES
+      -- ==========================================================
+      -- RPT Applications
+      CREATE INDEX IF NOT EXISTS idx_rpt_apps_tdn ON rpt_applications(tax_declaration_number);
+      CREATE INDEX IF NOT EXISTS idx_rpt_apps_email_lower ON rpt_applications(LOWER(email));
+      CREATE INDEX IF NOT EXISTS idx_rpt_apps_control_no ON rpt_applications(control_number);
+      CREATE INDEX IF NOT EXISTS idx_rpt_apps_pin ON rpt_applications(pin);
+      CREATE INDEX IF NOT EXISTS idx_rpt_apps_status ON rpt_applications(status);
+      CREATE INDEX IF NOT EXISTS idx_rpt_apps_created_at ON rpt_applications(created_at DESC);
+
+      -- LGU RPT Records
+      CREATE INDEX IF NOT EXISTS idx_lgu_rpt_pin ON lgu_rpt_records(pin);
+      CREATE INDEX IF NOT EXISTS idx_lgu_rpt_status ON lgu_rpt_records(status);
+      CREATE INDEX IF NOT EXISTS idx_lgu_rpt_payment_status ON lgu_rpt_records(paymentstatus);
+      CREATE INDEX IF NOT EXISTS idx_lgu_rpt_owner ON lgu_rpt_records(ownername);
+
+      -- Citizen RPT Payments
+      CREATE INDEX IF NOT EXISTS idx_rpt_payments_record_id ON citizen_rpt_payments(rpt_record_id);
+      CREATE INDEX IF NOT EXISTS idx_rpt_payments_tdn ON citizen_rpt_payments(tax_declaration_number);
+      CREATE INDEX IF NOT EXISTS idx_rpt_payments_date ON citizen_rpt_payments(payment_date DESC);
+      CREATE INDEX IF NOT EXISTS idx_rpt_payments_ref ON citizen_rpt_payments(payment_reference);
+
+      -- Audit Logs
+      CREATE INDEX IF NOT EXISTS idx_audit_logs_timestamp ON audit_logs(timestamp DESC);
+      CREATE INDEX IF NOT EXISTS idx_audit_logs_email ON audit_logs(user_email);
+      CREATE INDEX IF NOT EXISTS idx_audit_logs_module ON audit_logs(module);
+      CREATE INDEX IF NOT EXISTS idx_audit_logs_archived ON audit_logs(is_archived);
+
+      -- Business Assessments
+      CREATE INDEX IF NOT EXISTS idx_business_assessments_tracking ON business_assessments(tracking_number);
+      CREATE INDEX IF NOT EXISTS idx_business_assessments_tax_bill ON business_assessments(tax_bill_number);
+      CREATE INDEX IF NOT EXISTS idx_business_assessments_email ON business_assessments(email);
+      CREATE INDEX IF NOT EXISTS idx_business_assessments_status ON business_assessments(status);
+      CREATE INDEX IF NOT EXISTS idx_business_assessments_app_date ON business_assessments(application_date DESC);
+
+      -- Users & OTP
+      CREATE INDEX IF NOT EXISTS idx_users_email_lower ON users(LOWER(email));
+      CREATE INDEX IF NOT EXISTS idx_otp_verifications_email_lower ON otp_verifications(LOWER(email), purpose);
     `);
-
-
-
-
-
-
-
 
     const hashedRealAdminPassword = await bcrypt.hash('Admin@1234', 12);
     await pool.query(
       `INSERT INTO users (name, email, password, role)
        VALUES ('Hero Odiaman', 'dizon.hero.odiaman@gmail.com', $1, 'admin')
-       ON CONFLICT (email) DO UPDATE SET role = 'admin', password = EXCLUDED.password`,
+       ON CONFLICT (email) DO NOTHING`,
       [hashedRealAdminPassword]
     );
 
-    console.log('Database tables checked/initialized successfully.');
+    console.log('Database tables and performance indexes initialized successfully.');
   } catch (err) {
     const error = err as Error;
     console.error('Error initializing database tables:', error.message || error);
