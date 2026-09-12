@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { UnifiedHeader } from "./UnifiedHeader";
-import { UnifiedFooter } from "./UnifiedFooter";
+import CitizenLayout from "./CitizenLayout";
 import { API_BASE_URL } from "../config/api";
 
 function getSession() {
@@ -202,13 +201,8 @@ export default function CitizenProfile() {
       : nameParts[0].slice(0, 2).toUpperCase();
 
   return (
-    <div
-      className="min-h-screen bg-[#F4F6F8] text-slate-800 font-['Segoe_UI',Tahoma,Geneva,Verdana,sans-serif] flex flex-col antialiased relative transition-all duration-300 box-border"
-    >
-      <UnifiedHeader />
-
-      <div className="flex-1 flex flex-col justify-between w-full">
-        <main className="flex-1 max-w-5xl mx-auto w-full px-4 py-3 sm:py-4">
+    <CitizenLayout activeTitle="Citizen Profile" activeNav="profile">
+      <div className="max-w-5xl mx-auto w-full px-2 py-2">
           <div className="mb-3 flex items-center justify-between">
             <div>
               <p className="text-[10px] font-bold tracking-widest text-blue-700 uppercase mb-0.5">
@@ -397,10 +391,7 @@ export default function CitizenProfile() {
               </form>
             </div>
           )}
-        </main>
-
-        <UnifiedFooter />
       </div>
-    </div>
+    </CitizenLayout>
   );
 }
