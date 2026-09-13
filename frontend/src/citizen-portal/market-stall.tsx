@@ -88,7 +88,6 @@ export default function CitizenPortal() {
     'Real Property Tax',
     'Business Taxes',
     'Market & Vendors',
-    'Regulatory & Treasury',
   ];
 
   // 6 Priority Services (Image 2 UI style)
@@ -178,50 +177,6 @@ export default function CitizenPortal() {
       icon: (
         <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
           <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-        </svg>
-      ),
-    },
-    {
-      id: 'regulatory-service',
-      title: 'Regulatory Fees & Clearances',
-      category: 'Regulatory & Treasury',
-      tag: 'Treasury Clearances',
-      description:
-        'Settlement of sanitary inspection fees, building inspection certificates, fire safety, and environmental permits.',
-      requirements: [
-        'Inspection Assessment Order',
-        'Community Tax Certificate (Cedula)',
-        'Zoning Compliance Certificate',
-        'Proof of Payment of Previous Fees',
-      ],
-      actionLabel: 'Pay Regulatory Fees',
-      actionPath: '/business-tax-assessment',
-      iconBg: 'bg-purple-50 text-purple-700',
-      icon: (
-        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-        </svg>
-      ),
-    },
-    {
-      id: 'ledger-service',
-      title: 'Stall Account Management & Ledger',
-      category: 'Market & Vendors',
-      tag: 'Vendor Account Portal',
-      description:
-        'Check monthly stall rental dues, view payment ledger, settled receipts, and contract renewal schedule.',
-      requirements: [
-        'Stall Award Notice / Contract of Lease',
-        'Stall Number & Market Location Code',
-        'Registered Vendor Account ID',
-        'Latest Payment Slip / Official Receipt',
-      ],
-      actionLabel: 'Manage Stall Account',
-      actionPath: '/citizen-portal-stall-manage-account',
-      iconBg: 'bg-cyan-50 text-cyan-700',
-      icon: (
-        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
         </svg>
       ),
     },
@@ -352,54 +307,6 @@ export default function CitizenPortal() {
       icon: (
         <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
           <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-        </svg>
-      ),
-    },
-    {
-      id: 'mod-regulatory',
-      title: 'Regulatory Fees & Community Tax (Cedula)',
-      subtitle: 'City Treasury Collections',
-      description:
-        'One-stop settlement for Community Tax Certificate (Cedula), weights and measures sealing, garbage fees, and inspection clearances.',
-      category: 'Regulatory & Treasury',
-      features: [
-        'Online Cedula Issuance',
-        'Weights & Measures Seal',
-        'Inspection Clearances',
-        'Digital Payment Gateways',
-      ],
-      primaryLabel: 'Pay Regulatory Fees',
-      primaryPath: '/business-tax-assessment',
-      secondaryLabel: 'Get Cedula / CTC',
-      secondaryAction: () => navigate('/business-tax-assessment'),
-      iconBg: 'bg-purple-50 text-purple-700 border border-purple-200',
-      icon: (
-        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-        </svg>
-      ),
-    },
-    {
-      id: 'mod-payment-hub',
-      title: 'Treasury Payment & Electronic Receipts Hub',
-      subtitle: 'Official Electronic Receipts (e-OR)',
-      description:
-        'Check and track all tax assessments, view verified payments, download government official receipts (e-OR), and generate proof of tax settlement.',
-      category: 'Regulatory & Treasury',
-      features: [
-        'Real-time Payment Status',
-        'Tamper-proof QR e-OR',
-        'Complete Audit Trail',
-        'Instant Tax Clearance',
-      ],
-      primaryLabel: 'Open Payment Tracker',
-      primaryPath: '/citizen-portal-stall-status',
-      secondaryLabel: 'View Application History',
-      secondaryAction: () => navigate('/citizen-portal-stall-status'),
-      iconBg: 'bg-sky-50 text-sky-700 border border-sky-200',
-      icon: (
-        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
         </svg>
       ),
     },
