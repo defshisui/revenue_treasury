@@ -226,9 +226,6 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
         setIsViewOnly(false);
         setIsConfirmationOpen(false);
     };
-    const handleBack = () => {
-        window.history.back();
-    };
     const handleInitialSubmitClick = (e: React.FormEvent) => {
         e.preventDefault();
         const hasSecDti = uploadedDocs.some(d => d.document_type === 'SEC_DTI_PERMIT');
@@ -336,12 +333,6 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                         <h1 className="text-slate-800 font-bold text-sm tracking-wide uppercase">
                             VIEW HAWKER ASSOCIATION LIST
                         </h1>
-                        <button
-                            onClick={handleBack}
-                            className="flex items-center gap-2 px-3 py-1 bg-white border border-slate-300 hover:bg-slate-100 text-slate-800 rounded text-xs font-semibold transition-colors cursor-pointer"
-                        >
-                            <span>&larr;</span> Back
-                        </button>
                     </div>
                     <div className="mt-4 space-y-6">
                         <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4">

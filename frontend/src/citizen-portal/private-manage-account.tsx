@@ -4,31 +4,19 @@ import { useState } from 'react';
 export default function MarketOperatorAccount() {
     const [entriesCount, setEntriesCount] = useState('0');
 
-    const handleBack = () => {
-        window.history.back();
-    };
-
     return (
         <CitizenLayout activeTitle="Market Operator Account" activeNav="market">
             <div className="max-w-6xl mx-auto w-full space-y-6">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <p className="text-[10px] font-bold tracking-widest text-blue-700 dark:text-blue-400 uppercase mb-0.5">
-                            Market &amp; Vendors
-                        </p>
-                        <h1 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-                            Market Operator Account
-                        </h1>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                            Manage your private market permits and business records.
-                        </p>
-                    </div>
-                    <button
-                        onClick={handleBack}
-                        className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-4 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-blue-700 dark:hover:text-blue-400 transition-colors shadow-xs cursor-pointer"
-                    >
-                        <span>&larr;</span> Back
-                    </button>
+                <div>
+                    <p className="text-[10px] font-bold tracking-widest text-blue-700 dark:text-blue-400 uppercase mb-0.5">
+                        Market &amp; Vendors
+                    </p>
+                    <h1 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                        Market Operator Account
+                    </h1>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                        Manage your private market permits and business records.
+                    </p>
                 </div>
 
                 <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
@@ -69,7 +57,9 @@ export default function MarketOperatorAccount() {
                                     <th className="py-3.5 px-4 cursor-pointer hover:bg-blue-800/60 transition-colors">
                                         <div className="flex items-center justify-between gap-2">
                                             <span>Status</span>
-                                            <span className="text-blue-300">🔍</span>
+                                            <svg className="w-3 h-3 text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                            </svg>
                                         </div>
                                     </th>
                                     <th className="py-3.5 px-4 text-right">

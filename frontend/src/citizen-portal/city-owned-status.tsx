@@ -39,19 +39,10 @@ export default function ApplicationList() {
         console.log("Searching for Application ID:", appIdInput);
         console.log("Selected Application Types:", selectedValues);
     };
-    const handleBack = () => {
-        window.history.back();
-    };
+
     return (
         <CitizenLayout activeTitle="View Application List" activeNav="market">
             <div className="max-w-6xl mx-auto w-full space-y-4">
-                <button
-                    onClick={handleBack}
-                    className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-4 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-blue-700 dark:hover:text-blue-400 transition-colors shadow-xs cursor-pointer"
-                >
-                    <span>&larr;</span> Back
-                </button>
-
                 <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col">
                     <div className="flex justify-between items-center px-6 sm:px-8 py-5 border-b border-slate-200 dark:border-slate-800">
                         <div className="flex items-center gap-3">
@@ -139,7 +130,9 @@ export default function ApplicationList() {
                                     <th className="bg-blue-900 dark:bg-blue-950 text-white text-[11px] uppercase tracking-wider py-3.5 px-5 font-bold">
                                         <div className="flex items-center justify-between gap-2">
                                             <span className="cursor-pointer">Market Name</span>
-                                            <span className="cursor-pointer text-blue-300">🔍</span>
+                                            <svg className="w-3 h-3 text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                            </svg>
                                         </div>
                                     </th>
                                     <th className="bg-blue-900 dark:bg-blue-950 text-white text-[11px] uppercase tracking-wider py-3.5 px-5 font-bold">
@@ -150,7 +143,9 @@ export default function ApplicationList() {
                                     <th className="bg-blue-900 dark:bg-blue-950 text-white text-[11px] uppercase tracking-wider py-3.5 px-5 font-bold">
                                         <div className="flex items-center justify-between gap-2">
                                             <span className="cursor-pointer">Status</span>
-                                            <span className="cursor-pointer text-blue-300">🔍</span>
+                                            <svg className="w-3 h-3 text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                            </svg>
                                         </div>
                                     </th>
                                     <th className="bg-blue-900 dark:bg-blue-950 text-white text-[11px] uppercase tracking-wider py-3.5 px-5 font-bold">

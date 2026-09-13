@@ -433,14 +433,9 @@ export default function MarketStallApplication() {
         <CitizenLayout activeTitle="City-Owned Stall Application" activeNav="market">
             <div className="space-y-8">
                 <div className="bg-white rounded-3xl p-6 sm:p-10 border border-slate-200 shadow-sm space-y-8">
-                    <div className="border-b border-slate-200 pb-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                        <div>
-                            <span className="text-[11px] font-bold text-blue-900 uppercase tracking-wider">Gov Serv MDAD Portal</span>
-                            <h2 className="text-2xl font-black text-slate-900 tracking-tight">NEW MARKET STALL APPLICATION</h2>
-                        </div>
-                        <button onClick={() => window.history.back()} className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-xl text-xs transition-colors cursor-pointer inline-block border-0">
-                            &larr; Back to Previous Page
-                        </button>
+                    <div className="border-b border-slate-200 pb-5">
+                        <span className="text-[11px] font-bold text-blue-900 uppercase tracking-wider">Gov Serv MDAD Portal</span>
+                        <h2 className="text-2xl font-black text-slate-900 tracking-tight">NEW MARKET STALL APPLICATION</h2>
                     </div>
 
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-slate-50 p-5 rounded-2xl border border-slate-200">
@@ -493,19 +488,18 @@ export default function MarketStallApplication() {
                                     </div>
                                 </div>
 
-                                <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                                    <button onClick={() => setIsFloorPlanOpen(true)} className="flex-1 bg-blue-900 hover:bg-blue-800 text-white font-bold px-5 py-3.5 rounded-xl text-xs shadow-md transition-all text-center cursor-pointer">
+                                <div className="pt-2">
+                                    <button onClick={() => setIsFloorPlanOpen(true)} className="w-full bg-blue-900 hover:bg-blue-800 text-white font-bold px-5 py-3.5 rounded-xl text-xs shadow-md transition-all text-center cursor-pointer">
                                         View List of Available Stalls
-                                    </button>
-                                    <button onClick={() => window.history.back()} className="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-6 py-3.5 rounded-xl text-xs transition-colors text-center cursor-pointer border-0">
-                                        Back
                                     </button>
                                 </div>
                             </div>
 
                             <div className="lg:col-span-7 bg-slate-50 border-2 border-dashed border-slate-300 rounded-2xl p-6 flex flex-col items-center justify-center min-h-[380px] text-center space-y-3 cursor-pointer hover:border-blue-500 transition-all" onClick={() => setIsFloorPlanOpen(true)}>
-                                <div className="w-16 h-16 rounded-full bg-blue-50 text-blue-900 flex items-center justify-center text-2xl font-bold shadow-inner">
-                                    🗺️
+                                <div className="w-16 h-16 rounded-full bg-blue-50 text-blue-900 flex items-center justify-center shadow-inner">
+                                    <svg className="w-8 h-8 text-blue-800" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                                    </svg>
                                 </div>
                                 <div>
                                     <h3 className="font-bold text-slate-800 text-base">Market Floor Plan Preview</h3>
@@ -649,12 +643,20 @@ export default function MarketStallApplication() {
                                     {selectedFloor === "3" && (
                                         <div className="grid grid-cols-12 gap-4 relative py-6 text-center">
                                             <div className="col-span-6 bg-slate-200 border-2 border-slate-400 rounded-xl p-6 flex flex-col justify-center items-center">
-                                                <span className="text-2xl mb-2">🏢</span>
+                                                <div className="w-10 h-10 rounded-full bg-slate-300 flex items-center justify-center mb-2">
+                                                    <svg className="w-6 h-6 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                                    </svg>
+                                                </div>
                                                 <h4 className="font-bold text-slate-800 text-sm">Market Admin Office</h4>
                                                 <p className="text-xs text-slate-500 mt-1">Open Monday to Friday, 8AM - 5PM</p>
                                             </div>
                                             <div className="col-span-6 bg-slate-200 border-2 border-slate-400 rounded-xl p-6 flex flex-col justify-center items-center">
-                                                <span className="text-2xl mb-2">📦</span>
+                                                <div className="w-10 h-10 rounded-full bg-slate-300 flex items-center justify-center mb-2">
+                                                    <svg className="w-6 h-6 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                                                    </svg>
+                                                </div>
                                                 <h4 className="font-bold text-slate-800 text-sm">Cold Storage &amp; Warehouse</h4>
                                                 <p className="text-xs text-slate-500 mt-1">For vendor cargo and surplus goods</p>
                                             </div>

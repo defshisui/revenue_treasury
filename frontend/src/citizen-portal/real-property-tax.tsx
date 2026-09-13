@@ -1093,15 +1093,25 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
         }
 
         .rpt-portal .rpt-main-shell {
-          background: #ffffff !important;
-          border: 1px solid #E2E8F0 !important;
           border-radius: 16px !important;
           box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08) !important;
+        }
+        :root:not(.dark) .rpt-portal .rpt-main-shell {
+          background: #ffffff !important;
+          border: 1px solid #E2E8F0 !important;
           color: #1E293B !important;
+        }
+        .dark .rpt-portal .rpt-main-shell {
+          background: #0f172a !important;
+          border: 1px solid #1e293b !important;
+          color: #f1f5f9 !important;
         }
 
         .rpt-portal .rpt-nav-row {
           border-bottom: 1px solid #E2E8F0 !important;
+        }
+        .dark .rpt-portal .rpt-nav-row {
+          border-bottom-color: #1e293b !important;
         }
 
         .rpt-portal .rpt-nav-button {
@@ -1149,12 +1159,18 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
           font-weight: 900 !important;
           letter-spacing: .02em !important;
         }
+        .dark .rpt-portal .rpt-title {
+          color: #93c5fd !important;
+        }
 
         .rpt-portal .rpt-label {
           color: #0B3B60 !important;
           font-family: inherit !important;
           font-size: 11px !important;
           font-weight: 700 !important;
+        }
+        .dark .rpt-portal .rpt-label {
+          color: #93c5fd !important;
         }
 
         .rpt-portal .rpt-field {
@@ -1168,6 +1184,11 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
           font-weight: 500 !important;
           box-shadow: none !important;
           outline: none !important;
+        }
+        .dark .rpt-portal .rpt-field {
+          background: #1e293b !important;
+          border-color: #334155 !important;
+          color: #f1f5f9 !important;
         }
 
         .rpt-portal .rpt-field:focus {
@@ -1202,6 +1223,10 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
           border-radius: 8px !important;
           background: #ffffff !important;
         }
+        .dark .rpt-portal .rpt-table {
+          border-color: #334155 !important;
+          background: #0f172a !important;
+        }
 
         .rpt-portal .rpt-table th,
         .rpt-portal .rpt-table td {
@@ -1211,6 +1236,12 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
           font-family: inherit !important;
           font-size: 11px !important;
           padding: 10px 12px !important;
+        }
+        .dark .rpt-portal .rpt-table th,
+        .dark .rpt-portal .rpt-table td {
+          border-color: #334155 !important;
+          color: #cbd5e1 !important;
+          background: #0f172a !important;
         }
 
         .rpt-portal .rpt-table th {
@@ -1224,12 +1255,20 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
         .rpt-portal .rpt-table tbody tr:hover td {
           background: #F8FAFC !important;
         }
+        .dark .rpt-portal .rpt-table tbody tr:hover td {
+          background: #1e293b !important;
+        }
 
         .rpt-portal .rpt-history {
           border: 1px solid #E2E8F0 !important;
           border-radius: 10px !important;
           background: #ffffff !important;
           color: #334155 !important;
+        }
+        .dark .rpt-portal .rpt-history {
+          border-color: #334155 !important;
+          background: #0f172a !important;
+          color: #cbd5e1 !important;
         }
 
         .rpt-portal .rpt-history button {
@@ -1241,9 +1280,16 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
           font-size: 11px !important;
           font-weight: 800 !important;
         }
+        .dark .rpt-portal .rpt-history button {
+          color: #93c5fd !important;
+          background: #0f172a !important;
+        }
 
         .rpt-portal .rpt-history button:hover {
           background: #F8FAFC !important;
+        }
+        .dark .rpt-portal .rpt-history button:hover {
+          background: #1e293b !important;
         }
 
         .rpt-portal .rpt-empty {
@@ -1267,6 +1313,9 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
         .rpt-portal .rpt-divider {
           border-color: #E2E8F0 !important;
         }
+        .dark .rpt-portal .rpt-divider {
+          border-color: #334155 !important;
+        }
 
         .rpt-portal .rpt-main-shell input,
         .rpt-portal .rpt-main-shell select,
@@ -1275,18 +1324,38 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
         }
       `}</style>
       <div className="rpt-portal flex-1">
+        {/* Modern Gradient Hero Banner matching Business Tax */}
+        <div className="-mx-4 sm:-mx-6 lg:-mx-8 -mt-4 sm:-mt-6 lg:-mt-8 relative w-full bg-linear-to-r from-blue-950 via-blue-900 to-indigo-950 h-36 sm:h-48 overflow-hidden flex items-center justify-center border-b-4 border-blue-600">
+          <div className="absolute inset-0 opacity-30 bg-[radial-gradient(#3b82f6_1px,transparent_1px)] [background-size:16px_16px]"></div>
+          <div className="relative z-10 text-center px-4">
+            <h1 className="text-xl sm:text-3xl font-extrabold text-white tracking-wide">
+              REAL PROPERTY TAX (AMILYAR)
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-200 mt-1 max-w-xl mx-auto">
+              Search property records, verify tax declarations, compute balances, and pay securely online.
+            </p>
+          </div>
+        </div>
 
         {toastMessage && (
           <div className="fixed top-20 right-6 z-50 animate-bounce">
             <div
               className={`px-5 py-3 rounded-2xl shadow-xl font-bold text-xs flex items-center gap-2 border ${toastMessage.type === "success"
-                ? "bg-emerald-50 text-emerald-800 border-emerald-300"
+                ? "bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800"
                 : toastMessage.type === "error"
-                  ? "bg-rose-50 text-rose-800 border-rose-300"
-                  : "bg-blue-50 text-blue-800 border-blue-300"
+                  ? "bg-rose-50 text-rose-800 border-rose-300 dark:bg-rose-950 dark:text-rose-300 dark:border-rose-800"
+                  : "bg-blue-50 text-blue-800 border-blue-300 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800"
                 }`}
             >
-              <span>{toastMessage.type === "success" ? "✓" : "ℹ"}</span>
+              {toastMessage.type === "success" ? (
+                <svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4 text-blue-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              )}
               <span>{toastMessage.text}</span>
             </div>
           </div>
@@ -1298,16 +1367,6 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
               {rptSearchStep === 1 && (
                 <>
                   <div className="rpt-main-shell p-5 sm:p-6 mt-2">
-                    <div className="mb-5">
-                      <button
-                        type="button"
-                        onClick={() => window.history.back()}
-                        className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-xl text-xs transition-colors cursor-pointer inline-block border-0"
-                      >
-                        &larr; Back to Previous Page
-                      </button>
-                    </div>
-
                     <div className="rpt-nav-row border-b pb-4 flex items-center gap-6">
                       <button
                         type="button"
@@ -1323,7 +1382,7 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
                     </div>
 
                     {searchError && (
-                      <div className="mt-4 p-3 border border-white text-white text-[10px] font-bold">
+                      <div className="mt-4 p-3 rounded-lg border border-rose-300 bg-rose-50 text-rose-700 text-[10px] font-bold dark:bg-rose-950 dark:border-rose-800 dark:text-rose-300">
                         {searchError}
                       </div>
                     )}
@@ -1608,14 +1667,17 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
                         onClick={handleAddToCart}
                         className="bg-[#DC2626] hover:bg-red-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition shadow-md cursor-pointer flex items-center gap-1.5"
                       >
-                        <span>🛒 Add to Cart</span>
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                        <span>Add to Cart</span>
                       </button>
                     </div>
                   </div>
 
-                  <div className="overflow-x-auto rounded-2xl border border-slate-200">
+                  <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-800">
                     <table className="w-full text-left text-xs border-collapse">
-                      <thead className="bg-[#F8FAFC] text-slate-700 font-bold border-b border-slate-200">
+                      <thead className="bg-[#F8FAFC] dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold border-b border-slate-200 dark:border-slate-800">
                         <tr>
                           <th className="p-4">Tax Declaration No.</th>
                           <th className="p-4">Name of Owner</th>
@@ -1624,32 +1686,36 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
                           <th className="p-4 text-right">Action</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-100 bg-white">
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900">
                         {selectedPropertiesList.map((prop) => (
-                          <tr key={prop.taxDeclarationNumber} className="hover:bg-slate-50 transition">
-                            <td className="p-4 font-mono font-extrabold text-[#0B3B60]">
+                          <tr key={prop.taxDeclarationNumber} className="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition">
+                            <td className="p-4 font-mono font-extrabold text-[#0B3B60] dark:text-blue-400">
                               {prop.taxDeclarationNumber}
                             </td>
-                            <td className="p-4 font-semibold text-slate-800">
+                            <td className="p-4 font-semibold text-slate-800 dark:text-slate-200">
                               {prop.ownerName}
                             </td>
                             <td className="p-4">
-                              <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 px-3 py-1 rounded-lg text-xs font-bold">
-                                <span>✓</span>
+                              <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 px-3 py-1 rounded-lg text-xs font-bold">
+                                <svg className="w-3.5 h-3.5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
                                 <span>
                                   {prop.selectedPaymentOption === "Quarterly" ? "Quarterly (Q1-Q4)" : "Full Payment (Annual)"}
                                 </span>
                               </span>
                             </td>
-                            <td className="p-4 font-mono font-extrabold text-slate-900">
+                            <td className="p-4 font-mono font-extrabold text-slate-900 dark:text-slate-100">
                               {formatCurrency(prop.computedPayableAmount || prop.balance || 1020)}
                             </td>
                             <td className="p-4 text-right">
                               <button
                                 onClick={() => openPaymentOptionModal(prop)}
-                                className="text-xs font-bold text-[#0284C7] hover:text-sky-800 hover:underline cursor-pointer flex items-center gap-1 justify-end ml-auto"
+                                className="text-xs font-bold text-[#0284C7] dark:text-sky-400 hover:text-sky-800 dark:hover:text-sky-300 hover:underline cursor-pointer flex items-center gap-1.5 justify-end ml-auto"
                               >
-                                <span>✏️</span>
+                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                </svg>
                                 <span>Select Payment Option</span>
                               </button>
                             </td>
@@ -1886,7 +1952,10 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
                           className="text-xs file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#0B3B60] file:text-white cursor-pointer"
                         />
                         {appDocuments.ownershipProof.name && (
-                          <p className="text-[11px] font-mono text-emerald-700 font-bold">✓ {appDocuments.ownershipProof.name}</p>
+                          <p className="text-[11px] font-mono text-emerald-700 font-bold flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 shrink-0"></span>
+                            <span className="truncate">{appDocuments.ownershipProof.name}</span>
+                          </p>
                         )}
                       </div>
 
@@ -1901,7 +1970,10 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
                           className="text-xs file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#0B3B60] file:text-white cursor-pointer"
                         />
                         {appDocuments.validId.name && (
-                          <p className="text-[11px] font-mono text-emerald-700 font-bold">✓ {appDocuments.validId.name}</p>
+                          <p className="text-[11px] font-mono text-emerald-700 font-bold flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 shrink-0"></span>
+                            <span className="truncate">{appDocuments.validId.name}</span>
+                          </p>
                         )}
                       </div>
 
@@ -1915,7 +1987,10 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
                           className="text-xs file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#0B3B60] file:text-white cursor-pointer"
                         />
                         {appDocuments.taxRecord.name && (
-                          <p className="text-[11px] font-mono text-emerald-700 font-bold">✓ {appDocuments.taxRecord.name}</p>
+                          <p className="text-[11px] font-mono text-emerald-700 font-bold flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 shrink-0"></span>
+                            <span className="truncate">{appDocuments.taxRecord.name}</span>
+                          </p>
                         )}
                       </div>
                     </div>
@@ -2264,8 +2339,10 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
       {isSuccessFeedbackOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4">
           <div className="bg-white rounded-3xl border border-slate-200 p-8 max-w-sm w-full shadow-2xl text-center space-y-5">
-            <div className="size-16 rounded-full border-2 border-emerald-400 text-emerald-500 flex items-center justify-center text-3xl font-light mx-auto">
-              ✓
+            <div className="size-16 rounded-full border-2 border-emerald-400 text-emerald-500 flex items-center justify-center mx-auto">
+              <svg className="w-8 h-8 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
             </div>
 
             <h3 className="text-base font-extrabold text-slate-900">
@@ -2289,8 +2366,11 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4">
           <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 max-w-xl w-full shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-              <h3 className="text-base font-extrabold text-[#0B3B60]">
-                🛒 My Cart - Group Bill Set ({cart.length} Properties)
+              <h3 className="text-base font-extrabold text-[#0B3B60] dark:text-blue-400 flex items-center gap-2">
+                <svg className="w-5 h-5 text-[#0B3B60] dark:text-blue-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                <span>My Cart - Group Bill Set ({cart.length} Properties)</span>
               </h3>
               <button
                 onClick={() => setIsCartOpen(false)}
@@ -2395,7 +2475,11 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
 
                 <div className="mt-7 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
                   <div className="flex items-center gap-3">
-                    <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 text-lg">✓</span>
+                    <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                      <svg className="w-5 h-5 text-emerald-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </span>
                     <div>
                       <p className="text-sm font-black text-emerald-900">Secure Payment</p>
                       <p className="text-xs text-emerald-700 mt-1">Your payment is secured by PayMongo.</p>
@@ -2445,7 +2529,11 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
                       <div className="absolute top-0 left-0 right-0 h-2 bg-emerald-500" />
                       <div className="p-7 sm:p-9">
                         <div className="rpt-success-check mx-auto mb-5 h-24 w-24 rounded-full bg-emerald-100 border-8 border-white shadow-lg flex items-center justify-center">
-                          <div className="h-16 w-16 rounded-full bg-emerald-500 text-white flex items-center justify-center text-4xl font-black">✓</div>
+                          <div className="h-16 w-16 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-inner">
+                            <svg className="w-9 h-9 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
                         </div>
                         <p className="text-2xl sm:text-3xl font-black text-emerald-700">Payment Successful!</p>
                         <p className="text-sm text-slate-600 mt-2">Your Real Property Tax payment has been successfully confirmed.</p>
@@ -2455,7 +2543,7 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
                           <div className="flex justify-between gap-4 text-sm"><span className="text-slate-500">Payment Method</span><span className="font-bold text-slate-900">PayMongo (QR Ph)</span></div>
                         </div>
                         <div className="mt-5 rounded-2xl bg-emerald-50 border border-emerald-100 p-4 text-left">
-                          <p className="font-black text-emerald-800">🎉 Thank you!</p>
+                          <p className="font-black text-emerald-800">Thank you!</p>
                           <p className="text-xs text-emerald-700 mt-1">Your RPT payment has been recorded and your property records are being updated.</p>
                         </div>
                         <button type="button" onClick={closeRPTQrPayment} className="mt-6 w-full rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 font-black text-sm transition-all shadow-lg shadow-emerald-200">View My RPT Records →</button>
@@ -2667,7 +2755,12 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
                 </p>
                 {selectedAppDetail.paymentStatus === "Paid" ? (
                   <div className="space-y-1 text-[11px] text-emerald-800 font-semibold">
-                    <p>✓ Payment confirmed</p>
+                    <p className="flex items-center gap-1.5">
+                      <svg className="w-3.5 h-3.5 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span>Payment confirmed</span>
+                    </p>
                     {selectedAppDetail.officialReceiptNumber && <p>Official Receipt: <span className="font-mono">{selectedAppDetail.officialReceiptNumber}</span></p>}
                     {selectedAppDetail.paymentReference && <p>Reference: <span className="font-mono">{selectedAppDetail.paymentReference}</span></p>}
                   </div>
@@ -2812,8 +2905,11 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4">
           <div className="bg-white rounded-3xl border border-slate-200 p-8 max-w-xl w-full shadow-2xl space-y-6 max-h-[85vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-              <h3 className="text-base font-extrabold text-[#0B3B60]">
-                📖 Real Property Tax (RPT) Online Payment Guide
+              <h3 className="text-base font-extrabold text-[#0B3B60] dark:text-blue-400 flex items-center gap-2">
+                <svg className="w-5 h-5 text-[#0B3B60] dark:text-blue-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+                <span>Real Property Tax (RPT) Online Payment Guide</span>
               </h3>
               <button
                 onClick={() => setIsGuideModalOpen(false)}

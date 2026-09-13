@@ -24,10 +24,19 @@ export default function CitizenLayout({
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
 
-  // Submenu open states
-  const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
+  const profileDropdownRef = useRef<HTMLDivElement>(null);
+  const notificationsRef = useRef<HTMLDivElement>(null);
 
-  // User state
+  // Live clock
+  const [currentTime, setCurrentTime] = useState('');
+  const [currentDate, setCurrentDate] = useState('');
+
+  // Notifications
+  const [notifications, setNotifications] = useState<
+    { id: string | number; title: string; desc: string; time: string; link: string; unread: boolean }[]
+  >([]);
+
+  // Signed-in citizen
   const [user, setUser] = useState<{
     fullname: string;
     email: string;
@@ -42,141 +51,97 @@ export default function CitizenLayout({
     avatar: null,
   });
 
-  // Real-time clock
-  const [currentTime, setCurrentTime] = useState<string>('');
-  const [currentDate, setCurrentDate] = useState<string>('');
-
-  const profileDropdownRef = useRef<HTMLDivElement>(null);
-  const notificationsRef = useRef<HTMLDivElement>(null);
-
-  // Notifications list
-  const [notifications, setNotifications] = useState<Array<{
-    id: number;
-    title: string;
-    time: string;
-    desc: string;
-    unread: boolean;
-    link: string;
-  }>>([]);
-
-  // Handle clock
-  useEffect(() => {
-    const updateClock = () => {
-      const now = new Date();
-      const timeStr = now.toLocaleTimeString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: true,
-      });
-      const dateStr = now.toLocaleDateString('en-US', {
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric',
-      });
-      setCurrentTime(timeStr);
-      setCurrentDate(dateStr);
-    };
-
-    updateClock();
-    const interval = setInterval(updateClock, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Handle user session & security
+  // Load the signed-in citizen's session (encrypted storage first, then plain fallback)
   useEffect(() => {
     const cleanupSecurity = initCitizenSecurity();
 
     const checkUserSession = async () => {
-      try {
-        const encData =
-          (await getEncryptedItem('currentUser')) ||
-          (await getEncryptedItem('user'));
-        let target = encData;
-
-        if (encData && typeof encData === 'object') {
-          target =
-            (encData as any).user && typeof (encData as any).user === 'object'
-              ? (encData as any).user
-              : encData;
-        }
-
-        if (!target) {
-          const raw =
-            localStorage.getItem('currentUser') ||
-            localStorage.getItem('user') ||
-            sessionStorage.getItem('currentUser') ||
-            sessionStorage.getItem('user');
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            target =
-              parsed.user && typeof parsed.user === 'object'
-                ? parsed.user
-                : parsed;
-          }
-        }
-
-        if (target) {
-          const fullName =
-            target.fullname ||
-            target.name ||
-            target.fullName ||
-            target.firstName ||
-            target.email ||
-            'Citizen User';
-          const email = target.email || 'citizen@govserve.gov.ph';
-          const avatar = target.avatar || null;
+      const encData = (await getEncryptedItem('currentUser')) || (await getEncryptedItem('user'));
+      if (encData && typeof encData === 'object') {
+        const target =
+          (encData as any).user && typeof (encData as any).user === 'object' ? (encData as any).user : encData;
+        const fullName = target.fullname || target.name || target.fullName || target.firstName || target.email;
+        if (fullName) {
+          const email = target.email || '';
           const nameParts = String(fullName).trim().split(' ');
-          const firstName = nameParts[0].toUpperCase();
+          const firstName = nameParts[0];
           const initials =
             nameParts.length > 1
-              ? (
-                nameParts[0][0] + nameParts[nameParts.length - 1][0]
-              ).toUpperCase()
+              ? (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase()
               : nameParts[0].slice(0, 2).toUpperCase();
-
-          setUser({
-            fullname: String(fullName),
-            email,
-            firstName,
-            initials: initials || 'RM',
-            avatar,
-          });
+          return { fullname: String(fullName), email, firstName, initials, avatar: target.avatar || null };
         }
-      } catch (err) {
-        console.error('Session load error', err);
+      }
+
+      const rawData =
+        localStorage.getItem('currentUser') ||
+        localStorage.getItem('user') ||
+        sessionStorage.getItem('currentUser') ||
+        sessionStorage.getItem('user');
+      if (!rawData) return null;
+      try {
+        const parsed = JSON.parse(rawData);
+        const target = parsed.user && typeof parsed.user === 'object' ? parsed.user : parsed;
+        const fullName = target.fullname || target.name || target.fullName || target.firstName || target.email;
+        if (!fullName) return null;
+        const email = target.email || '';
+        const nameParts = String(fullName).trim().split(' ');
+        const firstName = nameParts[0];
+        const initials =
+          nameParts.length > 1
+            ? (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase()
+            : nameParts[0].slice(0, 2).toUpperCase();
+        return { fullname: String(fullName), email, firstName, initials, avatar: target.avatar || null };
+      } catch {
+        return null;
       }
     };
 
-    checkUserSession();
+    checkUserSession().then((result) => {
+      if (result) setUser(result);
+    });
 
-    const handleProfileUpdated = () => checkUserSession();
+    const handleProfileUpdated = () => {
+      checkUserSession().then((result) => {
+        if (result) setUser(result);
+      });
+    };
     window.addEventListener('profileUpdated', handleProfileUpdated);
 
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        profileDropdownRef.current &&
-        !profileDropdownRef.current.contains(e.target as Node)
-      ) {
-        setIsProfileDropdownOpen(false);
-      }
-      if (
-        notificationsRef.current &&
-        !notificationsRef.current.contains(e.target as Node)
-      ) {
-        setIsNotificationsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
       window.removeEventListener('profileUpdated', handleProfileUpdated);
       cleanupSecurity();
     };
   }, []);
 
-  // Dark mode toggle
+  // Live clock, updated every second
+  useEffect(() => {
+    const updateClock = () => {
+      const now = new Date();
+      setCurrentTime(
+        now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
+      );
+      setCurrentDate(now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }));
+    };
+    updateClock();
+    const interval = setInterval(updateClock, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Close the profile / notifications dropdowns when clicking outside them
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target as Node)) {
+        setIsProfileDropdownOpen(false);
+      }
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
+        setIsNotificationsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const toggleDarkMode = () => {
     setIsDarkMode((prev) => {
       const next = !prev;
@@ -185,14 +150,14 @@ export default function CitizenLayout({
       } else {
         document.documentElement.classList.remove('dark');
       }
+      localStorage.setItem('citizenDarkMode', next ? '1' : '0');
       return next;
     });
   };
 
-  // Secure Logout
   const handleLogout = () => {
-    const userName = user?.fullname || 'Citizen User';
-    const userEmail = user?.email || 'Unknown';
+    const userName = user.fullname || user.email || 'Citizen User';
+    const userEmail = user.email || 'Unknown';
     const auditPayload = JSON.stringify({
       auditId: `AUD-${Math.floor(100000 + Math.random() * 900000)}`,
       user: userName,
@@ -206,19 +171,21 @@ export default function CitizenLayout({
       newData: 'Session terminated / Logged out',
       timestamp: new Date().toISOString(),
     });
-
-    if (navigator.sendBeacon) {
-      const blob = new Blob([auditPayload], { type: 'application/json' });
-      navigator.sendBeacon(`${API_BASE_URL}/audit-logs`, blob);
-    } else {
-      fetch(`${API_BASE_URL}/audit-logs`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: auditPayload,
-        keepalive: true,
-      }).catch(() => { });
+    try {
+      if (navigator.sendBeacon) {
+        const blob = new Blob([auditPayload], { type: 'application/json' });
+        navigator.sendBeacon(`${API_BASE_URL}/audit-logs`, blob);
+      } else {
+        fetch(`${API_BASE_URL}/audit-logs`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: auditPayload,
+          keepalive: true,
+        }).catch(() => { });
+      }
+    } catch {
+      // best-effort audit log only
     }
-
     localStorage.removeItem('currentUser');
     localStorage.removeItem('user');
     localStorage.removeItem('__enc_currentUser');
@@ -226,15 +193,11 @@ export default function CitizenLayout({
     localStorage.removeItem('token');
     sessionStorage.removeItem('currentUser');
     sessionStorage.removeItem('user');
-
+    setIsProfileDropdownOpen(false);
     navigate('/');
   };
 
-  const toggleSubmenu = (menuId: string) => {
-    setOpenSubmenu((prev) => (prev === menuId ? null : menuId));
-  };
-
-  // Navigation Items matching the Revenue & Treasury system with reference UI design
+  // Navigation Items matching the Revenue & Treasury system
   const navItems = [
     {
       id: 'guide',
@@ -289,6 +252,31 @@ export default function CitizenLayout({
       ],
     },
   ];
+
+  // Submenu open states
+  const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
+
+  const toggleSubmenu = (menuId: string) => {
+    setOpenSubmenu((prev) => (prev === menuId ? null : menuId));
+  };
+
+  useEffect(() => {
+    for (const item of navItems) {
+      if (
+        item.path === location.pathname ||
+        item.subItems?.some((s) => {
+          if (s.path.includes('?')) {
+            const [subRoute, subQuery] = s.path.split('?');
+            return location.pathname === subRoute && location.search.includes(subQuery);
+          }
+          return s.path === location.pathname;
+        })
+      ) {
+        setOpenSubmenu(item.id);
+        break;
+      }
+    }
+  }, [location.pathname, location.search]);
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-['Segoe_UI',Tahoma,Geneva,Verdana,sans-serif]">
@@ -406,9 +394,27 @@ export default function CitizenLayout({
 
                 {/* Dropdown sub-items */}
                 {hasSubmenu && isSubmenuOpen && !isSidebarCollapsed && (
-                  <div className="pl-9 pr-2 py-1 space-y-1">
+                  <div className="pl-9 pr-2 py-1.5 space-y-1.5">
                     {item.subItems?.map((sub, sIdx) => {
-                      const isSubActive = location.pathname === sub.path;
+                      const isSubActive = (() => {
+                        if (sub.path.includes('?')) {
+                          const [subRoute, subQuery] = sub.path.split('?');
+                          if (location.pathname !== subRoute) return false;
+                          const subParams = new URLSearchParams(subQuery);
+                          const currentParams = new URLSearchParams(location.search);
+                          let matches = true;
+                          subParams.forEach((v, k) => {
+                            if (currentParams.get(k) !== v) matches = false;
+                          });
+                          return matches;
+                        }
+                        if (location.pathname === sub.path) {
+                          const currentParams = new URLSearchParams(location.search);
+                          return !currentParams.has('tab');
+                        }
+                        return false;
+                      })();
+
                       return (
                         <button
                           key={sIdx}
@@ -417,12 +423,16 @@ export default function CitizenLayout({
                             navigate(sub.path);
                             setIsMobileMenuOpen(false);
                           }}
-                          className={`w-full text-left px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-colors cursor-pointer block truncate ${isSubActive
-                            ? 'text-blue-300 bg-white/10 font-bold'
-                            : 'text-slate-400 hover:text-white hover:bg-white/5'
+                          className={`w-full flex items-center gap-2.5 text-left px-3 py-2 rounded-lg text-xs transition-all cursor-pointer truncate ${isSubActive
+                            ? 'bg-blue-600 text-white font-bold shadow-md shadow-blue-500/30 ring-1 ring-blue-400'
+                            : 'text-slate-300 hover:text-white hover:bg-white/10 font-medium'
                             }`}
                         >
-                          {sub.label}
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full shrink-0 transition-colors ${isSubActive ? 'bg-white shadow-xs' : 'bg-slate-500'
+                              }`}
+                          />
+                          <span className="truncate">{sub.label}</span>
                         </button>
                       );
                     })}

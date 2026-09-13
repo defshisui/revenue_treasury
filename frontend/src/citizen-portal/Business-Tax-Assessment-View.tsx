@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../config/api';
 import CitizenLayout from './CitizenLayout';
 import {
@@ -10,7 +10,7 @@ import {
 export interface BusinessTaxAssessmentViewProps {
   isCollapsed?: boolean;
 }
-type ActiveScreen = 'home' | 'assessment-list' | 'appointments-list';
+type ActiveScreen = 'assessment-list' | 'appointments-list' | 'verification';
 interface AttachmentFile {
   name: string;
   url: string;
@@ -57,8 +57,10 @@ interface AppointmentRecord {
 }
 export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps> = ({ isCollapsed: _isCollapsed = false }) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [currentScreen, setCurrentScreen] = useState<ActiveScreen>('assessment-list');
-  const [isModalOpen, setIsModalOpen] = useState<false | 'appointment' | 'tax-bill' | 'or-number' | 'sales-declaration'>(false);
+  const [verificationType, setVerificationType] = useState<'tax-bill' | 'or-number'>('tax-bill');
+  const [isModalOpen, setIsModalOpen] = useState<false | 'appointment' | 'sales-declaration'>(false);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -66,9 +68,10 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
     if (tab === 'appointments' || tab === 'appointment') {
       setCurrentScreen('appointments-list');
     } else if (tab === 'verify' || tab === 'verification') {
-      setIsModalOpen('tax-bill');
+      setCurrentScreen('verification');
     } else if (tab === 'sales-declaration') {
       setIsModalOpen('sales-declaration');
+      setCurrentScreen('assessment-list');
     } else {
       setCurrentScreen('assessment-list');
     }
@@ -81,6 +84,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [verifying, setVerifying] = useState<boolean>(false);
   const [verificationResult, setVerificationResult] = useState<any>(null);
+  const [verificationError, setVerificationError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [searchType, setSearchType] = useState<string>('Tracking/MP No.');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -367,10 +371,11 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
     e.preventDefault();
     setVerifying(true);
     setVerificationResult(null);
+    setVerificationError(null);
     try {
       const headers: HeadersInit = { 'Content-Type': 'application/json' };
       if (user?.token) headers['Authorization'] = `Bearer ${user.token}`;
-      const res = isModalOpen === 'tax-bill'
+      const res = verificationType === 'tax-bill'
         ? await fetch(`${API_BASE_URL}/verify/tax-bill`, {
           method: 'POST',
           headers,
@@ -389,14 +394,14 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
       try {
         data = JSON.parse(textResponse);
       } catch (parseErr) {
-        throw new Error(`Server returned invalid response (Status ${res.status}). Please check backend API logs.`);
+        throw new Error(`Server returned invalid response (Status ${res.status}). Please check backend connection.`);
       }
       if (!res.ok) {
-        throw new Error(data.message || `Server responded with status code ${res.status}`);
+        throw new Error(data.message || `No matching record found for the provided details (Status ${res.status}).`);
       }
       setVerificationResult(data);
     } catch (err: any) {
-      alert(`Verification Error: ${err.message}`);
+      setVerificationError(err.message || 'Verification failed. Please verify the entered details and try again.');
     } finally {
       setVerifying(false);
     }
@@ -431,18 +436,16 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
       setSubmitting(false);
     }
   };
-  const openModal = (type: 'appointment' | 'tax-bill' | 'or-number' | 'sales-declaration') => {
+  const openModal = (type: 'appointment' | 'sales-declaration') => {
     if (type === 'appointment') {
       setCaptchaNum1(Math.floor(Math.random() * 10) + 1);
       setCaptchaNum2(Math.floor(Math.random() * 10) + 1);
       setCaptchaInput('');
     }
-    setVerificationResult(null);
     setIsModalOpen(type);
   };
   const closeModal = () => {
     setIsModalOpen(false);
-    setVerificationResult(null);
   };
   return (
     <CitizenLayout activeTitle="Business Tax Assessment" activeNav="btax">
@@ -456,28 +459,202 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
               <h1 className="text-xl sm:text-3xl font-extrabold text-white tracking-wide">
                 {currentScreen === 'appointments-list'
                   ? 'MY APPOINTMENTS TRACKER'
-                  : '2026 BUSINESS TAX PAYMENT'}
+                  : currentScreen === 'verification'
+                    ? 'TAX BILL & O.R. NUMBER VERIFICATION'
+                    : '2026 BUSINESS TAX PAYMENT'}
               </h1>
 
               <p className="text-xs sm:text-sm text-slate-200 mt-1 max-w-xl mx-auto">
                 {currentScreen === 'appointments-list'
                   ? "Monitor the review, approval, or cancellation status of your scheduled municipal appointments in real time."
-                  : "Manage your online sales declarations and monitor permit assessment status."}
+                  : currentScreen === 'verification'
+                    ? "Authenticate official business tax bills and official receipts directly against municipal records."
+                    : "Manage your online sales declarations and monitor permit assessment status."}
               </p>
             </div>
           </div>
 
-          <div className="max-w-6xl mx-auto px-4 py-8">
-            {currentScreen === 'appointments-list' ? (
-              <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="max-w-6xl mx-auto px-4 pt-6 pb-2">
+            <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
+              <button
+                type="button"
+                onClick={() => navigate('/business-tax-assessment')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${currentScreen === 'assessment-list'
+                    ? 'bg-blue-900 text-white shadow-md'
+                    : 'bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800'
+                  }`}
+              >
+                Assessments &amp; Payments
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/business-tax-assessment?tab=appointments')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${currentScreen === 'appointments-list'
+                    ? 'bg-blue-900 text-white shadow-md'
+                    : 'bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800'
+                  }`}
+              >
+                My Appointments
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/business-tax-assessment?tab=verify')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${currentScreen === 'verification'
+                    ? 'bg-blue-900 text-white shadow-md'
+                    : 'bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800'
+                  }`}
+              >
+                Tax Bill &amp; O.R. Verification
+              </button>
+            </div>
+          </div>
+
+          <div className="max-w-6xl mx-auto px-4 py-6">
+            {currentScreen === 'verification' ? (
+              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 sm:p-8 space-y-6 max-w-2xl mx-auto">
+                <div className="border-b border-slate-200 dark:border-slate-800 pb-4">
+                  <h2 className="text-base font-extrabold text-slate-900 dark:text-slate-100 uppercase tracking-wider">
+                    Tax Bill &amp; Official Receipt Verification
+                  </h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    Authenticate your business tax assessment bill or official payment receipt against official municipal records.
+                  </p>
+                </div>
+
+                <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
                   <button
                     type="button"
-                    onClick={() => setCurrentScreen('assessment-list')}
-                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-xl text-xs transition-colors cursor-pointer inline-block border-0"
+                    onClick={() => { setVerificationType('tax-bill'); setVerificationResult(null); setVerificationError(null); }}
+                    className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${verificationType === 'tax-bill'
+                        ? 'bg-white dark:bg-slate-900 text-blue-900 dark:text-blue-400 shadow-sm'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                      }`}
                   >
-                    &larr; Back to Assessment List
+                    Verify Tax Bill Number
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => { setVerificationType('or-number'); setVerificationResult(null); setVerificationError(null); }}
+                    className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${verificationType === 'or-number'
+                        ? 'bg-white dark:bg-slate-900 text-blue-900 dark:text-blue-400 shadow-sm'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                      }`}
+                  >
+                    Verify Official Receipt (O.R.)
+                  </button>
+                </div>
+
+                <form onSubmit={handleTaxBillVerification} className="space-y-4">
+                  {verificationType === 'tax-bill' ? (
+                    <>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                          Tax Identification Number (TIN)
+                        </label>
+                        <input
+                          required
+                          type="text"
+                          value={taxBillForm.tin}
+                          onChange={(e) => setTaxBillForm({ ...taxBillForm, tin: e.target.value })}
+                          placeholder="000-000-000-000"
+                          className="w-full p-3 border border-slate-300 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 text-xs font-mono"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                          Tax Bill Number
+                        </label>
+                        <input
+                          required
+                          type="text"
+                          value={taxBillForm.taxBillNo}
+                          onChange={(e) => setTaxBillForm({ ...taxBillForm, taxBillNo: e.target.value })}
+                          placeholder="Enter Tax Bill No. (e.g. TB-2026-XXXX)"
+                          className="w-full p-3 border border-slate-300 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 text-xs font-mono"
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                          Tax Identification Number (TIN)
+                        </label>
+                        <input
+                          required
+                          type="text"
+                          value={orForm.tin}
+                          onChange={(e) => setOrForm({ ...orForm, tin: e.target.value })}
+                          placeholder="000-000-000-000"
+                          className="w-full p-3 border border-slate-300 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 text-xs font-mono"
+                        />
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                            Mayor's Permit Number
+                          </label>
+                          <input
+                            required
+                            type="text"
+                            value={orForm.permitNo}
+                            onChange={(e) => setOrForm({ ...orForm, permitNo: e.target.value })}
+                            placeholder="Enter Mayor's Permit No."
+                            className="w-full p-3 border border-slate-300 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 text-xs"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                            Official Receipt (O.R.) Number
+                          </label>
+                          <input
+                            required
+                            type="text"
+                            value={orForm.orNo}
+                            onChange={(e) => setOrForm({ ...orForm, orNo: e.target.value })}
+                            placeholder="Enter O.R. No."
+                            className="w-full p-3 border border-slate-300 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 text-xs font-mono"
+                          />
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {verificationError && (
+                    <div className="p-4 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 rounded-xl text-red-800 dark:text-red-300 text-xs space-y-1">
+                      <div className="flex items-center gap-2 font-bold">
+                        <svg className="w-4 h-4 text-red-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        Verification Notice
+                      </div>
+                      <p className="leading-relaxed pl-6">{verificationError}</p>
+                    </div>
+                  )}
+
+                  {verificationResult && (
+                    <div className="p-4 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-xl text-emerald-800 dark:text-emerald-300 text-xs space-y-1 font-mono">
+                      <p className="font-bold">Record Verified Successfully</p>
+                      {verificationResult.status && <p>Status: {verificationResult.status}</p>}
+                      {verificationResult.amount && <p>Paid Amount: ₱{verificationResult.amount}</p>}
+                      {verificationResult.message && <p>{verificationResult.message}</p>}
+                    </div>
+                  )}
+
+                  <div className="pt-2 flex justify-end">
+                    <button
+                      type="submit"
+                      disabled={verifying}
+                      className="px-6 py-2.5 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer disabled:opacity-50"
+                    >
+                      {verifying ? 'Verifying...' : 'Verify Record'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            ) : currentScreen === 'appointments-list' ? (
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4">
+                <div className="flex flex-wrap items-center justify-end gap-2">
                   <button onClick={() => openModal('appointment')} className="px-4 py-2 bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold rounded-md shadow-xs cursor-pointer">
                     + Request New Appointment
                   </button>
@@ -854,106 +1031,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
               </div>
             </form>
           )}
-          {isModalOpen === 'tax-bill' && (
-            <form onSubmit={handleTaxBillVerification} className="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden">
-              <div className="flex justify-between items-center px-6 py-4 border-b border-slate-200 bg-slate-50">
-                <h3 className="font-bold text-sm text-slate-800">TAX BILL NUMBER VERIFICATION</h3>
-                <button type="button" onClick={closeModal} className="text-slate-400 hover:text-slate-600 font-bold text-lg cursor-pointer">✕</button>
-              </div>
-              <div className="p-6 space-y-4 text-xs">
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">Tax Identification Number (TIN)</label>
-                  <input
-                    required
-                    type="text"
-                    value={taxBillForm.tin}
-                    onChange={(e) => setTaxBillForm({ ...taxBillForm, tin: e.target.value })}
-                    placeholder="000-000-000-000"
-                    className="w-full p-2.5 border border-slate-300 rounded bg-slate-50"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">Tax Bill Number</label>
-                  <input
-                    required
-                    type="text"
-                    value={taxBillForm.taxBillNo}
-                    onChange={(e) => setTaxBillForm({ ...taxBillForm, taxBillNo: e.target.value })}
-                    placeholder="Enter Tax Bill No."
-                    className="w-full p-2.5 border border-slate-300 rounded bg-slate-50"
-                  />
-                </div>
-                {verificationResult && (
-                  <div className="p-3 bg-emerald-50 border border-emerald-200 rounded text-emerald-800 font-mono">
-                    <p className="font-bold">Status: {verificationResult.status || 'Verified Successfully'}</p>
-                    {verificationResult.message && <p>{verificationResult.message}</p>}
-                  </div>
-                )}
-              </div>
-              <div className="flex justify-end gap-2 px-6 py-3 border-t border-slate-200 bg-slate-50">
-                <button type="button" onClick={closeModal} className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded shadow-xs cursor-pointer">Close</button>
-                <button type="submit" disabled={verifying} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded shadow-xs cursor-pointer">
-                  {verifying ? 'Verifying...' : 'Verify'}
-                </button>
-              </div>
-            </form>
-          )}
-          {isModalOpen === 'or-number' && (
-            <form onSubmit={handleTaxBillVerification} className="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden">
-              <div className="flex justify-between items-center px-6 py-4 border-b border-slate-200 bg-slate-50">
-                <h3 className="font-bold text-sm text-slate-800">O.R. NUMBER VERIFICATION</h3>
-                <button type="button" onClick={closeModal} className="text-slate-400 hover:text-slate-600 font-bold text-lg cursor-pointer">✕</button>
-              </div>
-              <div className="p-6 space-y-4 text-xs">
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">Tax Identification Number (TIN)</label>
-                  <input
-                    required
-                    type="text"
-                    value={orForm.tin}
-                    onChange={(e) => setOrForm({ ...orForm, tin: e.target.value })}
-                    placeholder="000-000-000-000"
-                    className="w-full p-2.5 border border-slate-300 rounded bg-slate-50"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">Mayor's Permit Number</label>
-                  <input
-                    required
-                    type="text"
-                    value={orForm.permitNo}
-                    onChange={(e) => setOrForm({ ...orForm, permitNo: e.target.value })}
-                    placeholder="Enter Mayor's Permit No."
-                    className="w-full p-2.5 border border-slate-300 rounded bg-slate-50"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">O.R. Number</label>
-                  <input
-                    required
-                    type="text"
-                    value={orForm.orNo}
-                    onChange={(e) => setOrForm({ ...orForm, orNo: e.target.value })}
-                    placeholder="Enter Official Receipt (O.R.) No."
-                    className="w-full p-2.5 border border-slate-300 rounded bg-slate-50"
-                  />
-                </div>
-                {verificationResult && (
-                  <div className="p-3 bg-emerald-50 border border-emerald-200 rounded text-emerald-800 font-mono">
-                    <p className="font-bold">Official Receipt Verified Successfully</p>
-                    <p>Paid Amount: ₱{verificationResult.amount || 'N/A'}</p>
-                    {verificationResult.status && <p>Status: {verificationResult.status}</p>}
-                  </div>
-                )}
-              </div>
-              <div className="flex justify-end gap-2 px-6 py-3 border-t border-slate-200 bg-slate-50">
-                <button type="button" onClick={closeModal} className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded shadow-xs cursor-pointer">Close</button>
-                <button type="submit" disabled={verifying} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded shadow-xs cursor-pointer">
-                  {verifying ? 'Verifying...' : 'Verify'}
-                </button>
-              </div>
-            </form>
-          )}
+
           {isModalOpen === 'sales-declaration' && (
             <form onSubmit={handleSalesDeclarationSubmit} className="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden">
               <div className="flex justify-between items-center px-6 py-4 border-b border-slate-200 bg-slate-50">
