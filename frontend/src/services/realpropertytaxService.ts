@@ -309,7 +309,7 @@ export const saveRPTApplication = async (
 
 
 export const searchRPTByTDN = async (
-  tdn: string
+  query: string = ''
 ): Promise<{
   found: boolean;
   matchedTdn?: string;
@@ -319,36 +319,29 @@ export const searchRPTByTDN = async (
   message?: string;
 }> => {
   try {
-    const response = await fetch(
-      `${API_BASE_URL}/api/rpt/search?tdn=${encodeURIComponent(
-        tdn.trim()
-      )}`
-    );
+    const q = query.trim();
+    const url = q
+      ? `${API_BASE_URL}/api/rpt/search?query=${encodeURIComponent(q)}`
+      : `${API_BASE_URL}/api/rpt/search?query=ALL`;
 
-    const data =
-      await response.json();
+    const response = await fetch(url);
+    const data = await response.json();
 
     if (!response.ok) {
       return {
         found: false,
-        message:
-          data.message ||
-          `No property records found for ${tdn}`,
+        properties: [],
+        message: data.message || `No property records found.`,
       };
     }
 
     return data;
   } catch (error: any) {
-    console.error(
-      'Error searching TDN:',
-      error
-    );
-
+    console.error('Error searching TDN:', error);
     return {
       found: false,
-      message:
-        error.message ||
-        'Network error while searching Tax Declaration.',
+      properties: [],
+      message: error.message || 'Network error while searching property records.',
     };
   }
 };

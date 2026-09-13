@@ -384,6 +384,30 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
     setTimeout(() => setToastMessage(null), 4000);
   };
 
+  const loadCitizenProperties = async (ownerName?: string) => {
+    try {
+      let result = ownerName ? await searchRPTByTDN(ownerName) : { found: false, properties: [] };
+      if (!result.found || !result.properties || result.properties.length === 0) {
+        result = await searchRPTByTDN("ALL");
+      }
+
+      if (result.found && result.properties && result.properties.length > 0) {
+        const mappedProps: PropertyItem[] = result.properties.map((p: any) => ({
+          ...p,
+          selectedPaymentOption: "Full",
+          computedPayableAmount: p.balance || p.totalAssessment || 0,
+          selectedQuarters: { q1: true, q2: true, q3: true, q4: true },
+        }));
+
+        setAssociatedProperties(mappedProps);
+        setSelectedTdnIds(new Set(mappedProps.map((p) => p.taxDeclarationNumber)));
+        setVerifiedOwnerName(result.ownerName || mappedProps[0]?.ownerName || "Property Owner");
+      }
+    } catch (e) {
+      console.error("Failed to load citizen properties:", e);
+    }
+  };
+
   useEffect(() => {
     const session = getStoredCitizenSession();
     if (session) {
@@ -424,17 +448,14 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
 
   useEffect(() => {
     loadApplications();
+    const session = getStoredCitizenSession();
+    loadCitizenProperties(session?.fullname);
   }, []);
 
 
   const handleExecuteTdnSearch = async (e?: FormEvent) => {
     if (e) e.preventDefault();
     setSearchError("");
-
-    if (!searchTdnInput.trim()) {
-      setSearchError("Please enter a valid Tax Declaration Number.");
-      return;
-    }
 
     if (dailySearchQuota <= 0) {
       setSearchError("You have reached your 20/20 daily search quota limit. Please try again tomorrow.");
@@ -444,25 +465,30 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
     setIsSearchingTdn(true);
 
     try {
-      const result = await searchRPTByTDN(searchTdnInput);
+      const query = searchTdnInput.trim() || (currentUser?.fullname || "ALL");
+      const result = await searchRPTByTDN(query);
 
       if (result.found && result.properties && result.properties.length > 0) {
-        setDailySearchQuota((prev) => Math.max(0, prev - 1));
+        if (searchTdnInput.trim()) {
+          setDailySearchQuota((prev) => Math.max(0, prev - 1));
+        }
         setVerifiedOwnerName(result.ownerName || result.properties[0].ownerName || "Property Owner");
 
         const mappedProps: PropertyItem[] = result.properties.map((p: any) => ({
           ...p,
           selectedPaymentOption: "Full",
-          computedPayableAmount: p.balance || p.totalAssessment || 1020.0,
+          computedPayableAmount: p.balance || p.totalAssessment || 0,
           selectedQuarters: { q1: true, q2: true, q3: true, q4: true },
         }));
 
         setAssociatedProperties(mappedProps);
         setSelectedTdnIds(new Set(mappedProps.map((p) => p.taxDeclarationNumber)));
 
-        setIsOwnerModalOpen(true);
+        if (searchTdnInput.trim()) {
+          setIsOwnerModalOpen(true);
+        }
       } else {
-        setSearchError(result.message || `Tax Declaration Number "${searchTdnInput}" not found in city records.`);
+        setSearchError(result.message || `No property records found matching "${searchTdnInput}".`);
       }
     } catch (err: any) {
       setSearchError(err.message || "Failed to query city database.");
@@ -1406,15 +1432,24 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
 
                         <div>
                           <label className="rpt-label block mb-1.5">
-                            TDN:
+                            {searchType === "Property Owner"
+                              ? "Owner Name:"
+                              : searchType === "Property Identification No. (PIN)"
+                              ? "PIN / PSPIN:"
+                              : "TDN:"}
                           </label>
                           <input
                             type="text"
-                            required
                             value={searchTdnInput}
-                            onChange={(e) => setSearchTdnInput(e.target.value.toUpperCase())}
-                            placeholder="____________"
-                            className="rpt-field w-full px-3 uppercase"
+                            onChange={(e) => setSearchTdnInput(e.target.value)}
+                            placeholder={
+                              searchType === "Property Owner"
+                                ? "Search owner name..."
+                                : searchType === "Property Identification No. (PIN)"
+                                ? "Enter PIN..."
+                                : "Enter TDN or leave empty for all..."
+                            }
+                            className="rpt-field w-full px-3"
                           />
                         </div>
 

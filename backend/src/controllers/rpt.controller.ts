@@ -569,79 +569,68 @@ export async function searchRptByTdn(
   req: Request,
   res: Response
 ): Promise<void> {
-  const rawTdn = String(
+  const rawQuery = String(
     req.query.tdn ||
+    req.query.query ||
+    req.query.q ||
+    req.query.search ||
+    req.query.owner ||
     req.params.tdn ||
     ''
   ).trim();
 
-  if (!rawTdn) {
-    res.status(400).json({
-      message:
-        'Please provide a Tax Declaration Number.'
-    });
-    return;
-  }
-
   try {
-    const directResult = await pool.query(
-      `SELECT *
-       FROM lgu_rpt_records
-       WHERE LOWER(
-         REPLACE(COALESCE(taxdeclarationnumber, tax_declaration_number, ''), ' ', '')
-       )
-       =
-       LOWER(
-         REPLACE($1, ' ', '')
-       )
-       LIMIT 1`,
-      [rawTdn]
-    );
+    let rows: any[] = [];
+    let matchedOwner = 'Property Owner';
 
-    if (directResult.rowCount === 0) {
-      res.status(404).json({
-        found: false,
-        message:
-          `Tax Declaration Number "${rawTdn}" was not found in the city assessment records.`
-      });
-      return;
+    if (!rawQuery || rawQuery.toUpperCase() === 'ALL') {
+      const allResult = await pool.query(
+        `SELECT * FROM lgu_rpt_records ORDER BY id ASC`
+      );
+      rows = allResult.rows;
+      if (rows.length > 0) {
+        matchedOwner = rows[0].owner_name || rows[0].ownername || 'Property Owner';
+      }
+    } else {
+      const searchPattern = `%${rawQuery}%`;
+      const searchResult = await pool.query(
+        `SELECT *
+         FROM lgu_rpt_records
+         WHERE
+           LOWER(REPLACE(COALESCE(tax_declaration_number, taxdeclarationnumber, ''), ' ', '')) LIKE LOWER(REPLACE($1, ' ', ''))
+           OR LOWER(COALESCE(owner_name, ownername, '')) LIKE LOWER($2)
+           OR LOWER(COALESCE(pin, '')) LIKE LOWER($2)
+           OR LOWER(COALESCE(new_pspin, newpspin, '')) LIKE LOWER($2)
+           OR LOWER(COALESCE(property_location, propertylocation, '')) LIKE LOWER($2)
+           OR LOWER(COALESCE(barangay, '')) LIKE LOWER($2)
+         ORDER BY id ASC`,
+        [searchPattern, searchPattern]
+      );
+
+      if (searchResult.rowCount === 0) {
+        res.status(404).json({
+          found: false,
+          properties: [],
+          message: `No assessment records found matching "${rawQuery}".`
+        });
+        return;
+      }
+
+      rows = searchResult.rows;
+      const firstRow = rows[0];
+      matchedOwner = firstRow.owner_name || firstRow.ownername || 'Property Owner';
+
+      // Also get all properties by the same owner if found
+      if (matchedOwner && matchedOwner !== 'Property Owner') {
+        const ownerRecords = await pool.query(
+          `SELECT * FROM lgu_rpt_records WHERE LOWER(TRIM(COALESCE(owner_name, ownername, ''))) = LOWER(TRIM($1)) ORDER BY id ASC`,
+          [matchedOwner]
+        );
+        if (ownerRecords.rows.length > rows.length) {
+          rows = ownerRecords.rows;
+        }
+      }
     }
-
-    const matchedRecord =
-      directResult.rows[0];
-
-    const ownerName =
-      matchedRecord.ownername ||
-      matchedRecord.owner_name ||
-      matchedRecord.ownerName;
-
-    const associatedResult = await pool.query(
-      `SELECT *
-       FROM lgu_rpt_records
-       WHERE
-       (
-         LOWER(TRIM(COALESCE(ownername, owner_name, '')))
-         =
-         LOWER(TRIM($1))
-       )
-       OR
-       (
-         pin IS NOT NULL
-         AND SUBSTRING(pin FROM 1 FOR 10)
-             =
-             SUBSTRING($2 FROM 1 FOR 10)
-       )
-       ORDER BY COALESCE(taxdeclarationnumber, tax_declaration_number, '') ASC`,
-      [
-        ownerName || '',
-        matchedRecord.pin || ''
-      ]
-    );
-
-    const rows =
-      associatedResult.rows.length > 0
-        ? associatedResult.rows
-        : [matchedRecord];
 
     const properties = rows.map(
       (row: any) => ({
@@ -732,7 +721,7 @@ export async function searchRptByTdn(
     res.json({
       found: true,
       ownerName:
-        ownerName || 'Property Owner',
+        matchedOwner || 'Property Owner',
       properties
     });
   } catch (err) {
