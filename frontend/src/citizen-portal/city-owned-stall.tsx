@@ -430,22 +430,38 @@ export default function MarketStallApplication() {
     };
 
     return (
-        <CitizenLayout activeTitle="City-Owned Stall Application" activeNav="market">
-            <div className="space-y-8">
-                <div className="bg-white rounded-3xl p-6 sm:p-10 border border-slate-200 shadow-sm space-y-8">
-                    <div className="border-b border-slate-200 pb-5">
-                        <span className="text-[11px] font-bold text-blue-900 uppercase tracking-wider">Gov Serv MDAD Portal</span>
-                        <h2 className="text-2xl font-black text-slate-900 tracking-tight">NEW MARKET STALL APPLICATION</h2>
+        <CitizenLayout activeTitle="City-Owned Market" activeNav="market">
+            <div className="flex flex-col justify-between w-full">
+                <div>
+                    {/* Top Hero Banner Matching Business Tax */}
+                    <div className="-mx-4 sm:-mx-6 lg:-mx-8 -mt-4 sm:-mt-6 lg:-mt-8 relative bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 h-36 sm:h-48 overflow-hidden flex items-center justify-center border-b-4 border-blue-600">
+                        <div className="absolute inset-0 opacity-30 bg-[radial-gradient(#3b82f6_1px,transparent_1px)] [background-size:16px_16px]"></div>
+
+                        <div className="relative z-10 text-center px-4">
+                            <h1 className="text-xl sm:text-3xl font-extrabold text-white tracking-wide uppercase">
+                                2026 City-Owned Market Stall Portal
+                            </h1>
+                            <p className="text-xs sm:text-sm text-slate-200 mt-1 max-w-xl mx-auto">
+                                Apply for new municipal market stalls and select preferred locations and sections.
+                            </p>
+                        </div>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-slate-50 p-5 rounded-2xl border border-slate-200">
-                        <label htmlFor="palengke-select" className="font-bold text-sm text-slate-700 w-44">City Markets:</label>
+                    <div className="max-w-6xl mx-auto px-4 py-6 space-y-8">
+                        <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-10 border border-slate-200 dark:border-slate-800 shadow-sm space-y-8">
+                            <div className="border-b border-slate-200 dark:border-slate-800 pb-5">
+                                <span className="text-[11px] font-bold text-blue-900 dark:text-blue-400 uppercase tracking-wider">Gov Serv MDAD Portal</span>
+                                <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">NEW MARKET STALL APPLICATION</h2>
+                            </div>
+
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-slate-50 dark:bg-slate-800/60 p-5 rounded-2xl border border-slate-200 dark:border-slate-700">
+                        <label htmlFor="palengke-select" className="font-bold text-sm text-slate-700 dark:text-slate-300 w-44">City Markets:</label>
                         <div className="flex-1 w-full max-w-md">
                             <select
                                 id="palengke-select"
                                 value={selectedMarket}
                                 onChange={(e) => setSelectedMarket(e.target.value)}
-                                className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900 shadow-sm"
+                                className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-sm font-semibold text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-900 shadow-sm"
                             >
                                 <option value="">Select a City Market</option>
                                 <option value="Galas">Galas City-Owned Market</option>
@@ -464,27 +480,27 @@ export default function MarketStallApplication() {
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 pt-2">
 
                             <div className="lg:col-span-5 space-y-6">
-                                <div className="space-y-1.5 bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
-                                    <h4 className="text-xs font-black uppercase text-slate-400 tracking-wider">Address:</h4>
-                                    <p className="text-sm font-bold text-slate-800 leading-relaxed">{marketData.address}</p>
+                                <div className="space-y-1.5 bg-white dark:bg-slate-800/80 p-5 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
+                                    <h4 className="text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Address:</h4>
+                                    <p className="text-sm font-bold text-slate-800 dark:text-slate-200 leading-relaxed">{marketData.address}</p>
                                 </div>
 
-                                <div className="space-y-2 bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
-                                    <h4 className="text-xs font-black uppercase text-slate-400 tracking-wider">Contact Person:</h4>
+                                <div className="space-y-2 bg-white dark:bg-slate-800/80 p-5 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
+                                    <h4 className="text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Contact Person:</h4>
                                     <div className="space-y-1 text-sm">
-                                        <p className="font-bold text-slate-900">{marketData.name}</p>
-                                        <p className="font-medium text-slate-600">{marketData.title}</p>
-                                        <p className="font-semibold text-slate-700">{marketData.phone}</p>
-                                        <a href={`mailto:${marketData.email}`} className="font-semibold text-blue-900 hover:underline block">{marketData.email}</a>
+                                        <p className="font-bold text-slate-900 dark:text-white">{marketData.name}</p>
+                                        <p className="font-medium text-slate-600 dark:text-slate-300">{marketData.title}</p>
+                                        <p className="font-semibold text-slate-700 dark:text-slate-300">{marketData.phone}</p>
+                                        <a href={`mailto:${marketData.email}`} className="font-semibold text-blue-900 dark:text-blue-400 hover:underline block">{marketData.email}</a>
                                     </div>
                                 </div>
 
-                                <div className="space-y-2 bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
-                                    <h4 className="text-xs font-black uppercase text-slate-400 tracking-wider">City Market Information</h4>
-                                    <div className="space-y-1 text-xs font-semibold text-slate-700">
-                                        <p>Total Number of Stalls: <span className="font-bold text-slate-900">{marketData.total}</span></p>
-                                        <p>Total Number of Vacant Stalls: <span className="font-bold text-emerald-600">{marketData.vacant}</span></p>
-                                        <p>Total Number of Occupied Stalls: <span className="font-bold text-rose-600">{marketData.occupied}</span></p>
+                                <div className="space-y-2 bg-white dark:bg-slate-800/80 p-5 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
+                                    <h4 className="text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">City Market Information</h4>
+                                    <div className="space-y-1 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                        <p>Total Number of Stalls: <span className="font-bold text-slate-900 dark:text-white">{marketData.total}</span></p>
+                                        <p>Total Number of Vacant Stalls: <span className="font-bold text-emerald-600 dark:text-emerald-400">{marketData.vacant}</span></p>
+                                        <p>Total Number of Occupied Stalls: <span className="font-bold text-rose-600 dark:text-rose-400">{marketData.occupied}</span></p>
                                     </div>
                                 </div>
 
@@ -495,17 +511,17 @@ export default function MarketStallApplication() {
                                 </div>
                             </div>
 
-                            <div className="lg:col-span-7 bg-slate-50 border-2 border-dashed border-slate-300 rounded-2xl p-6 flex flex-col items-center justify-center min-h-[380px] text-center space-y-3 cursor-pointer hover:border-blue-500 transition-all" onClick={() => setIsFloorPlanOpen(true)}>
-                                <div className="w-16 h-16 rounded-full bg-blue-50 text-blue-900 flex items-center justify-center shadow-inner">
-                                    <svg className="w-8 h-8 text-blue-800" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                            <div className="lg:col-span-7 bg-slate-50 dark:bg-slate-800/60 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-6 flex flex-col items-center justify-center min-h-[380px] text-center space-y-3 cursor-pointer hover:border-blue-500 transition-all" onClick={() => setIsFloorPlanOpen(true)}>
+                                <div className="w-16 h-16 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-900 dark:text-blue-400 flex items-center justify-center shadow-inner">
+                                    <svg className="w-8 h-8 text-blue-800 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
                                     </svg>
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-slate-800 text-base">Market Floor Plan Preview</h3>
-                                    <p className="text-xs text-slate-500 mt-1 max-w-xs">Click here or on the button to open the interactive floor plan layout and check available stalls by floor.</p>
+                                    <h3 className="font-bold text-slate-800 dark:text-white text-base">Market Floor Plan Preview</h3>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xs">Click here or on the button to open the interactive floor plan layout and check available stalls by floor.</p>
                                 </div>
-                                <span className="inline-block bg-white text-blue-900 border border-blue-200 text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm">Open Floor Plan &rarr;</span>
+                                <span className="inline-block bg-white dark:bg-slate-800 text-blue-900 dark:text-blue-400 border border-blue-200 dark:border-blue-800 text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm">Open Floor Plan &rarr;</span>
                             </div>
                         </div>
                     )}
@@ -514,24 +530,24 @@ export default function MarketStallApplication() {
 
             {isFloorPlanOpen && (
                 <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-40 flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
-                    <div className="bg-white rounded-2xl sm:rounded-3xl max-w-6xl w-full max-h-[94vh] flex flex-col shadow-2xl relative overflow-hidden">
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl max-w-6xl w-full max-h-[94vh] flex flex-col shadow-2xl relative border border-slate-200 dark:border-slate-800 overflow-hidden">
 
-                        <div className="px-4 sm:px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                        <div className="px-4 sm:px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/80">
                             <div>
-                                <span className="text-[10px] font-bold uppercase tracking-wider text-blue-900">Interactive Layout</span>
-                                <h3 className="text-base sm:text-lg font-black text-slate-900">Market Floor Plan - {selectedMarket || "Galas"} City-Owned Market</h3>
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-blue-900 dark:text-blue-400">Interactive Layout</span>
+                                <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">Market Floor Plan - {selectedMarket || "Galas"} City-Owned Market</h3>
                             </div>
-                            <button onClick={() => setIsFloorPlanOpen(false)} className="w-8 h-8 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold flex items-center justify-center transition-colors">✕</button>
+                            <button onClick={() => setIsFloorPlanOpen(false)} className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold flex items-center justify-center transition-colors">✕</button>
                         </div>
 
-                        <div className="p-4 bg-white border-b border-slate-200 flex flex-wrap items-center justify-between gap-4">
+                        <div className="p-4 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-4">
                             <div className="flex items-center space-x-3">
-                                <label htmlFor="floor-select" className="text-xs font-bold text-slate-700 uppercase">Select a Floor:</label>
+                                <label htmlFor="floor-select" className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase">Select a Floor:</label>
                                 <select
                                     id="floor-select"
                                     value={selectedFloor}
                                     onChange={(e) => setSelectedFloor(e.target.value)}
-                                    className="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900 shadow-sm"
+                                    className="bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-900 shadow-sm"
                                 >
                                     {Array.from({ length: marketData?.floors || 3 }, (_, i) => i + 1).map((f) => (
                                         <option key={f} value={f}>
@@ -542,19 +558,19 @@ export default function MarketStallApplication() {
                             </div>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-100">
-                            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-x-auto flex flex-col items-center">
-                                <div className="relative w-full max-w-4xl bg-white border-4 border-slate-800 rounded-xl p-4 shadow-inner min-h-[500px]">
+                        <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-100 dark:bg-slate-950">
+                            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-x-auto flex flex-col items-center">
+                                <div className="relative w-full max-w-4xl bg-white dark:bg-slate-900 border-4 border-slate-800 dark:border-slate-700 rounded-xl p-4 shadow-inner min-h-[500px]">
 
                                     {selectedFloor === "1" && (
                                         <div>
-                                            <div className="text-center font-bold text-xs bg-slate-200 py-1 border border-slate-400 mb-4 tracking-widest text-slate-700">
+                                            <div className="text-center font-bold text-xs bg-slate-200 dark:bg-slate-800 py-1 border border-slate-400 dark:border-slate-700 mb-4 tracking-widest text-slate-700 dark:text-slate-300">
                                                 {(selectedMarket || "GALAS").toUpperCase()} MARKET - GROUND FLOOR (WET & DRY SECTION)
                                             </div>
                                             <div className="grid grid-cols-12 gap-4 relative py-2">
-                                                <div className="col-span-6 bg-slate-100 border-2 border-slate-700 rounded-lg p-3 relative space-y-4">
+                                                <div className="col-span-6 bg-slate-100 dark:bg-slate-800/80 border-2 border-slate-700 dark:border-slate-600 rounded-lg p-3 relative space-y-4">
                                                     <div>
-                                                        <div className="text-[10px] font-bold text-center text-blue-900 bg-blue-100 py-0.5 border border-blue-300 mb-2 uppercase">FISH SECTION</div>
+                                                        <div className="text-[10px] font-bold text-center text-blue-900 dark:text-blue-300 bg-blue-100 dark:bg-blue-950/80 py-0.5 border border-blue-300 dark:border-blue-800 mb-2 uppercase">FISH SECTION</div>
                                                         <div className="grid grid-cols-6 gap-1">
                                                             {(() => {
                                                                 const st1 = getStallRealtimeStatus(1, "Fish");
@@ -576,9 +592,9 @@ export default function MarketStallApplication() {
                                                             })()}
                                                         </div>
                                                     </div>
-                                                    <div className="bg-slate-300 text-slate-800 font-extrabold text-xs text-center py-2 tracking-widest border border-slate-400">M A I N &nbsp; H A L L W A Y</div>
+                                                    <div className="bg-slate-300 dark:bg-slate-700 text-slate-800 dark:text-slate-200 font-extrabold text-xs text-center py-2 tracking-widest border border-slate-400 dark:border-slate-600">M A I N &nbsp; H A L L W A Y</div>
                                                     <div>
-                                                        <div className="text-[10px] font-bold text-center text-emerald-900 bg-emerald-100 py-0.5 border border-emerald-300 mb-2 uppercase">VEGETABLE SECTION</div>
+                                                        <div className="text-[10px] font-bold text-center text-emerald-900 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/80 py-0.5 border border-emerald-300 dark:border-emerald-800 mb-2 uppercase">VEGETABLE SECTION</div>
                                                         <div className="grid grid-cols-6 gap-1">
                                                             {(() => {
                                                                 const st12 = getStallRealtimeStatus(12, "Vegetables");
@@ -601,9 +617,9 @@ export default function MarketStallApplication() {
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <div className="col-span-6 bg-slate-100 border-2 border-slate-700 rounded-lg p-3 relative flex flex-col justify-between space-y-4">
+                                                <div className="col-span-6 bg-slate-100 dark:bg-slate-800/80 border-2 border-slate-700 dark:border-slate-600 rounded-lg p-3 relative flex flex-col justify-between space-y-4">
                                                     <div>
-                                                        <div className="text-[10px] font-bold text-center text-slate-800 bg-slate-200 py-0.5 border border-slate-400 mb-2 uppercase">DRY GOODS SECTION</div>
+                                                        <div className="text-[10px] font-bold text-center text-slate-800 dark:text-slate-300 bg-slate-200 dark:bg-slate-700 py-0.5 border border-slate-400 dark:border-slate-600 mb-2 uppercase">DRY GOODS SECTION</div>
                                                         <div className="grid grid-cols-4 gap-1">
                                                             {(() => {
                                                                 const st102 = getStallRealtimeStatus(102, "Dry Goods");
@@ -678,34 +694,34 @@ export default function MarketStallApplication() {
 
             {activeStall && (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[60] flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
-                    <div className="bg-white rounded-lg p-4 sm:p-6 max-w-sm w-full max-h-[94vh] overflow-y-auto space-y-4 shadow-2xl relative border border-slate-300">
-                        <div className="flex justify-between items-center pb-2">
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-sm w-full p-4 sm:p-6 shadow-2xl relative border border-slate-300 dark:border-slate-800 space-y-4">
+                        <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-3">
                             <div className="flex items-center space-x-2">
                                 <span className={`w-4 h-4 rounded-sm inline-block ${activeStall.availability === 'Occupied' ? 'bg-rose-600' : 'bg-emerald-500'}`}></span>
-                                <h3 className="text-base font-bold text-slate-900">Stall {activeStall.stallNum}</h3>
+                                <h3 className="text-base font-bold text-slate-900 dark:text-white">Stall {activeStall.stallNum}</h3>
                             </div>
-                            <button onClick={() => setActiveStall(null)} className="text-slate-500 hover:text-slate-800 font-bold text-base px-1 cursor-pointer">✕</button>
+                            <button onClick={() => setActiveStall(null)} className="text-slate-500 hover:text-slate-800 dark:hover:text-white font-bold text-base px-1 cursor-pointer">✕</button>
                         </div>
 
-                        <div className="space-y-2 text-xs text-slate-800">
-                            <p><strong>Stallholder Name:</strong> <span className="text-slate-700">{activeStall.holder}</span></p>
+                        <div className="space-y-2 text-xs text-slate-800 dark:text-slate-200">
+                            <p><strong>Stallholder Name:</strong> <span className="text-slate-700 dark:text-slate-300">{activeStall.holder}</span></p>
                             <p className="flex items-center gap-1.5">
                                 <strong>Stall Availability:</strong>
-                                <span className="inline-flex items-center gap-1 text-slate-700">
+                                <span className="inline-flex items-center gap-1 text-slate-700 dark:text-slate-300">
                                     <span className={`w-2 h-2 rounded-full ${activeStall.availability === 'Occupied' ? 'bg-rose-600' : 'bg-emerald-500'} inline-block`}></span>
                                     {activeStall.availability}
                                 </span>
                             </p>
-                            <p><strong>Section:</strong> <span className="text-slate-700">{activeStall.section}</span></p>
-                            <p><strong>Type:</strong> <span className="text-slate-700">{activeStall.type}</span></p>
-                            <p><strong>Size:</strong> <span className="text-slate-700">{activeStall.size}</span></p>
-                            <p><strong>Location Classification:</strong> <span className="text-slate-700">{activeStall.classification}</span></p>
-                            <p className="pt-1"><strong>Rental Fee (Monthly):</strong> <span className="text-slate-900">{activeStall.fee}</span></p>
+                            <p><strong>Section:</strong> <span className="text-slate-700 dark:text-slate-300">{activeStall.section}</span></p>
+                            <p><strong>Type:</strong> <span className="text-slate-700 dark:text-slate-300">{activeStall.type}</span></p>
+                            <p><strong>Size:</strong> <span className="text-slate-700 dark:text-slate-300">{activeStall.size}</span></p>
+                            <p><strong>Location Classification:</strong> <span className="text-slate-700 dark:text-slate-300">{activeStall.classification}</span></p>
+                            <p className="pt-1"><strong>Rental Fee (Monthly):</strong> <span className="text-slate-900 dark:text-white">{activeStall.fee}</span></p>
                         </div>
 
                         <div className="pt-2">
                             {activeStall.availability === 'Occupied' ? (
-                                <div className="bg-rose-50 border border-rose-200 text-rose-700 text-center font-bold py-2 px-3 rounded text-xs cursor-not-allowed select-none">
+                                <div className="bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-center font-bold py-2 px-3 rounded text-xs cursor-not-allowed select-none">
                                     This stall is currently occupied and cannot be applied for.
                                 </div>
                             ) : currentUser ? (
@@ -719,11 +735,11 @@ export default function MarketStallApplication() {
                                 <div className="space-y-1.5">
                                     <button
                                         disabled
-                                        className="w-full bg-slate-200 text-slate-400 font-medium py-2 px-4 rounded text-xs cursor-not-allowed text-center"
+                                        className="w-full bg-slate-200 dark:bg-slate-800 text-slate-400 font-medium py-2 px-4 rounded text-xs cursor-not-allowed text-center"
                                     >
                                         Apply Now
                                     </button>
-                                    <p className="text-[10px] text-rose-600 text-center font-medium">Please log in to your portal account to apply.</p>
+                                    <p className="text-[10px] text-rose-600 dark:text-rose-400 text-center font-medium">Please log in to your portal account to apply.</p>
                                 </div>
                             )}
                         </div>
@@ -733,57 +749,57 @@ export default function MarketStallApplication() {
 
             {isApplicationFormOpen && activeStall && (
                 <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[70] flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
-                    <div className="bg-white rounded-2xl max-w-md w-full max-h-[94vh] overflow-y-auto p-4 sm:p-6 shadow-2xl relative border border-slate-300 space-y-4">
-                        <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full max-h-[94vh] overflow-y-auto p-4 sm:p-6 shadow-2xl relative border border-slate-300 dark:border-slate-800 space-y-4">
+                        <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-3">
                             <div>
-                                <h3 className="text-sm font-bold text-slate-900 uppercase">Stall Lease Application Form</h3>
-                                <p className="text-[11px] text-slate-500">Stall #{activeStall.stallNum} ({activeStall.section}) - {selectedMarket} Market</p>
+                                <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase">Stall Lease Application Form</h3>
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400">Stall #{activeStall.stallNum} ({activeStall.section}) - {selectedMarket} Market</p>
                             </div>
-                            <button onClick={() => setIsApplicationFormOpen(false)} className="text-slate-500 hover:text-slate-800 font-bold text-sm cursor-pointer">✕</button>
+                            <button onClick={() => setIsApplicationFormOpen(false)} className="text-slate-500 hover:text-slate-800 dark:hover:text-white font-bold text-sm cursor-pointer">✕</button>
                         </div>
 
                         <form onSubmit={handleFormSubmit} className="space-y-3 text-xs">
                             {currentUser && (
-                                <div className="bg-blue-50 border border-blue-200 p-2.5 rounded-xl text-[11px] text-blue-900 flex items-center justify-between">
+                                <div className="bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-900 p-2.5 rounded-xl text-[11px] text-blue-900 dark:text-blue-300 flex items-center justify-between">
                                     <span>Logged in as: <strong>{currentUser.fullname}</strong></span>
-                                    <span className="text-[10px] bg-blue-200 px-2 py-0.5 rounded font-semibold">Active Session</span>
+                                    <span className="text-[10px] bg-blue-200 dark:bg-blue-900 px-2 py-0.5 rounded font-semibold">Active Session</span>
                                 </div>
                             )}
 
                             <div>
-                                <label className="block font-semibold text-slate-700 mb-1">First Name</label>
+                                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">First Name</label>
                                 <input
                                     type="text"
                                     required
                                     value={firstName}
                                     onChange={(e) => setFirstName(e.target.value)}
                                     placeholder="Enter first name..."
-                                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-900"
+                                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2.5 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-900"
                                 />
                             </div>
 
                             <div>
-                                <label className="block font-semibold text-slate-700 mb-1">Last Name</label>
+                                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Last Name</label>
                                 <input
                                     type="text"
                                     required
                                     value={lastName}
                                     onChange={(e) => setLastName(e.target.value)}
                                     placeholder="Enter last name..."
-                                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-900"
+                                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2.5 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-900"
                                 />
                             </div>
 
-                            <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-[11px] space-y-1 text-slate-600">
+                            <div className="bg-slate-50 dark:bg-slate-800/80 p-3 rounded-xl border border-slate-200 dark:border-slate-700 text-[11px] space-y-1 text-slate-600 dark:text-slate-300">
                                 <p><strong>Rental Fee:</strong> {activeStall.fee}</p>
                                 <p><strong>Market Location:</strong> {selectedMarket} Market</p>
                             </div>
 
-                            <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                            <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
                                 <button
                                     type="button"
                                     onClick={() => setIsApplicationFormOpen(false)}
-                                    className="px-4 py-2 font-semibold text-slate-600 hover:text-slate-900 cursor-pointer"
+                                    className="px-4 py-2 font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white cursor-pointer"
                                 >
                                     Cancel
                                 </button>
@@ -917,7 +933,8 @@ export default function MarketStallApplication() {
                     </div>
                 </div>
             )}
-
+                </div>
+            </div>
         </CitizenLayout>
     );
 }

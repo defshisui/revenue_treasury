@@ -205,47 +205,47 @@ export default function CitizenProfile() {
       <div className="max-w-5xl mx-auto w-full px-2 py-2">
           <div className="mb-3 flex items-center justify-between">
             <div>
-              <p className="text-[10px] font-bold tracking-widest text-blue-700 uppercase mb-0.5">
+              <p className="text-[10px] font-bold tracking-widest text-blue-700 dark:text-blue-400 uppercase mb-0.5">
                 Citizen Portal
               </p>
-              <h1 className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">
+              <h1 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">
                 My Profile
               </h1>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 Keep your personal information up to date.
               </p>
             </div>
             <button
               type="button"
               onClick={() => navigate("/citizen-portal")}
-              className="text-xs font-bold text-slate-600 hover:text-blue-700 bg-white border border-slate-200 px-4 py-2 rounded-xl shadow-xs transition cursor-pointer"
+              className="text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-blue-700 dark:hover:text-blue-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-4 py-2 rounded-xl shadow-xs transition cursor-pointer"
             >
               Back to Portal
             </button>
           </div>
 
           {status && (
-            <div className="mb-5 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-semibold px-4 py-3 rounded-2xl">
+            <div className="mb-5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-sm font-semibold px-4 py-3 rounded-2xl">
               {status}
             </div>
           )}
           {error && (
-            <div className="mb-5 bg-rose-50 border border-rose-200 text-rose-700 text-sm font-semibold px-4 py-3 rounded-2xl">
+            <div className="mb-5 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-sm font-semibold px-4 py-3 rounded-2xl">
               {error}
             </div>
           )}
 
           {loading ? (
-            <div className="flex items-center justify-center py-24 text-slate-400 font-semibold text-sm">
+            <div className="flex items-center justify-center py-24 text-slate-400 dark:text-slate-500 font-semibold text-sm">
               Loading profile…
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-4 items-start">
 
-              <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-sm flex flex-col items-center gap-2.5 h-fit">
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm flex flex-col items-center gap-2.5 h-fit">
 
                 <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
-                  <div className="w-20 h-20 rounded-full overflow-hidden border-4 border-slate-100 shadow-inner flex items-center justify-center bg-blue-600">
+                  <div className="w-20 h-20 rounded-full overflow-hidden border-4 border-slate-100 dark:border-slate-800 shadow-inner flex items-center justify-center bg-blue-600">
                     {avatarUrl ? (
                       <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                     ) : (
@@ -259,122 +259,122 @@ export default function CitizenProfile() {
                 <input ref={fileInputRef} type="file" accept="image/png,image/jpeg" className="hidden" onChange={handleAvatarChange} />
 
                 <div className="text-center">
-                  <p className="font-extrabold text-slate-900 text-sm">{fullName}</p>
-                  <p className="text-[11px] text-slate-500 mt-0.5">{sessionEmail}</p>
+                  <p className="font-extrabold text-slate-900 dark:text-white text-sm">{fullName}</p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">{sessionEmail}</p>
                 </div>
 
-                <span className="bg-blue-50 border border-blue-200 text-blue-700 text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+                <span className="bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-900 text-blue-700 dark:text-blue-400 text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
                   Citizen
                 </span>
 
-                <div className="w-full border-t border-slate-100 pt-4 space-y-2 text-xs">
+                <div className="w-full border-t border-slate-100 dark:border-slate-800 pt-4 space-y-2 text-xs">
                   <div className="flex justify-between">
-                    <span className="text-slate-500 font-semibold">Sex</span>
-                    <span className="font-bold text-slate-800">{form.sex || "—"}</span>
+                    <span className="text-slate-500 dark:text-slate-400 font-semibold">Sex</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200">{form.sex || "—"}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500 font-semibold">Birth Date</span>
-                    <span className="font-bold text-slate-800">{form.birthDate || "—"}</span>
+                    <span className="text-slate-500 dark:text-slate-400 font-semibold">Birth Date</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200">{form.birthDate || "—"}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500 font-semibold">City</span>
-                    <span className="font-bold text-slate-800">{form.city || "—"}</span>
+                    <span className="text-slate-500 dark:text-slate-400 font-semibold">City</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200">{form.city || "—"}</span>
                   </div>
                 </div>
               </div>
 
-              <form onSubmit={handleSubmit} className="bg-white border border-slate-200 rounded-3xl p-4 sm:p-5 shadow-sm space-y-3">
-                <h2 className="text-sm font-extrabold text-slate-900 mb-1">Personal Information</h2>
+              <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 sm:p-5 shadow-sm space-y-3">
+                <h2 className="text-sm font-extrabold text-slate-900 dark:text-white mb-1">Personal Information</h2>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="space-y-0.5">
-                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">First Name *</label>
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">First Name *</label>
                     <input name="firstName" required value={form.firstName} onChange={handleChange}
                       placeholder="First Name"
-                      className="w-full bg-[#EBF2FE] rounded-xl px-3 py-2 text-sm text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-600" />
+                      className="w-full bg-[#EBF2FE] dark:bg-slate-800 border border-transparent dark:border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-900 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-blue-600" />
                   </div>
                   <div className="space-y-0.5">
-                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Middle Name</label>
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Middle Name</label>
                     <input name="middleName" value={form.middleName} onChange={handleChange}
                       placeholder="Middle Name"
-                      className="w-full bg-[#EBF2FE] rounded-xl px-3 py-2 text-sm text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-600" />
+                      className="w-full bg-[#EBF2FE] dark:bg-slate-800 border border-transparent dark:border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-900 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-blue-600" />
                   </div>
                   <div className="space-y-0.5">
-                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Last Name *</label>
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Last Name *</label>
                     <input name="lastName" required value={form.lastName} onChange={handleChange}
                       placeholder="Last Name"
-                      className="w-full bg-[#EBF2FE] rounded-xl px-3 py-2 text-sm text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-600" />
+                      className="w-full bg-[#EBF2FE] dark:bg-slate-800 border border-transparent dark:border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-900 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-blue-600" />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="space-y-0.5">
-                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Suffix</label>
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Suffix</label>
                     <input name="suffix" value={form.suffix} onChange={handleChange}
                       placeholder="Jr., Sr., III"
-                      className="w-full bg-[#EBF2FE] rounded-xl px-3 py-2 text-sm text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-600" />
+                      className="w-full bg-[#EBF2FE] dark:bg-slate-800 border border-transparent dark:border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-900 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-blue-600" />
                   </div>
                   <div className="space-y-0.5">
-                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Sex *</label>
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Sex *</label>
                     <select name="sex" value={form.sex} onChange={handleChange}
-                      className="w-full bg-[#EBF2FE] rounded-xl px-3 py-2 text-sm text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-600 cursor-pointer">
+                      className="w-full bg-[#EBF2FE] dark:bg-slate-800 border border-transparent dark:border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-900 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-blue-600 cursor-pointer">
                       <option value="Male">Male</option>
                       <option value="Female">Female</option>
                       <option value="Other">Other</option>
                     </select>
                   </div>
                   <div className="space-y-0.5">
-                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Birth Date *</label>
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Birth Date *</label>
                     <input name="birthDate" type="date" required value={form.birthDate} onChange={handleChange}
-                      className="w-full bg-[#EBF2FE] rounded-xl px-3 py-2 text-sm text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-600 cursor-pointer" />
+                      className="w-full bg-[#EBF2FE] dark:bg-slate-800 border border-transparent dark:border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-900 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-blue-600 cursor-pointer" />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-0.5">
-                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Email Address</label>
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Email Address</label>
                     <input name="email" type="email" value={form.email} disabled
-                      className="w-full bg-slate-100 rounded-xl px-3 py-2 text-sm text-slate-500 font-medium cursor-not-allowed" />
-                    <p className="text-[10px] text-slate-400">Email cannot be changed here.</p>
+                      className="w-full bg-slate-100 dark:bg-slate-800/60 border border-transparent dark:border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-500 dark:text-slate-400 font-medium cursor-not-allowed" />
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500">Email cannot be changed here.</p>
                   </div>
                   <div className="space-y-0.5">
-                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Mobile Number *</label>
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Mobile Number *</label>
                     <input name="mobileNumber" required value={form.mobileNumber} onChange={(e) => {
                       const val = e.target.value.replace(/\D/g, "").slice(0, 11);
                       setForm((prev) => ({ ...prev, mobileNumber: val }));
                     }}
                       placeholder="09123456789" maxLength={11}
-                      className="w-full bg-[#EBF2FE] rounded-xl px-3 py-2 text-sm text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-600 tracking-wider" />
+                      className="w-full bg-[#EBF2FE] dark:bg-slate-800 border border-transparent dark:border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-900 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-blue-600 tracking-wider" />
                   </div>
                 </div>
 
                 <div className="space-y-0.5">
-                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Occupation</label>
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Occupation</label>
                   <input name="occupation" value={form.occupation} onChange={handleChange}
                     placeholder="e.g. Farmer, Teacher, Business Owner"
-                    className="w-full bg-[#EBF2FE] rounded-xl px-3 py-2 text-sm text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-600" />
+                    className="w-full bg-[#EBF2FE] dark:bg-slate-800 border border-transparent dark:border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-900 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-blue-600" />
                 </div>
 
-                <div className="border-t border-slate-100 pt-3 space-y-2.5">
-                  <h3 className="text-xs font-extrabold text-slate-800">Address</h3>
+                <div className="border-t border-slate-100 dark:border-slate-800 pt-3 space-y-2.5">
+                  <h3 className="text-xs font-extrabold text-slate-800 dark:text-slate-200">Address</h3>
                   <div className="space-y-0.5">
-                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">House No. / Street *</label>
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">House No. / Street *</label>
                     <input name="houseNoStreet" required value={form.houseNoStreet} onChange={handleChange}
                       placeholder="e.g. 12 Mabini St."
-                      className="w-full bg-[#EBF2FE] rounded-xl px-3 py-2 text-sm text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-600" />
+                      className="w-full bg-[#EBF2FE] dark:bg-slate-800 border border-transparent dark:border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-900 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-blue-600" />
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-0.5">
-                      <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Barangay *</label>
+                      <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Barangay *</label>
                       <input name="barangay" required value={form.barangay} onChange={handleChange}
                         placeholder="Barangay"
-                        className="w-full bg-[#EBF2FE] rounded-xl px-3 py-2 text-sm text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-600" />
+                        className="w-full bg-[#EBF2FE] dark:bg-slate-800 border border-transparent dark:border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-900 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-blue-600" />
                     </div>
                     <div className="space-y-0.5">
-                      <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">City / Municipality *</label>
+                      <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">City / Municipality *</label>
                       <input name="city" required value={form.city} onChange={handleChange}
                         placeholder="City"
-                        className="w-full bg-[#EBF2FE] rounded-xl px-3 py-2 text-sm text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-600" />
+                        className="w-full bg-[#EBF2FE] dark:bg-slate-800 border border-transparent dark:border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-900 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-blue-600" />
                     </div>
                   </div>
                 </div>

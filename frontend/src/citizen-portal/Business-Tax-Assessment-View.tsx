@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { API_BASE_URL } from '../config/api';
 import CitizenLayout from './CitizenLayout';
 import {
@@ -57,7 +57,6 @@ interface AppointmentRecord {
 }
 export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps> = ({ isCollapsed: _isCollapsed = false }) => {
   const location = useLocation();
-  const navigate = useNavigate();
   const [currentScreen, setCurrentScreen] = useState<ActiveScreen>('assessment-list');
   const [verificationType, setVerificationType] = useState<'tax-bill' | 'or-number'>('tax-bill');
   const [isModalOpen, setIsModalOpen] = useState<false | 'appointment' | 'sales-declaration'>(false);
@@ -452,7 +451,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
       <div className="flex flex-col justify-between w-full">
         <div>
 
-          <div className="-mx-4 sm:-mx-6 lg:-mx-8 -mt-4 sm:-mt-6 lg:-mt-8 relative w-full bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 h-36 sm:h-48 overflow-hidden flex items-center justify-center border-b-4 border-blue-600">
+          <div className="-mx-4 sm:-mx-6 lg:-mx-8 -mt-4 sm:-mt-6 lg:-mt-8 relative bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 h-36 sm:h-48 overflow-hidden flex items-center justify-center border-b-4 border-blue-600">
             <div className="absolute inset-0 opacity-30 bg-[radial-gradient(#3b82f6_1px,transparent_1px)] [background-size:16px_16px]"></div>
 
             <div className="relative z-10 text-center px-4">
@@ -471,41 +470,6 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                     ? "Authenticate official business tax bills and official receipts directly against municipal records."
                     : "Manage your online sales declarations and monitor permit assessment status."}
               </p>
-            </div>
-          </div>
-
-          <div className="max-w-6xl mx-auto px-4 pt-6 pb-2">
-            <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
-              <button
-                type="button"
-                onClick={() => navigate('/business-tax-assessment')}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${currentScreen === 'assessment-list'
-                    ? 'bg-blue-900 text-white shadow-md'
-                    : 'bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800'
-                  }`}
-              >
-                Assessments &amp; Payments
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate('/business-tax-assessment?tab=appointments')}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${currentScreen === 'appointments-list'
-                    ? 'bg-blue-900 text-white shadow-md'
-                    : 'bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800'
-                  }`}
-              >
-                My Appointments
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate('/business-tax-assessment?tab=verify')}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${currentScreen === 'verification'
-                    ? 'bg-blue-900 text-white shadow-md'
-                    : 'bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800'
-                  }`}
-              >
-                Tax Bill &amp; O.R. Verification
-              </button>
             </div>
           </div>
 
@@ -653,45 +617,45 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                 </form>
               </div>
             ) : currentScreen === 'appointments-list' ? (
-              <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4">
+              <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-5 space-y-4">
                 <div className="flex flex-wrap items-center justify-end gap-2">
                   <button onClick={() => openModal('appointment')} className="px-4 py-2 bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold rounded-md shadow-xs cursor-pointer">
                     + Request New Appointment
                   </button>
                 </div>
-                <div className="overflow-x-auto border border-slate-200 rounded-lg mt-4">
+                <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-lg mt-4">
                   <table className="w-full text-left text-xs">
                     <thead className="bg-blue-900 text-white font-semibold">
                       <tr>
                         <th className="p-3">DEPARTMENT</th>
                         <th className="p-3">APPOINTMENT TYPE</th>
                         <th className="p-3">BUSINESS NAME</th>
-                        <th className="p-3">SCHEDULE DATE & TIME</th>
+                        <th className="p-3">SCHEDULE DATE &amp; TIME</th>
                         <th className="p-3 text-center">STATUS</th>
                         <th className="p-3">REMARKS / NOTES</th>
                       </tr>
                     </thead>
                     <tbody>
                       {loading ? (
-                        <tr><td colSpan={6} className="p-8 text-center text-slate-500">Loading appointments...</td></tr>
+                        <tr><td colSpan={6} className="p-8 text-center text-slate-500 dark:text-slate-400">Loading appointments...</td></tr>
                       ) : userAppointments.length === 0 ? (
                         <tr><td colSpan={6} className="p-8 text-center text-slate-400">No appointments found. Click "Request New Appointment" to schedule one.</td></tr>
                       ) : (
                         userAppointments.map(apt => (
-                          <tr key={apt.id} className="border-b border-slate-100 hover:bg-slate-50">
-                            <td className="p-3 font-medium">{apt.department}</td>
-                            <td className="p-3 text-blue-600 font-semibold">{apt.appointmentType}</td>
+                          <tr key={apt.id} className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 text-slate-800 dark:text-slate-200">
+                            <td className="p-3 font-medium text-slate-900 dark:text-white">{apt.department}</td>
+                            <td className="p-3 text-blue-600 dark:text-blue-400 font-semibold">{apt.appointmentType}</td>
                             <td className="p-3">{apt.businessName || 'N/A'}</td>
                             <td className="p-3 font-mono">{apt.date} ({apt.timeSlot || 'All Day'})</td>
                             <td className="p-3 text-center">
-                              <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold ${apt.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-800  ' :
-                                apt.status === 'CANCELLED' ? 'bg-rose-100 text-rose-800  ' :
-                                  'bg-amber-100 text-amber-800  '
+                              <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold ${apt.status === 'APPROVED' ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300' :
+                                apt.status === 'CANCELLED' ? 'bg-rose-100 dark:bg-rose-950/80 text-rose-800 dark:text-rose-300' :
+                                  'bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300'
                                 }`}>
                                 {apt.status}
                               </span>
                             </td>
-                            <td className="p-3 italic text-slate-500">{apt.remarks || 'Under review by municipal staff.'}</td>
+                            <td className="p-3 italic text-slate-500 dark:text-slate-400">{apt.remarks || 'Under review by municipal staff.'}</td>
                           </tr>
                         ))
                       )}
@@ -700,7 +664,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                 </div>
               </div>
             ) : (
-              <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4">
+              <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-5 space-y-4">
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
                   <div className="flex items-center gap-2 w-full sm:w-auto">
                     <button onClick={() => openModal('sales-declaration')} className="px-4 py-2 bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold rounded-md shadow-xs cursor-pointer">
@@ -708,13 +672,13 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                     </button>
                   </div>
                 </div>
-                <div className="flex flex-col md:flex-row justify-between items-center gap-3 pt-4 border-t border-slate-200">
+                <div className="flex flex-col md:flex-row justify-between items-center gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
                   <div className="w-full md:w-64">
-                    <label className="block text-[11px] font-semibold text-slate-500 mb-1">Application Status</label>
+                    <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">Application Status</label>
                     <select
                       value={statusFilter}
                       onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-                      className="w-full p-2 text-xs border border-slate-300 rounded bg-slate-50"
+                      className="w-full p-2 text-xs border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-200"
                     >
                       <option value="ALL">ALL</option>
                       <option value="PENDING">Pending</option>
@@ -724,11 +688,11 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                   </div>
                   <div className="flex items-center gap-2 w-full md:w-auto justify-end">
                     <div className="w-full sm:w-48">
-                      <label className="block text-[11px] font-semibold text-slate-500 mb-1">Search By:</label>
+                      <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">Search By:</label>
                       <select
                         value={searchType}
                         onChange={(e) => setSearchType(e.target.value)}
-                        className="w-full p-2 text-xs border border-slate-300 rounded bg-slate-50"
+                        className="w-full p-2 text-xs border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-200"
                       >
                         <option value="Tracking/MP No.">Tracking/MP No.</option>
                         <option value="Business Name">Business Name</option>
@@ -741,16 +705,16 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
                           placeholder="Search..."
-                          className="w-full p-2 text-xs border border-slate-300 rounded bg-slate-50"
+                          className="w-full p-2 text-xs border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white"
                         />
-                        <button onClick={() => { setCurrentPage(1); fetchAssessments(); }} className="px-3 py-2 bg-slate-200 text-slate-700 text-xs font-semibold rounded cursor-pointer">
+                        <button onClick={() => { setCurrentPage(1); fetchAssessments(); }} className="px-3 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded cursor-pointer">
                           Search
                         </button>
                       </div>
                     </div>
                   </div>
                 </div>
-                <div className="overflow-x-auto border border-slate-200 rounded-lg">
+                <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-lg">
                   <table className="w-full text-left text-xs">
                     <thead className="bg-blue-900 text-white font-semibold">
                       <tr>
@@ -766,49 +730,49 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                     <tbody>
                       {loading ? (
                         <tr>
-                          <td colSpan={7} className="p-8 text-center text-slate-500 bg-slate-50">
+                          <td colSpan={7} className="p-8 text-center text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900">
                             Loading records from server...
                           </td>
                         </tr>
                       ) : fetchError ? (
                         <tr>
-                          <td colSpan={7} className="p-8 text-center text-rose-500 bg-slate-50">
+                          <td colSpan={7} className="p-8 text-center text-rose-500 bg-slate-50 dark:bg-slate-900">
                             Error: {fetchError}
                           </td>
                         </tr>
                       ) : assessments.length === 0 ? (
                         <tr>
-                          <td colSpan={7} className="p-8 text-center text-slate-400 bg-slate-50">
+                          <td colSpan={7} className="p-8 text-center text-slate-400 bg-slate-50 dark:bg-slate-900">
                             No data available in table
                           </td>
                         </tr>
                       ) : (
                         assessments.map((item) => (
-                          <tr key={item.id} className="border-b border-slate-100 hover:bg-slate-50">
-                            <td className="p-3 font-medium">{item.trackingNumber}</td>
-                            <td className="p-3">{item.businessName}</td>
+                          <tr key={item.id} className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 text-slate-800 dark:text-slate-200">
+                            <td className="p-3 font-medium text-blue-600 dark:text-blue-400">{item.trackingNumber}</td>
+                            <td className="p-3 font-medium text-slate-900 dark:text-white">{item.businessName}</td>
                             <td className="p-3">{item.businessOwner}</td>
                             <td className="p-3">
-                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${item.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-800  ' :
-                                item.status === 'REJECTED' ? 'bg-rose-100 text-rose-800  ' :
-                                  'bg-amber-100 text-amber-800  '
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${item.status === 'APPROVED' ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300' :
+                                item.status === 'REJECTED' ? 'bg-rose-100 dark:bg-rose-950/80 text-rose-800 dark:text-rose-300' :
+                                  'bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300'
                                 }`}>
                                 {item.status}
                               </span>
                             </td>
                             <td className="p-3">
                               <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${item.paymentStatus === 'PAID'
-                                ? 'bg-emerald-100 text-emerald-800  '
-                                : 'bg-amber-100 text-amber-800  '
+                                ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300'
+                                : 'bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300'
                                 }`}>
                                 {item.paymentStatus}
                               </span>
                             </td>
-                            <td className="p-3">{new Date(item.applicationDate).toLocaleDateString()}</td>
+                            <td className="p-3 text-slate-600 dark:text-slate-300">{new Date(item.applicationDate).toLocaleDateString()}</td>
                             <td className="p-3">
                               <button
                                 onClick={() => setSelectedAssessmentView(item)}
-                                className="text-blue-600 hover:underline font-semibold cursor-pointer"
+                                className="text-blue-600 dark:text-blue-400 hover:underline font-semibold cursor-pointer"
                               >
                                 View
                               </button>
@@ -819,20 +783,20 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                     </tbody>
                   </table>
                 </div>
-                <div className="flex justify-between items-center text-xs text-slate-500 pt-2">
+                <div className="flex justify-between items-center text-xs text-slate-500 dark:text-slate-400 pt-2">
                   <span>Page {currentPage} of {totalPages}</span>
                   <div className="flex gap-1">
                     <button
                       disabled={currentPage <= 1 || loading}
                       onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                      className="px-3 py-1 border border-slate-300 rounded disabled:opacity-40 cursor-pointer hover:bg-slate-100"
+                      className="px-3 py-1 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded disabled:opacity-40 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700"
                     >
                       Previous
                     </button>
                     <button
                       disabled={currentPage >= totalPages || loading}
                       onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                      className="px-3 py-1 border border-slate-300 rounded disabled:opacity-40 cursor-pointer hover:bg-slate-100"
+                      className="px-3 py-1 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded disabled:opacity-40 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700"
                     >
                       Next
                     </button>
@@ -844,20 +808,20 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
         </div>
       </div>
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
           {isModalOpen === 'appointment' && (
-            <form onSubmit={handleAppointmentSubmit} className="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-xl max-h-[94vh] overflow-y-auto">
-              <div className="flex justify-between items-center px-6 py-4 border-b border-slate-200 bg-slate-50">
-                <h3 className="font-bold text-sm text-slate-800">Schedule Municipal Appointment</h3>
-                <button type="button" onClick={closeModal} className="text-slate-400 hover:text-slate-600 font-bold text-lg cursor-pointer">✕</button>
+            <form onSubmit={handleAppointmentSubmit} className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-xl max-h-[94vh] overflow-y-auto">
+              <div className="flex justify-between items-center px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800">
+                <h3 className="font-bold text-sm text-slate-800 dark:text-white">Schedule Municipal Appointment</h3>
+                <button type="button" onClick={closeModal} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-bold text-lg cursor-pointer">✕</button>
               </div>
               <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto text-xs">
                 <div>
-                  <label className="block text-[11px] font-semibold text-red-600 mb-1">* Department</label>
+                  <label className="block text-[11px] font-semibold text-red-600 dark:text-red-400 mb-1">* Department</label>
                   <select
                     value={aptForm.department}
                     onChange={(e) => setAptForm({ ...aptForm, department: e.target.value })}
-                    className="w-full p-2 border border-slate-300 rounded bg-slate-50"
+                    className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-200"
                   >
                     <option>City Treasurer's Office</option>
                     <option>Business Permits and Licensing Department (BPLD)</option>
@@ -865,12 +829,12 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-semibold text-red-600 mb-1">* Appointment Type / Purpose</label>
+                  <label className="block text-[11px] font-semibold text-red-600 dark:text-red-400 mb-1">* Appointment Type / Purpose</label>
                   <select
                     required
                     value={aptForm.appointmentType}
                     onChange={(e) => setAptForm({ ...aptForm, appointmentType: e.target.value })}
-                    className="w-full p-2 border border-slate-300 rounded bg-slate-50"
+                    className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-200"
                   >
                     <option value="">Select appointment purpose...</option>
                     <option value="Business Tax Assessment Review">Business Tax Assessment Review</option>
@@ -881,70 +845,70 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">Registered Business Name</label>
+                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Registered Business Name</label>
                     <input
                       type="text"
                       value={aptForm.businessName}
                       onChange={(e) => setAptForm({ ...aptForm, businessName: e.target.value })}
                       placeholder="Enter business name"
-                      className="w-full p-2 border border-slate-300 rounded bg-slate-50"
+                      className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white"
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">Tax Identification Number (TIN)</label>
+                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Tax Identification Number (TIN)</label>
                     <input
                       type="text"
                       value={aptForm.tin}
                       onChange={(e) => setAptForm({ ...aptForm, tin: e.target.value })}
                       placeholder="000-000-000-000"
-                      className="w-full p-2 border border-slate-300 rounded bg-slate-50"
+                      className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">Business / Office Address</label>
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Business / Office Address</label>
                   <input
                     type="text"
                     value={aptForm.address}
                     onChange={(e) => setAptForm({ ...aptForm, address: e.target.value })}
-                    className="w-full p-2 border border-slate-300 rounded bg-slate-50"
+                    className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white"
                     placeholder="Street, Barangay, City"
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">Detailed Concern / Description</label>
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Detailed Concern / Description</label>
                   <input
                     type="text"
                     value={aptForm.description}
                     onChange={(e) => setAptForm({ ...aptForm, description: e.target.value })}
-                    className="w-full p-2 border border-slate-300 rounded bg-slate-50"
+                    className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white"
                     placeholder="Provide details regarding your assessment inquiry"
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-semibold text-red-600 mb-1">* Full Name</label>
+                  <label className="block text-[11px] font-semibold text-red-600 dark:text-red-400 mb-1">* Full Name</label>
                   <input
                     required
                     type="text"
                     value={aptForm.fullName}
                     onChange={(e) => setAptForm({ ...aptForm, fullName: e.target.value })}
                     placeholder="Enter full name"
-                    className="w-full p-2 border border-slate-300 rounded bg-slate-50"
+                    className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-semibold text-red-600 mb-1">* Email Address</label>
+                  <label className="block text-[11px] font-semibold text-red-600 dark:text-red-400 mb-1">* Email Address</label>
                   <input
                     required
                     type="email"
                     value={aptForm.email}
                     onChange={(e) => setAptForm({ ...aptForm, email: e.target.value })}
                     placeholder="Enter email address"
-                    className="w-full p-2 border border-slate-300 rounded bg-slate-50"
+                    className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-semibold text-red-600 mb-1">* Phone Number (Exact 11 Digits)</label>
+                  <label className="block text-[11px] font-semibold text-red-600 dark:text-red-400 mb-1">* Phone Number (Exact 11 Digits)</label>
                   <input
                     required
                     type="text"
@@ -952,27 +916,27 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                     value={aptForm.phone}
                     onChange={(e) => setAptForm({ ...aptForm, phone: e.target.value.replace(/\D/g, '').slice(0, 11) })}
                     placeholder="09123456789"
-                    className="w-full p-2 border border-slate-300 rounded bg-slate-50 font-mono"
+                    className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white font-mono"
                   />
                   <span className="text-[10px] text-slate-400 mt-0.5 block">Must be exactly 11 digits (e.g. 09XXXXXXXXX). Current count: {aptForm.phone.length}/11</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] font-semibold text-red-600 mb-1">* Preferred Date</label>
+                    <label className="block text-[11px] font-semibold text-red-600 dark:text-red-400 mb-1">* Preferred Date</label>
                     <input
                       required
                       type="date"
                       value={aptForm.date}
                       onChange={(e) => setAptForm({ ...aptForm, date: e.target.value })}
-                      className="w-full p-2 border border-slate-300 rounded bg-slate-50"
+                      className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white"
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-semibold text-red-600 mb-1">* Time Slot</label>
+                    <label className="block text-[11px] font-semibold text-red-600 dark:text-red-400 mb-1">* Time Slot</label>
                     <select
                       value={aptForm.timeSlot}
                       onChange={(e) => setAptForm({ ...aptForm, timeSlot: e.target.value })}
-                      className="w-full p-2 border border-slate-300 rounded bg-slate-50"
+                      className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-200"
                     >
                       <option value="08:00 AM - 09:00 AM">08:00 AM - 09:00 AM</option>
                       <option value="09:00 AM - 10:00 AM">09:00 AM - 10:00 AM</option>
@@ -984,21 +948,21 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                   </div>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-500 mb-1">Additional Remarks (Optional)</label>
+                  <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">Additional Remarks (Optional)</label>
                   <textarea
                     rows={2}
                     value={aptForm.remarks}
                     onChange={(e) => setAptForm({ ...aptForm, remarks: e.target.value })}
-                    className="w-full p-2 border border-slate-300 rounded bg-slate-50 resize-none"
+                    className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white resize-none"
                     placeholder="Any special instructions or accessibility requests..."
                   />
                 </div>
-                <div className="p-3 border border-slate-300 rounded bg-slate-50 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="p-3 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
                   <div className="flex items-center gap-2 text-xs font-semibold">
-                    <span className="bg-blue-100 text-blue-800 px-2.5 py-1 rounded font-mono">
+                    <span className="bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 px-2.5 py-1 rounded font-mono">
                       {captchaNum1} + {captchaNum2} = ?
                     </span>
-                    <span className="text-slate-600">Security Verification</span>
+                    <span className="text-slate-600 dark:text-slate-300">Security Verification</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <input
@@ -1007,7 +971,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                       value={captchaInput}
                       onChange={(e) => setCaptchaInput(e.target.value)}
                       placeholder="Answer"
-                      className="w-20 p-1.5 text-xs text-center border border-slate-300 rounded bg-white font-mono"
+                      className="w-20 p-1.5 text-xs text-center border border-slate-300 dark:border-slate-700 rounded bg-white dark:bg-slate-900 text-slate-800 dark:text-white font-mono"
                     />
                     <button
                       type="button"
@@ -1016,15 +980,15 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                         setCaptchaNum2(Math.floor(Math.random() * 10) + 1);
                         setCaptchaInput('');
                       }}
-                      className="text-[10px] text-blue-600 hover:underline font-bold cursor-pointer"
+                      className="text-[10px] text-blue-600 dark:text-blue-400 hover:underline font-bold cursor-pointer"
                     >
                       Refresh
                     </button>
                   </div>
                 </div>
               </div>
-              <div className="flex justify-end gap-2 px-6 py-3 border-t border-slate-200 bg-slate-50">
-                <button type="button" onClick={closeModal} className="px-4 py-2 border border-slate-300 rounded font-semibold hover:bg-slate-100 cursor-pointer">Cancel</button>
+              <div className="flex justify-end gap-2 px-6 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800">
+                <button type="button" onClick={closeModal} className="px-4 py-2 border border-slate-300 dark:border-slate-700 rounded font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer">Cancel</button>
                 <button type="submit" disabled={submitting} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded shadow-xs cursor-pointer">
                   {submitting ? 'Submitting...' : 'SUBMIT APPOINTMENT'}
                 </button>
@@ -1033,40 +997,40 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
           )}
 
           {isModalOpen === 'sales-declaration' && (
-            <form onSubmit={handleSalesDeclarationSubmit} className="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden">
-              <div className="flex justify-between items-center px-6 py-4 border-b border-slate-200 bg-slate-50">
-                <h3 className="font-bold text-sm text-slate-800">SUBMIT ONLINE SALES DECLARATION</h3>
-                <button type="button" onClick={closeModal} className="text-slate-400 hover:text-slate-600 font-bold text-lg cursor-pointer">✕</button>
+            <form onSubmit={handleSalesDeclarationSubmit} className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-lg overflow-hidden">
+              <div className="flex justify-between items-center px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800">
+                <h3 className="font-bold text-sm text-slate-800 dark:text-white">SUBMIT ONLINE SALES DECLARATION</h3>
+                <button type="button" onClick={closeModal} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-bold text-lg cursor-pointer">✕</button>
               </div>
               <div className="p-6 space-y-4 text-xs max-h-[75vh] overflow-y-auto">
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">Business Name</label>
+                  <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">Business Name</label>
                   <input
                     required
                     type="text"
                     value={salesForm.businessName}
                     onChange={(e) => setSalesForm({ ...salesForm, businessName: e.target.value })}
                     placeholder="Enter registered business name"
-                    className="w-full p-2.5 border border-slate-300 rounded bg-slate-50"
+                    className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">Tax Identification Number (TIN)</label>
+                  <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">Tax Identification Number (TIN)</label>
                   <input
                     required
                     type="text"
                     value={salesForm.tin}
                     onChange={(e) => setSalesForm({ ...salesForm, tin: e.target.value })}
                     placeholder="000-000-000-000"
-                    className="w-full p-2.5 border border-slate-300 rounded bg-slate-50"
+                    className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">PSIC Code (Line of Business)</label>
+                  <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">PSIC Code (Line of Business)</label>
                   <select
                     value={salesForm.psicCode}
                     onChange={(e) => setSalesForm({ ...salesForm, psicCode: e.target.value })}
-                    className="w-full p-2.5 border border-slate-300 rounded bg-slate-50"
+                    className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-200"
                   >
                     <option value="47110">47110 - Retail Sale in Non-Specialized Stores (Supermarkets/Sari-Sari)</option>
                     <option value="56101">56101 - Restaurants and Mobile Food Service Activities</option>
@@ -1076,7 +1040,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">Gross Sales / Receipts (PHP)</label>
+                  <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">Gross Sales / Receipts (PHP)</label>
                   <input
                     required
                     type="number"
@@ -1084,31 +1048,31 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                     value={salesForm.grossSales}
                     onChange={(e) => setSalesForm({ ...salesForm, grossSales: e.target.value })}
                     placeholder="0.00"
-                    className="w-full p-2.5 border border-slate-300 rounded bg-slate-50"
+                    className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">Tax Year</label>
+                  <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">Tax Year</label>
                   <input
                     required
                     type="text"
                     value={salesForm.year}
                     onChange={(e) => setSalesForm({ ...salesForm, year: e.target.value })}
-                    className="w-full p-2.5 border border-slate-300 rounded bg-slate-50"
+                    className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">Financial Statement / ITR (PDF/Image)</label>
+                  <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">Financial Statement / ITR (PDF/Image)</label>
                   <input
                     required
                     type="file"
                     accept=".pdf,image/*"
                     onChange={(e) => setSalesForm({ ...salesForm, file: e.target.files ? e.target.files[0] : null })}
-                    className="w-full p-2 border border-slate-300 rounded bg-slate-50 text-xs"
+                    className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs"
                   />
                 </div>
               </div>
-              <div className="flex justify-end gap-2 px-6 py-3 border-t border-slate-200 bg-slate-50">
+              <div className="flex justify-end gap-2 px-6 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800">
                 <button type="button" onClick={closeModal} className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded shadow-xs cursor-pointer">Cancel</button>
                 <button type="submit" disabled={submitting} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded shadow-xs cursor-pointer">
                   {submitting ? 'Submitting...' : 'Submit Declaration'}
@@ -1120,69 +1084,69 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
       )}
       {selectedAssessmentView && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl sm:rounded-3xl max-w-lg w-full max-h-[94vh] overflow-y-auto p-4 sm:p-6 shadow-2xl border border-slate-200 space-y-4">
-            <div className="flex justify-between items-center border-b border-slate-200 pb-3">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl max-w-lg w-full max-h-[94vh] overflow-y-auto p-4 sm:p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+            <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-3">
               <div>
-                <h3 className="font-bold text-slate-900 text-sm uppercase tracking-wide">
+                <h3 className="font-bold text-slate-900 dark:text-white text-sm uppercase tracking-wide">
                   Assessment Filing Details
                 </h3>
-                <p className="text-xs font-mono text-blue-600">{selectedAssessmentView.trackingNumber}</p>
+                <p className="text-xs font-mono text-blue-600 dark:text-blue-400">{selectedAssessmentView.trackingNumber}</p>
               </div>
               <button
                 type="button"
                 onClick={() => setSelectedAssessmentView(null)}
-                className="text-slate-400 hover:text-slate-600 cursor-pointer font-bold text-lg"
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer font-bold text-lg"
               >
                 ✕
               </button>
             </div>
             <div className="space-y-3 text-xs max-h-[60vh] overflow-y-auto pr-1">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 dark:bg-slate-800/60 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700">
                 <div>
-                  <span className="block text-[10px] text-slate-400 font-bold uppercase">Business Name</span>
-                  <span className="font-semibold text-slate-800">{selectedAssessmentView.businessName}</span>
+                  <span className="block text-[10px] text-slate-400 uppercase font-bold">Business Name</span>
+                  <span className="font-semibold text-slate-800 dark:text-white">{selectedAssessmentView.businessName}</span>
                 </div>
                 <div>
-                  <span className="block text-[10px] text-slate-400 font-bold uppercase">Owner</span>
-                  <span className="font-semibold text-slate-800">{selectedAssessmentView.businessOwner}</span>
+                  <span className="block text-[10px] text-slate-400 uppercase font-bold">Owner</span>
+                  <span className="font-semibold text-slate-800 dark:text-white">{selectedAssessmentView.businessOwner}</span>
                 </div>
                 <div>
-                  <span className="block text-[10px] text-slate-400 font-bold uppercase">TIN</span>
-                  <span className="font-mono font-medium text-slate-700">{selectedAssessmentView.tin || 'N/A'}</span>
+                  <span className="block text-[10px] text-slate-400 uppercase font-bold">TIN</span>
+                  <span className="font-mono font-medium text-slate-700 dark:text-slate-300">{selectedAssessmentView.tin || 'N/A'}</span>
                 </div>
                 <div>
-                  <span className="block text-[10px] text-slate-400 font-bold uppercase">Status</span>
-                  <span className={`inline-block px-2 py-0.5 rounded font-bold text-[10px] mt-0.5 ${selectedAssessmentView.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-800' :
-                    selectedAssessmentView.status === 'REJECTED' ? 'bg-rose-100 text-rose-800' :
-                      'bg-amber-100 text-amber-800'
+                  <span className="block text-[10px] text-slate-400 uppercase font-bold">Status</span>
+                  <span className={`inline-block px-2 py-0.5 rounded font-bold text-[10px] mt-0.5 ${selectedAssessmentView.status === 'APPROVED' ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300' :
+                    selectedAssessmentView.status === 'REJECTED' ? 'bg-rose-100 dark:bg-rose-950/80 text-rose-800 dark:text-rose-300' :
+                      'bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300'
                     }`}>
                     {selectedAssessmentView.status}
                   </span>
                 </div>
               </div>
-              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-2">
-                <div className="font-semibold text-slate-700">Application Date:</div>
-                <div className="text-slate-600">{new Date(selectedAssessmentView.applicationDate).toLocaleDateString()}</div>
-                <div className="pt-2 border-t border-slate-200">
-                  <div className="font-semibold text-slate-700">Tax Bill Number:</div>
-                  <div className="text-blue-700 font-mono font-bold">
+              <div className="bg-slate-50 dark:bg-slate-800/60 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-2">
+                <div className="font-semibold text-slate-700 dark:text-slate-300">Application Date:</div>
+                <div className="text-slate-600 dark:text-slate-300">{new Date(selectedAssessmentView.applicationDate).toLocaleDateString()}</div>
+                <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
+                  <div className="font-semibold text-slate-700 dark:text-slate-300">Tax Bill Number:</div>
+                  <div className="text-blue-700 dark:text-blue-400 font-mono font-bold">
                     {selectedAssessmentView.taxBillNumber || 'Not yet issued'}
                   </div>
                 </div>
               </div>
-              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-2">
-                <div className="font-semibold text-slate-700">Submitted Financial Documents:</div>
+              <div className="bg-slate-50 dark:bg-slate-800/60 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-2">
+                <div className="font-semibold text-slate-700 dark:text-slate-300">Submitted Financial Documents:</div>
                 {selectedAssessmentView.attachments && selectedAssessmentView.attachments.length > 0 ? (
                   selectedAssessmentView.attachments.map((file, idx) => (
-                    <div key={idx} className="flex justify-between items-center bg-white px-3 py-2 rounded-xl border border-slate-200">
-                      <span className="font-medium text-slate-800 truncate max-w-[220px] flex items-center gap-1.5">
+                    <div key={idx} className="flex justify-between items-center bg-white dark:bg-slate-800 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700">
+                      <span className="font-medium text-slate-800 dark:text-slate-200 truncate max-w-[220px] flex items-center gap-1.5">
                         <svg className="w-3.5 h-3.5 text-blue-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
                         {file.name}
                       </span>
                       <button
                         type="button"
                         onClick={() => window.open(file.url, '_blank', 'noopener,noreferrer')}
-                        className="text-blue-600 font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                        className="text-blue-600 dark:text-blue-400 font-bold hover:underline flex items-center gap-1 cursor-pointer"
                       >
                         Preview Document
                       </button>
@@ -1192,23 +1156,23 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                   <p className="text-slate-400 italic">No files attached.</p>
                 )}
               </div>
-              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-2">
-                <div className="font-semibold text-slate-700">Treasurer's Office Remarks:</div>
-                <div className="text-slate-600 italic">
+              <div className="bg-slate-50 dark:bg-slate-800/60 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-2">
+                <div className="font-semibold text-slate-700 dark:text-slate-300">Treasurer's Office Remarks:</div>
+                <div className="text-slate-600 dark:text-slate-300 italic">
                   {selectedAssessmentView.remarks || 'No remarks provided yet. Your declaration is currently under review.'}
                 </div>
               </div>
-              <div className="flex items-center justify-between bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
-                <span className="font-semibold text-slate-700">Payment Status:</span>
+              <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-800/60 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700">
+                <span className="font-semibold text-slate-700 dark:text-slate-300">Payment Status:</span>
                 <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${selectedAssessmentView.paymentStatus === 'PAID'
-                  ? 'bg-emerald-100 text-emerald-800  '
-                  : 'bg-amber-100 text-amber-800  '
+                  ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300'
+                  : 'bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300'
                   }`}>
                   {selectedAssessmentView.paymentStatus}
                 </span>
               </div>
             </div>
-            <div className="flex justify-between items-center pt-2 border-t border-slate-200 gap-2">
+            <div className="flex justify-between items-center pt-2 border-t border-slate-200 dark:border-slate-800 gap-2">
               {selectedAssessmentView.status === 'APPROVED' &&
                 selectedAssessmentView.paymentStatus !== 'PAID' && (
                   <button
@@ -1221,7 +1185,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                   </button>
                 )}
               {selectedAssessmentView.paymentStatus === 'PAID' && (
-                <span className="px-3 py-2 bg-emerald-100 text-emerald-800 font-bold rounded-xl text-xs">
+                <span className="px-3 py-2 bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-bold rounded-xl text-xs">
                   Payment PAID
                 </span>
               )}
@@ -1238,45 +1202,45 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
       )}
       {isPaymentStep && paymentAssessment && (
         <div className="fixed inset-0 z-[60] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto overscroll-contain">
-          <div className="bg-white rounded-2xl sm:rounded-3xl w-full max-w-5xl max-h-[96vh] shadow-2xl border border-slate-200 overflow-y-auto my-auto">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl w-full max-w-5xl max-h-[96vh] shadow-2xl border border-slate-200 dark:border-slate-800 overflow-y-auto my-auto">
             <>
               <div className="grid grid-cols-1 lg:grid-cols-2 min-w-0">
 
-                <div className="p-4 sm:p-6 lg:p-8 lg:border-r border-slate-200 min-w-0">
-                  <h2 className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">
+                <div className="p-4 sm:p-6 lg:p-8 lg:border-r border-slate-200 dark:border-slate-800 min-w-0">
+                  <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white leading-tight">
                     Business Tax Payment
                   </h2>
 
-                  <p className="text-xl sm:text-2xl font-black text-slate-900 mt-1 break-all">
+                  <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1 break-all">
                     ({paymentAssessment.trackingNumber})
                   </p>
 
-                  <p className="text-sm text-slate-500 mt-3">
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-3">
                     Business Tax Assessment ({paymentAssessment.businessName})
                   </p>
 
-                  <p className="text-sm text-slate-600 mt-4">
+                  <p className="text-sm text-slate-600 dark:text-slate-300 mt-4">
                     Billed to{" "}
-                    <span className="font-bold text-slate-900">
+                    <span className="font-bold text-slate-900 dark:text-white">
                       {user?.fullname || "Business Taxpayer"}
                     </span>
                     {user?.email && (
                       <>
                         ,{" "}
-                        <span className="text-slate-600">{user.email}</span>
+                        <span className="text-slate-600 dark:text-slate-400">{user.email}</span>
                       </>
                     )}
                   </p>
 
-                  <div className="mt-6 rounded-2xl border border-blue-200 bg-blue-50/60 p-5">
-                    <p className="text-xs font-black uppercase tracking-wide text-blue-900 mb-3">
+                  <div className="mt-6 rounded-2xl border border-blue-200 dark:border-blue-900/60 bg-blue-50/60 dark:bg-blue-950/40 p-5">
+                    <p className="text-xs font-black uppercase tracking-wide text-blue-900 dark:text-blue-300 mb-3">
                       Computed Local Government Statutory Fees (RA 7160)
                     </p>
 
                     <div className="space-y-0 text-sm">
-                      <div className="flex justify-between items-center gap-4 py-2 border-b border-blue-200">
-                        <span className="text-slate-600">Local Business Tax (LBT)</span>
-                        <span className="font-bold text-slate-900 whitespace-nowrap">
+                      <div className="flex justify-between items-center gap-4 py-2 border-b border-blue-200 dark:border-blue-900/60">
+                        <span className="text-slate-600 dark:text-slate-400">Local Business Tax (LBT)</span>
+                        <span className="font-bold text-slate-900 dark:text-white whitespace-nowrap">
                           ₱{Number(paymentAssessment.computedFees?.lbt || 0).toLocaleString("en-PH", {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2,
@@ -1284,9 +1248,9 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                         </span>
                       </div>
 
-                      <div className="flex justify-between items-center gap-4 py-2 border-b border-blue-200">
-                        <span className="text-slate-600">Mayor's Permit Fee</span>
-                        <span className="font-bold text-slate-900 whitespace-nowrap">
+                      <div className="flex justify-between items-center gap-4 py-2 border-b border-blue-200 dark:border-blue-900/60">
+                        <span className="text-slate-600 dark:text-slate-400">Mayor's Permit Fee</span>
+                        <span className="font-bold text-slate-900 dark:text-white whitespace-nowrap">
                           ₱{Number(paymentAssessment.computedFees?.mayorsPermit || 0).toLocaleString("en-PH", {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2,
@@ -1294,9 +1258,9 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                         </span>
                       </div>
 
-                      <div className="flex justify-between items-center gap-4 py-2 border-b border-blue-200">
-                        <span className="text-slate-600">Sanitary Inspection Fee</span>
-                        <span className="font-bold text-slate-900 whitespace-nowrap">
+                      <div className="flex justify-between items-center gap-4 py-2 border-b border-blue-200 dark:border-blue-900/60">
+                        <span className="text-slate-600 dark:text-slate-400">Sanitary Inspection Fee</span>
+                        <span className="font-bold text-slate-900 dark:text-white whitespace-nowrap">
                           ₱{Number(paymentAssessment.computedFees?.sanitaryFee || 0).toLocaleString("en-PH", {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2,
@@ -1304,9 +1268,9 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                         </span>
                       </div>
 
-                      <div className="flex justify-between items-center gap-4 py-2 border-b border-blue-200">
-                        <span className="text-slate-600">Garbage Fee</span>
-                        <span className="font-bold text-slate-900 whitespace-nowrap">
+                      <div className="flex justify-between items-center gap-4 py-2 border-b border-blue-200 dark:border-blue-900/60">
+                        <span className="text-slate-600 dark:text-slate-400">Garbage Fee</span>
+                        <span className="font-bold text-slate-900 dark:text-white whitespace-nowrap">
                           ₱{Number(paymentAssessment.computedFees?.garbageFee || 0).toLocaleString("en-PH", {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2,
@@ -1315,8 +1279,8 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                       </div>
 
                       <div className="flex justify-between items-center gap-4 py-2">
-                        <span className="text-slate-600">Fire Safety Inspection Fee (10% BFP share)</span>
-                        <span className="font-bold text-slate-900 whitespace-nowrap ml-3">
+                        <span className="text-slate-600 dark:text-slate-400">Fire Safety Inspection Fee (10% BFP share)</span>
+                        <span className="font-bold text-slate-900 dark:text-white whitespace-nowrap ml-3">
                           ₱{Number(paymentAssessment.computedFees?.fireSafetyFee || 0).toLocaleString("en-PH", {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2,
@@ -1325,9 +1289,9 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                       </div>
                     </div>
 
-                    <div className="flex justify-between items-center gap-4 mt-3 pt-3 border-t border-blue-300">
-                      <span className="font-black text-blue-800">Total Payable Assessment</span>
-                      <span className="font-black text-lg text-blue-700 whitespace-nowrap">
+                    <div className="flex justify-between items-center gap-4 mt-3 pt-3 border-t border-blue-300 dark:border-blue-800">
+                      <span className="font-black text-blue-800 dark:text-blue-300">Total Payable Assessment</span>
+                      <span className="font-black text-lg text-blue-700 dark:text-blue-400 whitespace-nowrap">
                         ₱{Number(paymentAssessment.computedFees?.total || 0).toLocaleString("en-PH", {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2,
@@ -1336,8 +1300,8 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                     </div>
                   </div>
 
-                  <div className="mt-6 pt-5 border-t border-slate-200">
-                    <p className="text-4xl sm:text-5xl font-black text-emerald-600">
+                  <div className="mt-6 pt-5 border-t border-slate-200 dark:border-slate-800">
+                    <p className="text-4xl sm:text-5xl font-black text-emerald-600 dark:text-emerald-400">
                       ₱{Number(paymentAssessment.computedFees?.total || 0).toLocaleString("en-PH", {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
@@ -1345,8 +1309,8 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                     </p>
 
                     <div className="flex justify-between items-center mt-8 text-sm">
-                      <span className="text-slate-600">Subtotal</span>
-                      <span className="font-bold text-slate-900">
+                      <span className="text-slate-600 dark:text-slate-400">Subtotal</span>
+                      <span className="font-bold text-slate-900 dark:text-white">
                         ₱{Number(paymentAssessment.computedFees?.total || 0).toLocaleString("en-PH", {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2,
@@ -1355,13 +1319,13 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                     </div>
 
                     <div className="flex justify-between items-center mt-4 text-sm">
-                      <span className="text-slate-600">Payment Fees</span>
-                      <span className="font-semibold text-slate-900">Free</span>
+                      <span className="text-slate-600 dark:text-slate-400">Payment Fees</span>
+                      <span className="font-semibold text-slate-900 dark:text-white">Free</span>
                     </div>
 
-                    <div className="flex justify-between items-center mt-5 pt-5 border-t border-slate-200">
-                      <span className="font-black text-slate-900">Total Due</span>
-                      <span className="font-black text-lg text-slate-900">
+                    <div className="flex justify-between items-center mt-5 pt-5 border-t border-slate-200 dark:border-slate-800">
+                      <span className="font-black text-slate-900 dark:text-white">Total Due</span>
+                      <span className="font-black text-lg text-slate-900 dark:text-white">
                         ₱{Number(paymentAssessment.computedFees?.total || 0).toLocaleString("en-PH", {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2,
@@ -1371,51 +1335,51 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                   </div>
                 </div>
 
-                <div className="p-4 sm:p-6 lg:p-8 bg-slate-50/60 flex flex-col items-center min-w-0">
+                <div className="p-4 sm:p-6 lg:p-8 bg-slate-50/60 dark:bg-slate-950/40 flex flex-col items-center min-w-0">
                   <div className="w-full text-center">
-                    <p className="text-base sm:text-lg font-black text-slate-900">Scan QR Ph code to pay</p>
-                    <p className="text-xs text-slate-500 mt-2">Use your supported banking or e-wallet app.</p>
+                    <p className="text-base sm:text-lg font-black text-slate-900 dark:text-white">Scan QR Ph code to pay</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">Use your supported banking or e-wallet app.</p>
                   </div>
 
                   {isProcessingPayment && !qrCodeUrl && (
-                    <div className="w-full max-w-sm mt-5 rounded-2xl border border-slate-200 bg-white p-6 sm:p-10 flex flex-col items-center text-center shadow-sm">
+                    <div className="w-full max-w-sm mt-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 sm:p-10 flex flex-col items-center text-center shadow-sm">
                       <div className="h-10 w-10 border-4 border-blue-200 border-t-blue-700 rounded-full animate-spin mb-4" />
-                      <p className="text-sm font-bold text-slate-800">Generating QR Ph code...</p>
-                      <p className="text-xs text-slate-500 mt-1">Please wait while PayMongo prepares your secure payment.</p>
+                      <p className="text-sm font-bold text-slate-800 dark:text-slate-200">Generating QR Ph code...</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Please wait while PayMongo prepares your secure payment.</p>
                     </div>
                   )}
 
                   {!isProcessingPayment && qrError && !qrCodeUrl && (
-                    <div className="w-full max-w-sm mt-5 rounded-2xl border border-rose-200 bg-rose-50 p-4 sm:p-5 text-center">
-                      <p className="text-xs font-bold text-rose-700">{qrError}</p>
-                      <button type="button" onClick={() => void handlePayMongoBusinessTaxQrPayment(paymentAssessment)} className="mt-4 px-5 py-2.5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold">Generate QR Again</button>
+                    <div className="w-full max-w-sm mt-5 rounded-2xl border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/60 p-4 sm:p-5 text-center">
+                      <p className="text-xs font-bold text-rose-700 dark:text-rose-300">{qrError}</p>
+                      <button type="button" onClick={() => void handlePayMongoBusinessTaxQrPayment(paymentAssessment)} className="mt-4 px-5 py-2.5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold cursor-pointer">Generate QR Again</button>
                     </div>
                   )}
 
                   {qrCodeUrl && !qrPaymentPaid && (
                     <div className="w-full flex flex-col items-center mt-5">
-                      <div className="w-full max-w-sm rounded-xl border border-blue-200 bg-blue-50 px-3 sm:px-4 py-3 text-center mb-4">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-blue-700">QR Code Refreshes In</p>
-                        <p className="text-xl sm:text-2xl font-black tabular-nums text-blue-700">{Math.floor(qrSecondsRemaining / 60)}:{String(qrSecondsRemaining % 60).padStart(2, "0")}</p>
-                        {qrReferenceNumber && <p className="text-[10px] font-mono text-slate-500 mt-1">Ref: {qrReferenceNumber}</p>}
+                      <div className="w-full max-w-sm rounded-xl border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/50 px-3 sm:px-4 py-3 text-center mb-4">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-blue-700 dark:text-blue-300">QR Code Refreshes In</p>
+                        <p className="text-xl sm:text-2xl font-black tabular-nums text-blue-700 dark:text-blue-300">{Math.floor(qrSecondsRemaining / 60)}:{String(qrSecondsRemaining % 60).padStart(2, "0")}</p>
+                        {qrReferenceNumber && <p className="text-[10px] font-mono text-slate-500 dark:text-slate-400 mt-1">Ref: {qrReferenceNumber}</p>}
                       </div>
-                      <div className="bg-white border border-slate-200 rounded-2xl p-3 sm:p-4 shadow-md max-w-full">
+                      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 sm:p-4 shadow-md max-w-full">
                         <img src={qrCodeUrl} alt="PayMongo Dynamic QR Ph payment code" className="w-[min(72vw,18rem)] h-[min(72vw,18rem)] max-w-full object-contain" />
                       </div>
-                      <p className="text-xs text-slate-500 text-center mt-3 max-w-sm px-2">Scan the QR code with your preferred supported payment app. Your payment will be confirmed automatically through PayMongo.</p>
-                      <div className="mt-4 flex items-center gap-2 text-xs font-bold text-blue-700">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 text-center mt-3 max-w-sm px-2">Scan the QR code with your preferred supported payment app. Your payment will be confirmed automatically through PayMongo.</p>
+                      <div className="mt-4 flex items-center gap-2 text-xs font-bold text-blue-700 dark:text-blue-400">
                         <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" /> Waiting for payment...
                       </div>
                     </div>
                   )}
                 </div>              </div>
 
-              <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-5 border-t border-slate-200 bg-white flex justify-end sticky bottom-0">
+              <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-5 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex justify-end sticky bottom-0">
                 <button
                   type="button"
                   onClick={closeBusinessTaxPayment}
                   disabled={isProcessingPayment}
-                  className="px-6 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed text-slate-700 font-bold text-sm transition-colors"
+                  className="px-6 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed text-slate-700 dark:text-slate-300 font-bold text-sm transition-colors cursor-pointer"
                 >
                   Close
                 </button>
@@ -1427,20 +1391,20 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
 
       {isPaymentSuccess && paymentAssessment && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-slate-950/75 backdrop-blur-md overflow-y-auto overscroll-contain">
-          <div className="relative w-full max-w-lg max-h-[94vh] overflow-y-auto rounded-2xl sm:rounded-[28px] bg-white p-5 sm:p-8 shadow-2xl text-center">
-            <div className="mx-auto mb-4 sm:mb-5 h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-emerald-100 flex items-center justify-center">
-              <svg viewBox="0 0 52 52" className="h-10 w-10 sm:h-12 sm:w-12 text-emerald-600" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M14 27l8 8 17-19" /></svg>
+          <div className="relative w-full max-w-lg max-h-[94vh] overflow-y-auto rounded-2xl sm:rounded-[28px] bg-white dark:bg-slate-900 p-5 sm:p-8 shadow-2xl text-center border border-slate-200 dark:border-slate-800">
+            <div className="mx-auto mb-4 sm:mb-5 h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-emerald-100 dark:bg-emerald-950 flex items-center justify-center">
+              <svg viewBox="0 0 52 52" className="h-10 w-10 sm:h-12 sm:w-12 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M14 27l8 8 17-19" /></svg>
             </div>
-            <p className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">PAYMENT CONFIRMED</p>
-            <h2 className="mt-3 sm:mt-4 text-xl sm:text-2xl font-black text-slate-900">Payment Successful!</h2>
-            <p className="mt-2 text-sm text-slate-500">Your Business Tax payment has been confirmed.</p>
-            <div className="mt-5 rounded-2xl bg-slate-50 border border-slate-200 p-4 sm:p-5 text-left space-y-3 text-sm overflow-x-auto">
-              <div className="flex justify-between gap-4"><span className="text-slate-500">Service</span><span className="font-bold text-right">Business Tax Assessment</span></div>
-              <div className="flex justify-between gap-4"><span className="text-slate-500">Amount Paid</span><span className="font-black">₱{Number(paymentAssessment.computedFees?.total || 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
-              <div className="flex justify-between gap-4"><span className="text-slate-500">Reference</span><span className="font-mono font-bold text-right break-all">{qrReferenceNumber || paymentAssessment.trackingNumber || "Confirmed"}</span></div>
-              {paymentConfirmedAt && <div className="flex justify-between gap-4"><span className="text-slate-500">Date</span><span className="font-bold text-right">{paymentConfirmedAt.toLocaleString("en-PH")}</span></div>}
+            <p className="inline-flex items-center rounded-full bg-emerald-50 dark:bg-emerald-950/80 px-3 py-1 text-xs font-bold text-emerald-700 dark:text-emerald-300">PAYMENT CONFIRMED</p>
+            <h2 className="mt-3 sm:mt-4 text-xl sm:text-2xl font-black text-slate-900 dark:text-white">Payment Successful!</h2>
+            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Your Business Tax payment has been confirmed.</p>
+            <div className="mt-5 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 p-4 sm:p-5 text-left space-y-3 text-sm overflow-x-auto text-slate-800 dark:text-slate-200">
+              <div className="flex justify-between gap-4"><span className="text-slate-500 dark:text-slate-400">Service</span><span className="font-bold text-right text-slate-900 dark:text-white">Business Tax Assessment</span></div>
+              <div className="flex justify-between gap-4"><span className="text-slate-500 dark:text-slate-400">Amount Paid</span><span className="font-black text-slate-900 dark:text-white">₱{Number(paymentAssessment.computedFees?.total || 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+              <div className="flex justify-between gap-4"><span className="text-slate-500 dark:text-slate-400">Reference</span><span className="font-mono font-bold text-right break-all text-slate-900 dark:text-white">{qrReferenceNumber || paymentAssessment.trackingNumber || "Confirmed"}</span></div>
+              {paymentConfirmedAt && <div className="flex justify-between gap-4"><span className="text-slate-500 dark:text-slate-400">Date</span><span className="font-bold text-right text-slate-900 dark:text-white">{paymentConfirmedAt.toLocaleString("en-PH")}</span></div>}
             </div>
-            <button type="button" onClick={() => { setIsPaymentSuccess(false); setPaymentAssessment(null); setQrPaymentPaid(false); setPaymentConfirmedAt(null); setQrReferenceNumber(""); setCurrentScreen('assessment-list'); setCurrentPage(1); }} className="mt-6 w-full rounded-xl bg-[#1D3F99] hover:bg-[#17357F] text-white py-3 font-extrabold text-sm">Done</button>
+            <button type="button" onClick={() => { setIsPaymentSuccess(false); setPaymentAssessment(null); setQrPaymentPaid(false); setPaymentConfirmedAt(null); setQrReferenceNumber(""); setCurrentScreen('assessment-list'); setCurrentPage(1); }} className="mt-6 w-full rounded-xl bg-[#1D3F99] hover:bg-[#17357F] text-white py-3 font-extrabold text-sm cursor-pointer">Done</button>
           </div>
         </div>
       )}

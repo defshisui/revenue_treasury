@@ -517,90 +517,90 @@ export default function CitizenPortal() {
       {/* ===================== HOW THE PROCESS WORKS (4 STEPS) ===================== */}
       <section className="space-y-6 pt-4">
         <div className="text-center max-w-xl mx-auto space-y-2">
-          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
             How the Revenue &amp; Treasury Application Works
           </h2>
-          <p className="text-xs sm:text-sm text-slate-500">
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
             Four simple steps from application filing to official treasury clearance and electronic receipt.
           </p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {/* Step 01 */}
-          <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs flex flex-col justify-between space-y-4 hover:shadow-md transition-shadow">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between space-y-4 hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">
-              <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
               </div>
-              <span className="text-xl font-extrabold text-slate-300 font-mono">01</span>
+              <span className="text-xl font-extrabold text-slate-300 dark:text-slate-700 font-mono">01</span>
             </div>
             <div className="space-y-1.5">
-              <h4 className="text-xs sm:text-sm font-extrabold text-slate-900">
+              <h4 className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white">
                 Select Service &amp; Requirements
               </h4>
-              <p className="text-xs text-slate-500 leading-relaxed">
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
                 Choose the service you need (Real Property Tax, Business Tax, Market Stall, Hawker) and prepare the required digital files (Title, DTI, Cedula).
               </p>
             </div>
           </div>
 
           {/* Step 02 */}
-          <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs flex flex-col justify-between space-y-4 hover:shadow-md transition-shadow">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between space-y-4 hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">
-              <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
               </div>
-              <span className="text-xl font-extrabold text-slate-300 font-mono">02</span>
+              <span className="text-xl font-extrabold text-slate-300 dark:text-slate-700 font-mono">02</span>
             </div>
             <div className="space-y-1.5">
-              <h4 className="text-xs sm:text-sm font-extrabold text-slate-900">
+              <h4 className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white">
                 Fill Online Form &amp; Upload
               </h4>
-              <p className="text-xs text-slate-500 leading-relaxed">
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
                 Provide your taxpayer details, property or business address, and upload legible photos or scanned copies of supporting documents.
               </p>
             </div>
           </div>
 
           {/* Step 03 */}
-          <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs flex flex-col justify-between space-y-4 hover:shadow-md transition-shadow">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between space-y-4 hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">
-              <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                 </svg>
               </div>
-              <span className="text-xl font-extrabold text-slate-300 font-mono">03</span>
+              <span className="text-xl font-extrabold text-slate-300 dark:text-slate-700 font-mono">03</span>
             </div>
             <div className="space-y-1.5">
-              <h4 className="text-xs sm:text-sm font-extrabold text-slate-900">
+              <h4 className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white">
                 Assessor &amp; Treasury Review
               </h4>
-              <p className="text-xs text-slate-500 leading-relaxed">
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
                 Assigned City Assessors and Treasury officers review your case, evaluate declarations, and compute the official assessment dues.
               </p>
             </div>
           </div>
 
           {/* Step 04 */}
-          <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs flex flex-col justify-between space-y-4 hover:shadow-md transition-shadow">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between space-y-4 hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">
-              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <span className="text-xl font-extrabold text-slate-300 font-mono">04</span>
+              <span className="text-xl font-extrabold text-slate-300 dark:text-slate-700 font-mono">04</span>
             </div>
             <div className="space-y-1.5">
-              <h4 className="text-xs sm:text-sm font-extrabold text-slate-900">
+              <h4 className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white">
                 Approval &amp; e-OR / Clearance
               </h4>
-              <p className="text-xs text-slate-500 leading-relaxed">
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
                 Receive real-time clearance notification, downloadable Electronic Official Receipt (e-OR), and official certificate releasing.
               </p>
             </div>
@@ -609,16 +609,16 @@ export default function CitizenPortal() {
       </section>
 
       {/* ===================== PRIORITY TREASURY SERVICES (6 CARDS GRID - IMAGE 2 UI) ===================== */}
-      <section className="bg-white rounded-3xl p-6 sm:p-8 lg:p-10 border border-slate-200 shadow-xs space-y-6">
+      <section className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 lg:p-10 border border-slate-200 dark:border-slate-800 shadow-xs space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <span className="text-[10px] font-extrabold text-blue-700 uppercase tracking-wider bg-blue-50 px-3 py-1 rounded-md border border-blue-200">
+            <span className="text-[10px] font-extrabold text-blue-700 dark:text-blue-400 uppercase tracking-wider bg-blue-50 dark:bg-blue-950/60 px-3 py-1 rounded-md border border-blue-200 dark:border-blue-900">
               PRIORITY TREASURY SERVICES
             </span>
-            <h3 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight mt-2">
+            <h3 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight mt-2">
               Tax &amp; Market Transaction Types &amp; Document Checklist
             </h3>
-            <p className="text-xs sm:text-sm text-slate-500 mt-1">
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
               Direct computation, clear guidelines, and expedited online processing for taxpayers and vendors.
             </p>
           </div>
@@ -636,7 +636,7 @@ export default function CitizenPortal() {
           {filteredPriorityServices.map((srv) => (
             <div
               key={srv.id}
-              className="bg-white rounded-2xl border border-slate-200 p-6 flex flex-col justify-between space-y-5 hover:shadow-lg hover:border-blue-300 transition-all group"
+              className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 flex flex-col justify-between space-y-5 hover:shadow-lg hover:border-blue-300 dark:hover:border-blue-600 transition-all group"
             >
               <div className="space-y-4">
                 {/* Header Icon + Tag */}
@@ -644,30 +644,30 @@ export default function CitizenPortal() {
                   <div className={`w-12 h-12 rounded-2xl ${srv.iconBg} flex items-center justify-center group-hover:scale-105 transition-transform shadow-xs`}>
                     {srv.icon}
                   </div>
-                  <span className="text-[10px] font-bold text-blue-700 bg-blue-50/80 px-2.5 py-1 rounded-md border border-blue-100">
+                  <span className="text-[10px] font-bold text-blue-700 dark:text-blue-400 bg-blue-50/80 dark:bg-blue-950/60 px-2.5 py-1 rounded-md border border-blue-100 dark:border-blue-900">
                     {srv.tag}
                   </span>
                 </div>
 
                 {/* Title & Description */}
                 <div>
-                  <h4 className="font-extrabold text-base text-slate-900 group-hover:text-blue-900 transition-colors">
+                  <h4 className="font-extrabold text-base text-slate-900 dark:text-white group-hover:text-blue-900 dark:group-hover:text-blue-300 transition-colors">
                     {srv.title}
                   </h4>
-                  <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
                     {srv.description}
                   </p>
                 </div>
 
                 {/* Key Requirements Checklist */}
-                <div className="pt-2 border-t border-slate-100 space-y-2">
-                  <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-2">
+                  <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                     Key Requirements:
                   </p>
                   <ul className="space-y-1.5">
                     {srv.requirements.map((req, rIdx) => (
-                      <li key={rIdx} className="text-[11px] text-slate-600 flex items-start gap-1.5">
-                        <span className="text-blue-600 font-bold shrink-0">&bull;</span>
+                      <li key={rIdx} className="text-[11px] text-slate-600 dark:text-slate-300 flex items-start gap-1.5">
+                        <span className="text-blue-600 dark:text-blue-400 font-bold shrink-0">&bull;</span>
                         <span className="leading-tight">{req}</span>
                       </li>
                     ))}
@@ -691,10 +691,10 @@ export default function CitizenPortal() {
       {/* ===================== EXPLORE ALL MODULES (7 MODULES - IMAGES 3 & 4 UI) ===================== */}
       <section className="space-y-6 pt-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
             Explore All Revenue, Treasury &amp; Market Modules
           </h2>
-          <span className="text-xs font-semibold text-slate-500">
+          <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
             Showing {filteredModules.length} programs
           </span>
         </div>
@@ -704,7 +704,7 @@ export default function CitizenPortal() {
           {filteredModules.map((mod) => (
             <div
               key={mod.id}
-              className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-7 flex flex-col justify-between space-y-6 hover:shadow-md hover:border-slate-300 transition-all"
+              className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 sm:p-7 flex flex-col justify-between space-y-6 hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 transition-all"
             >
               <div className="space-y-4">
                 {/* Icon + Title + Subtitle */}
@@ -713,17 +713,17 @@ export default function CitizenPortal() {
                     {mod.icon}
                   </div>
                   <div>
-                    <h3 className="font-extrabold text-base text-slate-900">
+                    <h3 className="font-extrabold text-base text-slate-900 dark:text-white">
                       {mod.title}
                     </h3>
-                    <p className="text-[11px] font-semibold text-blue-600 mt-0.5 uppercase tracking-wide">
+                    <p className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 mt-0.5 uppercase tracking-wide">
                       {mod.subtitle}
                     </p>
                   </div>
                 </div>
 
                 {/* Description */}
-                <p className="text-xs text-slate-500 leading-relaxed">
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
                   {mod.description}
                 </p>
 
@@ -732,9 +732,9 @@ export default function CitizenPortal() {
                   {mod.features.map((feat, fIdx) => (
                     <div
                       key={fIdx}
-                      className="px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-200/70 text-[11px] font-medium text-slate-700 flex items-center gap-1.5 truncate"
+                      className="px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200/70 dark:border-slate-700 text-[11px] font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5 truncate"
                     >
-                      <svg className="w-3.5 h-3.5 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                      <svg className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                       </svg>
                       <span className="truncate">{feat}</span>
@@ -755,7 +755,7 @@ export default function CitizenPortal() {
                 <button
                   type="button"
                   onClick={mod.secondaryAction}
-                  className="w-full sm:w-auto py-2.5 px-4 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold text-xs transition-colors cursor-pointer text-center"
+                  className="w-full sm:w-auto py-2.5 px-4 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 font-bold text-xs transition-colors cursor-pointer text-center"
                 >
                   {mod.secondaryLabel}
                 </button>
@@ -766,20 +766,20 @@ export default function CitizenPortal() {
       </section>
 
       {/* ===================== GENERAL QUALIFICATIONS & DOCUMENT REQUIREMENTS (IMAGE 5 UI) ===================== */}
-      <section className="bg-[#122261] text-white rounded-3xl p-6 sm:p-8 lg:p-10 shadow-xl space-y-6">
+      <section className="bg-[#122261] dark:bg-slate-900 border border-transparent dark:border-slate-800 text-white rounded-3xl p-6 sm:p-8 lg:p-10 shadow-xl space-y-6">
         <div>
           <h3 className="text-xl sm:text-2xl font-extrabold tracking-tight text-white">
             General Qualification &amp; Document Requirements
           </h3>
-          <p className="text-xs sm:text-sm text-blue-200 mt-1">
+          <p className="text-xs sm:text-sm text-blue-200 dark:text-slate-400 mt-1">
             Before submitting any application, make sure your digital copies are clear, legible, and uncropped.
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
           {/* Card 1 */}
-          <div className="bg-white/10 border border-white/15 rounded-2xl p-5 backdrop-blur-xs space-y-2.5">
-            <div className="flex items-center gap-2 text-blue-200">
+          <div className="bg-white/10 dark:bg-slate-800/60 border border-white/15 dark:border-slate-700 rounded-2xl p-5 backdrop-blur-xs space-y-2.5">
+            <div className="flex items-center gap-2 text-blue-200 dark:text-blue-400">
               <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -787,14 +787,14 @@ export default function CitizenPortal() {
                 Proof of Identity &amp; Ownership
               </h4>
             </div>
-            <p className="text-xs text-blue-100/85 leading-relaxed">
+            <p className="text-xs text-blue-100/85 dark:text-slate-300 leading-relaxed">
               Official QCID Card, PhilSys National ID, Voter's Certification, Transfer Certificate of Title (TCT), or Notarized Lease Contract with at least 6 months residency.
             </p>
           </div>
 
           {/* Card 2 */}
-          <div className="bg-white/10 border border-white/15 rounded-2xl p-5 backdrop-blur-xs space-y-2.5">
-            <div className="flex items-center gap-2 text-blue-200">
+          <div className="bg-white/10 dark:bg-slate-800/60 border border-white/15 dark:border-slate-700 rounded-2xl p-5 backdrop-blur-xs space-y-2.5">
+            <div className="flex items-center gap-2 text-blue-200 dark:text-blue-400">
               <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
               </svg>
@@ -802,14 +802,14 @@ export default function CitizenPortal() {
                 Barangay &amp; Zoning Clearances
               </h4>
             </div>
-            <p className="text-xs text-blue-100/85 leading-relaxed">
+            <p className="text-xs text-blue-100/85 dark:text-slate-300 leading-relaxed">
               Issued by your Barangay Captain or authorized barangay official stating business clearance, residency, and zoning compliance for commercial operations.
             </p>
           </div>
 
           {/* Card 3 */}
-          <div className="bg-white/10 border border-white/15 rounded-2xl p-5 backdrop-blur-xs space-y-2.5">
-            <div className="flex items-center gap-2 text-blue-200">
+          <div className="bg-white/10 dark:bg-slate-800/60 border border-white/15 dark:border-slate-700 rounded-2xl p-5 backdrop-blur-xs space-y-2.5">
+            <div className="flex items-center gap-2 text-blue-200 dark:text-blue-400">
               <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
@@ -817,7 +817,7 @@ export default function CitizenPortal() {
                 Financial &amp; Inspection Documents
               </h4>
             </div>
-            <p className="text-xs text-blue-100/85 leading-relaxed">
+            <p className="text-xs text-blue-100/85 dark:text-slate-300 leading-relaxed">
               Latest Tax Declaration for RPT; Audited Financial Statements or BIR Form 1701 for Business Tax; DTI/SEC registrations for stalls; Sanitary Health Permits.
             </p>
           </div>
@@ -825,18 +825,18 @@ export default function CitizenPortal() {
       </section>
 
       {/* ===================== FREQUENTLY ASKED QUESTIONS (FAQS) & HELP (IMAGE 5 UI) ===================== */}
-      <section className="bg-white rounded-3xl p-6 sm:p-8 lg:p-10 border border-slate-200 shadow-xs space-y-6 mb-8">
+      <section className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 lg:p-10 border border-slate-200 dark:border-slate-800 shadow-xs space-y-6 mb-8">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
           <div>
-            <h3 className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">
+            <h3 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">
               Frequently Asked Questions (FAQs) &amp; Help
             </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               Got questions about local taxes, market stall rentals, or assessments? Find quick answers below.
             </p>
           </div>
@@ -849,19 +849,19 @@ export default function CitizenPortal() {
             return (
               <div
                 key={idx}
-                className="border border-slate-200 rounded-2xl overflow-hidden transition-colors"
+                className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden transition-colors"
               >
                 <button
                   type="button"
                   onClick={() => setExpandedFaq(isExpanded ? null : idx)}
-                  className="w-full px-5 py-4 text-left flex items-center justify-between gap-4 bg-white hover:bg-slate-50/80 transition-colors cursor-pointer"
+                  className="w-full px-5 py-4 text-left flex items-center justify-between gap-4 bg-white dark:bg-slate-900 hover:bg-slate-50/80 dark:hover:bg-slate-800/80 transition-colors cursor-pointer"
                 >
-                  <span className="text-xs sm:text-sm font-bold text-slate-800">
+                  <span className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200">
                     {faq.q}
                   </span>
                   <svg
                     className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200 ${
-                      isExpanded ? 'rotate-180 text-blue-600' : ''
+                      isExpanded ? 'rotate-180 text-blue-600 dark:text-blue-400' : ''
                     }`}
                     fill="none"
                     viewBox="0 0 24 24"
@@ -873,7 +873,7 @@ export default function CitizenPortal() {
                 </button>
 
                 {isExpanded && (
-                  <div className="px-5 pb-4 pt-1 text-xs text-slate-600 leading-relaxed border-t border-slate-100 bg-slate-50/50">
+                  <div className="px-5 pb-4 pt-1 text-xs text-slate-600 dark:text-slate-300 leading-relaxed border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
                     {faq.a}
                   </div>
                 )}
@@ -886,15 +886,15 @@ export default function CitizenPortal() {
       {/* ===================== MODAL: TRACK APPLICATION ===================== */}
       {isTrackingModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-100 space-y-6 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-100 dark:border-slate-800 space-y-6 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                 </div>
-                <h3 className="font-extrabold text-base text-slate-900">
+                <h3 className="font-extrabold text-base text-slate-900 dark:text-white">
                   Track Application Status
                 </h3>
               </div>
@@ -903,7 +903,7 @@ export default function CitizenPortal() {
                   setIsTrackingModalOpen(false);
                   setTrackedResult(null);
                 }}
-                className="text-slate-400 hover:text-slate-600 font-bold text-lg cursor-pointer"
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-bold text-lg cursor-pointer"
               >
                 &times;
               </button>
@@ -911,7 +911,7 @@ export default function CitizenPortal() {
 
             <form onSubmit={handleSearchTracking} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                   Application Reference ID
                 </label>
                 <div className="flex gap-2">
@@ -920,7 +920,7 @@ export default function CitizenPortal() {
                     value={trackingIdInput}
                     onChange={(e) => setTrackingIdInput(e.target.value)}
                     placeholder="e.g. RPT-2026-981245 or STALL-KAMUNING-0412"
-                    className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-xs font-mono outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                    className="flex-1 px-4 py-2.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl text-xs font-mono outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900"
                     required
                   />
                   <button
@@ -934,18 +934,18 @@ export default function CitizenPortal() {
 
               {/* Sample Quick Tracking Suggestions */}
               <div className="flex flex-wrap gap-2 pt-1">
-                <span className="text-[10px] text-slate-400 font-semibold">Quick tests:</span>
+                <span className="text-[10px] text-slate-400 dark:text-slate-500 font-semibold">Quick tests:</span>
                 <button
                   type="button"
                   onClick={() => setTrackingIdInput('RPT-2026-981245')}
-                  className="text-[10px] text-blue-600 font-mono hover:underline cursor-pointer"
+                  className="text-[10px] text-blue-600 dark:text-blue-400 font-mono hover:underline cursor-pointer"
                 >
                   RPT-2026-981245
                 </button>
                 <button
                   type="button"
                   onClick={() => setTrackingIdInput('STALL-KAMUNING-0412')}
-                  className="text-[10px] text-blue-600 font-mono hover:underline cursor-pointer"
+                  className="text-[10px] text-blue-600 dark:text-blue-400 font-mono hover:underline cursor-pointer"
                 >
                   STALL-KAMUNING-0412
                 </button>
@@ -953,23 +953,23 @@ export default function CitizenPortal() {
 
               {/* Track Result Display */}
               {trackedResult && (
-                <div className="p-4 rounded-2xl bg-blue-50/50 border border-blue-100 space-y-3 mt-4">
+                <div className="p-4 rounded-2xl bg-blue-50/50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900 space-y-3 mt-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-extrabold text-blue-900">
+                    <span className="text-xs font-extrabold text-blue-900 dark:text-blue-300">
                       {trackedResult.service}
                     </span>
                     <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
                       trackedResult.status === 'Approved'
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : 'bg-amber-100 text-amber-800'
+                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                        : 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
                     }`}>
                       {trackedResult.status}
                     </span>
                   </div>
-                  <p className="text-[11px] font-mono text-slate-500">
+                  <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
                     Ref: {trackedResult.ref} &bull; Filed: {trackedResult.date}
                   </p>
-                  <p className="text-xs text-slate-700 leading-relaxed">
+                  <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
                     {trackedResult.note}
                   </p>
                 </div>
@@ -983,7 +983,7 @@ export default function CitizenPortal() {
                   setIsTrackingModalOpen(false);
                   navigate('/citizen-portal-stall-status');
                 }}
-                className="text-xs font-bold text-blue-700 hover:text-blue-900 cursor-pointer"
+                className="text-xs font-bold text-blue-700 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 cursor-pointer"
               >
                 Go to Full Application History &rarr;
               </button>
@@ -991,19 +991,18 @@ export default function CitizenPortal() {
           </div>
         </div>
       )}
-
       {/* ===================== MODAL: QUICK ASSESSMENT CALCULATOR ===================== */}
       {isCalculatorModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-100 space-y-6 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-100 dark:border-slate-800 space-y-6 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                   </svg>
                 </div>
-                <h3 className="font-extrabold text-base text-slate-900">
+                <h3 className="font-extrabold text-base text-slate-900 dark:text-white">
                   Quick Assessment Calculator
                 </h3>
               </div>
@@ -1012,13 +1011,13 @@ export default function CitizenPortal() {
                   setIsCalculatorModalOpen(false);
                   setCalcResult(null);
                 }}
-                className="text-slate-400 hover:text-slate-600 font-bold text-lg cursor-pointer"
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-bold text-lg cursor-pointer"
               >
                 &times;
               </button>
             </div>
 
-            <div className="flex gap-2 border-b border-slate-100 pb-3">
+            <div className="flex gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
               <button
                 type="button"
                 onClick={() => {
@@ -1026,7 +1025,7 @@ export default function CitizenPortal() {
                   setCalcResult(null);
                 }}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
-                  calcType === 'rpt' ? 'bg-[#1d4ed8] text-white' : 'text-slate-600 hover:bg-slate-100'
+                  calcType === 'rpt' ? 'bg-[#1d4ed8] text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}
               >
                 Real Property Tax
@@ -1038,7 +1037,7 @@ export default function CitizenPortal() {
                   setCalcResult(null);
                 }}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
-                  calcType === 'btax' ? 'bg-[#1d4ed8] text-white' : 'text-slate-600 hover:bg-slate-100'
+                  calcType === 'btax' ? 'bg-[#1d4ed8] text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}
               >
                 Business Tax
@@ -1050,7 +1049,7 @@ export default function CitizenPortal() {
                   setCalcResult(null);
                 }}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
-                  calcType === 'stall' ? 'bg-[#1d4ed8] text-white' : 'text-slate-600 hover:bg-slate-100'
+                  calcType === 'stall' ? 'bg-[#1d4ed8] text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}
               >
                 Stall Rental
@@ -1060,16 +1059,16 @@ export default function CitizenPortal() {
             <div className="space-y-4">
               {calcType === 'rpt' && (
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                     Property Fair Market Value (PHP)
                   </label>
                   <input
                     type="number"
                     value={calcInput.marketValue}
                     onChange={(e) => setCalcInput({ ...calcInput, marketValue: e.target.value })}
-                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-xs outline-none focus:border-blue-600"
+                    className="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl text-xs outline-none focus:border-blue-600"
                   />
-                  <p className="text-[10px] text-slate-400 mt-1">
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">
                     Based on 20% assessment level &bull; Includes 20% prompt payment discount.
                   </p>
                 </div>
@@ -1077,16 +1076,16 @@ export default function CitizenPortal() {
 
               {calcType === 'btax' && (
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                     Declared Annual Gross Sales (PHP)
                   </label>
                   <input
                     type="number"
                     value={calcInput.grossSales}
                     onChange={(e) => setCalcInput({ ...calcInput, grossSales: e.target.value })}
-                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-xs outline-none focus:border-blue-600"
+                    className="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl text-xs outline-none focus:border-blue-600"
                   />
-                  <p className="text-[10px] text-slate-400 mt-1">
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">
                     Computed based on graduated local revenue code tax schedules.
                   </p>
                 </div>
@@ -1094,16 +1093,16 @@ export default function CitizenPortal() {
 
               {calcType === 'stall' && (
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                     Stall Floor Area (Square Meters)
                   </label>
                   <input
                     type="number"
                     value={calcInput.stallSqm}
                     onChange={(e) => setCalcInput({ ...calcInput, stallSqm: e.target.value })}
-                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-xs outline-none focus:border-blue-600"
+                    className="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl text-xs outline-none focus:border-blue-600"
                   />
-                  <p className="text-[10px] text-slate-400 mt-1">
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">
                     Standard rate of ₱35/sqm/day for public wet/dry markets.
                   </p>
                 </div>
@@ -1118,14 +1117,14 @@ export default function CitizenPortal() {
               </button>
 
               {calcResult !== null && (
-                <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-center space-y-1">
-                  <p className="text-xs font-semibold text-emerald-800">
+                <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-center space-y-1">
+                  <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">
                     Estimated Amount Due:
                   </p>
-                  <p className="text-2xl font-black text-emerald-900 font-mono">
+                  <p className="text-2xl font-black text-emerald-900 dark:text-emerald-200 font-mono">
                     ₱{calcResult.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
-                  <p className="text-[10px] text-emerald-700">
+                  <p className="text-[10px] text-emerald-700 dark:text-emerald-400">
                     Subject to official verification by City Assessor &amp; Treasury.
                   </p>
                 </div>

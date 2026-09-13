@@ -22,8 +22,6 @@ export default function CitizenLayout({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
-
   const profileDropdownRef = useRef<HTMLDivElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
 
@@ -35,6 +33,15 @@ export default function CitizenLayout({
   const [notifications, setNotifications] = useState<
     { id: string | number; title: string; desc: string; time: string; link: string; unread: boolean }[]
   >([]);
+
+  // Dark mode initialized from localStorage
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    const saved = localStorage.getItem('citizenDarkMode');
+    if (saved !== null) {
+      return saved === '1';
+    }
+    return document.documentElement.classList.contains('dark');
+  });
 
   // Signed-in citizen
   const [user, setUser] = useState<{
@@ -113,6 +120,64 @@ export default function CitizenLayout({
       cleanupSecurity();
     };
   }, []);
+
+  // Sync Dark Mode state on mount & ensure html class matches
+  useEffect(() => {
+    const saved = localStorage.getItem('citizenDarkMode');
+    const shouldBeDark = saved !== null ? saved === '1' : document.documentElement.classList.contains('dark');
+    setIsDarkMode(shouldBeDark);
+    if (shouldBeDark) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, []);
+
+  // Load and persist notifications for the citizen user
+  useEffect(() => {
+    if (!user.email) return;
+    const storageKey = `citizen_notifications_${user.email.toLowerCase().trim()}`;
+    const stored = localStorage.getItem(storageKey);
+    let list: { id: string | number; title: string; desc: string; time: string; link: string; unread: boolean }[] = [];
+    if (stored) {
+      try {
+        list = JSON.parse(stored);
+      } catch {
+        list = [];
+      }
+    }
+
+    if (!list || list.length === 0) {
+      list = [
+        {
+          id: 1,
+          title: 'Account Registered',
+          desc: 'Your citizen tax portal account has been verified and activated.',
+          time: 'Today',
+          link: '/edit-profile',
+          unread: true,
+        },
+        {
+          id: 2,
+          title: '2026 Tax Declaration Notice',
+          desc: 'Annual business tax and real property assessment payments are now available.',
+          time: 'Today',
+          link: '/business-tax-assessment',
+          unread: true,
+        },
+        {
+          id: 3,
+          title: 'Market Stall & Hawker Services',
+          desc: 'Submit lease applications and review active permits directly online.',
+          time: 'Yesterday',
+          link: '/citizen-portal-stall-status',
+          unread: false,
+        },
+      ];
+      localStorage.setItem(storageKey, JSON.stringify(list));
+    }
+    setNotifications(list);
+  }, [user.email]);
 
   // Live clock, updated every second
   useEffect(() => {
@@ -245,9 +310,11 @@ export default function CitizenLayout({
           <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
         </svg>
       ),
-      path: '/citizen-portal-stall',
+      path: '/citizen-portal-stall-status',
       subItems: [
-        { label: 'City-Owned Market', path: '/citizen-portal-stall' },
+        { label: 'Stall Applications & Status', path: '/citizen-portal-stall-status' },
+        { label: 'Apply for New Stall', path: '/citizen-portal-stall' },
+        { label: 'Manage Stalls & Payments', path: '/citizen-portal-stall-manage-account' },
         { label: 'Hawkers & Street Vendors Registration', path: '/hawker-application' },
       ],
     },
@@ -457,10 +524,10 @@ export default function CitizenLayout({
           <button
             type="button"
             onClick={() => {
-              navigate('/citizen-portal-stall-status');
+              navigate('/application-history');
               setIsMobileMenuOpen(false);
             }}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer group ${location.pathname === '/citizen-portal-stall-status'
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer group ${location.pathname === '/application-history' || activeNav === 'history'
               ? 'bg-[#1a3885] text-white shadow-md'
               : 'text-slate-300 hover:bg-white/10 hover:text-white'
               }`}
@@ -617,11 +684,18 @@ export default function CitizenLayout({
                       Notifications
                     </span>
                     <button
-                      onClick={() =>
-                        setNotifications((prev) =>
-                          prev.map((n) => ({ ...n, unread: false }))
-                        )
-                      }
+                      onClick={() => {
+                        setNotifications((prev) => {
+                          const updated = prev.map((n) => ({ ...n, unread: false }));
+                          if (user.email) {
+                            localStorage.setItem(
+                              `citizen_notifications_${user.email.toLowerCase().trim()}`,
+                              JSON.stringify(updated)
+                            );
+                          }
+                          return updated;
+                        });
+                      }}
                       className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline font-semibold cursor-pointer"
                     >
                       Mark all as read

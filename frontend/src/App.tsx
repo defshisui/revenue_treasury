@@ -22,6 +22,7 @@ const HawkerApplication = lazy(() => import("./citizen-portal/hawker-application
 const RealPropertyApplication = lazy(() => import("./citizen-portal/real-property-tax"));
 
 const BusinessTaxAssessmentView = lazy(() => import("./citizen-portal/Business-Tax-Assessment-View"));
+const ApplicationHistory = lazy(() => import("./citizen-portal/ApplicationHistory"));
 
 function PageLoader() {
   return (
@@ -59,6 +60,7 @@ export default function App() {
             <Route path="/citizen-rpt/*" element={<RealPropertyApplication />} />
             <Route path="/real-property-application" element={<RealPropertyApplication />} />
             <Route path="/business-tax-assessment" element={<BusinessTaxAssessmentView />} />
+            <Route path="/application-history" element={<ApplicationHistory />} />
             <Route path="/market-vendor-tab" element={<Navigate to="/citizen-portal-stall" replace />} />
           </Routes>
         </Suspense>

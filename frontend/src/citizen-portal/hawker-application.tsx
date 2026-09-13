@@ -328,9 +328,9 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
     return (
         <CitizenLayout activeTitle="Hawker Association" activeNav="market">
             <div className="w-full font-['Segoe_UI',Tahoma,Geneva,Verdana,sans-serif] space-y-6">
-                <div className="w-full bg-white border border-slate-300 rounded-lg p-6 md:p-10 relative shadow-md">
-                    <div className="flex flex-col md:flex-row justify-between items-center border-b border-slate-200 pb-5 gap-4">
-                        <h1 className="text-slate-800 font-bold text-sm tracking-wide uppercase">
+                <div className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-lg p-6 md:p-10 relative shadow-md">
+                    <div className="flex flex-col md:flex-row justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-5 gap-4">
+                        <h1 className="text-slate-800 dark:text-white font-bold text-sm tracking-wide uppercase">
                             VIEW HAWKER ASSOCIATION LIST
                         </h1>
                     </div>
@@ -344,16 +344,16 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                 <i className="fa-solid fa-plus text-[10px]"></i>
                             </button>
                             <div className="flex items-center space-x-2 justify-end">
-                                <span className="text-xs text-slate-600">Search:</span>
+                                <span className="text-xs text-slate-600 dark:text-slate-300">Search:</span>
                                 <input
                                     type="text"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="border border-slate-300 rounded px-2.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 w-full sm:w-56"
+                                    className="border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-white rounded px-2.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 w-full sm:w-56"
                                 />
                             </div>
                         </div>
-                        <div className="overflow-x-auto border border-slate-200 rounded">
+                        <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded">
                             <table className="w-full text-left border-collapse">
                                 <thead>
                                     <tr className="bg-blue-900 text-white text-[11px] uppercase tracking-wider">
@@ -367,20 +367,20 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                 <tbody>
                                     {isLoading ? (
                                         <tr>
-                                            <td colSpan={5} className="bg-slate-50 py-10 text-center">
-                                                <p className="text-xs font-medium text-slate-500 animate-pulse">Loading backend records...</p>
+                                            <td colSpan={5} className="bg-slate-50 dark:bg-slate-900 py-10 text-center">
+                                                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 animate-pulse">Loading backend records...</p>
                                             </td>
                                         </tr>
                                     ) : displayedApplications.length > 0 ? (
                                         displayedApplications.map((app) => (
-                                            <tr key={app.id} className="border-b border-slate-200 bg-white hover:bg-slate-50 transition-colors text-xs text-slate-700">
-                                                <td className="py-2.5 px-4 font-semibold text-blue-800">{app.associationNumber}</td>
-                                                <td className="py-2.5 px-4">{app.associationName}</td>
-                                                <td className="py-2.5 px-4">{app.submissionDate}</td>
+                                            <tr key={app.id} className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors text-xs text-slate-700 dark:text-slate-200">
+                                                <td className="py-2.5 px-4 font-semibold text-blue-600 dark:text-blue-400">{app.associationNumber}</td>
+                                                <td className="py-2.5 px-4 font-medium text-slate-900 dark:text-white">{app.associationName}</td>
+                                                <td className="py-2.5 px-4 text-slate-600 dark:text-slate-300">{app.submissionDate}</td>
                                                 <td className="py-2.5 px-4">
-                                                    <span className={`px-2 py-1 rounded font-bold uppercase tracking-wider text-[10px] ${app.status === 'Approved' ? 'bg-emerald-100 text-emerald-800' :
-                                                        app.status === 'Rejected' || app.status === 'Suspended' ? 'bg-rose-100 text-rose-800' :
-                                                            'bg-amber-100 text-amber-800'
+                                                    <span className={`px-2 py-1 rounded font-bold uppercase tracking-wider text-[10px] ${app.status === 'Approved' ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' :
+                                                        app.status === 'Rejected' || app.status === 'Suspended' ? 'bg-rose-100 dark:bg-rose-950/80 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-800' :
+                                                            'bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
                                                         }`}>
                                                         {app.status || 'New'}
                                                     </span>
@@ -388,7 +388,7 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                                 <td className="py-2.5 px-4 text-center">
                                                     <button
                                                         onClick={() => handleViewClick(app)}
-                                                        className="text-blue-600 hover:text-blue-800 font-semibold hover:underline text-[11px] cursor-pointer"
+                                                        className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-semibold hover:underline text-[11px] cursor-pointer"
                                                     >
                                                         View
                                                     </button>
@@ -397,7 +397,7 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                         ))
                                     ) : (
                                         <tr>
-                                            <td colSpan={5} className="bg-slate-50 py-20 text-center">
+                                            <td colSpan={5} className="bg-slate-50 dark:bg-slate-900 py-20 text-center">
                                                 <div className="flex flex-col items-center justify-center space-y-1.5 text-slate-400">
                                                     <div className="text-2xl"><i className="fa-solid fa-inbox"></i></div>
                                                     <p className="text-xs font-medium">No Data Found</p>
@@ -408,13 +408,13 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                 </tbody>
                             </table>
                         </div>
-                        <div className="flex flex-col sm:flex-row justify-between items-center text-xs text-slate-600 pt-1 gap-4">
+                        <div className="flex flex-col sm:flex-row justify-between items-center text-xs text-slate-600 dark:text-slate-400 pt-1 gap-4">
                             <div className="flex items-center space-x-2">
                                 <span>Show</span>
                                 <select
                                     value={entriesCount}
                                     onChange={(e) => setEntriesCount(e.target.value)}
-                                    className="border border-slate-300 rounded px-1.5 py-0.5 bg-white text-xs focus:outline-none"
+                                    className="border border-slate-300 dark:border-slate-700 rounded px-1.5 py-0.5 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs focus:outline-none"
                                 >
                                     <option value="10">10</option>
                                     <option value="25">25</option>
@@ -427,56 +427,56 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                 </div>
             </div>
             {isModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 overflow-y-auto">
-                    <div className="bg-white border border-slate-300 rounded-lg max-w-4xl w-full relative shadow-2xl my-8 max-h-[90vh] overflow-y-auto">
-                        <div className="flex flex-col md:flex-row justify-between items-center border-b border-slate-200 px-6 md:px-8 pt-6 md:pt-8 pb-4 gap-4 sticky top-0 bg-white z-10 rounded-t-lg">
-                            <h1 className="text-slate-800 font-bold text-sm tracking-wide uppercase">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4 overflow-y-auto">
+                    <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-lg max-w-4xl w-full relative shadow-2xl my-8 max-h-[90vh] overflow-y-auto">
+                        <div className="flex flex-col md:flex-row justify-between items-center border-b border-slate-200 dark:border-slate-800 px-6 md:px-8 pt-6 md:pt-8 pb-4 gap-4 sticky top-0 bg-white dark:bg-slate-900 z-10 rounded-t-lg">
+                            <h1 className="text-slate-800 dark:text-white font-bold text-sm tracking-wide uppercase">
                                 {isViewOnly ? "HAWKER ASSOCIATION APPLICATION - RECORD VIEW" : (isPreviewMode ? "CLARIFICATION PREVIEW - HAWKER ASSOCIATION APPLICATION" : "HAWKER ASSOCIATION APPLICATION & LGU COMPLIANCE")}
                             </h1>
                             <button
                                 onClick={handleModalCloseClick}
-                                className="text-slate-400 hover:text-slate-700 text-sm font-bold px-2 py-1 rounded cursor-pointer"
+                                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 text-sm font-bold px-2 py-1 rounded cursor-pointer"
                             >
                                 &times; Close
                             </button>
                         </div>
                         <div className="px-6 md:px-8 pb-6 md:pb-8">
                             <form onSubmit={handleInitialSubmitClick} className="mt-4 space-y-6">
-                                <div className="flex flex-col md:flex-row justify-between items-center border-b border-slate-200 pb-5 gap-4">
-                                    <div className="w-14 h-14 flex items-center justify-center border border-slate-200 rounded-full bg-white p-2 shadow-xs">
+                                <div className="flex flex-col md:flex-row justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-5 gap-4">
+                                    <div className="w-14 h-14 flex items-center justify-center border border-slate-200 dark:border-slate-700 rounded-full bg-white dark:bg-slate-800 p-2 shadow-xs">
                                         <img src={logoSystem} alt="Logo Left" className="w-full h-full object-contain" />
                                     </div>
                                     <div className="text-center space-y-0.5">
-                                        <p className="text-[10px] uppercase tracking-wider text-slate-500 font-medium">Government Service</p>
-                                        <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800">Gov Serv</h2>
-                                        <p className="text-[10px] uppercase font-semibold text-slate-700 tracking-wide">Market Development and Administration Department</p>
-                                        <p className="text-[9px] text-slate-500">Tel No. 1122-3344 Local 1234</p>
+                                        <p className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-medium">Government Service</p>
+                                        <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-white">Gov Serv</h2>
+                                        <p className="text-[10px] uppercase font-semibold text-slate-700 dark:text-slate-300 tracking-wide">Market Development and Administration Department</p>
+                                        <p className="text-[9px] text-slate-500 dark:text-slate-400">Tel No. 1122-3344 Local 1234</p>
                                     </div>
-                                    <div className="w-14 h-14 flex items-center justify-center border border-slate-200 rounded-full bg-white p-2 shadow-xs">
+                                    <div className="w-14 h-14 flex items-center justify-center border border-slate-200 dark:border-slate-700 rounded-full bg-white dark:bg-slate-800 p-2 shadow-xs">
                                         <img src={logoSystem} alt="Logo Right" className="w-full h-full object-contain" />
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-3 text-xs">
                                     <div className="flex items-center justify-between">
-                                        <span className="text-slate-700">Application Type:</span>
-                                        <span className="text-emerald-700 font-semibold tracking-wide">HAWKER ASSOCIATION APPLICATION</span>
+                                        <span className="text-slate-700 dark:text-slate-300">Application Type:</span>
+                                        <span className="text-emerald-700 dark:text-emerald-400 font-semibold tracking-wide">HAWKER ASSOCIATION APPLICATION</span>
                                     </div>
                                     <div className="flex items-center justify-between">
-                                        <span className="text-slate-700">Date Submitted:</span>
+                                        <span className="text-slate-700 dark:text-slate-300">Date Submitted:</span>
                                         <input
                                             type="text"
                                             value={formData.dateSubmitted}
                                             readOnly
-                                            className="border border-slate-300 rounded px-2.5 py-1 w-56 bg-slate-100 text-slate-600 text-xs cursor-not-allowed focus:outline-none"
+                                            className="border border-slate-300 dark:border-slate-700 rounded px-2.5 py-1 w-56 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs cursor-not-allowed focus:outline-none"
                                         />
                                     </div>
                                     <div className="flex items-center justify-between">
-                                        <span className="text-slate-700">Application Status:</span>
+                                        <span className="text-slate-700 dark:text-slate-300">Application Status:</span>
                                         {isViewOnly ? (
                                             <div className="w-56 text-right md:text-left md:pl-1">
-                                                <span className={`px-3 py-1 rounded-full font-bold uppercase tracking-wider text-[10px] border ${viewedAppStatus === 'Approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                                                    viewedAppStatus === 'Rejected' || viewedAppStatus === 'Suspended' ? 'bg-rose-50 text-rose-700 border-rose-200' :
-                                                        'bg-amber-50 text-amber-700 border-amber-200'
+                                                <span className={`px-3 py-1 rounded-full font-bold uppercase tracking-wider text-[10px] border ${viewedAppStatus === 'Approved' ? 'bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800' :
+                                                    viewedAppStatus === 'Rejected' || viewedAppStatus === 'Suspended' ? 'bg-rose-50 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800' :
+                                                        'bg-amber-50 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
                                                     }`}>
                                                     {viewedAppStatus}
                                                 </span>
@@ -486,34 +486,34 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                                 type="text"
                                                 value="New"
                                                 readOnly
-                                                className="border border-slate-300 rounded px-2.5 py-1 w-56 bg-slate-100 text-slate-600 text-xs cursor-not-allowed focus:outline-none"
+                                                className="border border-slate-300 dark:border-slate-700 rounded px-2.5 py-1 w-56 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs cursor-not-allowed focus:outline-none"
                                             />
                                         )}
                                     </div>
                                     <div className="flex items-center justify-between">
-                                        <span className="text-slate-700">Association Number:</span>
+                                        <span className="text-slate-700 dark:text-slate-300">Association Number:</span>
                                         <input
                                             type="text"
                                             value={formData.associationNumber}
                                             readOnly
-                                            className="border border-slate-300 rounded px-2.5 py-1 w-56 bg-slate-100 text-slate-600 text-xs cursor-not-allowed focus:outline-none"
+                                            className="border border-slate-300 dark:border-slate-700 rounded px-2.5 py-1 w-56 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs cursor-not-allowed focus:outline-none"
                                         />
                                     </div>
                                     {isViewOnly && viewedAppRemarks && (
-                                        <div className="col-span-1 md:col-span-2 mt-3 p-3 bg-blue-50/50 border border-blue-200 rounded-lg">
-                                            <h4 className="text-[11px] font-bold text-blue-800 uppercase tracking-wider mb-1">
+                                        <div className="col-span-1 md:col-span-2 mt-3 p-3 bg-blue-50/50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 rounded-lg">
+                                            <h4 className="text-[11px] font-bold text-blue-800 dark:text-blue-300 uppercase tracking-wider mb-1">
                                                 <i className="fa-solid fa-comment-dots mr-1"></i> LGU Official Remarks / Assessment
                                             </h4>
-                                            <p className="text-xs text-blue-900 font-medium">{viewedAppRemarks}</p>
+                                            <p className="text-xs text-blue-900 dark:text-blue-200 font-medium">{viewedAppRemarks}</p>
                                         </div>
                                     )}
                                 </div>
                                 <div className="space-y-5 pt-1">
                                     <div>
-                                        <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wide mb-2.5">Information</h3>
+                                        <h3 className="text-xs font-bold text-slate-800 dark:text-white uppercase tracking-wide mb-2.5">Information</h3>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
                                             <div>
-                                                <label className="block font-medium text-slate-700 mb-1">Name of Association <span className="text-red-500">*</span></label>
+                                                <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">Name of Association <span className="text-red-500">*</span></label>
                                                 <input
                                                     type="text"
                                                     name="associationName"
@@ -521,22 +521,22 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                                     onChange={handleInputChange}
                                                     readOnly={isPreviewMode}
                                                     required
-                                                    className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`}
+                                                    className={`w-full border border-slate-300 dark:border-slate-700 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 dark:bg-slate-800 cursor-not-allowed text-slate-600 dark:text-slate-300' : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-white'}`}
                                                 />
                                             </div>
                                             <div>
-                                                <label className="block font-medium text-slate-700 mb-1">SEC Number</label>
+                                                <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">SEC Number</label>
                                                 <input
                                                     type="text"
                                                     name="secNumber"
                                                     value={formData.secNumber}
                                                     onChange={handleInputChange}
                                                     readOnly={isPreviewMode}
-                                                    className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`}
+                                                    className={`w-full border border-slate-300 dark:border-slate-700 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 dark:bg-slate-800 cursor-not-allowed text-slate-600 dark:text-slate-300' : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-white'}`}
                                                 />
                                             </div>
                                             <div>
-                                                <label className="block font-medium text-slate-700 mb-1">Date Granted</label>
+                                                <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">Date Granted</label>
                                                 <input
                                                     type="text"
                                                     name="dateGranted"
@@ -545,11 +545,11 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                                     value={formData.dateGranted}
                                                     onChange={handleInputChange}
                                                     readOnly={isPreviewMode}
-                                                    className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`}
+                                                    className={`w-full border border-slate-300 dark:border-slate-700 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 dark:bg-slate-800 cursor-not-allowed text-slate-600 dark:text-slate-300' : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-white'}`}
                                                 />
                                             </div>
                                             <div>
-                                                <label className="block font-medium text-slate-700 mb-1">Telephone <span className="text-red-500">*</span></label>
+                                                <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">Telephone <span className="text-red-500">*</span></label>
                                                 <input
                                                     type="text"
                                                     name="telephone"
@@ -559,22 +559,22 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                                     onChange={handleInputChange}
                                                     readOnly={isPreviewMode}
                                                     required
-                                                    className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`}
+                                                    className={`w-full border border-slate-300 dark:border-slate-700 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 dark:bg-slate-800 cursor-not-allowed text-slate-600 dark:text-slate-300' : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-white'}`}
                                                 />
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-                                        <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wide mb-2.5">LGU Market Zone & Location Allocation</h3>
+                                    <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+                                        <h3 className="text-xs font-bold text-slate-800 dark:text-white uppercase tracking-wide mb-2.5">LGU Market Zone & Location Allocation</h3>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                                             <div>
-                                                <label className="block font-medium text-slate-700 mb-1">Assigned Public Market Zone <span className="text-red-500">*</span></label>
+                                                <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">Assigned Public Market Zone <span className="text-red-500">*</span></label>
                                                 <select
                                                     name="marketZone"
                                                     value={formData.marketZone}
                                                     onChange={handleInputChange}
                                                     disabled={isPreviewMode}
-                                                    className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white cursor-pointer'}`}
+                                                    className={`w-full border border-slate-300 dark:border-slate-700 rounded px-2.5 py-1.5 text-xs focus:outline-none ${isPreviewMode ? 'bg-slate-100 dark:bg-slate-800 cursor-not-allowed text-slate-600 dark:text-slate-300' : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-white cursor-pointer'}`}
                                                 >
                                                     {MARKET_ZONES.map((zone, idx) => (
                                                         <option key={idx} value={zone}>{zone}</option>
@@ -582,7 +582,7 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                                 </select>
                                             </div>
                                             <div>
-                                                <label className="block font-medium text-slate-700 mb-1">Requested Vending Stalls / Meters Count <span className="text-red-500">*</span></label>
+                                                <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">Requested Vending Stalls / Meters Count <span className="text-red-500">*</span></label>
                                                 <input
                                                     type="number"
                                                     name="assignedStallCount"
@@ -591,31 +591,31 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                                     onChange={handleInputChange}
                                                     readOnly={isPreviewMode}
                                                     required
-                                                    className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`}
+                                                    className={`w-full border border-slate-300 dark:border-slate-700 rounded px-2.5 py-1.5 text-xs focus:outline-none ${isPreviewMode ? 'bg-slate-100 dark:bg-slate-800 cursor-not-allowed text-slate-600 dark:text-slate-300' : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-white'}`}
                                                 />
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-                                        <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wide mb-1">Digital Vault Statutory Documents</h3>
-                                        <p className="text-[11px] text-slate-500 mb-3">Upload required municipal compliance attachments (JPG, PNG images or PDF files):</p>
+                                    <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+                                        <h3 className="text-xs font-bold text-slate-800 dark:text-white uppercase tracking-wide mb-1">Digital Vault Statutory Documents</h3>
+                                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-3">Upload required municipal compliance attachments (JPG, PNG images or PDF files):</p>
                                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-                                            <div className="p-3 bg-white rounded-lg border border-slate-200 flex flex-col justify-between">
+                                            <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 flex flex-col justify-between">
                                                 <div>
-                                                    <p className="font-semibold text-slate-800 mb-1">SEC / DTI Permit <span className="text-red-500">*</span></p>
+                                                    <p className="font-semibold text-slate-800 dark:text-white mb-1">SEC / DTI Permit <span className="text-red-500">*</span></p>
                                                     {!isPreviewMode && (
                                                         <input
                                                             type="file"
                                                             accept="image/jpeg, image/png, application/pdf"
                                                             onChange={(e) => handleFileChange(e, 'SEC_DTI_PERMIT')}
-                                                            className="w-full text-[10px] text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                                                            className="w-full text-[10px] text-slate-500 dark:text-slate-400 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-blue-50 dark:file:bg-blue-950 file:text-blue-700 dark:file:text-blue-300 hover:file:bg-blue-100"
                                                         />
                                                     )}
                                                 </div>
                                                 {getDocByType('SEC_DTI_PERMIT') ? (
-                                                    <div className="mt-2 pt-2 border-t border-slate-100">
+                                                    <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800">
                                                         {getDocByType('SEC_DTI_PERMIT')?.mime_type.startsWith('image/') ? (
-                                                            <div className="w-full h-24 rounded overflow-hidden border border-slate-200 bg-slate-50">
+                                                            <div className="w-full h-24 rounded overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
                                                                 <img
                                                                     src={getDocByType('SEC_DTI_PERMIT')?.file_url}
                                                                     alt="SEC Permit Preview"
@@ -625,35 +625,35 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                                             </div>
                                                         ) : (
                                                             <div
-                                                                className="w-full h-24 rounded border border-slate-200 bg-slate-50 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-100"
+                                                                className="w-full h-24 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700"
                                                                 onClick={() => openAttachment(getDocByType('SEC_DTI_PERMIT')?.file_url, getDocByType('SEC_DTI_PERMIT')?.mime_type)}
                                                             >
                                                                 <i className="fa-solid fa-file-pdf text-rose-500 text-3xl mb-1"></i>
-                                                                <span className="text-[10px] text-blue-600 font-semibold hover:underline">View PDF</span>
+                                                                <span className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold hover:underline">View PDF</span>
                                                             </div>
                                                         )}
-                                                        <p className="text-[10px] text-slate-500 truncate mt-1">{getDocByType('SEC_DTI_PERMIT')?.file_name}</p>
+                                                        <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-1">{getDocByType('SEC_DTI_PERMIT')?.file_name}</p>
                                                     </div>
                                                 ) : isPreviewMode && (
-                                                    <p className="text-[10px] text-amber-600 italic mt-2">No SEC/DTI file attached</p>
+                                                    <p className="text-[10px] text-amber-600 dark:text-amber-400 italic mt-2">No SEC/DTI file attached</p>
                                                 )}
                                             </div>
-                                            <div className="p-3 bg-white rounded-lg border border-slate-200 flex flex-col justify-between">
+                                            <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 flex flex-col justify-between">
                                                 <div>
-                                                    <p className="font-semibold text-slate-800 mb-1">Member Roster List <span className="text-red-500">*</span></p>
+                                                    <p className="font-semibold text-slate-800 dark:text-white mb-1">Member Roster List <span className="text-red-500">*</span></p>
                                                     {!isPreviewMode && (
                                                         <input
                                                             type="file"
                                                             accept="image/jpeg, image/png, application/pdf"
                                                             onChange={(e) => handleFileChange(e, 'MEMBER_ROSTER')}
-                                                            className="w-full text-[10px] text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                                                            className="w-full text-[10px] text-slate-500 dark:text-slate-400 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-blue-50 dark:file:bg-blue-950 file:text-blue-700 dark:file:text-blue-300 hover:file:bg-blue-100"
                                                         />
                                                     )}
                                                 </div>
                                                 {getDocByType('MEMBER_ROSTER') ? (
-                                                    <div className="mt-2 pt-2 border-t border-slate-100">
+                                                    <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800">
                                                         {getDocByType('MEMBER_ROSTER')?.mime_type.startsWith('image/') ? (
-                                                            <div className="w-full h-24 rounded overflow-hidden border border-slate-200 bg-slate-50">
+                                                            <div className="w-full h-24 rounded overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
                                                                 <img
                                                                     src={getDocByType('MEMBER_ROSTER')?.file_url}
                                                                     alt="Roster Preview"
@@ -663,35 +663,35 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                                             </div>
                                                         ) : (
                                                             <div
-                                                                className="w-full h-24 rounded border border-slate-200 bg-slate-50 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-100"
+                                                                className="w-full h-24 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700"
                                                                 onClick={() => openAttachment(getDocByType('MEMBER_ROSTER')?.file_url, getDocByType('MEMBER_ROSTER')?.mime_type)}
                                                             >
                                                                 <i className="fa-solid fa-file-pdf text-rose-500 text-3xl mb-1"></i>
-                                                                <span className="text-[10px] text-blue-600 font-semibold hover:underline">View PDF</span>
+                                                                <span className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold hover:underline">View PDF</span>
                                                             </div>
                                                         )}
-                                                        <p className="text-[10px] text-slate-500 truncate mt-1">{getDocByType('MEMBER_ROSTER')?.file_name}</p>
+                                                        <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-1">{getDocByType('MEMBER_ROSTER')?.file_name}</p>
                                                     </div>
                                                 ) : isPreviewMode && (
-                                                    <p className="text-[10px] text-amber-600 italic mt-2">No Roster file attached</p>
+                                                    <p className="text-[10px] text-amber-600 dark:text-amber-400 italic mt-2">No Roster file attached</p>
                                                 )}
                                             </div>
-                                            <div className="p-3 bg-white rounded-lg border border-slate-200 flex flex-col justify-between">
+                                            <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 flex flex-col justify-between">
                                                 <div>
-                                                    <p className="font-semibold text-slate-800 mb-1">Barangay Clearance <span className="text-red-500">*</span></p>
+                                                    <p className="font-semibold text-slate-800 dark:text-white mb-1">Barangay Clearance <span className="text-red-500">*</span></p>
                                                     {!isPreviewMode && (
                                                         <input
                                                             type="file"
                                                             accept="image/jpeg, image/png, application/pdf"
                                                             onChange={(e) => handleFileChange(e, 'BARANGAY_CLEARANCE')}
-                                                            className="w-full text-[10px] text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                                                            className="w-full text-[10px] text-slate-500 dark:text-slate-400 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-blue-50 dark:file:bg-blue-950 file:text-blue-700 dark:file:text-blue-300 hover:file:bg-blue-100"
                                                         />
                                                     )}
                                                 </div>
                                                 {getDocByType('BARANGAY_CLEARANCE') ? (
-                                                    <div className="mt-2 pt-2 border-t border-slate-100">
+                                                    <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800">
                                                         {getDocByType('BARANGAY_CLEARANCE')?.mime_type.startsWith('image/') ? (
-                                                            <div className="w-full h-24 rounded overflow-hidden border border-slate-200 bg-slate-50">
+                                                            <div className="w-full h-24 rounded overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
                                                                 <img
                                                                     src={getDocByType('BARANGAY_CLEARANCE')?.file_url}
                                                                     alt="Clearance Preview"
@@ -701,26 +701,26 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                                             </div>
                                                         ) : (
                                                             <div
-                                                                className="w-full h-24 rounded border border-slate-200 bg-slate-50 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-100"
+                                                                className="w-full h-24 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700"
                                                                 onClick={() => openAttachment(getDocByType('BARANGAY_CLEARANCE')?.file_url, getDocByType('BARANGAY_CLEARANCE')?.mime_type)}
                                                             >
                                                                 <i className="fa-solid fa-file-pdf text-rose-500 text-3xl mb-1"></i>
-                                                                <span className="text-[10px] text-blue-600 font-semibold hover:underline">View PDF</span>
+                                                                <span className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold hover:underline">View PDF</span>
                                                             </div>
                                                         )}
-                                                        <p className="text-[10px] text-slate-500 truncate mt-1">{getDocByType('BARANGAY_CLEARANCE')?.file_name}</p>
+                                                        <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-1">{getDocByType('BARANGAY_CLEARANCE')?.file_name}</p>
                                                     </div>
                                                 ) : isPreviewMode && (
-                                                    <p className="text-[10px] text-amber-600 italic mt-2">No Barangay Clearance attached</p>
+                                                    <p className="text-[10px] text-amber-600 dark:text-amber-400 italic mt-2">No Barangay Clearance attached</p>
                                                 )}
                                             </div>
                                         </div>
                                     </div>
                                     <div>
-                                        <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wide mb-2.5">Chairperson</h3>
+                                        <h3 className="text-xs font-bold text-slate-800 dark:text-white uppercase tracking-wide mb-2.5">Chairperson</h3>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
                                             <div>
-                                                <label className="block font-medium text-slate-700 mb-1">First Name <span className="text-red-500">*</span></label>
+                                                <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">First Name <span className="text-red-500">*</span></label>
                                                 <input
                                                     type="text"
                                                     name="firstName"
@@ -728,22 +728,22 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                                     onChange={handleInputChange}
                                                     readOnly={isPreviewMode}
                                                     required
-                                                    className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`}
+                                                    className={`w-full border border-slate-300 dark:border-slate-700 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 dark:bg-slate-800 cursor-not-allowed text-slate-600 dark:text-slate-300' : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-white'}`}
                                                 />
                                             </div>
                                             <div>
-                                                <label className="block font-medium text-slate-700 mb-1">Middle Name</label>
+                                                <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">Middle Name</label>
                                                 <input
                                                     type="text"
                                                     name="middleName"
                                                     value={formData.middleName}
                                                     onChange={handleInputChange}
                                                     readOnly={isPreviewMode}
-                                                    className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`}
+                                                    className={`w-full border border-slate-300 dark:border-slate-700 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 dark:bg-slate-800 cursor-not-allowed text-slate-600 dark:text-slate-300' : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-white'}`}
                                                 />
                                             </div>
                                             <div>
-                                                <label className="block font-medium text-slate-700 mb-1">Last Name <span className="text-red-500">*</span></label>
+                                                <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">Last Name <span className="text-red-500">*</span></label>
                                                 <input
                                                     type="text"
                                                     name="lastName"
@@ -751,11 +751,11 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                                     onChange={handleInputChange}
                                                     readOnly={isPreviewMode}
                                                     required
-                                                    className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`}
+                                                    className={`w-full border border-slate-300 dark:border-slate-700 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 dark:bg-slate-800 cursor-not-allowed text-slate-600 dark:text-slate-300' : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-white'}`}
                                                 />
                                             </div>
                                             <div>
-                                                <label className="block font-medium text-slate-700 mb-1">Email Address <span className="text-red-500">*</span></label>
+                                                <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">Email Address <span className="text-red-500">*</span></label>
                                                 <input
                                                     type="email"
                                                     name="email"
@@ -763,14 +763,14 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                                     onChange={handleInputChange}
                                                     readOnly={isPreviewMode}
                                                     required
-                                                    className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`}
+                                                    className={`w-full border border-slate-300 dark:border-slate-700 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 dark:bg-slate-800 cursor-not-allowed text-slate-600 dark:text-slate-300' : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-white'}`}
                                                 />
                                             </div>
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs pt-1">
                                         <div>
-                                            <label className="block font-medium text-slate-700 mb-1">Submitted By: <span className="text-red-500">*</span></label>
+                                            <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">Submitted By: <span className="text-red-500">*</span></label>
                                             <input
                                                 type="text"
                                                 name="submittedBy"
@@ -778,11 +778,11 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                                 onChange={handleInputChange}
                                                 readOnly={isPreviewMode}
                                                 required
-                                                className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`}
+                                                className={`w-full border border-slate-300 dark:border-slate-700 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 dark:bg-slate-800 cursor-not-allowed text-slate-600 dark:text-slate-300' : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-white'}`}
                                             />
                                         </div>
                                         <div>
-                                            <label className="block font-medium text-slate-700 mb-1">Email Address of Submitter: <span className="text-red-500">*</span></label>
+                                            <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">Email Address of Submitter: <span className="text-red-500">*</span></label>
                                             <input
                                                 type="email"
                                                 name="submitterEmail"
@@ -790,17 +790,17 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                                 onChange={handleInputChange}
                                                 readOnly={isPreviewMode}
                                                 required
-                                                className={`w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`}
+                                                className={`w-full border border-slate-300 dark:border-slate-700 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-800 ${isPreviewMode ? 'bg-slate-100 dark:bg-slate-800 cursor-not-allowed text-slate-600 dark:text-slate-300' : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-white'}`}
                                             />
                                         </div>
                                     </div>
                                 </div>
-                                <div className="flex items-center justify-center space-x-3 pt-4 border-t border-slate-100 mt-6">
+                                <div className="flex items-center justify-center space-x-3 pt-4 border-t border-slate-100 dark:border-slate-800 mt-6">
                                     {isViewOnly ? (
                                         <button
                                             type="button"
                                             onClick={showListView}
-                                            className="bg-white hover:bg-slate-50 text-blue-800 border border-blue-600 font-semibold text-xs py-1.5 px-8 rounded shadow-sm transition-colors cursor-pointer"
+                                            className="bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-blue-800 dark:text-blue-300 border border-blue-600 dark:border-blue-500 font-semibold text-xs py-1.5 px-8 rounded shadow-sm transition-colors cursor-pointer"
                                         >
                                             Close View
                                         </button>
@@ -809,7 +809,7 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                             <button
                                                 type="button"
                                                 onClick={handleCancelClick}
-                                                className="bg-white hover:bg-slate-50 text-blue-800 border border-blue-600 font-semibold text-xs py-1.5 px-6 rounded shadow-sm transition-colors cursor-pointer"
+                                                className="bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-blue-800 dark:text-blue-300 border border-blue-600 dark:border-blue-500 font-semibold text-xs py-1.5 px-6 rounded shadow-sm transition-colors cursor-pointer"
                                             >
                                                 {isPreviewMode ? "Back to Edit" : "Cancel"}
                                             </button>
@@ -839,19 +839,19 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                 </div>
             )}
             {isConfirmationOpen && (
-                <div className="fixed inset-0 z-60 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
-                    <div className="bg-white border border-slate-300 rounded-lg max-w-sm w-full p-6 text-center space-y-4 shadow-xl">
-                        <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto text-lg font-bold">
+                <div className="fixed inset-0 z-60 flex items-center justify-center bg-slate-950/70 backdrop-blur-xs p-4">
+                    <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-lg max-w-sm w-full p-6 text-center space-y-4 shadow-xl">
+                        <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto text-lg font-bold">
                             ?
                         </div>
                         <div className="space-y-1">
-                            <h3 className="text-sm font-bold text-slate-900 uppercase">Are you sure?</h3>
-                            <p className="text-xs text-slate-600">You are about to cancel. Any inputs or progress will be discarded.</p>
+                            <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase">Are you sure?</h3>
+                            <p className="text-xs text-slate-600 dark:text-slate-300">You are about to cancel. Any inputs or progress will be discarded.</p>
                         </div>
                         <div className="flex items-center justify-center space-x-2 pt-2">
                             <button
                                 onClick={handleConfirmNo}
-                                className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 font-semibold text-xs py-1.5 px-6 rounded shadow-xs cursor-pointer"
+                                className="bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 font-semibold text-xs py-1.5 px-6 rounded shadow-xs cursor-pointer"
                             >
                                 No
                             </button>

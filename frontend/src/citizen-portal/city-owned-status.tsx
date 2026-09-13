@@ -1,202 +1,724 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import CitizenLayout from './CitizenLayout';
+import { getLeases, type LeaseRecord } from '../services/marketService';
+import { API_BASE_URL } from '../config/api';
+import {
+    createPayMongoQrPaymentIntent,
+    createQrPhPaymentMethod,
+    attachQrPhPaymentMethod,
+} from '../services/paymongoService';
+
+interface EnrichedLeaseRecord extends LeaseRecord {
+    id?: string;
+    createdAt?: string;
+    paymentDate?: string;
+}
 
 export default function ApplicationList() {
-    const [selectedValues, setSelectedValues] = useState<string[]>([]);
-    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-    const [appIdInput, setAppIdInput] = useState('');
-    const [entriesPerPage, setEntriesPerPage] = useState('10');
-    const dropdownRef = useRef<HTMLDivElement>(null);
-    const availableApplicationTypes = [
-        "New Stall Application",
-        "Removal of Stall Extension Application",
-        "Renewal of Stall Application",
-        "Repair Permit Application",
-        "Stall Extension Application",
-        "Transfer Stall Application"
-    ];
+    const navigate = useNavigate();
+
+    const [user, setUser] = useState<{
+        fullname: string;
+        email: string;
+        firstName: string;
+        lastName: string;
+    } | null>(null);
+
+    const [leases, setLeases] = useState<EnrichedLeaseRecord[]>([]);
+    const [loading, setLoading] = useState<boolean>(true);
+    const [statusFilter, setStatusFilter] = useState<string>('ALL');
+    const [searchType, setSearchType] = useState<string>('Tracking/Lease No.');
+    const [searchQuery, setSearchQuery] = useState<string>('');
+    const [submittedSearch, setSubmittedSearch] = useState<string>('');
+    const [currentPage, setCurrentPage] = useState<number>(1);
+    const pageSize = 10;
+
+    // View Modal State
+    const [selectedLease, setSelectedLease] = useState<EnrichedLeaseRecord | null>(null);
+
+    // QR Payment Flow
+    const [isPaymentStep, setIsPaymentStep] = useState<boolean>(false);
+    const [isProcessingPayment, setIsProcessingPayment] = useState<boolean>(false);
+    const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
+    const [qrReferenceNumber, setQrReferenceNumber] = useState<string>('');
+    const [qrPaymentIntentId, setQrPaymentIntentId] = useState<string>('');
+    const [qrError, setQrError] = useState<string>('');
+    const [qrSecondsRemaining, setQrSecondsRemaining] = useState<number>(300);
+    const [qrPaymentPaid, setQrPaymentPaid] = useState<boolean>(false);
+    const [paymentConfirmedAt, setPaymentConfirmedAt] = useState<Date | null>(null);
+    const [isPaymentSuccess, setIsPaymentSuccess] = useState<boolean>(false);
+
+    // Load active citizen session
     useEffect(() => {
-        function handleClickOutside(event: MouseEvent) {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-                setIsDropdownOpen(false);
+        const rawData =
+            localStorage.getItem('currentUser') ||
+            localStorage.getItem('user') ||
+            localStorage.getItem('citizen_user') ||
+            sessionStorage.getItem('currentUser') ||
+            sessionStorage.getItem('user');
+
+        if (rawData) {
+            try {
+                const parsed = JSON.parse(rawData);
+                const target = parsed.user && typeof parsed.user === 'object' ? parsed.user : parsed;
+                const fullName = target.fullname || target.name || target.fullName || target.firstName || target.email || 'Citizen';
+                const email = target.email || '';
+                const parts = String(fullName).trim().split(' ');
+                const firstName = parts[0] || 'Citizen';
+                const lastName = parts.length > 1 ? parts.slice(1).join(' ') : '';
+                setUser({ fullname: String(fullName), email, firstName, lastName });
+            } catch (err) {
+                console.error('Failed to parse user session:', err);
             }
         }
-        window.addEventListener('click', handleClickOutside);
-        return () => window.removeEventListener('click', handleClickOutside);
     }, []);
-    const handleToggleSelect = (value: string) => {
-        if (selectedValues.includes(value)) {
-            setSelectedValues(selectedValues.filter(v => v !== value));
-        } else {
-            setSelectedValues([...selectedValues, value]);
+
+    // Load leases from API
+    const fetchLeases = async () => {
+        setLoading(true);
+        try {
+            const data = await getLeases();
+            setLeases(data || []);
+        } catch (err) {
+            console.error('Error fetching market stall applications:', err);
+        } finally {
+            setLoading(false);
         }
     };
-    const handleRemoveTag = (e: React.MouseEvent, val: string) => {
-        e.stopPropagation();
-        setSelectedValues(selectedValues.filter(v => v !== val));
+
+    useEffect(() => {
+        fetchLeases();
+    }, []);
+
+    // Filter and search logic
+    const filteredLeases = useMemo(() => {
+        let result = [...leases];
+
+        // Filter by user if known (or show all citizen's matched by name / all if demo)
+        if (user && user.fullname && user.fullname !== 'Citizen User') {
+            const userFull = user.fullname.toLowerCase();
+            const userFirst = user.firstName.toLowerCase();
+            const userLast = user.lastName.toLowerCase();
+
+            const userMatches = result.filter(r => {
+                const holderName = `${r.firstName || ''} ${r.lastName || ''}`.toLowerCase();
+                return (
+                    holderName.includes(userFull) ||
+                    (userFirst && holderName.includes(userFirst)) ||
+                    (userLast && holderName.includes(userLast))
+                );
+            });
+
+            // If user has specific matching records, prioritize them
+            if (userMatches.length > 0) {
+                result = userMatches;
+            }
+        }
+
+        // Filter by Status
+        if (statusFilter !== 'ALL') {
+            result = result.filter((r) => {
+                const status = (r.leaseStatus || '').toUpperCase();
+                const payStatus = (r.paymentStatus || '').toUpperCase();
+                if (statusFilter === 'PAID') return payStatus.includes('PAID');
+                if (statusFilter === 'UNPAID') return !payStatus.includes('PAID');
+                return status === statusFilter.toUpperCase() || payStatus === statusFilter.toUpperCase();
+            });
+        }
+
+        // Search Query
+        if (submittedSearch.trim()) {
+            const q = submittedSearch.trim().toLowerCase();
+            result = result.filter((r) => {
+                if (searchType === 'Tracking/Lease No.') {
+                    return (r.leaseId || '').toLowerCase().includes(q);
+                }
+                if (searchType === 'Market Name') {
+                    return (r.marketName || '').toLowerCase().includes(q);
+                }
+                if (searchType === 'Stall No.') {
+                    return (r.stallNumber || '').toLowerCase().includes(q);
+                }
+                if (searchType === 'Applicant Name') {
+                    const name = `${r.firstName || ''} ${r.lastName || ''}`.toLowerCase();
+                    return name.includes(q);
+                }
+                return (
+                    (r.leaseId || '').toLowerCase().includes(q) ||
+                    (r.marketName || '').toLowerCase().includes(q) ||
+                    (r.stallNumber || '').toLowerCase().includes(q)
+                );
+            });
+        }
+
+        return result;
+    }, [leases, user, statusFilter, searchType, submittedSearch]);
+
+    // Pagination
+    const totalPages = Math.max(1, Math.ceil(filteredLeases.length / pageSize));
+    const paginatedLeases = useMemo(() => {
+        const start = (currentPage - 1) * pageSize;
+        return filteredLeases.slice(start, start + pageSize);
+    }, [filteredLeases, currentPage, pageSize]);
+
+    const handleSearch = (e: React.FormEvent) => {
+        e.preventDefault();
+        setSubmittedSearch(searchQuery);
+        setCurrentPage(1);
     };
-    const handleSearch = () => {
-        console.log("Searching for Application ID:", appIdInput);
-        console.log("Selected Application Types:", selectedValues);
+
+    // PayMongo QR Payment Handler
+    const handlePayMongoMarketQrPayment = async (record: EnrichedLeaseRecord) => {
+        setIsProcessingPayment(true);
+        setQrCodeUrl('');
+        setQrReferenceNumber('');
+        setQrPaymentIntentId('');
+        setQrError('');
+        setQrPaymentPaid(false);
+        setPaymentConfirmedAt(null);
+        setQrSecondsRemaining(300);
+
+        const computedAmount = Number(record.amountDue || 0);
+        if (!Number.isFinite(computedAmount) || computedAmount <= 0) {
+            setIsProcessingPayment(false);
+            setQrError('No outstanding payment balance found for this stall.');
+            return;
+        }
+
+        try {
+            const paymentIntent = await createPayMongoQrPaymentIntent({
+                amount: computedAmount,
+                type: 'MARKET_STALL',
+                businessTrackingNumber: record.leaseId,
+                customerName: `${record.firstName} ${record.lastName}`.trim() || user?.fullname || 'Market Vendor',
+                customerEmail: user?.email || 'vendor@gov.ph',
+                description: `Market Stall Rental Payment (${record.leaseId} - Stall ${record.stallNumber})`,
+            });
+
+            setQrPaymentIntentId(paymentIntent.paymentIntentId);
+            setQrReferenceNumber(paymentIntent.referenceNumber);
+
+            const paymentMethodId = await createQrPhPaymentMethod(paymentIntent.publicKey, 300);
+            const attachedPayment = await attachQrPhPaymentMethod(
+                paymentIntent.paymentIntentId,
+                paymentMethodId,
+                paymentIntent.clientKey,
+                paymentIntent.publicKey
+            );
+
+            const imageUrl =
+                attachedPayment?.attributes?.next_action?.code?.image_url ||
+                attachedPayment?.next_action?.code?.image_url ||
+                attachedPayment?.attributes?.next_action?.qr_code?.image_url ||
+                attachedPayment?.qr_code?.image_url ||
+                '';
+
+            if (!imageUrl) {
+                throw new Error('PayMongo did not return the QRPh code image. Please try again.');
+            }
+
+            setQrCodeUrl(imageUrl);
+        } catch (err: any) {
+            console.error('PayMongo Market QRPh payment error:', err);
+            setQrError(err?.message || 'Unable to generate the PayMongo QRPh code. Please try again.');
+        } finally {
+            setIsProcessingPayment(false);
+        }
+    };
+
+    // QR Countdown Timer
+    useEffect(() => {
+        if (!isPaymentStep || !qrCodeUrl || qrPaymentPaid) return;
+        const timer = window.setInterval(() => {
+            setQrSecondsRemaining((seconds) => {
+                if (seconds <= 1) {
+                    window.clearInterval(timer);
+                    setQrCodeUrl('');
+                    if (selectedLease) void handlePayMongoMarketQrPayment(selectedLease);
+                    return 300;
+                }
+                return seconds - 1;
+            });
+        }, 1000);
+        return () => window.clearInterval(timer);
+    }, [isPaymentStep, qrCodeUrl, qrPaymentPaid, selectedLease]);
+
+    // QR Payment Polling
+    useEffect(() => {
+        if (!isPaymentStep || !qrPaymentIntentId || qrPaymentPaid) return;
+        const poll = window.setInterval(async () => {
+            try {
+                const response = await fetch(
+                    `${API_BASE_URL}/api/payments/qr-status/${encodeURIComponent(qrPaymentIntentId)}`
+                );
+                if (!response.ok) return;
+                const data = await response.json();
+                if (data.paid) {
+                    setQrPaymentPaid(true);
+                    setPaymentConfirmedAt(new Date());
+                    setQrSecondsRemaining(0);
+                    setQrCodeUrl('');
+
+                    await fetchLeases();
+                    setIsPaymentStep(false);
+                    setQrPaymentIntentId('');
+                    setQrError('');
+                    setIsPaymentSuccess(true);
+                }
+            } catch (error) {
+                console.error('QR payment status check failed:', error);
+            }
+        }, 3000);
+        return () => window.clearInterval(poll);
+    }, [isPaymentStep, qrPaymentIntentId, qrPaymentPaid]);
+
+    const openPaymentModal = (record: EnrichedLeaseRecord) => {
+        setSelectedLease(record);
+        setIsPaymentStep(true);
+        void handlePayMongoMarketQrPayment(record);
+    };
+
+    const closePaymentModal = () => {
+        if (isProcessingPayment) return;
+        setIsPaymentStep(false);
+        setIsPaymentSuccess(false);
+        setQrCodeUrl('');
+        setQrReferenceNumber('');
+        setQrPaymentIntentId('');
+        setQrError('');
+        setPaymentConfirmedAt(null);
+        setQrPaymentPaid(false);
     };
 
     return (
-        <CitizenLayout activeTitle="View Application List" activeNav="market">
-            <div className="max-w-6xl mx-auto w-full space-y-4">
-                <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col">
-                    <div className="flex justify-between items-center px-6 sm:px-8 py-5 border-b border-slate-200 dark:border-slate-800">
-                        <div className="flex items-center gap-3">
-                            <h2 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white tracking-tight border-l-4 border-blue-700 pl-3">
-                                View Application List
-                            </h2>
+        <CitizenLayout activeTitle="City-Owned Market" activeNav="market">
+            <div className="flex flex-col justify-between w-full">
+                <div>
+                    {/* Top Hero Banner Matching Business Tax */}
+                    <div className="-mx-4 sm:-mx-6 lg:-mx-8 -mt-4 sm:-mt-6 lg:-mt-8 relative bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 h-36 sm:h-48 overflow-hidden flex items-center justify-center border-b-4 border-blue-600">
+                        <div className="absolute inset-0 opacity-30 bg-[radial-gradient(#3b82f6_1px,transparent_1px)] [background-size:16px_16px]"></div>
+
+                        <div className="relative z-10 text-center px-4">
+                            <h1 className="text-xl sm:text-3xl font-extrabold text-white tracking-wide uppercase">
+                                2026 City-Owned Market Stall Portal
+                            </h1>
+                            <p className="text-xs sm:text-sm text-slate-200 mt-1 max-w-xl mx-auto">
+                                Manage your stall applications, view market assignments, and monitor lease payment status.
+                            </p>
                         </div>
                     </div>
 
-                    <div className="p-6 sm:p-8 bg-white dark:bg-slate-900 grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6 items-start">
-                        <div className="flex flex-col gap-2">
-                            <label htmlFor="appId" className="text-xs font-bold text-slate-700 dark:text-slate-300">Application ID</label>
-                            <div className="flex gap-2">
-                                <input
-                                    type="text"
-                                    id="appId"
-                                    value={appIdInput}
-                                    onChange={(e) => setAppIdInput(e.target.value)}
-                                    placeholder="Search ID..."
-                                    className="w-full px-3.5 py-2.5 border border-slate-200 dark:border-slate-700 rounded-lg text-sm outline-none focus:border-blue-600 focus:ring-[3px] focus:ring-blue-600/15 transition-all bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500"
-                                />
+                    {/* Main Content Area */}
+                    <div className="max-w-6xl mx-auto px-4 py-6">
+                        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 sm:p-8 space-y-6">
+                            {/* Primary Action Button */}
+                            <div className="flex justify-between items-center">
                                 <button
-                                    onClick={handleSearch}
-                                    className="bg-blue-900 hover:bg-blue-950 text-white border-none px-5 rounded-lg font-bold text-sm cursor-pointer transition-colors whitespace-nowrap"
+                                    type="button"
+                                    onClick={() => navigate('/citizen-portal-stall')}
+                                    className="bg-blue-900 hover:bg-blue-950 text-white text-xs font-extrabold uppercase px-5 py-2.5 rounded-lg shadow-sm transition-all flex items-center gap-2 cursor-pointer"
                                 >
-                                    Search
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                                    </svg>
+                                    Apply for Market Stall
                                 </button>
                             </div>
-                        </div>
-                        <div className="flex flex-col gap-2">
-                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Application Type</label>
-                            <div className="relative" ref={dropdownRef}>
-                                <div
-                                    className="min-h-[44px] flex flex-wrap gap-1.5 items-center cursor-pointer px-3.5 py-2.5 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 focus-within:border-blue-600 focus-within:ring-[3px] focus-within:ring-blue-600/15 transition-all"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setIsDropdownOpen(!isDropdownOpen);
-                                    }}
-                                >
-                                    {selectedValues.length === 0 ? (
-                                        <span className="text-slate-400 dark:text-slate-500 text-sm">-- Select --</span>
-                                    ) : (
-                                        selectedValues.map((val) => (
-                                            <span key={val} className="bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200 px-2 py-1 rounded-md text-xs flex items-center gap-1.5 border border-slate-200 dark:border-slate-600 font-medium">
-                                                {val}
-                                                <span
-                                                    className="cursor-pointer font-bold text-slate-400 dark:text-slate-500 hover:text-rose-600"
-                                                    onClick={(e) => handleRemoveTag(e, val)}
-                                                >
-                                                    &times;
-                                                </span>
-                                            </span>
-                                        ))
-                                    )}
+
+                            {/* Search and Filters */}
+                            <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                                <div className="md:col-span-4">
+                                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                                        Application / Lease Status
+                                    </label>
+                                    <select
+                                        value={statusFilter}
+                                        onChange={(e) => {
+                                            setStatusFilter(e.target.value);
+                                            setCurrentPage(1);
+                                        }}
+                                        className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-semibold bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-blue-900"
+                                    >
+                                        <option value="ALL">ALL</option>
+                                        <option value="Active">Active</option>
+                                        <option value="Pending">Pending</option>
+                                        <option value="Approved">Approved</option>
+                                        <option value="PAID">Paid</option>
+                                        <option value="UNPAID">Pending Payment / Unpaid</option>
+                                        <option value="Terminated">Terminated</option>
+                                    </select>
                                 </div>
-                                <div className={`absolute top-[calc(100%+4px)] left-0 right-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg z-10 max-h-[250px] overflow-y-auto ${isDropdownOpen ? 'block' : 'hidden'}`}>
-                                    {availableApplicationTypes.map((type) => {
-                                        const isSelected = selectedValues.includes(type);
-                                        return (
-                                            <div
-                                                key={type}
-                                                className={`px-3.5 py-2.5 text-sm cursor-pointer flex justify-between items-center border-b border-slate-50 dark:border-slate-700/60 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-blue-700 dark:hover:text-blue-400 ${isSelected ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400' : 'text-slate-700 dark:text-slate-200'}`}
-                                                onClick={() => handleToggleSelect(type)}
-                                            >
-                                                <span>{type}</span>
-                                                <span className={`text-xs text-blue-600 dark:text-blue-400 ${isSelected ? 'inline' : 'hidden'}`}>✓</span>
-                                            </div>
-                                        );
-                                    })}
+
+                                <div className="md:col-span-8 flex flex-col sm:flex-row gap-2 items-end">
+                                    <div className="w-full sm:w-1/3">
+                                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                                            Search By:
+                                        </label>
+                                        <select
+                                            value={searchType}
+                                            onChange={(e) => setSearchType(e.target.value)}
+                                            className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-semibold bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-blue-900"
+                                        >
+                                            <option value="Tracking/Lease No.">Tracking/Lease No.</option>
+                                            <option value="Market Name">Market Name</option>
+                                            <option value="Stall No.">Stall No.</option>
+                                            <option value="Applicant Name">Applicant Name</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="w-full sm:w-2/3 flex gap-2">
+                                        <input
+                                            type="text"
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            placeholder="Search..."
+                                            className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded-lg text-xs bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-900"
+                                        />
+                                        <button
+                                            type="submit"
+                                            className="bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold px-4 py-2.5 rounded-lg text-xs transition-colors whitespace-nowrap cursor-pointer"
+                                        >
+                                            Search
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+
+                            {/* Data Table */}
+                            <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800">
+                                <table className="w-full text-left border-collapse text-xs">
+                                    <thead>
+                                        <tr className="bg-blue-900 dark:bg-blue-950 text-white font-bold uppercase tracking-wider text-[11px]">
+                                            <th className="py-3 px-4">Tracking/Lease Number ↕</th>
+                                            <th className="py-3 px-4">Market Name</th>
+                                            <th className="py-3 px-4">Stall &amp; Section</th>
+                                            <th className="py-3 px-4">Applicant Name</th>
+                                            <th className="py-3 px-4">Application Status</th>
+                                            <th className="py-3 px-4">Payment Status</th>
+                                            <th className="py-3 px-4">Application Date</th>
+                                            <th className="py-3 px-4 text-center">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                        {loading ? (
+                                            <tr>
+                                                <td colSpan={8} className="py-12 text-center text-slate-400">
+                                                    <div className="inline-block animate-spin rounded-full h-7 w-7 border-4 border-blue-600 border-t-transparent mb-2"></div>
+                                                    <p className="text-xs font-semibold">Loading market stall records...</p>
+                                                </td>
+                                            </tr>
+                                        ) : paginatedLeases.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={8} className="py-12 text-center text-slate-400 dark:text-slate-500">
+                                                    <svg className="w-10 h-10 mx-auto mb-2 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                    </svg>
+                                                    <p className="text-xs font-bold uppercase tracking-wider">No Market Stall Records Found</p>
+                                                    <p className="text-[11px] text-slate-400 mt-1">Submit a new stall application using the button above.</p>
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            paginatedLeases.map((lease) => {
+                                                const isPaid = (lease.paymentStatus || '').toLowerCase().includes('paid');
+                                                const isPending = (lease.leaseStatus || '').toLowerCase().includes('pending');
+                                                const isApproved = (lease.leaseStatus || '').toLowerCase().includes('active') || (lease.leaseStatus || '').toLowerCase().includes('approved');
+                                                const formattedDate = lease.createdAt
+                                                    ? new Date(lease.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'numeric', day: 'numeric' })
+                                                    : '9/13/2026';
+
+                                                return (
+                                                    <tr key={lease.leaseId || lease.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                                                        <td className="py-3 px-4 font-mono font-bold text-blue-900 dark:text-blue-400">
+                                                            {lease.leaseId}
+                                                        </td>
+                                                        <td className="py-3 px-4 font-semibold text-slate-800 dark:text-slate-200">
+                                                            {lease.marketName}
+                                                        </td>
+                                                        <td className="py-3 px-4 text-slate-600 dark:text-slate-300">
+                                                            Stall {lease.stallNumber} ({lease.section})
+                                                        </td>
+                                                        <td className="py-3 px-4 text-slate-700 dark:text-slate-300 font-medium">
+                                                            {lease.firstName} {lease.lastName}
+                                                        </td>
+                                                        <td className="py-3 px-4">
+                                                            <span
+                                                                className={`font-bold px-2.5 py-0.5 rounded text-[10px] uppercase ${isApproved
+                                                                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                                                                    : isPending
+                                                                        ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
+                                                                        : 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300'
+                                                                    }`}
+                                                            >
+                                                                {lease.leaseStatus || 'PENDING'}
+                                                            </span>
+                                                        </td>
+                                                        <td className="py-3 px-4">
+                                                            <span
+                                                                className={`font-bold px-2.5 py-0.5 rounded text-[10px] uppercase ${isPaid
+                                                                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                                                                    : 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
+                                                                    }`}
+                                                            >
+                                                                {isPaid ? 'PAID' : 'UNPAID'}
+                                                            </span>
+                                                        </td>
+                                                        <td className="py-3 px-4 text-slate-500 dark:text-slate-400 font-mono text-[11px]">
+                                                            {formattedDate}
+                                                        </td>
+                                                        <td className="py-3 px-4 text-center">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setSelectedLease(lease)}
+                                                                className="text-blue-700 dark:text-blue-400 hover:text-blue-900 font-bold hover:underline cursor-pointer"
+                                                            >
+                                                                View
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Pagination */}
+                            <div className="flex justify-between items-center pt-2 text-xs text-slate-500 dark:text-slate-400">
+                                <div>
+                                    Page {currentPage} of {totalPages}
+                                </div>
+                                <div className="flex gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                                        disabled={currentPage === 1}
+                                        className={`px-3 py-1.5 rounded-lg border text-xs font-semibold ${currentPage === 1
+                                            ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700 cursor-not-allowed'
+                                            : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer'
+                                            }`}
+                                    >
+                                        Previous
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                                        disabled={currentPage === totalPages}
+                                        className={`px-3 py-1.5 rounded-lg border text-xs font-semibold ${currentPage === totalPages
+                                            ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700 cursor-not-allowed'
+                                            : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer'
+                                            }`}
+                                    >
+                                        Next
+                                    </button>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-
-                    <div className="w-full overflow-x-auto min-h-[300px] bg-slate-50 dark:bg-slate-950/40 border-t border-b border-slate-200 dark:border-slate-800 flex flex-col justify-center">
-                        <table className="w-full border-collapse text-left">
-                            <thead>
-                                <tr>
-                                    <th className="bg-blue-900 dark:bg-blue-950 text-white text-[11px] uppercase tracking-wider py-3.5 px-5 font-bold">
-                                        <div className="flex items-center justify-between gap-2">
-                                            <span className="cursor-pointer">Form ID</span>
-                                            <span className="cursor-pointer text-blue-300">▲</span>
-                                        </div>
-                                    </th>
-                                    <th className="bg-blue-900 dark:bg-blue-950 text-white text-[11px] uppercase tracking-wider py-3.5 px-5 font-bold">
-                                        <div className="flex items-center justify-between gap-2">
-                                            <span className="cursor-pointer">Market Name</span>
-                                            <svg className="w-3 h-3 text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                                                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                            </svg>
-                                        </div>
-                                    </th>
-                                    <th className="bg-blue-900 dark:bg-blue-950 text-white text-[11px] uppercase tracking-wider py-3.5 px-5 font-bold">
-                                        <div className="flex items-center justify-between gap-2">
-                                            <span className="cursor-pointer">Section</span>
-                                        </div>
-                                    </th>
-                                    <th className="bg-blue-900 dark:bg-blue-950 text-white text-[11px] uppercase tracking-wider py-3.5 px-5 font-bold">
-                                        <div className="flex items-center justify-between gap-2">
-                                            <span className="cursor-pointer">Status</span>
-                                            <svg className="w-3 h-3 text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                                                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                            </svg>
-                                        </div>
-                                    </th>
-                                    <th className="bg-blue-900 dark:bg-blue-950 text-white text-[11px] uppercase tracking-wider py-3.5 px-5 font-bold">
-                                        <div className="flex items-center justify-between gap-2">
-                                            <span className="cursor-pointer">Date Submitted</span>
-                                        </div>
-                                    </th>
-                                    <th className="bg-blue-900 dark:bg-blue-950 text-white text-[11px] uppercase tracking-wider py-3.5 px-5 font-bold">
-                                        <div className="flex items-center justify-between gap-2">
-                                            <span className="cursor-pointer">Action</span>
-                                        </div>
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td colSpan={6} className="py-4 px-5 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
-                                        <div className="text-center py-14 px-5 text-slate-400 dark:text-slate-600">
-                                            <div className="w-11 h-11 mx-auto mb-3 opacity-40 bg-slate-200 dark:bg-slate-700 rounded-md"></div>
-                                            <p className="text-xs font-semibold uppercase tracking-widest">No Data</p>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div className="flex justify-between items-center py-5 px-6 sm:px-8 bg-white dark:bg-slate-900 text-xs text-slate-500 dark:text-slate-400">
-                        <div className="flex items-center gap-2">
-                            <span>Show</span>
-                            <select
-                                value={entriesPerPage}
-                                onChange={(e) => setEntriesPerPage(e.target.value)}
-                                className="py-1 px-2 border border-slate-200 dark:border-slate-700 rounded-md outline-none text-slate-800 dark:text-slate-200 bg-white dark:bg-slate-800"
-                            >
-                                <option value="0">0</option>
-                                <option value="10">10</option>
-                                <option value="25">25</option>
-                            </select>
-                            <span>of 0 entries</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                            <button className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 py-1.5 px-3 rounded-md text-slate-800 dark:text-slate-300 text-xs opacity-40 cursor-not-allowed" disabled>&laquo;</button>
-                            <button className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 py-1.5 px-3 rounded-md text-slate-800 dark:text-slate-300 text-xs opacity-40 cursor-not-allowed" disabled>&lsaquo;</button>
-                            <button className="py-1.5 px-3 rounded-md text-xs bg-blue-900 dark:bg-blue-800 text-white border border-blue-900 dark:border-blue-800">1</button>
-                            <button className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 py-1.5 px-3 rounded-md text-slate-800 dark:text-slate-300 text-xs opacity-40 cursor-not-allowed" disabled>&rsaquo;</button>
-                            <button className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 py-1.5 px-3 rounded-md text-slate-800 dark:text-slate-300 text-xs opacity-40 cursor-not-allowed" disabled>&raquo;</button>
                         </div>
                     </div>
                 </div>
             </div>
+
+            {/* View Details Modal */}
+            {selectedLease && !isPaymentStep && (
+                <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-2xl w-full border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                        <div className="bg-blue-900 px-6 py-4 flex justify-between items-center text-white">
+                            <div>
+                                <span className="text-[10px] uppercase font-bold text-blue-300 tracking-wider">Application Details</span>
+                                <h3 className="text-base font-extrabold">{selectedLease.leaseId}</h3>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setSelectedLease(null)}
+                                className="text-white/80 hover:text-white text-lg font-bold p-1 cursor-pointer"
+                            >
+                                &times;
+                            </button>
+                        </div>
+
+                        <div className="p-6 space-y-5 text-xs text-slate-700 dark:text-slate-300 max-h-[75vh] overflow-y-auto">
+                            {/* Summary Grid */}
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
+                                <div>
+                                    <span className="block text-[10px] uppercase font-bold text-slate-400">Market Name</span>
+                                    <span className="font-bold text-slate-900 dark:text-white text-sm">{selectedLease.marketName}</span>
+                                </div>
+                                <div>
+                                    <span className="block text-[10px] uppercase font-bold text-slate-400">Stall Number</span>
+                                    <span className="font-bold text-slate-900 dark:text-white text-sm">Stall #{selectedLease.stallNumber}</span>
+                                </div>
+                                <div>
+                                    <span className="block text-[10px] uppercase font-bold text-slate-400">Section</span>
+                                    <span className="font-bold text-slate-900 dark:text-white text-sm">{selectedLease.section}</span>
+                                </div>
+                                <div>
+                                    <span className="block text-[10px] uppercase font-bold text-slate-400">Applicant / Holder</span>
+                                    <span className="font-semibold text-slate-800 dark:text-slate-200">{selectedLease.firstName} {selectedLease.lastName}</span>
+                                </div>
+                                <div>
+                                    <span className="block text-[10px] uppercase font-bold text-slate-400">Lease Status</span>
+                                    <span className="font-bold text-emerald-600 dark:text-emerald-400 uppercase">{selectedLease.leaseStatus}</span>
+                                </div>
+                                <div>
+                                    <span className="block text-[10px] uppercase font-bold text-slate-400">Monthly Rental Due</span>
+                                    <span className="font-extrabold text-blue-900 dark:text-blue-400 text-sm">
+                                        ₱{(selectedLease.amountDue || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Payment & Compliance Info */}
+                            <div className="space-y-2 border-t border-slate-200 dark:border-slate-800 pt-4">
+                                <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100">
+                                    Payment Information &amp; Official Receipts
+                                </h4>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                                        <span className="block text-[10px] uppercase font-bold text-slate-400">Payment Status</span>
+                                        <span className={`font-bold ${selectedLease.paymentStatus?.toLowerCase().includes('paid') ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                            {selectedLease.paymentStatus || 'Pending Payment'}
+                                        </span>
+                                    </div>
+                                    <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                                        <span className="block text-[10px] uppercase font-bold text-slate-400">Payment Method</span>
+                                        <span className="font-semibold text-slate-800 dark:text-slate-200">
+                                            {selectedLease.paymentMethod || 'PayMongo (QR Ph)'}
+                                        </span>
+                                    </div>
+                                    {selectedLease.officialReceiptNumber && (
+                                        <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                                            <span className="block text-[10px] uppercase font-bold text-slate-400">Official Receipt (O.R.) No.</span>
+                                            <span className="font-mono font-bold text-blue-900 dark:text-blue-400">{selectedLease.officialReceiptNumber}</span>
+                                        </div>
+                                    )}
+                                    {selectedLease.paymentReference && (
+                                        <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                                            <span className="block text-[10px] uppercase font-bold text-slate-400">Payment Reference</span>
+                                            <span className="font-mono font-bold text-slate-700 dark:text-slate-300">{selectedLease.paymentReference}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Modal Footer Actions */}
+                        <div className="bg-slate-50 dark:bg-slate-800/80 px-6 py-4 flex justify-between items-center border-t border-slate-200 dark:border-slate-800">
+                            <button
+                                type="button"
+                                onClick={() => setSelectedLease(null)}
+                                className="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 cursor-pointer"
+                            >
+                                Close
+                            </button>
+
+                            {!(selectedLease.paymentStatus || '').toLowerCase().includes('paid') && (
+                                <button
+                                    type="button"
+                                    onClick={() => openPaymentModal(selectedLease)}
+                                    className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-md transition-all flex items-center gap-2 cursor-pointer"
+                                >
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                                    </svg>
+                                    Pay Online (QR Ph)
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* QR Payment Modal */}
+            {isPaymentStep && selectedLease && (
+                <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full border border-slate-200 dark:border-slate-800 shadow-2xl p-6 text-center space-y-5 animate-in fade-in zoom-in-95">
+                        <div className="border-b border-slate-200 dark:border-slate-800 pb-3">
+                            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                                PayMongo QR Ph Checkout
+                            </span>
+                            <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
+                                Market Stall Rental Payment
+                            </h3>
+                            <p className="text-xs text-slate-500 mt-0.5 font-mono">{selectedLease.leaseId} - Stall {selectedLease.stallNumber}</p>
+                        </div>
+
+                        {isProcessingPayment ? (
+                            <div className="py-10 space-y-3">
+                                <div className="animate-spin rounded-full h-10 w-10 border-4 border-emerald-500 border-t-transparent mx-auto"></div>
+                                <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                                    Generating dynamic QR Ph code...
+                                </p>
+                            </div>
+                        ) : qrError ? (
+                            <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-xs font-semibold">
+                                {qrError}
+                            </div>
+                        ) : qrCodeUrl ? (
+                            <div className="space-y-4">
+                                <div className="p-4 bg-white rounded-2xl border-2 border-emerald-500 shadow-inner inline-block">
+                                    <img src={qrCodeUrl} alt="QR Ph Code" className="w-56 h-56 mx-auto object-contain" />
+                                    {qrReferenceNumber && (
+                                        <p className="text-[10px] font-mono text-slate-500 mt-1.5">Ref: {qrReferenceNumber}</p>
+                                    )}
+                                </div>
+
+                                <div className="space-y-1">
+                                    <div className="text-xs text-slate-500">Amount Due:</div>
+                                    <div className="text-xl font-black text-slate-900 dark:text-white">
+                                        ₱{(selectedLease.amountDue || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                    </div>
+                                    <div className="text-[11px] font-semibold text-amber-600">
+                                        Expires in: {Math.floor(qrSecondsRemaining / 60)}:{(qrSecondsRemaining % 60).toString().padStart(2, '0')}
+                                    </div>
+                                </div>
+
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                                    Scan with GCash, Maya, or any InstaPay/QRPh mobile banking app.
+                                </p>
+                            </div>
+                        ) : null}
+
+                        <div className="pt-2">
+                            <button
+                                type="button"
+                                onClick={closePaymentModal}
+                                className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-xl text-xs font-bold cursor-pointer"
+                            >
+                                Cancel / Back
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Payment Success Notification */}
+            {isPaymentSuccess && (
+                <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-sm w-full border border-emerald-500 p-6 text-center space-y-4 shadow-2xl">
+                        <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
+                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                        </div>
+                        <h3 className="text-base font-extrabold text-slate-900 dark:text-white">Payment Confirmed!</h3>
+                        <p className="text-xs text-slate-600 dark:text-slate-300">
+                            Your market stall rental payment has been successfully recorded and processed.
+                        </p>
+                        {paymentConfirmedAt && (
+                            <p className="text-[11px] font-mono text-slate-400">
+                                Confirmed at: {paymentConfirmedAt.toLocaleTimeString()}
+                            </p>
+                        )}
+                        <button
+                            type="button"
+                            onClick={() => setIsPaymentSuccess(false)}
+                            className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs cursor-pointer"
+                        >
+                            Done
+                        </button>
+                    </div>
+                </div>
+            )}
         </CitizenLayout>
     );
 }

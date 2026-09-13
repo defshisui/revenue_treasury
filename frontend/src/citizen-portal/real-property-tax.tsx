@@ -1445,7 +1445,7 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
                       </div>
                     </form>
 
-                    <div className="overflow-x-auto border border-white mt-6 rpt-table">
+                    <div className="overflow-x-auto border border-white dark:border-slate-800 mt-6 rpt-table">
                       <table className="w-full min-w-[760px] text-left border-collapse rpt-table">
                         <thead className="text-white font-black uppercase">
                           <tr>
@@ -1459,14 +1459,14 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
                             <th>VIEW</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100">
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                           {associatedProperties.length > 0 ? (
                             associatedProperties
                               .filter((property) => assessmentYear === "All Years" || String(property.billingYear) === assessmentYear)
                               .map((property) => {
                                 const matchedApp = getAppForTdn(property.taxDeclarationNumber);
                                 return (
-                                  <tr key={property.taxDeclarationNumber} className="hover:bg-slate-50 transition">
+                                  <tr key={property.taxDeclarationNumber} className="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition">
                                     <td className="font-mono font-black">{property.taxDeclarationNumber}</td>
                                     <td className="font-bold">{property.ownerName}</td>
                                     <td>{property.propertyLocation || property.barangay || "—"}</td>
@@ -1530,8 +1530,8 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
                     </div>
 
                     <div className="hidden">
-                      <p className="font-bold text-[#0B3B60] mb-2 flex items-center gap-2">
-                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 text-blue-600">i</span>
+                      <p className="font-bold text-[#0B3B60] dark:text-blue-300 mb-2 flex items-center gap-2">
+                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300">i</span>
                         How to search:
                       </p>
                       <ol className="list-decimal ml-5 space-y-1">
@@ -1547,31 +1547,31 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
 
               {rptSearchStep === 2 && (
                 <div className="rpt-main-shell p-6 sm:p-8 space-y-6">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
                     <div>
                       <button
                         onClick={() => setRptSearchStep(1)}
-                        className="text-xs font-bold text-[#0284C7] hover:underline flex items-center gap-1 cursor-pointer mb-2"
+                        className="text-xs font-bold text-[#0284C7] dark:text-sky-400 hover:underline flex items-center gap-1 cursor-pointer mb-2"
                       >
                         &lt; GO BACK TO SEARCH
                       </button>
-                      <h2 className="text-lg font-extrabold text-[#0B3B60]">Possible properties you might own</h2>
-                      <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1.5">
+                      <h2 className="text-lg font-extrabold text-[#0B3B60] dark:text-blue-300">Possible properties you might own</h2>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-1.5">
                         <span>ℹ️</span>
                         <span>Here is the list of other Tax Declaration Numbers (TDNs) in relation to the TDN that you entered.</span>
                       </p>
                     </div>
 
-                    <div className="text-right bg-slate-50 border border-slate-200 px-4 py-2 rounded-xl text-xs font-bold text-slate-700">
-                      <span>Selected TDN: <span className="text-[#0B3B60] font-black">{selectedTdnIds.size}</span></span>
-                      <span className="mx-2 text-slate-300">|</span>
-                      <span>Unselected TDN: <span className="text-rose-600 font-black">{unselectedTdns.length}</span></span>
+                    <div className="text-right bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300">
+                      <span>Selected TDN: <span className="text-[#0B3B60] dark:text-blue-400 font-black">{selectedTdnIds.size}</span></span>
+                      <span className="mx-2 text-slate-300 dark:text-slate-600">|</span>
+                      <span>Unselected TDN: <span className="text-rose-600 dark:text-rose-400 font-black">{unselectedTdns.length}</span></span>
                     </div>
                   </div>
 
-                  <div className="overflow-x-auto rounded-2xl border border-slate-200">
+                  <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-800">
                     <table className="w-full text-left text-xs border-collapse">
-                      <thead className="bg-[#F8FAFC] text-slate-700 font-bold border-b border-slate-200">
+                      <thead className="bg-[#F8FAFC] dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold border-b border-slate-200 dark:border-slate-700">
                         <tr>
                           <th className="p-4 w-12 text-center">
                             <input
@@ -1589,11 +1589,11 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
                           <th className="p-4 text-right">Assessment Due</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-100 bg-white">
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900">
                         {associatedProperties.map((prop) => {
                           const isSelected = selectedTdnIds.has(prop.taxDeclarationNumber);
                           return (
-                            <tr key={prop.taxDeclarationNumber} className={`hover:bg-slate-50 transition ${isSelected ? "bg-sky-50/40" : ""}`}>
+                            <tr key={prop.taxDeclarationNumber} className={`hover:bg-slate-50 dark:hover:bg-slate-800/60 transition ${isSelected ? "bg-sky-50/40 dark:bg-sky-950/40" : ""}`}>
                               <td className="p-4 text-center">
                                 <input
                                   type="checkbox"
@@ -1602,24 +1602,24 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
                                   className="size-4 accent-[#0B3B60] rounded cursor-pointer"
                                 />
                               </td>
-                              <td className="p-4 font-mono font-extrabold text-[#0B3B60]">
+                              <td className="p-4 font-mono font-extrabold text-[#0B3B60] dark:text-blue-400">
                                 {prop.taxDeclarationNumber}
                               </td>
-                              <td className="p-4 font-semibold text-slate-800">
+                              <td className="p-4 font-semibold text-slate-800 dark:text-slate-200">
                                 {prop.ownerName}
                               </td>
-                              <td className="p-4 font-mono text-slate-600">
+                              <td className="p-4 font-mono text-slate-600 dark:text-slate-400">
                                 {prop.billExpiryDate}
                               </td>
-                              <td className="p-4 font-mono text-slate-600">
+                              <td className="p-4 font-mono text-slate-600 dark:text-slate-400">
                                 {prop.newPspin}
                               </td>
                               <td className="p-4">
-                                <span className="bg-slate-100 text-slate-700 font-bold px-2.5 py-1 rounded-lg text-[10px]">
+                                <span className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold px-2.5 py-1 rounded-lg text-[10px]">
                                   {prop.propertyType}
                                 </span>
                               </td>
-                              <td className="p-4 text-right font-mono font-bold text-slate-900">
+                              <td className="p-4 text-right font-mono font-bold text-slate-900 dark:text-white">
                                 {formatCurrency(prop.balance || prop.totalAssessment || 1020)}
                               </td>
                             </tr>
@@ -1643,15 +1643,15 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
 
               {rptSearchStep === 3 && (
                 <div className="rpt-main-shell p-6 sm:p-8 space-y-6">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
                     <div>
                       <button
                         onClick={() => setRptSearchStep(2)}
-                        className="text-xs font-bold text-[#0284C7] hover:underline flex items-center gap-1 cursor-pointer mb-2"
+                        className="text-xs font-bold text-[#0284C7] dark:text-sky-400 hover:underline flex items-center gap-1 cursor-pointer mb-2"
                       >
                         &lt; GO BACK TO GROUP BILL SET
                       </button>
-                      <h2 className="text-lg font-extrabold text-[#0B3B60] uppercase tracking-wide">
+                      <h2 className="text-lg font-extrabold text-[#0B3B60] dark:text-blue-300 uppercase tracking-wide">
                         SELECTED TAX DECLARATION NUMBER(S):
                       </h2>
                     </div>
@@ -1725,10 +1725,10 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
                     </table>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row items-center justify-between bg-slate-50 border border-slate-200 p-5 rounded-2xl gap-4">
+                  <div className="flex flex-col sm:flex-row items-center justify-between bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl gap-4">
                     <div>
-                      <p className="text-xs text-slate-500 font-semibold">Group Bill Set Total Assessment</p>
-                      <p className="text-2xl font-black text-[#0B3B60]">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold">Group Bill Set Total Assessment</p>
+                      <p className="text-2xl font-black text-[#0B3B60] dark:text-blue-300">
                         {formatCurrency(
                           selectedPropertiesList.reduce((sum, p) => sum + (p.computedPayableAmount || p.balance || 1020), 0)
                         )}
@@ -1750,42 +1750,42 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
 
           {isServiceRequestModalOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4">
-              <div className="relative bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-6 sm:p-8 space-y-8">
+              <div className="relative bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-6 sm:p-8 space-y-8">
                 <button
                   type="button"
                   onClick={() => setIsServiceRequestModalOpen(false)}
                   aria-label="Close"
-                  className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 font-bold text-lg cursor-pointer"
+                  className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 font-bold text-lg cursor-pointer"
                 >
                   ✕
                 </button>
 
-                <div className="border-b border-slate-200 pb-4 pr-8">
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-[#0284C7]">OFFICE OF THE CITY ASSESSOR</p>
-                  <h2 className="text-2xl font-extrabold text-[#0B3B60]">Real Property Tax Service Request</h2>
-                  <p className="text-xs text-slate-500 mt-1">
+                <div className="border-b border-slate-200 dark:border-slate-800 pb-4 pr-8">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-[#0284C7] dark:text-sky-400">OFFICE OF THE CITY ASSESSOR</p>
+                  <h2 className="text-2xl font-extrabold text-[#0B3B60] dark:text-blue-300">Real Property Tax Service Request</h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                     Submit a declaration, transfer of ownership, property reclassification, or correction directly for assessor evaluation.
                   </p>
                 </div>
 
                 {appNotice && (
-                  <div className="p-4 bg-sky-50 border border-sky-200 rounded-2xl text-sky-900 text-xs font-bold">
+                  <div className="p-4 bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800 rounded-2xl text-sky-900 dark:text-sky-300 text-xs font-bold">
                     {appNotice}
                   </div>
                 )}
 
                 <form onSubmit={handleAppSubmit} className="space-y-8">
                   <div>
-                    <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-800 border-b border-slate-100 pb-2 mb-4">
+                    <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-100 border-b border-slate-100 dark:border-slate-800 pb-2 mb-4">
                       1. Transaction Details
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                       <div className="space-y-1.5">
-                        <label className="font-bold text-slate-700">Requested LGU Service *</label>
+                        <label className="font-bold text-slate-700 dark:text-slate-300">Requested LGU Service *</label>
                         <select
                           value={appForm.service}
                           onChange={(e) => setAppForm({ ...appForm, service: e.target.value })}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
+                          className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
                         >
                           {services.map((s) => (
                             <option key={s} value={s}>{s}</option>
@@ -1793,11 +1793,11 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
                         </select>
                       </div>
                       <div className="space-y-1.5">
-                        <label className="font-bold text-slate-700">Applying As *</label>
+                        <label className="font-bold text-slate-700 dark:text-slate-300">Applying As *</label>
                         <select
                           value={appForm.applicantType}
                           onChange={(e) => setAppForm({ ...appForm, applicantType: e.target.value as ApplicantType })}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
+                          className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
                         >
                           <option value="Property Owner">Property Owner</option>
                           <option value="Authorized Representative">Authorized Representative</option>
@@ -1808,42 +1808,42 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
                   </div>
 
                   <div>
-                    <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-800 border-b border-slate-100 pb-2 mb-4">
+                    <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-100 border-b border-slate-100 dark:border-slate-800 pb-2 mb-4">
                       2. Applicant &amp; Owner Details
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
                       <div className="space-y-1.5">
-                        <label className="font-bold text-slate-700">Owner Name / Company *</label>
+                        <label className="font-bold text-slate-700 dark:text-slate-300">Owner Name / Company *</label>
                         <input
                           type="text"
                           required
                           value={appForm.ownerName}
                           onChange={(e) => setAppForm({ ...appForm, ownerName: e.target.value })}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
+                          className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="font-bold text-slate-700">Applicant Full Name *</label>
+                        <label className="font-bold text-slate-700 dark:text-slate-300">Applicant Full Name *</label>
                         <input
                           type="text"
                           required
                           value={appForm.applicantName}
                           onChange={(e) => setAppForm({ ...appForm, applicantName: e.target.value })}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
+                          className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="font-bold text-slate-700">Email Address *</label>
+                        <label className="font-bold text-slate-700 dark:text-slate-300">Email Address *</label>
                         <input
                           type="email"
                           required
                           value={appForm.email}
                           onChange={(e) => setAppForm({ ...appForm, email: e.target.value })}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
+                          className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="font-bold text-slate-700">Mobile Number (PH) *</label>
+                        <label className="font-bold text-slate-700 dark:text-slate-300">Mobile Number (PH) *</label>
                         <input
                           type="tel"
                           inputMode="numeric"
@@ -1858,11 +1858,11 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
                               mobileNumber: e.target.value.replace(/\D/g, "").slice(0, 11),
                             })
                           }
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
+                          className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="font-bold text-slate-700">TIN Number</label>
+                        <label className="font-bold text-slate-700 dark:text-slate-300">TIN Number</label>
                         <input
                           type="text"
                           inputMode="numeric"
@@ -1876,33 +1876,33 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
                               tin: e.target.value.replace(/\D/g, "").slice(0, 14),
                             })
                           }
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
+                          className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
                         />
                       </div>
                     </div>
                   </div>
 
                   <div>
-                    <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-800 border-b border-slate-100 pb-2 mb-4">
+                    <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-100 border-b border-slate-100 dark:border-slate-800 pb-2 mb-4">
                       3. Real Property Location &amp; Classification
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
                       <div className="space-y-1.5">
-                        <label className="font-bold text-slate-700">Tax Declaration No. (if existing)</label>
+                        <label className="font-bold text-slate-700 dark:text-slate-300">Tax Declaration No. (if existing)</label>
                         <input
                           type="text"
                           placeholder="e.g. F-021-01491"
                           value={appForm.taxDeclarationNumber}
                           onChange={(e) => setAppForm({ ...appForm, taxDeclarationNumber: e.target.value })}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none font-mono"
+                          className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none font-mono"
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="font-bold text-slate-700">Property Type *</label>
+                        <label className="font-bold text-slate-700 dark:text-slate-300">Property Type *</label>
                         <select
                           value={appForm.propertyType}
                           onChange={(e) => setAppForm({ ...appForm, propertyType: e.target.value })}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
+                          className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
                         >
                           <option value="Residential">Residential</option>
                           <option value="Commercial">Commercial</option>
@@ -1912,82 +1912,82 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
                         </select>
                       </div>
                       <div className="space-y-1.5">
-                        <label className="font-bold text-slate-700">Barangay *</label>
+                        <label className="font-bold text-slate-700 dark:text-slate-300">Barangay *</label>
                         <input
                           type="text"
                           required
                           placeholder="e.g. Central, Diliman, Batasan"
                           value={appForm.barangay}
                           onChange={(e) => setAppForm({ ...appForm, barangay: e.target.value })}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
+                          className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
                         />
                       </div>
                       <div className="md:col-span-3 space-y-1.5">
-                        <label className="font-bold text-slate-700">Complete Property Location Address *</label>
+                        <label className="font-bold text-slate-700 dark:text-slate-300">Complete Property Location Address *</label>
                         <input
                           type="text"
                           required
                           placeholder="House / Lot No., Street, Subdivision, Quezon City"
                           value={appForm.propertyLocation}
                           onChange={(e) => setAppForm({ ...appForm, propertyLocation: e.target.value })}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
+                          className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl p-3 text-xs font-semibold focus:ring-2 focus:ring-[#0284C7] outline-none"
                         />
                       </div>
                     </div>
                   </div>
 
                   <div>
-                    <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-800 border-b border-slate-100 pb-2 mb-4">
+                    <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-100 border-b border-slate-100 dark:border-slate-800 pb-2 mb-4">
                       4. Documentary Requirements (PDF / Images)
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
-                      <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
-                        <span className="font-bold text-slate-800 block">Proof of Ownership *</span>
-                        <p className="text-[10px] text-slate-500">Deed of Absolute Sale, Transfer Certificate of Title (TCT)</p>
+                      <div className="p-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl space-y-2">
+                        <span className="font-bold text-slate-800 dark:text-slate-100 block">Proof of Ownership *</span>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400">Deed of Absolute Sale, Transfer Certificate of Title (TCT)</p>
                         <input
                           type="file"
                           required
                           accept="image/*,.pdf"
                           onChange={(e) => handleAppFileChange(e, "ownershipProof")}
-                          className="text-xs file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#0B3B60] file:text-white cursor-pointer"
+                          className="text-xs text-slate-700 dark:text-slate-300 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#0B3B60] file:text-white cursor-pointer"
                         />
                         {appDocuments.ownershipProof.name && (
-                          <p className="text-[11px] font-mono text-emerald-700 font-bold flex items-center gap-1.5">
+                          <p className="text-[11px] font-mono text-emerald-700 dark:text-emerald-400 font-bold flex items-center gap-1.5">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 shrink-0"></span>
                             <span className="truncate">{appDocuments.ownershipProof.name}</span>
                           </p>
                         )}
                       </div>
 
-                      <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
-                        <span className="font-bold text-slate-800 block">Valid Government ID *</span>
-                        <p className="text-[10px] text-slate-500">Passport, UMID, Driver's License of Owner/Applicant</p>
+                      <div className="p-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl space-y-2">
+                        <span className="font-bold text-slate-800 dark:text-slate-100 block">Valid Government ID *</span>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400">Passport, UMID, Driver's License of Owner/Applicant</p>
                         <input
                           type="file"
                           required
                           accept="image/*,.pdf"
                           onChange={(e) => handleAppFileChange(e, "validId")}
-                          className="text-xs file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#0B3B60] file:text-white cursor-pointer"
+                          className="text-xs text-slate-700 dark:text-slate-300 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#0B3B60] file:text-white cursor-pointer"
                         />
                         {appDocuments.validId.name && (
-                          <p className="text-[11px] font-mono text-emerald-700 font-bold flex items-center gap-1.5">
+                          <p className="text-[11px] font-mono text-emerald-700 dark:text-emerald-400 font-bold flex items-center gap-1.5">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 shrink-0"></span>
                             <span className="truncate">{appDocuments.validId.name}</span>
                           </p>
                         )}
                       </div>
 
-                      <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
-                        <span className="font-bold text-slate-800 block">Latest Tax Receipt / Tax Dec</span>
-                        <p className="text-[10px] text-slate-500">Official Receipt or Copy of Previous Assessment</p>
+                      <div className="p-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl space-y-2">
+                        <span className="font-bold text-slate-800 dark:text-slate-100 block">Latest Tax Receipt / Tax Dec</span>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400">Official Receipt or Copy of Previous Assessment</p>
                         <input
                           type="file"
                           accept="image/*,.pdf"
                           onChange={(e) => handleAppFileChange(e, "taxRecord")}
-                          className="text-xs file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#0B3B60] file:text-white cursor-pointer"
+                          className="text-xs text-slate-700 dark:text-slate-300 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#0B3B60] file:text-white cursor-pointer"
                         />
                         {appDocuments.taxRecord.name && (
-                          <p className="text-[11px] font-mono text-emerald-700 font-bold flex items-center gap-1.5">
+                          <p className="text-[11px] font-mono text-emerald-700 dark:text-emerald-400 font-bold flex items-center gap-1.5">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 shrink-0"></span>
                             <span className="truncate">{appDocuments.taxRecord.name}</span>
                           </p>
@@ -1996,7 +1996,7 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
                     </div>
                   </div>
 
-                  <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                  <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
                     <button
                       type="submit"
                       disabled={isSubmittingApp}
@@ -2014,20 +2014,20 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
 
           {activePortalTab === "summary" && (
             <div className="rpt-main-shell p-6 sm:p-8 space-y-6">
-              <div className="border-b border-slate-200 pb-4">
-                <h2 className="text-xl font-extrabold text-[#0B3B60]">Real Property Tax Clearance &amp; Electronic Receipts</h2>
-                <p className="text-xs text-slate-500 mt-1">
+              <div className="border-b border-slate-200 dark:border-slate-800 pb-4">
+                <h2 className="text-xl font-extrabold text-[#0B3B60] dark:text-blue-300">Real Property Tax Clearance &amp; Electronic Receipts</h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                   View and download electronic Official Receipts (eOR) and Real Property Tax Clearance certificates.
                 </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-6 bg-emerald-50/60 border border-emerald-200 rounded-3xl space-y-3">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-200/60 px-2.5 py-1 rounded-lg">
+                <div className="p-6 bg-emerald-50/60 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-3xl space-y-3">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300 bg-emerald-200/60 dark:bg-emerald-900/60 px-2.5 py-1 rounded-lg">
                     OFFICIAL LGU TAX CLEARANCE
                   </span>
-                  <h3 className="text-base font-extrabold text-emerald-950">Property Tax Status Verified</h3>
-                  <p className="text-xs text-slate-600 leading-relaxed">
+                  <h3 className="text-base font-extrabold text-emerald-950 dark:text-emerald-200">Property Tax Status Verified</h3>
+                  <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
                     All settled Real Property Taxes are officially transmitted to the Local Government Unit Revenue Repository and recognized by banks, registries, and city assessors.
                   </p>
                   <button
@@ -2038,12 +2038,12 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
                   </button>
                 </div>
 
-                <div className="p-6 bg-slate-50 border border-slate-200 rounded-3xl space-y-3">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-700 bg-slate-200 px-2.5 py-1 rounded-lg">
+                <div className="p-6 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 rounded-3xl space-y-3">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 bg-slate-200 dark:bg-slate-700 px-2.5 py-1 rounded-lg">
                     ONLINE AMILYAR SUPPORT
                   </span>
-                  <h3 className="text-base font-extrabold text-slate-900">Need Help with Your Group Bill Set?</h3>
-                  <p className="text-xs text-slate-600 leading-relaxed">
+                  <h3 className="text-base font-extrabold text-slate-900 dark:text-white">Need Help with Your Group Bill Set?</h3>
+                  <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
                     If your property TDN is missing or if you have questions regarding Socialized Housing Tax Credits (SHTTC), email the City Treasurer's Office at <strong>rptpayment@quezoncity.gov.ph</strong>.
                   </p>
                 </div>
@@ -2055,16 +2055,16 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
 
       {isOwnerModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-3xl border border-slate-200 p-8 max-w-md w-full shadow-2xl text-center space-y-6">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-8 max-w-md w-full shadow-2xl text-center space-y-6">
             <div className="size-16 rounded-full border-2 border-sky-400 text-sky-500 flex items-center justify-center text-3xl font-light mx-auto">
               ?
             </div>
 
             <div className="space-y-2">
-              <p className="text-xs text-slate-600 font-semibold leading-relaxed">
+              <p className="text-xs text-slate-600 dark:text-slate-300 font-semibold leading-relaxed">
                 Please verify that you are paying the RPT for :
               </p>
-              <h3 className="text-base font-black text-slate-900 uppercase tracking-wide">
+              <h3 className="text-base font-black text-slate-900 dark:text-white uppercase tracking-wide">
                 {verifiedOwnerName}
               </h3>
             </div>
@@ -2080,7 +2080,7 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
               <button
                 type="button"
                 onClick={() => handleConfirmOwnerVerification(false)}
-                className="w-28 bg-white hover:bg-slate-100 text-[#D97706] border border-[#D97706] font-bold py-2.5 px-4 rounded-xl text-xs transition cursor-pointer"
+                className="w-28 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-[#D97706] dark:text-amber-400 border border-[#D97706] dark:border-amber-500 font-bold py-2.5 px-4 rounded-xl text-xs transition cursor-pointer"
               >
                 No
               </button>
@@ -2091,24 +2091,24 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
 
       {isUnselectedWarningOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-3xl border border-slate-200 p-8 max-w-md w-full shadow-2xl text-center space-y-5">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-8 max-w-md w-full shadow-2xl text-center space-y-5">
             <div className="size-14 rounded-full border-2 border-sky-400 text-sky-500 flex items-center justify-center text-2xl font-bold mx-auto">
               i
             </div>
 
             <div className="space-y-1">
-              <h3 className="text-base font-extrabold text-slate-900">Info</h3>
-              <p className="text-xs text-slate-600">
+              <h3 className="text-base font-extrabold text-slate-900 dark:text-white">Info</h3>
+              <p className="text-xs text-slate-600 dark:text-slate-300">
                 Not all associated Tax Declaration Numbers (TDNs) were selected.
               </p>
             </div>
 
-            <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-left space-y-1">
-              <span className="text-[11px] font-bold text-rose-700 block">Unselected TDNs:</span>
-              <p className="text-xs font-mono font-bold text-rose-600">{unselectedTdns.join(", ")}</p>
+            <div className="p-3.5 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-xl text-left space-y-1">
+              <span className="text-[11px] font-bold text-rose-700 dark:text-rose-300 block">Unselected TDNs:</span>
+              <p className="text-xs font-mono font-bold text-rose-600 dark:text-rose-400">{unselectedTdns.join(", ")}</p>
             </div>
 
-            <label className="flex items-center gap-2.5 text-left text-xs text-slate-700 font-semibold cursor-pointer select-none">
+            <label className="flex items-center gap-2.5 text-left text-xs text-slate-700 dark:text-slate-300 font-semibold cursor-pointer select-none">
               <input
                 type="checkbox"
                 checked={hasAcknowledgedUnselected}
@@ -2122,7 +2122,7 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
               <button
                 type="button"
                 onClick={() => setIsUnselectedWarningOpen(false)}
-                className="bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-bold py-2.5 px-4 rounded-xl text-xs transition cursor-pointer"
+                className="bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 font-bold py-2.5 px-4 rounded-xl text-xs transition cursor-pointer"
               >
                 Edit Selected TDN
               </button>
@@ -2141,19 +2141,19 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
 
       {isOptionModalOpen && activeConfiguringTdn && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 max-w-2xl w-full shadow-2xl space-y-6">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 sm:p-8 max-w-2xl w-full shadow-2xl space-y-6">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
               <div>
-                <h3 className="text-base font-extrabold text-[#0B3B60]">
+                <h3 className="text-base font-extrabold text-[#0B3B60] dark:text-blue-300">
                   CHOOSE A PAYMENT OPTION ({activeConfiguringTdn.taxDeclarationNumber}):
                 </h3>
-                <p className="text-xs text-slate-500 font-semibold mt-0.5">
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold mt-0.5">
                   Bill Coverage: 2025(Q1) - 2025(Q4)
                 </p>
               </div>
               <button
                 onClick={() => setIsOptionModalOpen(false)}
-                className="text-slate-400 hover:text-slate-700 font-bold text-lg cursor-pointer"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 font-bold text-lg cursor-pointer"
               >
                 ✕
               </button>
@@ -2164,12 +2164,12 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
               <div
                 onClick={() => setTempOptionChoice("Quarterly")}
                 className={`p-5 rounded-2xl border-2 transition cursor-pointer space-y-3 ${tempOptionChoice === "Quarterly"
-                  ? "border-[#0284C7] bg-sky-50/40 shadow-sm"
-                  : "border-slate-200 bg-white hover:border-slate-300"
+                  ? "border-[#0284C7] bg-sky-50/40 dark:bg-sky-950/40 shadow-sm"
+                  : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 hover:border-slate-300 dark:hover:border-slate-600"
                   }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-black uppercase text-[#0B3B60]">
+                  <span className="text-xs font-black uppercase text-[#0B3B60] dark:text-blue-300">
                     PAYMENT OPTION 1: QUARTERLY
                   </span>
                   <input
@@ -2181,24 +2181,24 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
                   />
                 </div>
 
-                <div className="space-y-1.5 text-xs text-slate-600 border-t border-slate-100 pt-3">
+                <div className="space-y-1.5 text-xs text-slate-600 dark:text-slate-300 border-t border-slate-100 dark:border-slate-700 pt-3">
                   <div className="flex justify-between">
                     <span>AMOUNT DUE:</span>
-                    <span className="font-mono font-bold text-slate-800">
+                    <span className="font-mono font-bold text-slate-800 dark:text-slate-100">
                       {formatCurrency((activeConfiguringTdn.totalAssessment || 1020) / 4)} / Qtr
                     </span>
                   </div>
-                  <div className="flex justify-between text-[11px] text-slate-500">
+                  <div className="flex justify-between text-[11px] text-slate-500 dark:text-slate-400">
                     <span>* SHTTC APPLIED:</span>
                     <span>-₱0.00</span>
                   </div>
-                  <div className="flex justify-between text-[11px] text-slate-500">
+                  <div className="flex justify-between text-[11px] text-slate-500 dark:text-slate-400">
                     <span>* DISCOUNT:</span>
                     <span>-₱0.00</span>
                   </div>
-                  <div className="flex justify-between font-black text-slate-900 border-t pt-2">
+                  <div className="flex justify-between font-black text-slate-900 dark:text-white border-t border-slate-100 dark:border-slate-700 pt-2">
                     <span>TOTAL:</span>
-                    <span className="font-mono text-[#0B3B60]">
+                    <span className="font-mono text-[#0B3B60] dark:text-blue-400">
                       {formatCurrency(
                         ((activeConfiguringTdn.totalAssessment || 1020) / 4) *
                         (Object.values(tempQuarterSelection).filter(Boolean).length || 1)
@@ -2208,12 +2208,12 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
                 </div>
 
                 <div className="pt-2">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Select Quarters:</span>
+                  <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-1">Select Quarters:</span>
                   <div className="grid grid-cols-4 gap-1 text-center">
                     {(["q1", "q2", "q3", "q4"] as const).map((q) => (
                       <label
                         key={q}
-                        className={`p-1.5 rounded-lg border text-[11px] font-mono font-bold cursor-pointer transition ${tempQuarterSelection[q] ? "bg-[#0B3B60] text-white border-[#0B3B60]" : "bg-slate-50 text-slate-600 border-slate-200"
+                        className={`p-1.5 rounded-lg border text-[11px] font-mono font-bold cursor-pointer transition ${tempQuarterSelection[q] ? "bg-[#0B3B60] dark:bg-blue-800 text-white border-[#0B3B60] dark:border-blue-800" : "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700"
                           }`}
                       >
                         <input
@@ -2234,12 +2234,12 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
               <div
                 onClick={() => setTempOptionChoice("Full")}
                 className={`p-5 rounded-2xl border-2 transition cursor-pointer space-y-3 ${tempOptionChoice === "Full"
-                  ? "border-[#0284C7] bg-sky-50/40 shadow-sm"
-                  : "border-slate-200 bg-white hover:border-slate-300"
+                  ? "border-[#0284C7] bg-sky-50/40 dark:bg-sky-950/40 shadow-sm"
+                  : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 hover:border-slate-300 dark:hover:border-slate-600"
                   }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-black uppercase text-[#0B3B60]">
+                  <span className="text-xs font-black uppercase text-[#0B3B60] dark:text-blue-300">
                     PAYMENT OPTION 2: FULL
                   </span>
                   <input
@@ -2251,30 +2251,30 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
                   />
                 </div>
 
-                <div className="space-y-1.5 text-xs text-slate-600 border-t border-slate-100 pt-3">
+                <div className="space-y-1.5 text-xs text-slate-600 dark:text-slate-300 border-t border-slate-100 dark:border-slate-700 pt-3">
                   <div className="flex justify-between">
                     <span>AMOUNT DUE:</span>
-                    <span className="font-mono font-bold text-slate-800">
+                    <span className="font-mono font-bold text-slate-800 dark:text-slate-100">
                       {formatCurrency(activeConfiguringTdn.basicTax + activeConfiguringTdn.sefTax || 1020.0)}
                     </span>
                   </div>
-                  <div className="flex justify-between text-[11px] text-slate-500">
+                  <div className="flex justify-between text-[11px] text-slate-500 dark:text-slate-400">
                     <span>* SHTTC APPLIED:</span>
                     <span>-₱0.00</span>
                   </div>
-                  <div className="flex justify-between text-[11px] text-slate-500">
+                  <div className="flex justify-between text-[11px] text-slate-500 dark:text-slate-400">
                     <span>* DISCOUNT:</span>
                     <span>-₱0.00</span>
                   </div>
                   {activeConfiguringTdn.penalty > 0 && (
-                    <div className="flex justify-between text-[11px] text-rose-600 font-bold">
+                    <div className="flex justify-between text-[11px] text-rose-600 dark:text-rose-400 font-bold">
                       <span>* PENALTY FEE:</span>
                       <span>+({formatCurrency(activeConfiguringTdn.penalty)})</span>
                     </div>
                   )}
-                  <div className="flex justify-between font-black text-slate-900 border-t pt-2">
+                  <div className="flex justify-between font-black text-slate-900 dark:text-white border-t border-slate-100 dark:border-slate-700 pt-2">
                     <span>TOTAL:</span>
-                    <span className="font-mono text-[#0B3B60]">
+                    <span className="font-mono text-[#0B3B60] dark:text-blue-400">
                       {formatCurrency(activeConfiguringTdn.balance || activeConfiguringTdn.totalAssessment || 1127.1)}
                     </span>
                   </div>
@@ -2282,11 +2282,11 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
               <button
                 type="button"
                 onClick={() => setIsOptionModalOpen(false)}
-                className="w-32 bg-white hover:bg-slate-100 text-rose-600 border border-rose-300 font-bold py-2.5 px-4 rounded-xl text-xs transition cursor-pointer"
+                className="w-32 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-rose-600 dark:text-rose-400 border border-rose-300 dark:border-rose-800 font-bold py-2.5 px-4 rounded-xl text-xs transition cursor-pointer"
               >
                 CANCEL
               </button>
@@ -2304,14 +2304,14 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
 
       {isGroupApplyConfirmOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-3xl border border-slate-200 p-8 max-w-md w-full shadow-2xl text-center space-y-6">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-8 max-w-md w-full shadow-2xl text-center space-y-6">
             <div className="size-16 rounded-full border-2 border-sky-400 text-sky-500 flex items-center justify-center text-3xl font-light mx-auto">
               ?
             </div>
 
             <div className="space-y-1">
-              <h3 className="text-base font-extrabold text-slate-900">Confirmation</h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
+              <h3 className="text-base font-extrabold text-slate-900 dark:text-white">Confirmation</h3>
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
                 Would you like to apply this payment option to all TDNs included in the Group Bill Set?
               </p>
             </div>
@@ -2338,14 +2338,14 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
 
       {isSuccessFeedbackOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-3xl border border-slate-200 p-8 max-w-sm w-full shadow-2xl text-center space-y-5">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-8 max-w-sm w-full shadow-2xl text-center space-y-5">
             <div className="size-16 rounded-full border-2 border-emerald-400 text-emerald-500 flex items-center justify-center mx-auto">
               <svg className="w-8 h-8 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
             </div>
 
-            <h3 className="text-base font-extrabold text-slate-900">
+            <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
               {successFeedbackMessage}
             </h3>
 
@@ -2364,8 +2364,8 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
 
       {isCartOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 max-w-xl w-full shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 sm:p-8 max-w-xl w-full shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
               <h3 className="text-base font-extrabold text-[#0B3B60] dark:text-blue-400 flex items-center gap-2">
                 <svg className="w-5 h-5 text-[#0B3B60] dark:text-blue-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -2374,42 +2374,42 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
               </h3>
               <button
                 onClick={() => setIsCartOpen(false)}
-                className="text-slate-400 hover:text-slate-700 font-bold text-lg cursor-pointer"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 font-bold text-lg cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
             {cart.length === 0 ? (
-              <div className="p-8 text-center text-slate-400 text-xs italic bg-slate-50 rounded-2xl">
+              <div className="p-8 text-center text-slate-400 dark:text-slate-500 text-xs italic bg-slate-50 dark:bg-slate-800/60 rounded-2xl">
                 Your cart is empty. Select TDNs to add them here.
               </div>
             ) : (
               <div className="space-y-3">
                 {cart.map((item, idx) => (
-                  <div key={idx} className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-1 text-xs">
+                  <div key={idx} className="p-4 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl space-y-1 text-xs">
                     <div className="flex justify-between items-center font-bold">
-                      <span className="text-[#0B3B60] font-mono">{item.tdn}</span>
-                      <span className="font-mono text-slate-900">{formatCurrency(item.totalPayable)}</span>
+                      <span className="text-[#0B3B60] dark:text-blue-400 font-mono">{item.tdn}</span>
+                      <span className="font-mono text-slate-900 dark:text-white">{formatCurrency(item.totalPayable)}</span>
                     </div>
-                    <p className="text-slate-600">{item.ownerName} • {item.propertyType}</p>
-                    <div className="flex justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-200">
+                    <p className="text-slate-600 dark:text-slate-300">{item.ownerName} • {item.propertyType}</p>
+                    <div className="flex justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-200 dark:border-slate-700">
                       <span>Coverage: {item.billCoverage}</span>
                       <span className="font-semibold">{item.paymentOption}</span>
                     </div>
                   </div>
                 ))}
 
-                <div className="p-4 bg-sky-50 border border-sky-200 rounded-2xl space-y-1">
-                  <div className="flex justify-between text-xs text-slate-600">
+                <div className="p-4 bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800 rounded-2xl space-y-1">
+                  <div className="flex justify-between text-xs text-slate-600 dark:text-slate-300">
                     <span>Total Assessed Tax Due:</span>
                     <span className="font-mono font-bold">{formatCurrency(grandCartTotal)}</span>
                   </div>
-                  <div className="flex justify-between text-xs text-slate-600">
+                  <div className="flex justify-between text-xs text-slate-600 dark:text-slate-300">
                     <span>Convenience / Processing Fee:</span>
-                    <span className="font-mono font-bold text-emerald-700">₱0.00 (Waived)</span>
+                    <span className="font-mono font-bold text-emerald-700 dark:text-emerald-400">₱0.00 (Waived)</span>
                   </div>
-                  <div className="flex justify-between text-sm font-black text-[#0B3B60] pt-2 border-t border-sky-200">
+                  <div className="flex justify-between text-sm font-black text-[#0B3B60] dark:text-blue-300 pt-2 border-t border-sky-200 dark:border-sky-800">
                     <span>GRAND TOTAL PAYABLE:</span>
                     <span className="font-mono">{formatCurrency(grandCartTotal)}</span>
                   </div>
@@ -2439,73 +2439,73 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
 
       {isQrPaymentOpen && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl sm:rounded-3xl w-full max-w-5xl max-h-[96vh] shadow-2xl border border-slate-200 overflow-y-auto my-auto">
-            <div className="px-6 sm:px-8 py-5 border-b border-slate-200">
-              <h3 className="text-base sm:text-lg font-black text-slate-900 uppercase tracking-tight">Real Property Tax Payment</h3>
-              <p className="text-xs text-slate-500 mt-1">PayMongo Secure Checkout</p>
+          <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl w-full max-w-5xl max-h-[96vh] shadow-2xl border border-slate-200 dark:border-slate-800 overflow-y-auto my-auto">
+            <div className="px-6 sm:px-8 py-5 border-b border-slate-200 dark:border-slate-800">
+              <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Real Property Tax Payment</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">PayMongo Secure Checkout</p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2">
-              <div className="p-6 sm:p-8 border-b lg:border-b-0 lg:border-r border-slate-200">
+              <div className="p-6 sm:p-8 border-b lg:border-b-0 lg:border-r border-slate-200 dark:border-slate-800">
                 <div className="mb-6">
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Payment Summary</p>
-                  <h2 className="text-2xl sm:text-3xl font-black text-slate-900 mt-2">Real Property Tax Payment</h2>
-                  <p className="text-sm text-slate-500 mt-2">{cart.length} {cart.length === 1 ? 'property' : 'properties'} selected for payment</p>
+                  <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Payment Summary</p>
+                  <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-2">Real Property Tax Payment</h2>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">{cart.length} {cart.length === 1 ? 'property' : 'properties'} selected for payment</p>
                 </div>
 
-                <div className="text-4xl sm:text-5xl font-black text-emerald-600 tracking-tight">
+                <div className="text-4xl sm:text-5xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
                   {formatCurrency(grandCartTotal)}
                 </div>
-                <p className="text-xs text-slate-500 mt-2">Billed to {currentUser?.fullname || cart[0]?.ownerName || 'Taxpayer'}, {currentUser?.email || 'citizen@gov.ph'}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">Billed to {currentUser?.fullname || cart[0]?.ownerName || 'Taxpayer'}, {currentUser?.email || 'citizen@gov.ph'}</p>
 
-                <div className="mt-7 border-t border-slate-200 pt-5 space-y-4 text-sm">
-                  <div className="flex justify-between gap-4 text-slate-600">
+                <div className="mt-7 border-t border-slate-200 dark:border-slate-800 pt-5 space-y-4 text-sm">
+                  <div className="flex justify-between gap-4 text-slate-600 dark:text-slate-300">
                     <span>Subtotal</span>
-                    <span className="font-bold text-slate-900">{formatCurrency(grandCartTotal)}</span>
+                    <span className="font-bold text-slate-900 dark:text-white">{formatCurrency(grandCartTotal)}</span>
                   </div>
-                  <div className="flex justify-between gap-4 text-slate-600">
+                  <div className="flex justify-between gap-4 text-slate-600 dark:text-slate-300">
                     <span>Fees</span>
-                    <span className="font-semibold text-slate-900">Free</span>
+                    <span className="font-semibold text-slate-900 dark:text-white">Free</span>
                   </div>
-                  <div className="flex justify-between gap-4 border-t border-slate-200 pt-5">
-                    <span className="font-black text-slate-900">Total Due</span>
-                    <span className="font-black text-xl text-slate-900">{formatCurrency(grandCartTotal)}</span>
+                  <div className="flex justify-between gap-4 border-t border-slate-200 dark:border-slate-800 pt-5">
+                    <span className="font-black text-slate-900 dark:text-white">Total Due</span>
+                    <span className="font-black text-xl text-slate-900 dark:text-white">{formatCurrency(grandCartTotal)}</span>
                   </div>
                 </div>
 
-                <div className="mt-7 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                <div className="mt-7 rounded-2xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 p-4">
                   <div className="flex items-center gap-3">
-                    <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
-                      <svg className="w-5 h-5 text-emerald-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                    <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300">
+                      <svg className="w-5 h-5 text-emerald-700 dark:text-emerald-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                       </svg>
                     </span>
                     <div>
-                      <p className="text-sm font-black text-emerald-900">Secure Payment</p>
-                      <p className="text-xs text-emerald-700 mt-1">Your payment is secured by PayMongo.</p>
+                      <p className="text-sm font-black text-emerald-900 dark:text-emerald-200">Secure Payment</p>
+                      <p className="text-xs text-emerald-700 dark:text-emerald-300 mt-1">Your payment is secured by PayMongo.</p>
                     </div>
                   </div>
-                  <p className="text-xs text-emerald-700 mt-3 pl-12">We do not store your payment details.</p>
+                  <p className="text-xs text-emerald-700 dark:text-emerald-300 mt-3 pl-12">We do not store your payment details.</p>
                 </div>
               </div>
 
-              <div className="p-4 sm:p-6 lg:p-8 bg-slate-50/60 flex flex-col items-center min-w-0">
+              <div className="p-4 sm:p-6 lg:p-8 bg-slate-50/60 dark:bg-slate-950/50 flex flex-col items-center min-w-0">
                 <div className="w-full text-center">
-                  <p className="text-lg font-black text-slate-900 uppercase tracking-tight">Scan QR Ph code to pay</p>
-                  <p className="text-xs text-slate-500 mt-1">Use your supported banking or e-wallet app.</p>
+                  <p className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Scan QR Ph code to pay</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Use your supported banking or e-wallet app.</p>
                 </div>
 
                 {isGeneratingQr && !rptQrCodeUrl && (
-                  <div className="w-full max-w-sm mt-6 rounded-2xl border-2 border-dashed border-slate-300 bg-white p-10 text-center">
-                    <div className="w-10 h-10 border-4 border-blue-200 border-t-blue-700 rounded-full animate-spin mx-auto mb-4" />
-                    <p className="font-bold text-slate-800 text-sm">Generating your QR Ph code...</p>
-                    <p className="text-xs text-slate-500 mt-1">Please wait while PayMongo prepares your secure payment.</p>
+                  <div className="w-full max-w-sm mt-6 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 p-10 text-center">
+                    <div className="w-10 h-10 border-4 border-blue-200 dark:border-blue-800 border-t-blue-700 dark:border-t-blue-400 rounded-full animate-spin mx-auto mb-4" />
+                    <p className="font-bold text-slate-800 dark:text-slate-100 text-sm">Generating your QR Ph code...</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Please wait while PayMongo prepares your secure payment.</p>
                   </div>
                 )}
 
                 {!isGeneratingQr && rptQrError && !rptQrCodeUrl && (
-                  <div className="w-full max-w-sm mt-6 rounded-2xl border border-rose-200 bg-rose-50 p-5 text-center">
-                    <p className="text-xs font-bold text-rose-700">{rptQrError}</p>
+                  <div className="w-full max-w-sm mt-6 rounded-2xl border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/40 p-5 text-center">
+                    <p className="text-xs font-bold text-rose-700 dark:text-rose-300">{rptQrError}</p>
                     <button type="button" onClick={() => void generateRPTQrPayment()} className="mt-4 px-4 py-2.5 bg-[#0B3B60] hover:bg-[#082944] text-white rounded-xl text-xs font-bold">Generate QR Again</button>
                   </div>
                 )}
@@ -2525,29 +2525,29 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
                         <span key={i} className="rpt-payment-confetti absolute top-[-20px] h-2.5 w-2.5 rounded-sm" style={{ left: `${(i * 41) % 100}%`, animationDelay: `${(i % 8) * 0.18}s`, background: ['#22c55e', '#3b82f6', '#f59e0b', '#ec4899', '#8b5cf6'][i % 5] }} />
                       ))}
                     </div>
-                    <div className="rpt-success-card relative w-full max-w-md rounded-[2rem] bg-white shadow-2xl border border-emerald-100 overflow-hidden text-center">
+                    <div className="rpt-success-card relative w-full max-w-md rounded-[2rem] bg-white dark:bg-slate-900 shadow-2xl border border-emerald-100 dark:border-emerald-900 overflow-hidden text-center">
                       <div className="absolute top-0 left-0 right-0 h-2 bg-emerald-500" />
                       <div className="p-7 sm:p-9">
-                        <div className="rpt-success-check mx-auto mb-5 h-24 w-24 rounded-full bg-emerald-100 border-8 border-white shadow-lg flex items-center justify-center">
+                        <div className="rpt-success-check mx-auto mb-5 h-24 w-24 rounded-full bg-emerald-100 dark:bg-emerald-900/60 border-8 border-white dark:border-slate-800 shadow-lg flex items-center justify-center">
                           <div className="h-16 w-16 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-inner">
                             <svg className="w-9 h-9 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
                               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                             </svg>
                           </div>
                         </div>
-                        <p className="text-2xl sm:text-3xl font-black text-emerald-700">Payment Successful!</p>
-                        <p className="text-sm text-slate-600 mt-2">Your Real Property Tax payment has been successfully confirmed.</p>
-                        <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left space-y-3">
-                          <div className="flex justify-between gap-4 text-sm"><span className="text-slate-500">Properties Paid</span><span className="font-bold text-slate-900">{cart.length}</span></div>
-                          <div className="flex justify-between gap-4 text-sm"><span className="text-slate-500">Amount Paid</span><span className="font-black text-emerald-700">{formatCurrency(grandCartTotal)}</span></div>
-                          <div className="flex justify-between gap-4 text-sm"><span className="text-slate-500">Payment Method</span><span className="font-bold text-slate-900">PayMongo (QR Ph)</span></div>
+                        <p className="text-2xl sm:text-3xl font-black text-emerald-700 dark:text-emerald-400">Payment Successful!</p>
+                        <p className="text-sm text-slate-600 dark:text-slate-300 mt-2">Your Real Property Tax payment has been successfully confirmed.</p>
+                        <div className="mt-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 p-4 text-left space-y-3">
+                          <div className="flex justify-between gap-4 text-sm"><span className="text-slate-500 dark:text-slate-400">Properties Paid</span><span className="font-bold text-slate-900 dark:text-white">{cart.length}</span></div>
+                          <div className="flex justify-between gap-4 text-sm"><span className="text-slate-500 dark:text-slate-400">Amount Paid</span><span className="font-black text-emerald-700 dark:text-emerald-400">{formatCurrency(grandCartTotal)}</span></div>
+                          <div className="flex justify-between gap-4 text-sm"><span className="text-slate-500 dark:text-slate-400">Payment Method</span><span className="font-bold text-slate-900 dark:text-white">PayMongo (QR Ph)</span></div>
                         </div>
-                        <div className="mt-5 rounded-2xl bg-emerald-50 border border-emerald-100 p-4 text-left">
-                          <p className="font-black text-emerald-800">Thank you!</p>
-                          <p className="text-xs text-emerald-700 mt-1">Your RPT payment has been recorded and your property records are being updated.</p>
+                        <div className="mt-5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-800 p-4 text-left">
+                          <p className="font-black text-emerald-800 dark:text-emerald-200">Thank you!</p>
+                          <p className="text-xs text-emerald-700 dark:text-emerald-300 mt-1">Your RPT payment has been recorded and your property records are being updated.</p>
                         </div>
-                        <button type="button" onClick={closeRPTQrPayment} className="mt-6 w-full rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 font-black text-sm transition-all shadow-lg shadow-emerald-200">View My RPT Records →</button>
-                        <p className="text-[11px] text-slate-400 mt-3">This window will close automatically in <span className="font-black text-emerald-600">{rptPaymentSuccessCountdown}</span> seconds.</p>
+                        <button type="button" onClick={closeRPTQrPayment} className="mt-6 w-full rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 font-black text-sm transition-all shadow-lg shadow-emerald-200 dark:shadow-none">View My RPT Records →</button>
+                        <p className="text-[11px] text-slate-400 mt-3">This window will close automatically in <span className="font-black text-emerald-600 dark:text-emerald-400">{rptPaymentSuccessCountdown}</span> seconds.</p>
                       </div>
                     </div>
                   </div>
@@ -2555,35 +2555,35 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
 
                 {rptQrCodeUrl && !rptQrPaid && (
                   <div className="w-full max-w-sm mt-6 flex flex-col items-center">
-                    <div className={`w-full rounded-xl border px-4 py-3 text-center mb-4 ${rptQrSecondsRemaining <= 30 ? 'border-rose-200 bg-rose-50' : 'border-blue-200 bg-blue-50'}`}>
-                      <p className={`text-[10px] font-black uppercase tracking-widest ${rptQrSecondsRemaining <= 30 ? 'text-rose-600' : 'text-blue-700'}`}>QR code refreshes in</p>
-                      <p className={`text-2xl font-black tabular-nums mt-1 ${rptQrSecondsRemaining <= 30 ? 'text-rose-700' : 'text-blue-700'}`}>
+                    <div className={`w-full rounded-xl border px-4 py-3 text-center mb-4 ${rptQrSecondsRemaining <= 30 ? 'border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/40' : 'border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/40'}`}>
+                      <p className={`text-[10px] font-black uppercase tracking-widest ${rptQrSecondsRemaining <= 30 ? 'text-rose-600 dark:text-rose-400' : 'text-blue-700 dark:text-blue-300'}`}>QR code refreshes in</p>
+                      <p className={`text-2xl font-black tabular-nums mt-1 ${rptQrSecondsRemaining <= 30 ? 'text-rose-700 dark:text-rose-300' : 'text-blue-700 dark:text-blue-300'}`}>
                         {Math.floor(rptQrSecondsRemaining / 60)}:{String(rptQrSecondsRemaining % 60).padStart(2, '0')}
                       </p>
-                      <p className="text-[10px] text-slate-500 mt-1">A new QR code will be generated automatically when the timer expires.</p>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">A new QR code will be generated automatically when the timer expires.</p>
                     </div>
 
                     <div className="bg-white border border-slate-200 rounded-2xl p-3 sm:p-4 shadow-md max-w-full">
                       <img src={rptQrCodeUrl} alt="PayMongo Dynamic QR Ph payment code" className="w-56 h-56 sm:w-64 sm:h-64 object-contain" />
                     </div>
 
-                    <p className="text-xs text-slate-500 text-center mt-4 max-w-sm">Complete the payment by scanning the QR code. Payment confirmation is handled automatically by PayMongo.</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 text-center mt-4 max-w-sm">Complete the payment by scanning the QR code. Payment confirmation is handled automatically by PayMongo.</p>
 
-                    <div className="w-full mt-4 rounded-2xl border border-sky-200 bg-sky-50 p-4 text-left">
+                    <div className="w-full mt-4 rounded-2xl border border-sky-200 dark:border-sky-800 bg-sky-50 dark:bg-sky-950/40 p-4 text-left">
                       <div className="flex items-center gap-2 mb-2">
                         <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-sky-600 text-white text-xs font-black">i</span>
-                        <p className="text-xs font-black text-sky-900">How to pay with QR Ph</p>
+                        <p className="text-xs font-black text-sky-900 dark:text-sky-200">How to pay with QR Ph</p>
                       </div>
-                      <p className="text-[10px] leading-relaxed text-slate-600">Scan this QR Ph using a participating Philippine bank or e-wallet app. Depending on your provider, supported apps may include GCash, Maya, BPI, BDO, UnionBank, RCBC, LandBank, Metrobank, PNB, Security Bank, and other participating QR Ph institutions.</p>
-                      <p className="text-[10px] leading-relaxed text-slate-500 mt-2"><strong>Tip:</strong> Before confirming, check that the amount shown in your banking or e-wallet app matches the Total Due.</p>
+                      <p className="text-[10px] leading-relaxed text-slate-600 dark:text-slate-300">Scan this QR Ph using a participating Philippine bank or e-wallet app. Depending on your provider, supported apps may include GCash, Maya, BPI, BDO, UnionBank, RCBC, LandBank, Metrobank, PNB, Security Bank, and other participating QR Ph institutions.</p>
+                      <p className="text-[10px] leading-relaxed text-slate-500 dark:text-slate-400 mt-2"><strong>Tip:</strong> Before confirming, check that the amount shown in your banking or e-wallet app matches the Total Due.</p>
                     </div>
                   </div>
                 )}
               </div>
             </div>
 
-            <div className="px-6 sm:px-8 py-4 border-t border-slate-200 bg-white">
-              <button type="button" onClick={closeRPTQrPayment} disabled={isGeneratingQr} className="w-full sm:max-w-xs sm:ml-auto py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-xl disabled:opacity-50">Close</button>
+            <div className="px-6 sm:px-8 py-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+              <button type="button" onClick={closeRPTQrPayment} disabled={isGeneratingQr} className="w-full sm:max-w-xs sm:ml-auto py-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-semibold rounded-xl disabled:opacity-50 cursor-pointer">Close</button>
             </div>
           </div>
         </div>
@@ -2591,49 +2591,49 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
 
       {isReceiptModalOpen && issuedReceipt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-3xl border border-slate-200 p-8 max-w-lg w-full shadow-2xl space-y-6 text-slate-800 max-h-[90vh] overflow-y-auto">
-            <div className="text-center space-y-1 border-b border-slate-200 pb-4">
-              <span className="text-[10px] font-black tracking-widest text-[#0B3B60] uppercase">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-8 max-w-lg w-full shadow-2xl space-y-6 text-slate-800 dark:text-slate-200 max-h-[90vh] overflow-y-auto">
+            <div className="text-center space-y-1 border-b border-slate-200 dark:border-slate-800 pb-4">
+              <span className="text-[10px] font-black tracking-widest text-[#0B3B60] dark:text-blue-300 uppercase">
                 REPUBLIC OF THE PHILIPPINES • CITY TREASURER'S OFFICE
               </span>
-              <h3 className="text-xl font-black text-slate-900">ELECTRONIC OFFICIAL RECEIPT (eOR)</h3>
-              <p className="text-xs font-mono font-bold text-emerald-700">
+              <h3 className="text-xl font-black text-slate-900 dark:text-white">ELECTRONIC OFFICIAL RECEIPT (eOR)</h3>
+              <p className="text-xs font-mono font-bold text-emerald-700 dark:text-emerald-400">
                 OR No: {issuedReceipt.officialReceiptNumber}
               </p>
             </div>
 
             <div className="space-y-2 text-xs">
               <div className="flex justify-between">
-                <span className="text-slate-500">Date &amp; Time:</span>
-                <span className="font-mono font-semibold">{new Date(issuedReceipt.paymentDate).toLocaleString()}</span>
+                <span className="text-slate-500 dark:text-slate-400">Date &amp; Time:</span>
+                <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">{new Date(issuedReceipt.paymentDate).toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Payor / Owner:</span>
-                <span className="font-bold text-slate-900">{issuedReceipt.customerName}</span>
+                <span className="text-slate-500 dark:text-slate-400">Payor / Owner:</span>
+                <span className="font-bold text-slate-900 dark:text-white">{issuedReceipt.customerName}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Payment Gateway:</span>
-                <span className="font-semibold">{issuedReceipt.paymentMethod}</span>
+                <span className="text-slate-500 dark:text-slate-400">Payment Gateway:</span>
+                <span className="font-semibold text-slate-800 dark:text-slate-200">{issuedReceipt.paymentMethod}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Group Reference:</span>
-                <span className="font-mono text-slate-600">{issuedReceipt.groupReferenceNumber}</span>
+                <span className="text-slate-500 dark:text-slate-400">Group Reference:</span>
+                <span className="font-mono text-slate-600 dark:text-slate-300">{issuedReceipt.groupReferenceNumber}</span>
               </div>
             </div>
 
             {issuedReceipt.items && issuedReceipt.items.length > 0 && (
-              <div className="border-t border-slate-200 pt-3 space-y-2">
-                <span className="text-[11px] font-bold uppercase text-slate-700 block">Settled TDNs:</span>
+              <div className="border-t border-slate-200 dark:border-slate-800 pt-3 space-y-2">
+                <span className="text-[11px] font-bold uppercase text-slate-700 dark:text-slate-300 block">Settled TDNs:</span>
                 {issuedReceipt.items.map((item, i) => (
-                  <div key={i} className="flex justify-between text-xs p-2 bg-slate-50 rounded-lg">
-                    <span className="font-mono font-bold text-[#0B3B60]">{item.taxDeclarationNumber}</span>
-                    <span className="font-mono font-bold">{formatCurrency(item.amount)}</span>
+                  <div key={i} className="flex justify-between text-xs p-2 bg-slate-50 dark:bg-slate-800/80 rounded-lg">
+                    <span className="font-mono font-bold text-[#0B3B60] dark:text-blue-400">{item.taxDeclarationNumber}</span>
+                    <span className="font-mono font-bold text-slate-900 dark:text-white">{formatCurrency(item.amount)}</span>
                   </div>
                 ))}
               </div>
             )}
 
-            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex justify-between items-center text-sm font-black text-emerald-950">
+            <div className="p-4 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-2xl flex justify-between items-center text-sm font-black text-emerald-950 dark:text-emerald-200">
               <span>TOTAL AMOUNT PAID:</span>
               <span className="font-mono">{formatCurrency(issuedReceipt.totalAmount)}</span>
             </div>
@@ -2641,7 +2641,7 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
             <div className="flex gap-2">
               <button
                 onClick={() => window.print()}
-                className="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-3 rounded-xl text-xs transition cursor-pointer"
+                className="w-1/2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold py-3 rounded-xl text-xs transition cursor-pointer"
               >
                 Print Receipt
               </button>
@@ -2658,15 +2658,15 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
 
       {selectedAppDetail && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-3xl border border-slate-200 p-8 max-w-lg w-full shadow-2xl space-y-5">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-8 max-w-lg w-full shadow-2xl space-y-5">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
               <div>
-                <span className="text-[10px] font-bold uppercase text-[#0284C7]">Control Number</span>
-                <h3 className="text-base font-extrabold text-[#0B3B60]">{selectedAppDetail.controlNumber}</h3>
+                <span className="text-[10px] font-bold uppercase text-[#0284C7] dark:text-sky-400">Control Number</span>
+                <h3 className="text-base font-extrabold text-[#0B3B60] dark:text-blue-300">{selectedAppDetail.controlNumber}</h3>
               </div>
               <button
                 onClick={() => setSelectedAppDetail(null)}
-                className="text-slate-400 hover:text-slate-700 font-bold text-lg cursor-pointer"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 font-bold text-lg cursor-pointer"
               >
                 ✕
               </button>
@@ -2674,35 +2674,35 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
 
             <div className="space-y-3 text-xs">
               <div className="flex justify-between">
-                <span className="text-slate-500">Service:</span>
-                <span className="font-bold">{selectedAppDetail.service}</span>
+                <span className="text-slate-500 dark:text-slate-400">Service:</span>
+                <span className="font-bold text-slate-900 dark:text-white">{selectedAppDetail.service}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Owner Name:</span>
-                <span className="font-bold">{selectedAppDetail.ownerName}</span>
+                <span className="text-slate-500 dark:text-slate-400">Owner Name:</span>
+                <span className="font-bold text-slate-900 dark:text-white">{selectedAppDetail.ownerName}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Property Location:</span>
-                <span className="font-semibold text-right max-w-xs">{selectedAppDetail.propertyLocation}, {selectedAppDetail.barangay}</span>
+                <span className="text-slate-500 dark:text-slate-400">Property Location:</span>
+                <span className="font-semibold text-right max-w-xs text-slate-800 dark:text-slate-200">{selectedAppDetail.propertyLocation}, {selectedAppDetail.barangay}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Status:</span>
-                <span className="font-bold text-[#0B3B60]">{selectedAppDetail.status}</span>
+                <span className="text-slate-500 dark:text-slate-400">Status:</span>
+                <span className="font-bold text-[#0B3B60] dark:text-blue-400">{selectedAppDetail.status}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Filed Date:</span>
-                <span className="font-mono">{selectedAppDetail.filedDate}</span>
+                <span className="text-slate-500 dark:text-slate-400">Filed Date:</span>
+                <span className="font-mono text-slate-800 dark:text-slate-200">{selectedAppDetail.filedDate}</span>
               </div>
             </div>
 
-            <div className="pt-3 border-t border-slate-200 space-y-2">
+            <div className="pt-3 border-t border-slate-200 dark:border-slate-800 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-800 uppercase tracking-wide">
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-100 uppercase tracking-wide">
                   Uploaded Documents ({getAppDocumentsList(selectedAppDetail).length})
                 </span>
               </div>
               {getAppDocumentsList(selectedAppDetail).length === 0 ? (
-                <p className="text-xs text-slate-400 italic bg-slate-50 p-3 rounded-xl border border-dashed text-center">
+                <p className="text-xs text-slate-400 dark:text-slate-500 italic bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-dashed border-slate-200 dark:border-slate-700 text-center">
                   No uploaded documents recorded for this application.
                 </p>
               ) : (
@@ -2712,15 +2712,15 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
                     return (
                       <div
                         key={idx}
-                        className="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100/80 transition text-xs"
+                        className="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100/80 dark:hover:bg-slate-700/80 transition text-xs"
                       >
                         <div className="flex items-center gap-2.5 min-w-0 pr-3">
-                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-200 text-slate-700 shrink-0">
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 shrink-0">
                             {isPdf ? 'PDF' : 'IMG'}
                           </span>
                           <div className="min-w-0">
-                            <p className="font-semibold text-slate-800 truncate">{doc.name}</p>
-                            <p className="text-[10px] text-slate-400">{isPdf ? 'PDF Document' : 'Image File'}</p>
+                            <p className="font-semibold text-slate-800 dark:text-slate-100 truncate">{doc.name}</p>
+                            <p className="text-[10px] text-slate-400 dark:text-slate-400">{isPdf ? 'PDF Document' : 'Image File'}</p>
                           </div>
                         </div>
                         <div className="shrink-0">
@@ -2740,23 +2740,23 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
             </div>
 
             {Number(selectedAppDetail.paymentAmount || 0) > 0 && (
-              <div className="p-4 rounded-2xl border border-blue-200 bg-blue-50 space-y-3">
+              <div className="p-4 rounded-2xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/40 space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-blue-700">RPT Service Assessment</p>
-                    <p className="text-xl font-black text-[#0B3B60]">{formatCurrency(Number(selectedAppDetail.paymentAmount))}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300">RPT Service Assessment</p>
+                    <p className="text-xl font-black text-[#0B3B60] dark:text-blue-300">{formatCurrency(Number(selectedAppDetail.paymentAmount))}</p>
                   </div>
-                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${selectedAppDetail.paymentStatus === "Paid" ? "bg-emerald-100 text-emerald-800" : "bg-white text-blue-800 border border-blue-200"}`}>
+                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${selectedAppDetail.paymentStatus === "Paid" ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300" : "bg-white dark:bg-slate-800 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-700"}`}>
                     {selectedAppDetail.paymentStatus === "Paid" ? "PAID" : "FOR PAYMENT"}
                   </span>
                 </div>
-                <p className="text-[11px] text-blue-800 leading-relaxed">
+                <p className="text-[11px] text-blue-800 dark:text-blue-200 leading-relaxed">
                   The City Assessor has completed the assessment. Pay the posted RPT service fee online to continue the application process.
                 </p>
                 {selectedAppDetail.paymentStatus === "Paid" ? (
-                  <div className="space-y-1 text-[11px] text-emerald-800 font-semibold">
+                  <div className="space-y-1 text-[11px] text-emerald-800 dark:text-emerald-300 font-semibold">
                     <p className="flex items-center gap-1.5">
-                      <svg className="w-3.5 h-3.5 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                      <svg className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                       </svg>
                       <span>Payment confirmed</span>
@@ -2769,7 +2769,7 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
                     type="button"
                     disabled={isGeneratingRPTServiceQr}
                     onClick={() => void handleRPTServicePayment(selectedAppDetail)}
-                    className="w-full bg-[#1D3F99] hover:bg-[#17357F] disabled:opacity-50 text-white font-extrabold py-3 rounded-xl text-xs uppercase tracking-wide shadow-sm transition"
+                    className="w-full bg-[#1D3F99] hover:bg-[#17357F] disabled:opacity-50 text-white font-extrabold py-3 rounded-xl text-xs uppercase tracking-wide shadow-sm transition cursor-pointer"
                   >
                     {isGeneratingRPTServiceQr ? "Generating QR..." : `Pay ${selectedAppDetail.service || "RPT Service"} →`}
                   </button>
@@ -2789,83 +2789,83 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
 
       {isRPTServiceQrOpen && rptServicePaymentApplication && (
         <div className="fixed inset-0 z-[60] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto overscroll-contain">
-          <div className="bg-white rounded-2xl sm:rounded-3xl w-full max-w-5xl max-h-[96vh] shadow-2xl border border-slate-200 overflow-y-auto my-auto">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl w-full max-w-5xl max-h-[96vh] shadow-2xl border border-slate-200 dark:border-slate-800 overflow-y-auto my-auto">
             <div className="grid grid-cols-1 lg:grid-cols-2">
-              <div className="p-4 sm:p-6 lg:p-8 lg:border-r border-slate-200 min-w-0">
-                <h2 className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">
+              <div className="p-4 sm:p-6 lg:p-8 lg:border-r border-slate-200 dark:border-slate-800 min-w-0">
+                <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white leading-tight">
                   RPT Service Payment
                 </h2>
-                <p className="text-xl sm:text-2xl font-black text-slate-900 mt-1 break-all">
+                <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1 break-all">
                   ({rptServicePaymentApplication.controlNumber || rptServicePaymentApplication.taxDeclarationNumber || "RPT Application"})
                 </p>
-                <p className="text-sm text-slate-500 mt-3">
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-3">
                   {rptServicePaymentApplication.service || "Real Property Tax Service"}
                 </p>
-                <p className="text-sm text-slate-600 mt-4">
-                  Billed to <span className="font-bold text-slate-900">{rptServicePaymentApplication.applicantName || rptServicePaymentApplication.ownerName || currentUser?.fullname || "Taxpayer"}</span>
+                <p className="text-sm text-slate-600 dark:text-slate-300 mt-4">
+                  Billed to <span className="font-bold text-slate-900 dark:text-white">{rptServicePaymentApplication.applicantName || rptServicePaymentApplication.ownerName || currentUser?.fullname || "Taxpayer"}</span>
                   {(rptServicePaymentApplication.email || currentUser?.email) && <> , <span>{rptServicePaymentApplication.email || currentUser?.email}</span></>}
                 </p>
 
-                <div className="mt-6 rounded-2xl border border-blue-200 bg-blue-50/60 p-5">
-                  <p className="text-xs font-black uppercase tracking-wide text-blue-900 mb-3">RPT Service Assessment</p>
+                <div className="mt-6 rounded-2xl border border-blue-200 dark:border-blue-800 bg-blue-50/60 dark:bg-blue-950/40 p-5">
+                  <p className="text-xs font-black uppercase tracking-wide text-blue-900 dark:text-blue-300 mb-3">RPT Service Assessment</p>
                   <div className="flex justify-between items-center gap-4 py-3">
-                    <span className="text-slate-600">{rptServicePaymentApplication.service || "Service Fee"}</span>
-                    <span className="font-black text-slate-900 whitespace-nowrap">{formatCurrency(Number(rptServicePaymentApplication.paymentAmount || 0))}</span>
+                    <span className="text-slate-600 dark:text-slate-300">{rptServicePaymentApplication.service || "Service Fee"}</span>
+                    <span className="font-black text-slate-900 dark:text-white whitespace-nowrap">{formatCurrency(Number(rptServicePaymentApplication.paymentAmount || 0))}</span>
                   </div>
                 </div>
 
-                <div className="mt-6 pt-5 border-t border-slate-200">
-                  <p className="text-3xl sm:text-4xl lg:text-5xl font-black text-emerald-600">
+                <div className="mt-6 pt-5 border-t border-slate-200 dark:border-slate-800">
+                  <p className="text-3xl sm:text-4xl lg:text-5xl font-black text-emerald-600 dark:text-emerald-400">
                     {formatCurrency(Number(rptServicePaymentApplication.paymentAmount || 0))}
                   </p>
                   <div className="flex justify-between items-center mt-8 text-sm">
-                    <span className="text-slate-600">Subtotal</span>
-                    <span className="font-bold text-slate-900">{formatCurrency(Number(rptServicePaymentApplication.paymentAmount || 0))}</span>
+                    <span className="text-slate-600 dark:text-slate-300">Subtotal</span>
+                    <span className="font-bold text-slate-900 dark:text-white">{formatCurrency(Number(rptServicePaymentApplication.paymentAmount || 0))}</span>
                   </div>
                   <div className="flex justify-between items-center mt-4 text-sm">
-                    <span className="text-slate-600">Payment Fees</span>
-                    <span className="font-semibold text-slate-900">Free</span>
+                    <span className="text-slate-600 dark:text-slate-300">Payment Fees</span>
+                    <span className="font-semibold text-slate-900 dark:text-white">Free</span>
                   </div>
-                  <div className="flex justify-between items-center mt-5 pt-5 border-t border-slate-200">
-                    <span className="font-black text-slate-900">Total Due</span>
-                    <span className="font-black text-lg text-slate-900">{formatCurrency(Number(rptServicePaymentApplication.paymentAmount || 0))}</span>
+                  <div className="flex justify-between items-center mt-5 pt-5 border-t border-slate-200 dark:border-slate-800">
+                    <span className="font-black text-slate-900 dark:text-white">Total Due</span>
+                    <span className="font-black text-lg text-slate-900 dark:text-white">{formatCurrency(Number(rptServicePaymentApplication.paymentAmount || 0))}</span>
                   </div>
                 </div>
               </div>
 
-              <div className="p-4 sm:p-6 lg:p-8 bg-slate-50/60 flex flex-col items-center min-w-0">
+              <div className="p-4 sm:p-6 lg:p-8 bg-slate-50/60 dark:bg-slate-950/50 flex flex-col items-center min-w-0">
                 <div className="w-full text-center">
-                  <p className="text-base sm:text-lg font-black text-slate-900">Scan QR Ph code to pay</p>
-                  <p className="text-xs text-slate-500 mt-2">Use your supported banking or e-wallet app.</p>
+                  <p className="text-base sm:text-lg font-black text-slate-900 dark:text-white">Scan QR Ph code to pay</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">Use your supported banking or e-wallet app.</p>
                 </div>
 
                 {isGeneratingRPTServiceQr && !rptServiceQrCodeUrl && (
-                  <div className="w-full max-w-sm mt-6 rounded-2xl border border-slate-200 bg-white p-10 flex flex-col items-center text-center shadow-sm">
-                    <div className="h-10 w-10 border-4 border-blue-200 border-t-blue-700 rounded-full animate-spin mb-4" />
-                    <p className="text-sm font-bold text-slate-800">Generating QR Ph code...</p>
-                    <p className="text-xs text-slate-500 mt-1">Please wait while PayMongo prepares your secure payment.</p>
+                  <div className="w-full max-w-sm mt-6 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-10 flex flex-col items-center text-center shadow-sm">
+                    <div className="h-10 w-10 border-4 border-blue-200 dark:border-blue-800 border-t-blue-700 dark:border-t-blue-400 rounded-full animate-spin mb-4" />
+                    <p className="text-sm font-bold text-slate-800 dark:text-slate-100">Generating QR Ph code...</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Please wait while PayMongo prepares your secure payment.</p>
                   </div>
                 )}
 
                 {!isGeneratingRPTServiceQr && rptServicePaymentNotice && !rptServiceQrCodeUrl && (
-                  <div className="w-full max-w-sm mt-6 rounded-2xl border border-rose-200 bg-rose-50 p-5 text-center">
-                    <p className="text-xs font-bold text-rose-700">{rptServicePaymentNotice}</p>
+                  <div className="w-full max-w-sm mt-6 rounded-2xl border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/40 p-5 text-center">
+                    <p className="text-xs font-bold text-rose-700 dark:text-rose-300">{rptServicePaymentNotice}</p>
                     <button type="button" onClick={() => void handlePayMongoRPTServiceQrPayment(rptServicePaymentApplication)} className="mt-4 px-5 py-2.5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold">Generate QR Again</button>
                   </div>
                 )}
 
                 {rptServiceQrCodeUrl && !rptServiceQrPaid && (
                   <div className="w-full flex flex-col items-center mt-5">
-                    <div className="w-full max-w-sm rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-center mb-4">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-blue-700">QR Code Refreshes In</p>
-                      <p className="text-xl sm:text-2xl font-black tabular-nums text-blue-700">{Math.floor(rptServiceQrSecondsRemaining / 60)}:{String(rptServiceQrSecondsRemaining % 60).padStart(2, "0")}</p>
-                      {rptServiceQrReferenceNumber && <p className="text-[10px] font-mono text-slate-500 mt-1">Ref: {rptServiceQrReferenceNumber}</p>}
+                    <div className="w-full max-w-sm rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/40 px-4 py-3 text-center mb-4">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-blue-700 dark:text-blue-300">QR Code Refreshes In</p>
+                      <p className="text-xl sm:text-2xl font-black tabular-nums text-blue-700 dark:text-blue-300">{Math.floor(rptServiceQrSecondsRemaining / 60)}:{String(rptServiceQrSecondsRemaining % 60).padStart(2, "0")}</p>
+                      {rptServiceQrReferenceNumber && <p className="text-[10px] font-mono text-slate-500 dark:text-slate-400 mt-1">Ref: {rptServiceQrReferenceNumber}</p>}
                     </div>
                     <div className="bg-white border border-slate-200 rounded-2xl p-3 sm:p-4 shadow-md max-w-full">
                       <img src={rptServiceQrCodeUrl} alt="PayMongo Dynamic QR Ph payment code" className="w-[min(72vw,18rem)] h-[min(72vw,18rem)] max-w-full object-contain" />
                     </div>
-                    <p className="text-xs text-slate-500 text-center mt-3 max-w-sm">Scan the QR code with your preferred supported payment app. Your payment will be confirmed automatically through PayMongo.</p>
-                    <div className="mt-4 flex items-center gap-2 text-xs font-bold text-blue-700">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 text-center mt-3 max-w-sm">Scan the QR code with your preferred supported payment app. Your payment will be confirmed automatically through PayMongo.</p>
+                    <div className="mt-4 flex items-center gap-2 text-xs font-bold text-blue-700 dark:text-blue-400">
                       <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" /> Waiting for payment...
                     </div>
                   </div>
@@ -2873,8 +2873,8 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
               </div>
             </div>
 
-            <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-5 border-t border-slate-200 bg-white flex justify-end sticky bottom-0">
-              <button type="button" onClick={closeRPTServicePayment} disabled={isGeneratingRPTServiceQr} className="px-6 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 disabled:opacity-50 text-slate-700 font-bold text-sm transition-colors">Close</button>
+            <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-5 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex justify-end sticky bottom-0">
+              <button type="button" onClick={closeRPTServicePayment} disabled={isGeneratingRPTServiceQr} className="px-6 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-50 text-slate-700 dark:text-slate-200 font-bold text-sm transition-colors cursor-pointer">Close</button>
             </div>
           </div>
         </div>
@@ -2882,29 +2882,29 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
 
       {rptServicePaymentSuccess && rptServicePaymentApplication && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-slate-950/75 backdrop-blur-md overflow-y-auto overscroll-contain">
-          <div className="relative w-full max-w-lg max-h-[94vh] overflow-y-auto rounded-2xl sm:rounded-[28px] bg-white p-5 sm:p-8 shadow-2xl text-center">
-            <div className="mx-auto mb-4 sm:mb-5 h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-emerald-100 flex items-center justify-center">
-              <svg viewBox="0 0 52 52" className="h-10 w-10 sm:h-12 sm:w-12 text-emerald-600" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M14 27l8 8 17-19" /></svg>
+          <div className="relative w-full max-w-lg max-h-[94vh] overflow-y-auto rounded-2xl sm:rounded-[28px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 sm:p-8 shadow-2xl text-center">
+            <div className="mx-auto mb-4 sm:mb-5 h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-emerald-100 dark:bg-emerald-950/60 flex items-center justify-center">
+              <svg viewBox="0 0 52 52" className="h-10 w-10 sm:h-12 sm:w-12 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M14 27l8 8 17-19" /></svg>
             </div>
-            <p className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">PAYMENT CONFIRMED</p>
-            <h2 className="mt-3 sm:mt-4 text-xl sm:text-2xl font-black text-slate-900">Payment Successful!</h2>
-            <p className="mt-2 text-sm text-slate-500">Your {rptServicePaymentApplication.service || "RPT service"} payment has been confirmed.</p>
-            <div className="mt-5 rounded-2xl bg-slate-50 border border-slate-200 p-4 sm:p-5 text-left space-y-3 text-sm overflow-x-auto">
-              <div className="flex justify-between gap-4"><span className="text-slate-500">Service</span><span className="font-bold text-right">{rptServicePaymentApplication.service}</span></div>
-              <div className="flex justify-between gap-4"><span className="text-slate-500">Amount Paid</span><span className="font-black">{formatCurrency(Number(rptServicePaymentApplication.paymentAmount || 0))}</span></div>
-              <div className="flex justify-between gap-4"><span className="text-slate-500">Reference</span><span className="font-mono font-bold text-right">{rptServicePaymentApplication.paymentReference || rptServiceQrReferenceNumber || "Confirmed"}</span></div>
-              {rptServicePaymentApplication.officialReceiptNumber && <div className="flex justify-between gap-4"><span className="text-slate-500">Official Receipt</span><span className="font-mono font-bold">{rptServicePaymentApplication.officialReceiptNumber}</span></div>}
-              {rptServicePaymentConfirmedAt && <div className="flex justify-between gap-4"><span className="text-slate-500">Date</span><span className="font-bold">{rptServicePaymentConfirmedAt.toLocaleString("en-PH")}</span></div>}
+            <p className="inline-flex items-center rounded-full bg-emerald-50 dark:bg-emerald-950/40 px-3 py-1 text-xs font-bold text-emerald-700 dark:text-emerald-300">PAYMENT CONFIRMED</p>
+            <h2 className="mt-3 sm:mt-4 text-xl sm:text-2xl font-black text-slate-900 dark:text-white">Payment Successful!</h2>
+            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Your {rptServicePaymentApplication.service || "RPT service"} payment has been confirmed.</p>
+            <div className="mt-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 p-4 sm:p-5 text-left space-y-3 text-sm overflow-x-auto">
+              <div className="flex justify-between gap-4"><span className="text-slate-500 dark:text-slate-400">Service</span><span className="font-bold text-slate-900 dark:text-white text-right">{rptServicePaymentApplication.service}</span></div>
+              <div className="flex justify-between gap-4"><span className="text-slate-500 dark:text-slate-400">Amount Paid</span><span className="font-black text-emerald-600 dark:text-emerald-400">{formatCurrency(Number(rptServicePaymentApplication.paymentAmount || 0))}</span></div>
+              <div className="flex justify-between gap-4"><span className="text-slate-500 dark:text-slate-400">Reference</span><span className="font-mono font-bold text-slate-900 dark:text-white text-right">{rptServicePaymentApplication.paymentReference || rptServiceQrReferenceNumber || "Confirmed"}</span></div>
+              {rptServicePaymentApplication.officialReceiptNumber && <div className="flex justify-between gap-4"><span className="text-slate-500 dark:text-slate-400">Official Receipt</span><span className="font-mono font-bold text-slate-900 dark:text-white">{rptServicePaymentApplication.officialReceiptNumber}</span></div>}
+              {rptServicePaymentConfirmedAt && <div className="flex justify-between gap-4"><span className="text-slate-500 dark:text-slate-400">Date</span><span className="font-bold text-slate-900 dark:text-white">{rptServicePaymentConfirmedAt.toLocaleString("en-PH")}</span></div>}
             </div>
-            <button type="button" onClick={() => { setRptServicePaymentSuccess(false); setRptServicePaymentApplication(null); loadApplications(); }} className="mt-6 w-full rounded-xl bg-[#1D3F99] hover:bg-[#17357F] text-white py-3 font-extrabold text-sm">Done</button>
+            <button type="button" onClick={() => { setRptServicePaymentSuccess(false); setRptServicePaymentApplication(null); loadApplications(); }} className="mt-6 w-full rounded-xl bg-[#1D3F99] hover:bg-[#17357F] text-white py-3 font-extrabold text-sm cursor-pointer">Done</button>
           </div>
         </div>
       )}
 
       {isGuideModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-3xl border border-slate-200 p-8 max-w-xl w-full shadow-2xl space-y-6 max-h-[85vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-8 max-w-xl w-full shadow-2xl space-y-6 max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
               <h3 className="text-base font-extrabold text-[#0B3B60] dark:text-blue-400 flex items-center gap-2">
                 <svg className="w-5 h-5 text-[#0B3B60] dark:text-blue-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
@@ -2913,31 +2913,31 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
               </h3>
               <button
                 onClick={() => setIsGuideModalOpen(false)}
-                className="text-slate-400 hover:text-slate-700 font-bold text-lg cursor-pointer"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 font-bold text-lg cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <div className="space-y-4 text-xs text-slate-700 leading-relaxed">
-              <div className="p-3 bg-sky-50 rounded-xl border border-sky-100">
-                <h4 className="font-bold text-[#0B3B60] mb-1">Step 1: Search Tax Declaration Number (TDN)</h4>
+            <div className="space-y-4 text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+              <div className="p-3 bg-sky-50 dark:bg-sky-950/40 rounded-xl border border-sky-100 dark:border-sky-800">
+                <h4 className="font-bold text-[#0B3B60] dark:text-sky-300 mb-1">Step 1: Search Tax Declaration Number (TDN)</h4>
                 <p>Enter your TDN (e.g. F-021-01491), complete the "I'm not a robot" captcha, and click SEARCH.</p>
               </div>
-              <div className="p-3 bg-sky-50 rounded-xl border border-sky-100">
-                <h4 className="font-bold text-[#0B3B60] mb-1">Step 2: Verify Property Ownership</h4>
+              <div className="p-3 bg-sky-50 dark:bg-sky-950/40 rounded-xl border border-sky-100 dark:border-sky-800">
+                <h4 className="font-bold text-[#0B3B60] dark:text-sky-300 mb-1">Step 2: Verify Property Ownership</h4>
                 <p>Confirm the owner or corporation name displayed on the prompt. If correct, click YES.</p>
               </div>
-              <div className="p-3 bg-sky-50 rounded-xl border border-sky-100">
-                <h4 className="font-bold text-[#0B3B60] mb-1">Step 3: Group Bill Set (Multiple TDNs)</h4>
+              <div className="p-3 bg-sky-50 dark:bg-sky-950/40 rounded-xl border border-sky-100 dark:border-sky-800">
+                <h4 className="font-bold text-[#0B3B60] dark:text-sky-300 mb-1">Step 3: Group Bill Set (Multiple TDNs)</h4>
                 <p>Review all properties linked to your ownership or parcel PIN. Select all TDNs you want to pay together.</p>
               </div>
-              <div className="p-3 bg-sky-50 rounded-xl border border-sky-100">
-                <h4 className="font-bold text-[#0B3B60] mb-1">Step 4: Select Payment Option</h4>
+              <div className="p-3 bg-sky-50 dark:bg-sky-950/40 rounded-xl border border-sky-100 dark:border-sky-800">
+                <h4 className="font-bold text-[#0B3B60] dark:text-sky-300 mb-1">Step 4: Select Payment Option</h4>
                 <p>Choose between Quarterly (Q1-Q4) or Full Annual payment. You can apply the option to all TDNs with one click!</p>
               </div>
-              <div className="p-3 bg-sky-50 rounded-xl border border-sky-100">
-                <h4 className="font-bold text-[#0B3B60] mb-1">Step 5: Checkout &amp; Electronic Official Receipt</h4>
+              <div className="p-3 bg-sky-50 dark:bg-sky-950/40 rounded-xl border border-sky-100 dark:border-sky-800">
+                <h4 className="font-bold text-[#0B3B60] dark:text-sky-300 mb-1">Step 5: Checkout &amp; Electronic Official Receipt</h4>
                 <p>Add to Cart and complete payment with GCash, Maya, Cards, or QR Ph. Receive instant downloadable eOR.</p>
               </div>
             </div>
@@ -2952,7 +2952,7 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
               </button>
 
               {isPaymentHistoryOpen && (
-                <div className="border-t border-white overflow-x-auto">
+                <div className="border-t border-slate-200 dark:border-slate-800 overflow-x-auto">
                   {rptPaymentHistory.length === 0 ? (
                     <div className="rpt-empty px-4 py-6">
                       No RPT payment history available.
@@ -3001,8 +3001,8 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
 
       {citizenPreviewDoc && (
         <div className="fixed inset-0 z-[70] bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-4xl h-[85vh] shadow-2xl overflow-hidden flex flex-col border border-slate-200">
-            <div className="p-4 bg-[#0B3B60] text-white flex justify-between items-center">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-4xl h-[85vh] shadow-2xl overflow-hidden flex flex-col border border-slate-200 dark:border-slate-800">
+            <div className="p-4 bg-[#0B3B60] dark:bg-slate-800 text-white flex justify-between items-center">
               <div className="flex items-center gap-2 min-w-0 pr-2">
                 <span className="text-xs uppercase font-bold text-sky-300 shrink-0">Document Preview</span>
                 <span className="text-xs text-slate-200 truncate max-w-md">({citizenPreviewDoc.name})</span>
@@ -3014,13 +3014,13 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
                     setCitizenPreviewDoc(null);
                     setCitizenPreviewError(false);
                   }}
-                  className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-semibold cursor-pointer transition"
+                  className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 text-white rounded-lg text-xs font-semibold cursor-pointer transition"
                 >
                   Close
                 </button>
               </div>
             </div>
-            <div className="flex-1 bg-slate-100 overflow-auto flex items-center justify-center p-4">
+            <div className="flex-1 bg-slate-100 dark:bg-slate-950 overflow-auto flex items-center justify-center p-4">
               {citizenPreviewDoc.url.toLowerCase().includes('.pdf') || citizenPreviewDoc.url.startsWith('data:application/pdf') ? (
                 <iframe
                   src={citizenPreviewDoc.url}
@@ -3028,16 +3028,16 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
                   className="w-full h-full border-0 rounded-xl bg-white shadow-md"
                 />
               ) : citizenPreviewError || !citizenPreviewDoc.url ? (
-                <div className="text-center p-8 max-w-md bg-white border border-slate-200 rounded-2xl shadow-lg space-y-4">
-                  <div className="w-12 h-12 mx-auto rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center">
+                <div className="text-center p-8 max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-lg space-y-4">
+                  <div className="w-12 h-12 mx-auto rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 flex items-center justify-center">
                     <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-slate-900">Preview Unavailable</h4>
-                    <p className="text-xs text-slate-500 mt-1">
-                      The document <span className="font-mono font-semibold text-slate-700">"{citizenPreviewDoc.name}"</span> could not be loaded in the inline viewer.
+                    <h4 className="text-sm font-bold text-slate-900 dark:text-white">Preview Unavailable</h4>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                      The document <span className="font-mono font-semibold text-slate-700 dark:text-slate-300">"{citizenPreviewDoc.name}"</span> could not be loaded in the inline viewer.
                     </p>
                   </div>
                   {citizenPreviewDoc.url && (
