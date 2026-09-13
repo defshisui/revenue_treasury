@@ -148,54 +148,11 @@ function getStoredCitizenSession() {
 export function RealPropertyTaxHub() {
   const navigate = useNavigate();
 
-  return (
-    <CitizenLayout activeTitle="Real Property Tax Hub" activeNav="rpt">
-      <div className="-m-4 sm:-m-6 lg:-m-8 mb-0">
-        <div className="relative w-full bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 h-36 sm:h-48 overflow-hidden flex items-center justify-center border-b-4 border-blue-600">
-          <div className="absolute inset-0 opacity-30 bg-[radial-gradient(#3b82f6_1px,transparent_1px)] [background-size:16px_16px]"></div>
+  useEffect(() => {
+    navigate("/citizen-rpt", { replace: true });
+  }, [navigate]);
 
-          <div className="relative z-10 text-center px-4">
-            <h1 className="text-xl sm:text-3xl font-extrabold text-white tracking-wide uppercase">
-              WELCOME TO REAL PROPERTY TAX
-            </h1>
-
-            <p className="text-xs sm:text-sm text-slate-200 mt-1 max-w-xl mx-auto">
-              This portal is one of our digital Gov Serv initiatives catering to property owners and taxpayers in accessing their Real Property Tax services.
-            </p>
-          </div>
-        </div>
-      </div>
-
-
-      <div className="max-w-6xl mx-auto px-4 py-8 sm:py-10">
-
-        <div className="flex justify-center">
-
-          <section className="w-full max-w-[650px] bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-7 text-center">
-
-            <h2 className="text-blue-900 font-bold text-sm tracking-wider uppercase mb-2">
-              PROCEED AND PAY ONLINE
-            </h2>
-
-            <p className="max-w-xl mx-auto mt-3 text-xs sm:text-sm text-[#36527A] leading-relaxed">
-              Search your Tax Declaration Number, view your property
-              assessment and outstanding balance and pay your Real Property Tax Online.
-            </p>
-
-            <button
-              type="button"
-              onClick={() => navigate("/citizen-rpt")}
-              className="mt-5 w-full sm:w-auto px-6 py-2.5 bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold rounded-full shadow-md transition-all cursor-pointer"
-            >
-              PROCEED WITH REAL PROPERTY TAX
-            </button>
-
-          </section>
-
-        </div>
-      </div>
-    </CitizenLayout>
-  );
+  return null;
 }
 
 export default function RealPropertyApplication({ isCollapsed: _isCollapsed = false }: { isCollapsed?: boolean }) {

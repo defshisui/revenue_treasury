@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "./components/ThemeContext";
 
 const LandingPage = lazy(() => import("./pages/LandingPage"));
@@ -20,12 +20,8 @@ const PrivateManageAccount = lazy(() => import("./citizen-portal/private-manage-
 const HawkerApplication = lazy(() => import("./citizen-portal/hawker-application"));
 
 const RealPropertyApplication = lazy(() => import("./citizen-portal/real-property-tax"));
-const RealPropertyTaxHub = lazy(() =>
-  import("./citizen-portal/real-property-tax").then((m) => ({ default: m.RealPropertyTaxHub }))
-);
 
 const BusinessTaxAssessmentView = lazy(() => import("./citizen-portal/Business-Tax-Assessment-View"));
-const MarketVendor = lazy(() => import("./citizen-portal/Market-Vendor"));
 
 function PageLoader() {
   return (
@@ -59,11 +55,11 @@ export default function App() {
             <Route path="/citizen-portal-stall-manage-account" element={<CityStallManageAccount />} />
             <Route path="/private-manage-account" element={<PrivateManageAccount />} />
             <Route path="/hawker-application" element={<HawkerApplication />} />
-            <Route path="/real-property-tax-hub" element={<RealPropertyTaxHub />} />
+            <Route path="/real-property-tax-hub" element={<Navigate to="/citizen-rpt" replace />} />
             <Route path="/citizen-rpt/*" element={<RealPropertyApplication />} />
             <Route path="/real-property-application" element={<RealPropertyApplication />} />
             <Route path="/business-tax-assessment" element={<BusinessTaxAssessmentView />} />
-            <Route path="/market-vendor-tab" element={<MarketVendor />} />
+            <Route path="/market-vendor-tab" element={<Navigate to="/citizen-portal-stall" replace />} />
           </Routes>
         </Suspense>
       </BrowserRouter>

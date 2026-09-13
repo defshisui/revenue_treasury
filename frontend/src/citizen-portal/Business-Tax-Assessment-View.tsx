@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { API_BASE_URL } from '../config/api';
 import CitizenLayout from './CitizenLayout';
 import {
@@ -55,8 +56,23 @@ interface AppointmentRecord {
   createdAt: string;
 }
 export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps> = ({ isCollapsed: _isCollapsed = false }) => {
-  const [currentScreen, setCurrentScreen] = useState<ActiveScreen>('home');
+  const location = useLocation();
+  const [currentScreen, setCurrentScreen] = useState<ActiveScreen>('assessment-list');
   const [isModalOpen, setIsModalOpen] = useState<false | 'appointment' | 'tax-bill' | 'or-number' | 'sales-declaration'>(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tab = params.get('tab');
+    if (tab === 'appointments' || tab === 'appointment') {
+      setCurrentScreen('appointments-list');
+    } else if (tab === 'verify' || tab === 'verification') {
+      setIsModalOpen('tax-bill');
+    } else if (tab === 'sales-declaration') {
+      setIsModalOpen('sales-declaration');
+    } else {
+      setCurrentScreen('assessment-list');
+    }
+  }, [location.search]);
   const [selectedAssessmentView, setSelectedAssessmentView] = useState<AssessmentRecord | null>(null);
   const [user, setUser] = useState<{ fullname: string; email: string; initials: string; firstName: string; token: string } | null>(null);
   const [assessments, setAssessments] = useState<AssessmentRecord[]>([]);
@@ -438,83 +454,29 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
 
             <div className="relative z-10 text-center px-4">
               <h1 className="text-xl sm:text-3xl font-extrabold text-white tracking-wide">
-                {currentScreen === 'home'
-                  ? 'WELCOME TO BUSINESS TAX ASSESSMENT'
-                  : currentScreen === 'appointments-list'
-                    ? 'MY APPOINTMENTS TRACKER'
-                    : '2026 BUSINESS TAX PAYMENT'}
+                {currentScreen === 'appointments-list'
+                  ? 'MY APPOINTMENTS TRACKER'
+                  : '2026 BUSINESS TAX PAYMENT'}
               </h1>
 
               <p className="text-xs sm:text-sm text-slate-200 mt-1 max-w-xl mx-auto">
-                {currentScreen === 'home'
-                  ? "This portal is one of our digital Gov Serv initiatives catering to the needs of business owners in securing their permits and licenses."
-                  : currentScreen === 'appointments-list'
-                    ? "Monitor the review, approval, or cancellation status of your scheduled municipal appointments in real time."
-                    : "Manage your online sales declarations and monitor permit assessment status."}
+                {currentScreen === 'appointments-list'
+                  ? "Monitor the review, approval, or cancellation status of your scheduled municipal appointments in real time."
+                  : "Manage your online sales declarations and monitor permit assessment status."}
               </p>
             </div>
           </div>
 
           <div className="max-w-6xl mx-auto px-4 py-8">
-            {currentScreen === 'home' ? (
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 flex flex-col justify-between text-center">
-                    <div>
-                      <h4 className="text-blue-900 font-bold text-sm tracking-wider uppercase mb-2">PROCEED AND PAY ONLINE</h4>
-                      <p className="text-xs text-slate-500 leading-relaxed mb-6">
-                        You can now submit your Online Sales Declaration along with your Financial Statements and other requirements online. Assessment and settlement of payment can also be done through this portal.
-                      </p>
-                    </div>
-                    <div>
-                      <button onClick={() => setCurrentScreen('assessment-list')} className="w-full sm:w-auto px-6 py-2.5 bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold rounded-full shadow-md transition-all cursor-pointer">
-                        PROCEED WITH BUSINESS TAX ASSESSMENT
-                      </button>
-                    </div>
-                  </div>
-                  <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 flex flex-col justify-between text-center">
-                    <div>
-                      <h3 className="text-blue-900 font-bold text-sm tracking-wider uppercase mb-3">Appointment</h3>
-                      <p className="text-xs text-slate-500 leading-relaxed mb-6">
-                        Do you have any concerns regarding your Business Tax Assessment? Schedule an appointment or track your existing appointments below:
-                      </p>
-                    </div>
-                    <div className="flex flex-col sm:flex-row justify-center gap-2">
-                      <button onClick={() => openModal('appointment')} className="px-5 py-2.5 bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold rounded-full shadow-md transition-all cursor-pointer">
-                        SET AN APPOINTMENT
-                      </button>
-                      <button onClick={() => setCurrentScreen('appointments-list')} className="px-5 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-bold rounded-full shadow-md transition-all cursor-pointer">
-                        VIEW MY APPOINTMENTS
-                      </button>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 text-center">
-                  <h3 className="text-blue-900 font-bold text-sm tracking-wider uppercase mb-2">
-                    TAX BILL NUMBER AND O.R. NUMBER VERIFICATION
-                  </h3>
-                  <p className="text-xs text-slate-500 mb-6">
-                    Do you want to verify your Tax Bill Number or O.R. Number?<br />Just click below
-                  </p>
-                  <div className="flex flex-col sm:flex-row justify-center items-center gap-3">
-                    <button onClick={() => openModal('tax-bill')} className="w-full sm:w-auto px-5 py-2.5 bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold rounded-full shadow-md transition-all cursor-pointer">
-                      TAX BILL NUMBER VERIFICATION
-                    </button>
-                    <button onClick={() => openModal('or-number')} className="w-full sm:w-auto px-5 py-2.5 bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold rounded-full shadow-md transition-all cursor-pointer">
-                      O.R. NUMBER VERIFICATION
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ) : currentScreen === 'appointments-list' ? (
+            {currentScreen === 'appointments-list' ? (
               <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <button
                     type="button"
-                    onClick={() => setCurrentScreen('home')}
+                    onClick={() => setCurrentScreen('assessment-list')}
                     className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-xl text-xs transition-colors cursor-pointer inline-block border-0"
                   >
-                    &larr; Back to Previous Page
+                    &larr; Back to Assessment List
                   </button>
                   <button onClick={() => openModal('appointment')} className="px-4 py-2 bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold rounded-md shadow-xs cursor-pointer">
                     + Request New Appointment
@@ -562,16 +524,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
               </div>
             ) : (
               <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4">
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setCurrentScreen('home')}
-                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-xl text-xs transition-colors cursor-pointer inline-block border-0"
-                  >
-                    &larr; Back to Previous Page
-                  </button>
-                </div>
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
                   <div className="flex items-center gap-2 w-full sm:w-auto">
                     <button onClick={() => openModal('sales-declaration')} className="px-4 py-2 bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold rounded-md shadow-xs cursor-pointer">
                       SUBMIT ONLINE SALES DECLARATION

@@ -35,10 +35,10 @@ export default function CitizenLayout({
     firstName: string;
     avatar?: string | null;
   }>({
-    fullname: 'Renz Millares',
-    email: 'renz.millares@citizen.gov.ph',
-    initials: 'RM',
-    firstName: 'RENZ',
+    fullname: 'Citizen User',
+    email: 'citizen@govserve.gov.ph',
+    initials: 'CU',
+    firstName: 'CITIZEN',
     avatar: null,
   });
 
@@ -50,32 +50,14 @@ export default function CitizenLayout({
   const notificationsRef = useRef<HTMLDivElement>(null);
 
   // Notifications list
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      title: 'RPT Assessment Approved',
-      time: '15m ago',
-      desc: 'Tax Declaration for Ref: RPT-2026-981245 is approved. 20% prompt payment discount applied.',
-      unread: true,
-      link: '/real-property-tax-hub',
-    },
-    {
-      id: 2,
-      title: 'Stall Rental Due Reminder',
-      time: '2h ago',
-      desc: 'Monthly rental for Kamuning Stall #412 is due on the 20th.',
-      unread: true,
-      link: '/citizen-portal-stall-manage-account',
-    },
-    {
-      id: 3,
-      title: 'Business Tax Clearance Ready',
-      time: '1d ago',
-      desc: 'Official e-OR and Tax Clearance for Ref: BTAX-2026-883109 have been issued.',
-      unread: false,
-      link: '/business-tax-assessment',
-    },
-  ]);
+  const [notifications, setNotifications] = useState<Array<{
+    id: number;
+    title: string;
+    time: string;
+    desc: string;
+    unread: boolean;
+    link: string;
+  }>>([]);
 
   // Handle clock
   useEffect(() => {
@@ -141,7 +123,7 @@ export default function CitizenLayout({
             target.fullName ||
             target.firstName ||
             target.email ||
-            'RENZ MILLARES';
+            'Citizen User';
           const email = target.email || 'citizen@govserve.gov.ph';
           const avatar = target.avatar || null;
           const nameParts = String(fullName).trim().split(' ');
@@ -272,6 +254,7 @@ export default function CitizenLayout({
           <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
         </svg>
       ),
+      path: '/citizen-rpt',
       subItems: [
         { label: 'Proceed and Pay Online', path: '/citizen-rpt' },
       ],
@@ -284,10 +267,11 @@ export default function CitizenLayout({
           <path strokeLinecap="round" strokeLinejoin="round" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
         </svg>
       ),
+      path: '/business-tax-assessment',
       subItems: [
         { label: 'Proceed and Pay Online', path: '/business-tax-assessment' },
-        { label: 'Appointment', path: '/business-tax-assessment' },
-        { label: 'Tax Bill Number and O.R. Number Verification', path: '/business-tax-assessment' },
+        { label: 'Appointment', path: '/business-tax-assessment?tab=appointments' },
+        { label: 'Tax Bill Number and O.R. Number Verification', path: '/business-tax-assessment?tab=verify' },
       ],
     },
     {
@@ -298,36 +282,10 @@ export default function CitizenLayout({
           <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
         </svg>
       ),
+      path: '/citizen-portal-stall',
       subItems: [
-        { label: 'City-Owned Market', path: '/market-vendor-tab' },
-        { label: 'Hawkers & Street Vendors Registration', path: '/market-vendor-tab' },
-      ],
-    },
-    {
-      id: 'regulatory',
-      label: 'Regulatory Fees',
-      icon: (
-        <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-        </svg>
-      ),
-      subItems: [
-        { label: "Mayor's Permit Fees", path: '/business-tax-assessment' },
-        { label: 'Sanitary & Safety Clearances', path: '/market-vendor-tab' },
-        { label: 'Cedula / Community Tax', path: '/citizen-portal' },
-      ],
-    },
-    {
-      id: 'payments',
-      label: 'Payments & Receipts',
-      icon: (
-        <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-        </svg>
-      ),
-      subItems: [
-        { label: 'Disbursements & Payout Status', path: '/citizen-portal-stall-status' },
-        { label: 'Electronic Receipts (e-OR)', path: '/citizen-portal-stall-manage-account' },
+        { label: 'City-Owned Market', path: '/citizen-portal-stall' },
+        { label: 'Hawkers & Street Vendors Registration', path: '/hawker-application' },
       ],
     },
   ];
@@ -397,7 +355,8 @@ export default function CitizenLayout({
                   onClick={() => {
                     if (hasSubmenu) {
                       toggleSubmenu(item.id);
-                    } else if (item.path) {
+                    }
+                    if (item.path) {
                       navigate(item.path);
                       setIsMobileMenuOpen(false);
                     }
@@ -659,28 +618,34 @@ export default function CitizenLayout({
                     </button>
                   </div>
                   <div className="max-h-72 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
-                    {notifications.map((n) => (
-                      <div
-                        key={n.id}
-                        onClick={() => {
-                          navigate(n.link);
-                          setIsNotificationsOpen(false);
-                        }}
-                        className={`p-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors cursor-pointer flex gap-3 ${n.unread ? 'bg-blue-50/40 dark:bg-blue-950/30' : ''
-                          }`}
-                      >
-                        <div className="w-2 h-2 mt-1.5 rounded-full shrink-0 bg-blue-600" />
-                        <div>
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="text-xs font-bold text-slate-900 dark:text-slate-100">{n.title}</p>
-                            <span className="text-[10px] text-slate-400 dark:text-slate-500">{n.time}</span>
-                          </div>
-                          <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5 leading-relaxed">
-                            {n.desc}
-                          </p>
-                        </div>
+                    {notifications.length === 0 ? (
+                      <div className="p-6 text-center text-xs text-slate-400 dark:text-slate-500">
+                        No notifications at this time
                       </div>
-                    ))}
+                    ) : (
+                      notifications.map((n) => (
+                        <div
+                          key={n.id}
+                          onClick={() => {
+                            navigate(n.link);
+                            setIsNotificationsOpen(false);
+                          }}
+                          className={`p-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors cursor-pointer flex gap-3 ${n.unread ? 'bg-blue-50/40 dark:bg-blue-950/30' : ''
+                            }`}
+                        >
+                          <div className="w-2 h-2 mt-1.5 rounded-full shrink-0 bg-blue-600" />
+                          <div>
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-xs font-bold text-slate-900 dark:text-slate-100">{n.title}</p>
+                              <span className="text-[10px] text-slate-400 dark:text-slate-500">{n.time}</span>
+                            </div>
+                            <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5 leading-relaxed">
+                              {n.desc}
+                            </p>
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
               )}
@@ -718,21 +683,6 @@ export default function CitizenLayout({
                     <span className="inline-block mt-2 px-2 py-0.5 bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400 text-[10px] font-bold rounded-md border border-blue-200 dark:border-blue-900">
                       Verified Citizen
                     </span>
-                  </div>
-
-                  <div className="py-1">
-                    <button
-                      onClick={() => {
-                        navigate('/edit-profile');
-                        setIsProfileDropdownOpen(false);
-                      }}
-                      className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-blue-700 dark:hover:text-blue-400 flex items-center gap-2 cursor-pointer"
-                    >
-                      <svg className="w-4 h-4 text-slate-400 dark:text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                      </svg>
-                      My Profile & Account
-                    </button>
                   </div>
 
                   <div className="border-t border-slate-100 dark:border-slate-800 pt-1">

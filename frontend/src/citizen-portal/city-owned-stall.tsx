@@ -36,10 +36,10 @@ interface StallDetails {
 const marketDatabase: Record<string, MarketInfo> = {
     "Galas": {
         address: "Luzon Avenue cor. Unang Hakbang St., Barangay San Isidro, District 4, Quezon City",
-        name: "Mr. Leon S Kenndy",
+        name: "Galas Market Admin Office",
         title: "Market Supervisor",
         phone: "8426-30-03",
-        email: "LeonSK1998@gmail.com",
+        email: "galas.market@quezoncity.gov.ph",
         total: 620,
         vacant: 44,
         occupied: 572,
@@ -58,7 +58,7 @@ const marketDatabase: Record<string, MarketInfo> = {
     },
     "Murphy": {
         address: "Boni Serrano Ave, Cubao, Quezon City",
-        name: "Mrs. Rhaenyra Targaryen",
+        name: "Murphy Market Admin Office",
         title: "Market Supervisor",
         phone: "8721-55-88",
         email: "murphymarket@quezoncity.gov.ph",
@@ -69,7 +69,7 @@ const marketDatabase: Record<string, MarketInfo> = {
     },
     "Project 2": {
         address: "Anonas St., Project 2, Quezon City",
-        name: "Arya Stark",
+        name: "Project 2 Market Admin Office",
         title: "Market Supervisor",
         phone: "8911-22-33",
         email: "project2market@quezoncity.gov.ph",

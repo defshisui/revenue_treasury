@@ -8,8 +8,8 @@ export default function CitizenPortal() {
   const navigate = useNavigate();
 
   const [user, setUser] = useState<{ fullname: string; firstName: string }>({
-    fullname: 'RENZ MILLARES',
-    firstName: 'RENZ',
+    fullname: 'Citizen User',
+    firstName: 'CITIZEN',
   });
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -65,7 +65,7 @@ export default function CitizenPortal() {
             target.fullName ||
             target.firstName ||
             target.email ||
-            'RENZ MILLARES';
+            'Citizen User';
           const nameParts = String(fullName).trim().split(' ');
           const firstName = nameParts[0].toUpperCase();
 
@@ -106,7 +106,7 @@ export default function CitizenPortal() {
         'Transfer Certificate of Title (TCT)',
       ],
       actionLabel: 'File Property Tax Assessment',
-      actionPath: '/real-property-tax-hub',
+      actionPath: '/citizen-rpt',
       iconBg: 'bg-blue-50 text-blue-700',
       icon: (
         <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -120,7 +120,7 @@ export default function CitizenPortal() {
       category: 'Business Taxes',
       tag: 'Annual Business Renewal',
       description:
-        'Gross sales declaration, regulatory fee computation, and local business tax clearance processing.',
+        'Gross sales declaration, local business tax computation, and municipal tax clearance processing.',
       requirements: [
         'Audited Financial Statement / BIR 1701/1702',
         "Previous Year Official Receipt & Mayor's Permit",
@@ -198,7 +198,7 @@ export default function CitizenPortal() {
         'Tax Clearance Generation',
       ],
       primaryLabel: 'Explore Property Tax',
-      primaryPath: '/real-property-tax-hub',
+      primaryPath: '/citizen-rpt',
       secondaryLabel: 'Compute Assessment',
       secondaryAction: () => {
         setCalcType('rpt');
@@ -216,7 +216,7 @@ export default function CitizenPortal() {
       title: 'Business Tax Assessment & Clearances',
       subtitle: 'BPLO & Treasury Assessment',
       description:
-        'Compute annual business taxes based on graduated gross sales brackets, regulatory fees, garbage fees, and sanitary charges.',
+        'Compute annual business taxes based on graduated gross sales brackets, local business taxes, garbage fees, and municipal charges.',
       category: 'Business Taxes',
       features: [
         'Automated Bracket Computation',
@@ -267,7 +267,7 @@ export default function CitizenPortal() {
       title: 'Private Market & Commercial Stalls',
       subtitle: 'Commercial Stall Registry',
       description:
-        'Regulatory oversight, annual inspection compliance, and account verification for private market operators and leased stalls.',
+        'Municipal compliance, annual inspection verification, and account management for private market operators and leased stalls.',
       category: 'Market & Vendors',
       features: [
         'Commercial Operator Clearance',
@@ -277,8 +277,8 @@ export default function CitizenPortal() {
       ],
       primaryLabel: 'Manage Private Stall',
       primaryPath: '/private-manage-account',
-      secondaryLabel: 'Check Operator Status',
-      secondaryAction: () => navigate('/market-vendor-tab'),
+      secondaryLabel: 'Manage Stall Account',
+      secondaryAction: () => navigate('/private-manage-account'),
       iconBg: 'bg-teal-50 text-teal-700 border border-teal-200',
       icon: (
         <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -301,8 +301,8 @@ export default function CitizenPortal() {
       ],
       primaryLabel: 'Apply Hawker Permit',
       primaryPath: '/hawker-application',
-      secondaryLabel: 'View Vending Guidelines',
-      secondaryAction: () => navigate('/market-vendor-tab'),
+      secondaryLabel: 'View Applications',
+      secondaryAction: () => navigate('/hawker-application'),
       iconBg: 'bg-amber-50 text-amber-700 border border-amber-200',
       icon: (
         <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -389,37 +389,36 @@ export default function CitizenPortal() {
     e.preventDefault();
     if (!trackingIdInput.trim()) return;
 
-    if (trackingIdInput.toUpperCase().includes('RPT')) {
-      setTrackedResult({
-        ref: trackingIdInput.toUpperCase(),
-        service: 'Real Property Tax Assessment',
-        date: 'Sep 10, 2026',
-        status: 'Under Review',
-        step: 3,
-        note: 'Submitted to City Assessor Office. Evaluation of tax declaration is underway.',
-      });
-    } else if (
-      trackingIdInput.toUpperCase().includes('STALL') ||
-      trackingIdInput.toUpperCase().includes('KAMUNING')
-    ) {
-      setTrackedResult({
-        ref: trackingIdInput.toUpperCase(),
-        service: 'City Market Stall Lease Application',
-        date: 'Sep 04, 2026',
-        status: 'Approved',
-        step: 4,
-        note: 'Stall Award Approved by Market Committee. Ready for contract signing.',
-      });
-    } else {
-      setTrackedResult({
-        ref: trackingIdInput.toUpperCase(),
-        service: 'Business Tax Assessment / Clearance',
-        date: 'Sep 12, 2026',
-        status: 'Approved',
-        step: 4,
-        note: 'Assessment completed. Official e-OR released.',
-      });
+    try {
+      const rptApps = JSON.parse(localStorage.getItem('rptApplications') || '[]');
+      const matchedRpt = rptApps.find((a: any) =>
+        a.id?.toLowerCase().includes(trackingIdInput.trim().toLowerCase()) ||
+        a.taxDeclarationNumber?.toLowerCase().includes(trackingIdInput.trim().toLowerCase())
+      );
+
+      if (matchedRpt) {
+        setTrackedResult({
+          ref: matchedRpt.id || trackingIdInput.toUpperCase(),
+          service: 'Real Property Tax Assessment',
+          date: matchedRpt.applicationDate ? new Date(matchedRpt.applicationDate).toLocaleDateString() : 'Recent',
+          status: matchedRpt.status || 'Under Review',
+          step: matchedRpt.status === 'Approved' ? 4 : 3,
+          note: `Property TD ${matchedRpt.taxDeclarationNumber || ''}. Assessment status: ${matchedRpt.status || 'Under Review'}.`,
+        });
+        return;
+      }
+    } catch {
+      // Ignore parse errors
     }
+
+    setTrackedResult({
+      ref: trackingIdInput.toUpperCase(),
+      service: 'Municipal Application Tracking',
+      date: new Date().toLocaleDateString(),
+      status: 'Submitted',
+      step: 2,
+      note: `Reference ${trackingIdInput.toUpperCase()} has been received and is queued for verification with the respective city department.`,
+    });
   };
 
   return (
@@ -459,7 +458,7 @@ export default function CitizenPortal() {
           </h2>
 
           <p className="text-xs sm:text-sm text-blue-100/90 leading-relaxed max-w-2xl font-normal">
-            Learn about available local tax assessments (RPT), business tax clearances, market stall leasing, street vendor permits, regulatory payments, and document requirements before applying.
+            Learn about available local tax assessments (RPT), business tax clearances, market stall leasing, street vendor permits, and document requirements before applying.
           </p>
         </div>
 
@@ -511,88 +510,6 @@ export default function CitizenPortal() {
         </div>
       </section>
 
-      {/* ===================== ACTIVE & RECENT APPLICATIONS STATUS ===================== */}
-      <section className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 shadow-xs space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <h3 className="text-xs sm:text-sm font-bold text-slate-800 tracking-tight">
-              Your Active &amp; Recent Applications Status
-            </h3>
-          </div>
-
-          <button
-            onClick={() => navigate('/citizen-portal-stall-status')}
-            className="text-xs font-bold text-blue-700 hover:text-blue-900 flex items-center gap-1 cursor-pointer transition-colors"
-          >
-            View History &rarr;
-          </button>
-        </div>
-
-        {/* 3 Status Cards in Horizontal Row */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
-          {/* Item 1: RPT */}
-          <div
-            onClick={() => navigate('/real-property-tax-hub')}
-            className="p-4 rounded-xl border border-slate-200 hover:border-blue-300 hover:bg-blue-50/20 transition-all cursor-pointer flex items-center justify-between group"
-          >
-            <div>
-              <p className="text-xs font-extrabold text-slate-900 group-hover:text-blue-900">
-                Real Property Tax Assessment
-              </p>
-              <p className="text-[11px] font-mono text-slate-400 mt-0.5">
-                Ref: RPT-2026-981245
-              </p>
-            </div>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 shrink-0">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-              Under Review
-            </span>
-          </div>
-
-          {/* Item 2: Market Stall */}
-          <div
-            onClick={() => navigate('/citizen-portal-stall-manage-account')}
-            className="p-4 rounded-xl border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/20 transition-all cursor-pointer flex items-center justify-between group"
-          >
-            <div>
-              <p className="text-xs font-extrabold text-slate-900 group-hover:text-emerald-900">
-                City Market Stall &bull; KAMUNING
-              </p>
-              <p className="text-[11px] font-mono text-slate-400 mt-0.5">
-                Ref: STALL-KAMUNING-0412
-              </p>
-            </div>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              Approved
-            </span>
-          </div>
-
-          {/* Item 3: Business Tax Clearance */}
-          <div
-            onClick={() => navigate('/business-tax-assessment')}
-            className="p-4 rounded-xl border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/20 transition-all cursor-pointer flex items-center justify-between group"
-          >
-            <div>
-              <p className="text-xs font-extrabold text-slate-900 group-hover:text-emerald-900">
-                Business Tax Clearance
-              </p>
-              <p className="text-[11px] font-mono text-slate-400 mt-0.5">
-                Ref: BTAX-2026-883109
-              </p>
-            </div>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              Approved
-            </span>
-          </div>
-        </div>
-      </section>
 
       {/* ===================== HOW THE PROCESS WORKS (4 STEPS) ===================== */}
       <section className="space-y-6 pt-4">
