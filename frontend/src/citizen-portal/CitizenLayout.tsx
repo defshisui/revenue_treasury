@@ -273,9 +273,7 @@ export default function CitizenLayout({
         </svg>
       ),
       subItems: [
-        { label: 'Real Property Tax Hub', path: '/real-property-tax-hub' },
-        { label: 'Tax Declaration & Filing', path: '/citizen-rpt' },
-        { label: 'RPT Assessment View', path: '/real-property-application' },
+        { label: 'Proceed and Pay Online', path: '/citizen-rpt' },
       ],
     },
     {
@@ -287,8 +285,9 @@ export default function CitizenLayout({
         </svg>
       ),
       subItems: [
-        { label: 'Business Tax Assessment', path: '/business-tax-assessment' },
-        { label: 'Gross Sales Declaration', path: '/business-tax-assessment' },
+        { label: 'Proceed and Pay Online', path: '/business-tax-assessment' },
+        { label: 'Appointment', path: '/business-tax-assessment' },
+        { label: 'Tax Bill Number and O.R. Number Verification', path: '/business-tax-assessment' },
       ],
     },
     {
@@ -300,11 +299,8 @@ export default function CitizenLayout({
         </svg>
       ),
       subItems: [
-        { label: 'Market & Vendors Hub', path: '/market-vendor-tab' },
-        { label: 'City-Owned Stall Application', path: '/citizen-portal-stall' },
-        { label: 'Stall Account Management', path: '/citizen-portal-stall-manage-account' },
-        { label: 'Private Market Account', path: '/private-manage-account' },
-        { label: 'Street Hawker Application', path: '/hawker-application' },
+        { label: 'City-Owned Market', path: '/market-vendor-tab' },
+        { label: 'Hawkers & Street Vendors Registration', path: '/market-vendor-tab' },
       ],
     },
     {

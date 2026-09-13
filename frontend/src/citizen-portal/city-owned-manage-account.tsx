@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getLeases } from '../services/marketService';
 import type { LeaseRecord } from '../services/marketService';
-import { UnifiedHeader } from './UnifiedHeader';
-import { UnifiedFooter } from './UnifiedFooter';
+import CitizenLayout from './CitizenLayout';
 import { API_BASE_URL } from "../config/api";
 import {
     createPayMongoQrPaymentIntent,
@@ -346,9 +345,8 @@ export default function MarketLeaseSearch() {
         window.history.back();
     };
     return (
-        <div className="w-full min-h-screen bg-slate-100 text-slate-800 flex flex-col antialiased relative">
-            <UnifiedHeader />
-            <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 font-['Segoe_UI',Tahoma,Geneva,Verdana,sans-serif]">
+        <CitizenLayout activeTitle="Manage City-Owned Market Account" activeNav="market">
+            <div className="w-full font-['Segoe_UI',Tahoma,Geneva,Verdana,sans-serif]">
                 <div className="w-full bg-white border border-slate-300 rounded-lg shadow-md overflow-hidden flex flex-col pb-5">
                     <div className="flex justify-between items-center p-[20px_24px] border-b-2 border-slate-200">
                         <h2 className="text-[1.1rem] font-bold text-slate-800 tracking-[0.5px] uppercase">
@@ -557,7 +555,7 @@ export default function MarketLeaseSearch() {
                         </div>
                     </div>
                 </div>
-            </main>
+            </div>
 
             {isDetailsOpen && selectedLease && (
                 <div className="fixed inset-0 z-[70] bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
@@ -978,7 +976,6 @@ export default function MarketLeaseSearch() {
                     </div>
                 </div>
             )}
-            <UnifiedFooter />
-        </div>
+        </CitizenLayout>
     );
 }

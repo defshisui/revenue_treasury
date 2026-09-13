@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react';
 import logoSystem from '../assets/logo-system.png';
 import { submitHawkerApplication } from '../services/hawkerservice';
 import { API_BASE_URL } from '../config/api';
-import { UnifiedHeader } from './UnifiedHeader';
-import { UnifiedFooter } from './UnifiedFooter';
+import CitizenLayout from './CitizenLayout';
 interface Props {
     onSubmitApplication?: (record: any) => void;
 }
@@ -330,9 +329,8 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
         return uploadedDocs.find(d => d.document_type === docType);
     };
     return (
-        <div className="w-full min-h-screen bg-slate-100 font-['Segoe_UI',Tahoma,Geneva,Verdana,sans-serif] text-slate-800 flex flex-col antialiased relative">
-            <UnifiedHeader />
-            <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        <CitizenLayout activeTitle="Hawker Association" activeNav="market">
+            <div className="w-full font-['Segoe_UI',Tahoma,Geneva,Verdana,sans-serif] space-y-6">
                 <div className="w-full bg-white border border-slate-300 rounded-lg p-6 md:p-10 relative shadow-md">
                     <div className="flex flex-col md:flex-row justify-between items-center border-b border-slate-200 pb-5 gap-4">
                         <h1 className="text-slate-800 font-bold text-sm tracking-wide uppercase">
@@ -436,7 +434,7 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                         </div>
                     </div>
                 </div>
-            </main>
+            </div>
             {isModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 overflow-y-auto">
                     <div className="bg-white border border-slate-300 rounded-lg max-w-4xl w-full relative shadow-2xl my-8 max-h-[90vh] overflow-y-auto">
@@ -876,7 +874,6 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                     </div>
                 </div>
             )}
-            <UnifiedFooter />
-        </div>
+        </CitizenLayout>
     );
 }

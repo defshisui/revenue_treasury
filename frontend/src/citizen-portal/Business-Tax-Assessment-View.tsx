@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../config/api';
-import { UnifiedHeader } from './UnifiedHeader';
-import { UnifiedFooter } from './UnifiedFooter';
+import CitizenLayout from './CitizenLayout';
 import {
   createPayMongoQrPaymentIntent,
   createQrPhPaymentMethod,
@@ -55,7 +54,7 @@ interface AppointmentRecord {
   status: 'PENDING' | 'APPROVED' | 'CANCELLED';
   createdAt: string;
 }
-export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps> = ({ isCollapsed = false }) => {
+export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps> = ({ isCollapsed: _isCollapsed = false }) => {
   const [currentScreen, setCurrentScreen] = useState<ActiveScreen>('home');
   const [isModalOpen, setIsModalOpen] = useState<false | 'appointment' | 'tax-bill' | 'or-number' | 'sales-declaration'>(false);
   const [selectedAssessmentView, setSelectedAssessmentView] = useState<AssessmentRecord | null>(null);
@@ -430,19 +429,11 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
     setVerificationResult(null);
   };
   return (
-    <div
-      style={{
-        marginLeft: isCollapsed ? "80px" : "0px",
-        width: isCollapsed ? "calc(100% - 80px)" : "100%",
-      }}
-      className="min-h-screen bg-slate-100 font-['Segoe_UI',Tahoma,Geneva,Verdana,sans-serif] text-slate-800 pt-0 flex flex-col antialiased relative transition-all duration-300 box-border"
-    >
-      <UnifiedHeader />
-
-      <div className="flex-1 flex flex-col justify-between w-full">
+    <CitizenLayout activeTitle="Business Tax Assessment" activeNav="btax">
+      <div className="flex flex-col justify-between w-full">
         <div>
 
-          <div className="relative w-full bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 h-36 sm:h-48 overflow-hidden flex items-center justify-center border-b-4 border-blue-600">
+          <div className="-mx-4 sm:-mx-6 lg:-mx-8 -mt-4 sm:-mt-6 lg:-mt-8 relative w-full bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 h-36 sm:h-48 overflow-hidden flex items-center justify-center border-b-4 border-blue-600">
             <div className="absolute inset-0 opacity-30 bg-[radial-gradient(#3b82f6_1px,transparent_1px)] [background-size:16px_16px]"></div>
 
             <div className="relative z-10 text-center px-4">
@@ -721,8 +712,6 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
             )}
           </div>
         </div>
-
-        <UnifiedFooter />
       </div>
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
@@ -1425,7 +1414,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
         </div>
       )}
 
-    </div>
+    </CitizenLayout>
   );
 };
 export default BusinessTaxAssessmentView;

@@ -2,8 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../config/api";
-import { UnifiedHeader } from "./UnifiedHeader";
-import { UnifiedFooter } from "./UnifiedFooter";
+import CitizenLayout from "./CitizenLayout";
 import {
   createPayMongoQrPaymentIntent,
   createQrPhPaymentMethod,
@@ -150,62 +149,56 @@ export function RealPropertyTaxHub() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F4F6F9] text-slate-800 font-sans">
+    <CitizenLayout activeTitle="Real Property Tax Hub" activeNav="rpt">
+      <div className="-m-4 sm:-m-6 lg:-m-8 mb-0">
+        <div className="relative w-full bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 h-36 sm:h-48 overflow-hidden flex items-center justify-center border-b-4 border-blue-600">
+          <div className="absolute inset-0 opacity-30 bg-[radial-gradient(#3b82f6_1px,transparent_1px)] [background-size:16px_16px]"></div>
 
-      <UnifiedHeader />
+          <div className="relative z-10 text-center px-4">
+            <h1 className="text-xl sm:text-3xl font-extrabold text-white tracking-wide uppercase">
+              WELCOME TO REAL PROPERTY TAX
+            </h1>
 
-      <div className="relative w-full bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 h-36 sm:h-48 overflow-hidden flex items-center justify-center border-b-4 border-blue-600">
-        <div className="absolute inset-0 opacity-30 bg-[radial-gradient(#3b82f6_1px,transparent_1px)] [background-size:16px_16px]"></div>
-
-        <div className="relative z-10 text-center px-4">
-          <h1 className="text-xl sm:text-3xl font-extrabold text-white tracking-wide uppercase">
-            WELCOME TO REAL PROPERTY TAX
-          </h1>
-
-          <p className="text-xs sm:text-sm text-slate-200 mt-1 max-w-xl mx-auto">
-            This portal is one of our digital Gov Serv initiatives catering to property owners and taxpayers in accessing their Real Property Tax services.
-          </p>
+            <p className="text-xs sm:text-sm text-slate-200 mt-1 max-w-xl mx-auto">
+              This portal is one of our digital Gov Serv initiatives catering to property owners and taxpayers in accessing their Real Property Tax services.
+            </p>
+          </div>
         </div>
       </div>
 
 
-      <main className="flex-1">
-        <div className="max-w-6xl mx-auto px-4 py-8 sm:py-10">
+      <div className="max-w-6xl mx-auto px-4 py-8 sm:py-10">
 
-          <div className="flex justify-center">
+        <div className="flex justify-center">
 
-            <section className="w-full max-w-[650px] bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-7 text-center">
+          <section className="w-full max-w-[650px] bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-7 text-center">
 
-              <h2 className="text-blue-900 font-bold text-sm tracking-wider uppercase mb-2">
-                PROCEED AND PAY ONLINE
-              </h2>
+            <h2 className="text-blue-900 font-bold text-sm tracking-wider uppercase mb-2">
+              PROCEED AND PAY ONLINE
+            </h2>
 
-              <p className="max-w-xl mx-auto mt-3 text-xs sm:text-sm text-[#36527A] leading-relaxed">
-                Search your Tax Declaration Number, view your property
-                assessment and outstanding balance and pay your Real Property Tax Online.
-              </p>
+            <p className="max-w-xl mx-auto mt-3 text-xs sm:text-sm text-[#36527A] leading-relaxed">
+              Search your Tax Declaration Number, view your property
+              assessment and outstanding balance and pay your Real Property Tax Online.
+            </p>
 
-              <button
-                type="button"
-                onClick={() => navigate("/citizen-rpt")}
-                className="mt-5 w-full sm:w-auto px-6 py-2.5 bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold rounded-full shadow-md transition-all cursor-pointer"
-              >
-                PROCEED WITH REAL PROPERTY TAX
-              </button>
+            <button
+              type="button"
+              onClick={() => navigate("/citizen-rpt")}
+              className="mt-5 w-full sm:w-auto px-6 py-2.5 bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold rounded-full shadow-md transition-all cursor-pointer"
+            >
+              PROCEED WITH REAL PROPERTY TAX
+            </button>
 
-            </section>
+          </section>
 
-          </div>
         </div>
-      </main>
-
-      <UnifiedFooter />
-
-    </div>
+      </div>
+    </CitizenLayout>
   );
 }
 
-export default function RealPropertyApplication({ isCollapsed = false }: { isCollapsed?: boolean }) {
+export default function RealPropertyApplication({ isCollapsed: _isCollapsed = false }: { isCollapsed?: boolean }) {
   const location = useLocation();
 
   const [activePortalTab, setActivePortalTab] = useState<"search" | "summary">("search");
@@ -1131,15 +1124,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
 
 
   return (
-    <div
-      style={{
-        marginLeft: isCollapsed ? "80px" : "0px",
-        width: isCollapsed ? "calc(100% - 80px)" : "100%",
-      }}
-      className="rpt-portal min-h-screen flex flex-col bg-[#F4F6F9] text-slate-800 font-sans transition-all duration-300"
-    >
-      <UnifiedHeader />
-
+    <CitizenLayout activeTitle="Real Property Tax" activeNav="rpt">
       <style>{`
         .rpt-portal {
           --rpt-blue: #1D3F99;
@@ -1332,7 +1317,7 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
           font-family: inherit;
         }
       `}</style>
-      <div className="flex-1">
+      <div className="rpt-portal flex-1">
 
         {toastMessage && (
           <div className="fixed top-20 right-6 z-50 animate-bounce">
@@ -2035,8 +2020,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
           )}
         </div>
       </div>
-
-      <div className="hidden"><UnifiedFooter /></div>
 
       {isOwnerModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4">
@@ -3040,7 +3023,6 @@ export default function RealPropertyApplication({ isCollapsed = false }: { isCol
         </div>
       )}
 
-      <UnifiedFooter />
-    </div>
+    </CitizenLayout>
   );
 }
