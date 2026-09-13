@@ -182,136 +182,6 @@ export default function CitizenPortal() {
     },
   ];
 
-  // 7 Modules (Images 3 & 4 UI style)
-  const modulesList = [
-    {
-      id: 'mod-rpt',
-      title: 'Real Property Tax Hub',
-      subtitle: 'Assessor & Treasury Services',
-      description:
-        'Comprehensive land, building, and machinery assessment hub with automated discounts, assessment verification, and tax clearance.',
-      category: 'Real Property Tax',
-      features: [
-        'Early Bird 20% Discount',
-        'Online Title Verification',
-        'Instant Electronic Receipt',
-        'Tax Clearance Generation',
-      ],
-      primaryLabel: 'Explore Property Tax',
-      primaryPath: '/citizen-rpt',
-      secondaryLabel: 'Compute Assessment',
-      secondaryAction: () => {
-        setCalcType('rpt');
-        setIsCalculatorModalOpen(true);
-      },
-      iconBg: 'bg-blue-50 text-blue-700 border border-blue-200',
-      icon: (
-        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-        </svg>
-      ),
-    },
-    {
-      id: 'mod-btax',
-      title: 'Business Tax Assessment & Clearances',
-      subtitle: 'BPLO & Treasury Assessment',
-      description:
-        'Compute annual business taxes based on graduated gross sales brackets, local business taxes, garbage fees, and municipal charges.',
-      category: 'Business Taxes',
-      features: [
-        'Automated Bracket Computation',
-        'Quarter Payment Option',
-        "Mayor's Permit Clearance",
-        'BIR Gross Reconciliation',
-      ],
-      primaryLabel: 'Assess Business Tax',
-      primaryPath: '/business-tax-assessment',
-      secondaryLabel: 'Declare Gross Sales',
-      secondaryAction: () => {
-        setCalcType('btax');
-        setIsCalculatorModalOpen(true);
-      },
-      iconBg: 'bg-indigo-50 text-indigo-700 border border-indigo-200',
-      icon: (
-        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-        </svg>
-      ),
-    },
-    {
-      id: 'mod-city-stall',
-      title: 'City-Owned Market Stalls',
-      subtitle: 'Public Market Administration',
-      description:
-        'Apply for public market stalls across 8 city wet/dry markets, process stall renewals, extension permits, and change of line.',
-      category: 'Market & Vendors',
-      features: [
-        'Galas, Kamuning & Murphy',
-        'Stall Transfer & Repair Permits',
-        'Verified Awarding System',
-        'Subsidized Utility Rates',
-      ],
-      primaryLabel: 'Apply Market Stall',
-      primaryPath: '/citizen-portal-stall',
-      secondaryLabel: 'Manage Stall Account',
-      secondaryAction: () => navigate('/citizen-portal-stall-manage-account'),
-      iconBg: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
-      icon: (
-        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-        </svg>
-      ),
-    },
-    {
-      id: 'mod-pvt-stall',
-      title: 'Private Market & Commercial Stalls',
-      subtitle: 'Commercial Stall Registry',
-      description:
-        'Municipal compliance, annual inspection verification, and account management for private market operators and leased stalls.',
-      category: 'Market & Vendors',
-      features: [
-        'Commercial Operator Clearance',
-        'Lease Verification',
-        'Sanitation Standards Audit',
-        'Masterlist Record Check',
-      ],
-      primaryLabel: 'Manage Private Stall',
-      primaryPath: '/private-manage-account',
-      secondaryLabel: 'Manage Stall Account',
-      secondaryAction: () => navigate('/private-manage-account'),
-      iconBg: 'bg-teal-50 text-teal-700 border border-teal-200',
-      icon: (
-        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
-        </svg>
-      ),
-    },
-    {
-      id: 'mod-hawker',
-      title: 'Hawkers & Mobile Vendors Program',
-      subtitle: 'Sidewalk & Hawker Regulation',
-      description:
-        'Special registration and identification for street vendors, mobile carts, food trucks, and night market designated areas.',
-      category: 'Market & Vendors',
-      features: [
-        'Designated Zone Mapping',
-        'Official Hawker ID Card',
-        'Micro-business Protection',
-        'Simplified Document Filing',
-      ],
-      primaryLabel: 'Apply Hawker Permit',
-      primaryPath: '/hawker-application',
-      secondaryLabel: 'View Applications',
-      secondaryAction: () => navigate('/hawker-application'),
-      iconBg: 'bg-amber-50 text-amber-700 border border-amber-200',
-      icon: (
-        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-        </svg>
-      ),
-    },
-  ];
-
   // FAQs list
   const faqs = [
     {
@@ -345,19 +215,6 @@ export default function CitizenPortal() {
       s.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.requirements.some((r) =>
         r.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    return matchCat && matchQuery;
-  });
-
-  // Filter 7 modules
-  const filteredModules = modulesList.filter((m) => {
-    const matchCat =
-      selectedCategory === 'All Services' || m.category === selectedCategory;
-    const matchQuery =
-      m.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      m.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      m.features.some((f) =>
-        f.toLowerCase().includes(searchQuery.toLowerCase())
       );
     return matchCat && matchQuery;
   });
@@ -500,11 +357,10 @@ export default function CitizenPortal() {
                 key={cat}
                 type="button"
                 onClick={() => setSelectedCategory(cat)}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                  isSelected
+                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${isSelected
                     ? 'bg-slate-900 text-white shadow-md border border-slate-700'
                     : 'bg-white/10 hover:bg-white/20 text-blue-100 border border-white/15'
-                }`}
+                  }`}
               >
                 {cat}
               </button>
@@ -688,83 +544,6 @@ export default function CitizenPortal() {
         </div>
       </section>
 
-      {/* ===================== EXPLORE ALL MODULES (7 MODULES - IMAGES 3 & 4 UI) ===================== */}
-      <section className="space-y-6 pt-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-            Explore All Revenue, Treasury &amp; Market Modules
-          </h2>
-          <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-            Showing {filteredModules.length} programs
-          </span>
-        </div>
-
-        {/* 2-Column Grid of Large Module Cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {filteredModules.map((mod) => (
-            <div
-              key={mod.id}
-              className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 sm:p-7 flex flex-col justify-between space-y-6 hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 transition-all"
-            >
-              <div className="space-y-4">
-                {/* Icon + Title + Subtitle */}
-                <div className="flex items-start gap-4">
-                  <div className={`w-12 h-12 rounded-xl ${mod.iconBg} flex items-center justify-center shrink-0`}>
-                    {mod.icon}
-                  </div>
-                  <div>
-                    <h3 className="font-extrabold text-base text-slate-900 dark:text-white">
-                      {mod.title}
-                    </h3>
-                    <p className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 mt-0.5 uppercase tracking-wide">
-                      {mod.subtitle}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Description */}
-                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                  {mod.description}
-                </p>
-
-                {/* 4 Feature Badges */}
-                <div className="grid grid-cols-2 gap-2 pt-2">
-                  {mod.features.map((feat, fIdx) => (
-                    <div
-                      key={fIdx}
-                      className="px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200/70 dark:border-slate-700 text-[11px] font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5 truncate"
-                    >
-                      <svg className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
-                      <span className="truncate">{feat}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Action Buttons (Primary & Secondary) */}
-              <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => navigate(mod.primaryPath)}
-                  className="w-full sm:flex-1 py-2.5 px-4 rounded-xl bg-[#1d4ed8] hover:bg-[#1e40af] text-white font-bold text-xs transition-colors cursor-pointer shadow-xs text-center"
-                >
-                  {mod.primaryLabel} &rarr;
-                </button>
-                <button
-                  type="button"
-                  onClick={mod.secondaryAction}
-                  className="w-full sm:w-auto py-2.5 px-4 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 font-bold text-xs transition-colors cursor-pointer text-center"
-                >
-                  {mod.secondaryLabel}
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
       {/* ===================== GENERAL QUALIFICATIONS & DOCUMENT REQUIREMENTS (IMAGE 5 UI) ===================== */}
       <section className="bg-[#122261] dark:bg-slate-900 border border-transparent dark:border-slate-800 text-white rounded-3xl p-6 sm:p-8 lg:p-10 shadow-xl space-y-6">
         <div>
@@ -860,9 +639,8 @@ export default function CitizenPortal() {
                     {faq.q}
                   </span>
                   <svg
-                    className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200 ${
-                      isExpanded ? 'rotate-180 text-blue-600 dark:text-blue-400' : ''
-                    }`}
+                    className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200 ${isExpanded ? 'rotate-180 text-blue-600 dark:text-blue-400' : ''
+                      }`}
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -958,11 +736,10 @@ export default function CitizenPortal() {
                     <span className="text-xs font-extrabold text-blue-900 dark:text-blue-300">
                       {trackedResult.service}
                     </span>
-                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                      trackedResult.status === 'Approved'
+                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${trackedResult.status === 'Approved'
                         ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
                         : 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
-                    }`}>
+                      }`}>
                       {trackedResult.status}
                     </span>
                   </div>
@@ -1024,9 +801,8 @@ export default function CitizenPortal() {
                   setCalcType('rpt');
                   setCalcResult(null);
                 }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
-                  calcType === 'rpt' ? 'bg-[#1d4ed8] text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-                }`}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${calcType === 'rpt' ? 'bg-[#1d4ed8] text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  }`}
               >
                 Real Property Tax
               </button>
@@ -1036,9 +812,8 @@ export default function CitizenPortal() {
                   setCalcType('btax');
                   setCalcResult(null);
                 }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
-                  calcType === 'btax' ? 'bg-[#1d4ed8] text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-                }`}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${calcType === 'btax' ? 'bg-[#1d4ed8] text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  }`}
               >
                 Business Tax
               </button>
@@ -1048,9 +823,8 @@ export default function CitizenPortal() {
                   setCalcType('stall');
                   setCalcResult(null);
                 }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
-                  calcType === 'stall' ? 'bg-[#1d4ed8] text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-                }`}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${calcType === 'stall' ? 'bg-[#1d4ed8] text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  }`}
               >
                 Stall Rental
               </button>

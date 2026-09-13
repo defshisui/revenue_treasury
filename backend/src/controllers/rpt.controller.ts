@@ -588,7 +588,7 @@ export async function searchRptByTdn(
       `SELECT *
        FROM lgu_rpt_records
        WHERE LOWER(
-         REPLACE(tax_declaration_number, ' ', '')
+         REPLACE(COALESCE(taxdeclarationnumber, tax_declaration_number, ''), ' ', '')
        )
        =
        LOWER(
@@ -611,16 +611,16 @@ export async function searchRptByTdn(
       directResult.rows[0];
 
     const ownerName =
+      matchedRecord.ownername ||
       matchedRecord.owner_name ||
-      matchedRecord.ownerName ||
-      matchedRecord.ownername;
+      matchedRecord.ownerName;
 
     const associatedResult = await pool.query(
       `SELECT *
        FROM lgu_rpt_records
        WHERE
        (
-         LOWER(TRIM(owner_name))
+         LOWER(TRIM(COALESCE(ownername, owner_name, '')))
          =
          LOWER(TRIM($1))
        )
@@ -631,7 +631,7 @@ export async function searchRptByTdn(
              =
              SUBSTRING($2 FROM 1 FOR 10)
        )
-       ORDER BY tax_declaration_number`,
+       ORDER BY COALESCE(taxdeclarationnumber, tax_declaration_number, '') ASC`,
       [
         ownerName || '',
         matchedRecord.pin || ''
@@ -647,68 +647,85 @@ export async function searchRptByTdn(
       (row: any) => ({
         id: row.id,
         taxDeclarationNumber:
+          row.taxdeclarationnumber ||
+          row.tax_declaration_number ||
           row.taxDeclarationNumber,
         pin: row.pin,
-        newPspin: row.new_pspin,
+        newPspin: row.new_pspin || row.newpspin || row.newPspin,
         ownerName:
-          row.ownerName ||
-          row.ownername,
+          row.ownername ||
+          row.owner_name ||
+          row.ownerName,
         propertyLocation:
+          row.propertylocation ||
+          row.property_location ||
           row.propertyLocation,
         barangay:
           row.barangay,
         propertyType:
+          row.propertytype ||
+          row.property_type ||
           row.propertyType,
         billingYear:
-          Number(row.billingYear) || 2025,
+          Number(row.billingyear || row.billing_year || row.billingYear) || 2025,
         quarter:
           row.quarter,
         billExpiryDate:
-          row.bill_expiry_date,
+          row.bill_expiry_date ||
+          row.billexpirydate ||
+          row.billExpiryDate,
         lotAreaSqM:
-          Number(row.lot_area_sqm) || 0,
+          Number(row.lot_area_sqm || row.lotareasqm || row.lotAreaSqM) || 0,
         marketValue:
-          Number(row.market_value) || 0,
+          Number(row.market_value || row.marketvalue || row.marketValue) || 0,
         assessedValue:
-          Number(row.assessed_value) || 0,
+          Number(row.assessed_value || row.assessedvalue || row.assessedValue) || 0,
         basicTax:
-          Number(row.basicTax) || 0,
+          Number(row.basictax || row.basic_tax || row.basicTax) || 0,
         sefTax:
-          Number(row.sefTax) || 0,
+          Number(row.seftax || row.sef_tax || row.sefTax) || 0,
         shttcApplied:
-          Number(row.shttc_applied) || 0,
+          Number(row.shttc_applied || row.shttcapplied || row.shttcApplied) || 0,
         penalty:
           Number(row.penalty) || 0,
         discount:
           Number(row.discount) || 0,
         totalAssessment:
-          Number(row.totalAssessment) || 0,
+          Number(row.totalassessment || row.total_assessment || row.totalAssessment) || 0,
         amountPaid:
-          Number(row.amountPaid) || 0,
+          Number(row.amountpaid || row.amount_paid || row.amountPaid) || 0,
         balance:
           Number(row.balance) || 0,
         amountDue:
-          Number(row.amountDue) ||
-          Number(row.balance) ||
-          0,
+          Number(row.amountdue || row.amount_due || row.balance || row.totalassessment || row.total_assessment || row.totalAssessment) || 0,
         status:
-          row.status || 'Unpaid',
+          row.status || 'Active',
         paymentStatus:
+          row.paymentstatus ||
+          row.payment_status ||
           row.paymentStatus ||
           'Unpaid',
         paymentMethod:
+          row.paymentmethod ||
+          row.payment_method ||
           row.paymentMethod || null,
         officialReceiptNumber:
+          row.officialreceiptnumber ||
+          row.official_receipt_number ||
           row.officialReceiptNumber ||
           null,
         paymentReference:
+          row.paymentreference ||
+          row.payment_reference ||
           row.paymentReference ||
           null,
         paymentDate:
+          row.paymentdate ||
+          row.payment_date ||
           row.paymentDate ||
           null,
         quarterlyAmounts:
-          row.quarterly_amounts || {}
+          row.quarterly_amounts || row.quarterlyamounts || {}
       })
     );
 
@@ -931,31 +948,38 @@ export async function updateLguRptRecord(
          property_location = COALESCE($2, property_location),
          barangay = COALESCE($3, barangay),
          property_type = COALESCE($4, property_type),
-         basic_tax = COALESCE($5, basic_tax),
-         sef_tax = COALESCE($6, sef_tax),
-         penalty = COALESCE($7, penalty),
-         discount = COALESCE($8, discount),
-         total_assessment = COALESCE($9, total_assessment),
-         balance = COALESCE($10, balance),
-         status = COALESCE($11, status),
-         payment_status = COALESCE($12, payment_status),
+         market_value = COALESCE($5, market_value),
+         assessed_value = COALESCE($6, assessed_value),
+         lot_area_sqm = COALESCE($7, lot_area_sqm),
+         basic_tax = COALESCE($8, basic_tax),
+         sef_tax = COALESCE($9, sef_tax),
+         penalty = COALESCE($10, penalty),
+         discount = COALESCE($11, discount),
+         total_assessment = COALESCE($12, total_assessment),
+         balance = COALESCE($13, balance),
+         status = COALESCE($14, status),
+         payment_status = COALESCE($15, payment_status),
          amount_paid = CASE
-           WHEN $12::text IN ('Paid', 'Settled') AND $13::numeric IS NULL THEN COALESCE(total_assessment, 0)
-           ELSE COALESCE($13, amount_paid)
+           WHEN $15::text IN ('Paid', 'Settled') AND $16::numeric IS NULL THEN COALESCE(total_assessment, 0)
+           ELSE COALESCE($16, amount_paid)
          END,
-         official_receipt_number = COALESCE($14, official_receipt_number),
-         payment_method = COALESCE($15, payment_method),
+         official_receipt_number = COALESCE($17, official_receipt_number),
+         payment_method = COALESCE($18, payment_method),
          payment_date = CASE
-           WHEN $12::text IN ('Paid', 'Settled') THEN COALESCE($16, payment_date, NOW())
+           WHEN $15::text IN ('Paid', 'Settled') THEN COALESCE($19, payment_date, NOW())
            ELSE payment_date
-         END
-       WHERE id = $17
+         END,
+         quarterly_amounts = COALESCE($20::jsonb, quarterly_amounts)
+       WHERE id = $21
        RETURNING *`,
       [
         data.ownerName || data.owner_name || null,
         data.propertyLocation || data.property_location || data.location || null,
         data.barangay || null,
         data.propertyType || data.property_type || null,
+        data.marketValue !== undefined ? data.marketValue : (data.market_value !== undefined ? data.market_value : null),
+        data.assessedValue !== undefined ? data.assessedValue : (data.assessed_value !== undefined ? data.assessed_value : null),
+        data.lotAreaSqM !== undefined ? data.lotAreaSqM : (data.lotAreaSqm !== undefined ? data.lotAreaSqm : (data.lot_area_sqm !== undefined ? data.lot_area_sqm : null)),
         data.basicTax !== undefined ? data.basicTax : (data.basic_tax !== undefined ? data.basic_tax : null),
         data.sefTax !== undefined ? data.sefTax : (data.sef_tax !== undefined ? data.sef_tax : null),
         data.penalty !== undefined ? data.penalty : null,
@@ -968,6 +992,7 @@ export async function updateLguRptRecord(
         data.officialReceiptNumber || data.official_receipt_number || null,
         data.paymentMethod || data.payment_method || null,
         data.paymentDate || data.payment_date || null,
+        data.quarterlyAmounts || data.quarterly_amounts ? JSON.stringify(data.quarterlyAmounts || data.quarterly_amounts) : null,
         id
       ]
     );

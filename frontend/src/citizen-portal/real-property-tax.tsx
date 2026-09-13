@@ -1323,9 +1323,9 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
           font-family: inherit;
         }
       `}</style>
-      <div className="rpt-portal flex-1">
+      <div className="rpt-portal flex-1 w-full min-w-0">
         {/* Modern Gradient Hero Banner matching Business Tax */}
-        <div className="-mx-4 sm:-mx-6 lg:-mx-8 -mt-4 sm:-mt-6 lg:-mt-8 relative w-full bg-linear-to-r from-blue-950 via-blue-900 to-indigo-950 h-36 sm:h-48 overflow-hidden flex items-center justify-center border-b-4 border-blue-600">
+        <div className="-mx-4 sm:-mx-6 lg:-mx-8 -mt-4 sm:-mt-6 lg:-mt-8 relative bg-linear-to-r from-blue-950 via-blue-900 to-indigo-950 h-36 sm:h-48 overflow-hidden flex items-center justify-center border-b-4 border-blue-600">
           <div className="absolute inset-0 opacity-30 bg-[radial-gradient(#3b82f6_1px,transparent_1px)] [background-size:16px_16px]"></div>
           <div className="relative z-10 text-center px-4">
             <h1 className="text-xl sm:text-3xl font-extrabold text-white tracking-wide">
