@@ -149,8 +149,8 @@ export default function CitizenLayout({
           const initials =
             nameParts.length > 1
               ? (
-                  nameParts[0][0] + nameParts[nameParts.length - 1][0]
-                ).toUpperCase()
+                nameParts[0][0] + nameParts[nameParts.length - 1][0]
+              ).toUpperCase()
               : nameParts[0].slice(0, 2).toUpperCase();
 
           setUser({
@@ -234,7 +234,7 @@ export default function CitizenLayout({
         headers: { 'Content-Type': 'application/json' },
         body: auditPayload,
         keepalive: true,
-      }).catch(() => {});
+      }).catch(() => { });
     }
 
     localStorage.removeItem('currentUser');
@@ -337,12 +337,11 @@ export default function CitizenLayout({
   ];
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-slate-100 text-slate-900 font-['Segoe_UI',Tahoma,Geneva,Verdana,sans-serif]">
+    <div className="flex h-screen w-full overflow-hidden bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-['Segoe_UI',Tahoma,Geneva,Verdana,sans-serif]">
       {/* ===================== SIDEBAR ===================== */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex flex-col bg-[#0b132b] text-slate-300 transition-all duration-300 ease-in-out border-r border-[#1c284f] ${
-          isSidebarCollapsed ? 'w-20' : 'w-64'
-        } ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}
+        className={`fixed inset-y-0 left-0 z-50 flex flex-col bg-[#0b132b] text-slate-300 transition-all duration-300 ease-in-out border-r border-[#1c284f] ${isSidebarCollapsed ? 'w-20' : 'w-64'
+          } ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}
       >
         {/* Brand / Logo Header */}
         <div className="flex items-center justify-between px-4 py-4 border-b border-[#1c284f] h-18">
@@ -376,9 +375,8 @@ export default function CitizenLayout({
             title={isSidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
           >
             <svg
-              className={`w-4 h-4 transition-transform duration-200 ${
-                isSidebarCollapsed ? 'rotate-180' : ''
-              }`}
+              className={`w-4 h-4 transition-transform duration-200 ${isSidebarCollapsed ? 'rotate-180' : ''
+                }`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -408,11 +406,10 @@ export default function CitizenLayout({
                       setIsMobileMenuOpen(false);
                     }
                   }}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer group ${
-                    isActive
-                      ? 'bg-[#1a3885] text-white shadow-md shadow-blue-950/40'
-                      : 'text-slate-300 hover:bg-white/10 hover:text-white'
-                  }`}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer group ${isActive
+                    ? 'bg-[#1a3885] text-white shadow-md shadow-blue-950/40'
+                    : 'text-slate-300 hover:bg-white/10 hover:text-white'
+                    }`}
                   title={isSidebarCollapsed ? item.label : undefined}
                 >
                   <div className="flex items-center gap-3 truncate">
@@ -428,9 +425,8 @@ export default function CitizenLayout({
                     <div className="flex items-center">
                       {hasSubmenu ? (
                         <svg
-                          className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
-                            isSubmenuOpen ? 'rotate-180 text-white' : ''
-                          }`}
+                          className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${isSubmenuOpen ? 'rotate-180 text-white' : ''
+                            }`}
                           fill="none"
                           viewBox="0 0 24 24"
                           stroke="currentColor"
@@ -466,11 +462,10 @@ export default function CitizenLayout({
                             navigate(sub.path);
                             setIsMobileMenuOpen(false);
                           }}
-                          className={`w-full text-left px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-colors cursor-pointer block truncate ${
-                            isSubActive
-                              ? 'text-blue-300 bg-white/10 font-bold'
-                              : 'text-slate-400 hover:text-white hover:bg-white/5'
-                          }`}
+                          className={`w-full text-left px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-colors cursor-pointer block truncate ${isSubActive
+                            ? 'text-blue-300 bg-white/10 font-bold'
+                            : 'text-slate-400 hover:text-white hover:bg-white/5'
+                            }`}
                         >
                           {sub.label}
                         </button>
@@ -500,11 +495,10 @@ export default function CitizenLayout({
               navigate('/citizen-portal-stall-status');
               setIsMobileMenuOpen(false);
             }}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer group ${
-              location.pathname === '/citizen-portal-stall-status'
-                ? 'bg-[#1a3885] text-white shadow-md'
-                : 'text-slate-300 hover:bg-white/10 hover:text-white'
-            }`}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer group ${location.pathname === '/citizen-portal-stall-status'
+              ? 'bg-[#1a3885] text-white shadow-md'
+              : 'text-slate-300 hover:bg-white/10 hover:text-white'
+              }`}
             title="Application History"
           >
             <svg
@@ -528,11 +522,10 @@ export default function CitizenLayout({
               navigate('/edit-profile');
               setIsMobileMenuOpen(false);
             }}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer group ${
-              location.pathname === '/edit-profile'
-                ? 'bg-[#1a3885] text-white shadow-md'
-                : 'text-slate-300 hover:bg-white/10 hover:text-white'
-            }`}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer group ${location.pathname === '/edit-profile'
+              ? 'bg-[#1a3885] text-white shadow-md'
+              : 'text-slate-300 hover:bg-white/10 hover:text-white'
+              }`}
             title="My Profile & Security"
           >
             <svg
@@ -584,24 +577,23 @@ export default function CitizenLayout({
 
       {/* ===================== MAIN CONTENT WRAPPER ===================== */}
       <div
-        className={`flex-1 flex flex-col min-w-0 transition-all duration-300 h-screen overflow-hidden ${
-          isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'
-        }`}
+        className={`flex-1 flex flex-col min-w-0 transition-all duration-300 h-screen overflow-hidden ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'
+          }`}
       >
         {/* ===================== TOP BAR ===================== */}
-        <header className="h-16 bg-white border-b border-slate-200 px-4 sm:px-6 flex items-center justify-between shrink-0 z-30 shadow-xs">
+        <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 sm:px-6 flex items-center justify-between shrink-0 z-30 shadow-xs">
           {/* Left: Mobile Toggle & Breadcrumb Title */}
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="md:hidden p-2 text-slate-600 hover:text-slate-900 rounded-lg hover:bg-slate-100 cursor-pointer"
+              className="md:hidden p-2 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
 
-            <h1 className="text-sm sm:text-base font-bold text-slate-800 tracking-tight">
+            <h1 className="text-sm sm:text-base font-bold text-slate-800 dark:text-slate-100 tracking-tight">
               {activeTitle}
             </h1>
           </div>
@@ -610,10 +602,10 @@ export default function CitizenLayout({
           <div className="flex items-center gap-3 sm:gap-5">
             {/* Live Clock & Date */}
             <div className="hidden sm:flex flex-col text-right pr-2">
-              <span className="text-xs font-bold text-slate-700 font-mono tracking-tight">
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-200 font-mono tracking-tight">
                 {currentTime || '09:32:48 PM'}
               </span>
-              <span className="text-[10px] font-semibold text-slate-400">
+              <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500">
                 {currentDate || 'Sat, Sep 12'}
               </span>
             </div>
@@ -622,7 +614,7 @@ export default function CitizenLayout({
             <button
               type="button"
               onClick={toggleDarkMode}
-              className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"
+              className="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors cursor-pointer"
               title="Toggle Dark Mode"
             >
               {isDarkMode ? (
@@ -641,22 +633,22 @@ export default function CitizenLayout({
               <button
                 type="button"
                 onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
-                className="relative p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"
+                className="relative p-2 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors cursor-pointer"
                 title="Notifications"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                 </svg>
                 {notifications.some((n) => n.unread) && (
-                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white" />
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white dark:ring-slate-900" />
                 )}
               </button>
 
               {/* Notification Dropdown */}
               {isNotificationsOpen && (
-                <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-xl border border-slate-200 py-3 z-50 animate-in fade-in zoom-in-95 duration-150">
-                  <div className="px-4 py-2 border-b border-slate-100 flex items-center justify-between">
-                    <span className="font-bold text-xs text-slate-800 uppercase tracking-wider">
+                <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 py-3 z-50 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                    <span className="font-bold text-xs text-slate-800 dark:text-slate-100 uppercase tracking-wider">
                       Notifications
                     </span>
                     <button
@@ -665,12 +657,12 @@ export default function CitizenLayout({
                           prev.map((n) => ({ ...n, unread: false }))
                         )
                       }
-                      className="text-[11px] text-blue-600 hover:underline font-semibold cursor-pointer"
+                      className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline font-semibold cursor-pointer"
                     >
                       Mark all as read
                     </button>
                   </div>
-                  <div className="max-h-72 overflow-y-auto divide-y divide-slate-100">
+                  <div className="max-h-72 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
                     {notifications.map((n) => (
                       <div
                         key={n.id}
@@ -678,17 +670,16 @@ export default function CitizenLayout({
                           navigate(n.link);
                           setIsNotificationsOpen(false);
                         }}
-                        className={`p-3.5 hover:bg-slate-50 transition-colors cursor-pointer flex gap-3 ${
-                          n.unread ? 'bg-blue-50/40' : ''
-                        }`}
+                        className={`p-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors cursor-pointer flex gap-3 ${n.unread ? 'bg-blue-50/40 dark:bg-blue-950/30' : ''
+                          }`}
                       >
                         <div className="w-2 h-2 mt-1.5 rounded-full shrink-0 bg-blue-600" />
                         <div>
                           <div className="flex items-center justify-between gap-2">
-                            <p className="text-xs font-bold text-slate-900">{n.title}</p>
-                            <span className="text-[10px] text-slate-400">{n.time}</span>
+                            <p className="text-xs font-bold text-slate-900 dark:text-slate-100">{n.title}</p>
+                            <span className="text-[10px] text-slate-400 dark:text-slate-500">{n.time}</span>
                           </div>
-                          <p className="text-[11px] text-slate-600 mt-0.5 leading-relaxed">
+                          <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5 leading-relaxed">
                             {n.desc}
                           </p>
                         </div>
@@ -704,9 +695,9 @@ export default function CitizenLayout({
               <button
                 type="button"
                 onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
-                className="flex items-center gap-2 pl-2 pr-1 py-1 rounded-full hover:bg-slate-100 transition-colors cursor-pointer group"
+                className="flex items-center gap-2 pl-2 pr-1 py-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer group"
               >
-                <span className="text-xs font-bold text-slate-700 hidden md:inline">
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-200 hidden md:inline">
                   Hi, {user.firstName || 'RENZ'}
                 </span>
                 <div className="w-8 h-8 rounded-full bg-[#1e40af] text-white font-extrabold text-xs flex items-center justify-center shadow-xs">
@@ -720,15 +711,15 @@ export default function CitizenLayout({
 
               {/* Profile Dropdown */}
               {isProfileDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-slate-200 py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
-                  <div className="px-4 py-3 border-b border-slate-100">
-                    <p className="text-xs font-extrabold text-slate-900 leading-tight">
+                <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800">
+                    <p className="text-xs font-extrabold text-slate-900 dark:text-slate-100 leading-tight">
                       {user.fullname}
                     </p>
-                    <p className="text-[11px] text-slate-500 truncate mt-0.5">
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
                       {user.email}
                     </p>
-                    <span className="inline-block mt-2 px-2 py-0.5 bg-blue-50 text-blue-700 text-[10px] font-bold rounded-md border border-blue-200">
+                    <span className="inline-block mt-2 px-2 py-0.5 bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400 text-[10px] font-bold rounded-md border border-blue-200 dark:border-blue-900">
                       Verified Citizen
                     </span>
                   </div>
@@ -739,31 +730,19 @@ export default function CitizenLayout({
                         navigate('/edit-profile');
                         setIsProfileDropdownOpen(false);
                       }}
-                      className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-blue-700 flex items-center gap-2 cursor-pointer"
+                      className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-blue-700 dark:hover:text-blue-400 flex items-center gap-2 cursor-pointer"
                     >
-                      <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="w-4 h-4 text-slate-400 dark:text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                       </svg>
                       My Profile & Account
                     </button>
-                    <button
-                      onClick={() => {
-                        navigate('/citizen-portal-stall-status');
-                        setIsProfileDropdownOpen(false);
-                      }}
-                      className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-blue-700 flex items-center gap-2 cursor-pointer"
-                    >
-                      <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                      </svg>
-                      My Applications
-                    </button>
                   </div>
 
-                  <div className="border-t border-slate-100 pt-1">
+                  <div className="border-t border-slate-100 dark:border-slate-800 pt-1">
                     <button
                       onClick={handleLogout}
-                      className="w-full text-left px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-50 flex items-center gap-2 cursor-pointer"
+                      className="w-full text-left px-4 py-2 text-xs font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 flex items-center gap-2 cursor-pointer"
                     >
                       <svg className="w-4 h-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -778,7 +757,7 @@ export default function CitizenLayout({
         </header>
 
         {/* ===================== SCROLLABLE CONTENT BODY ===================== */}
-        <main className="flex-1 overflow-y-auto bg-[#f8fafc] p-4 sm:p-6 lg:p-8 space-y-8">
+        <main className="flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-950 p-4 sm:p-6 lg:p-8 space-y-8">
           {children}
         </main>
       </div>
