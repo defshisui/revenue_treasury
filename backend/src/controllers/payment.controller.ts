@@ -1451,25 +1451,74 @@ export async function createQrPaymentIntent(
             ? 'Real Property Tax Payment'
             : 'Market Stall Rental Payment');
 
-    const result = await PayMongoService.createQrPaymentIntent({
-      amount: numericAmount,
-      description: paymentDescription,
-      referenceNumber,
-      metadata: {
+    const qrMetadata =
+  paymentType === 'RPT'
+    ? {
+        type: 'RPT',
+
+        taxDeclarationNumber: taxDeclarationNumber
+          ? String(taxDeclarationNumber)
+          : undefined,
+
+        rptRecordId:
+          rptRecordId !== undefined && rptRecordId !== null
+            ? String(rptRecordId)
+            : undefined,
+
+        customerName:
+          customerName
+            ? String(customerName)
+            : undefined,
+
+        customerEmail:
+          customerEmail
+            ? String(customerEmail)
+            : undefined,
+
+        customerPhone:
+          customerPhone
+            ? String(customerPhone)
+            : undefined,
+      }
+    : {
         type: paymentType,
-        leaseId: paymentType === 'MARKET_STALL' ? leaseId : undefined,
-        taxDeclarationNumber: paymentType === 'RPT' ? taxDeclarationNumber : undefined,
-        rptRecordId: paymentType === 'RPT' ? rptRecordId : undefined,
-        rptApplicationId: paymentType === 'RPT_SERVICE' ? rptApplicationId : undefined,
+
+        leaseId:
+          paymentType === 'MARKET_STALL'
+            ? leaseId
+            : undefined,
+
+        taxDeclarationNumber:
+          paymentType === 'RPT'
+            ? taxDeclarationNumber
+            : undefined,
+
+        rptRecordId:
+          paymentType === 'RPT'
+            ? rptRecordId
+            : undefined,
+
+        rptApplicationId:
+          paymentType === 'RPT_SERVICE'
+            ? rptApplicationId
+            : undefined,
+
         businessTrackingNumber:
           paymentType === 'BUSINESS_TAX'
             ? businessTrackingNumber
             : undefined,
+
         customerName,
         customerEmail,
         customerPhone,
-      },
-    });
+      };
+
+const result = await PayMongoService.createQrPaymentIntent({
+  amount: numericAmount,
+  description: paymentDescription,
+  referenceNumber,
+  metadata: qrMetadata,
+});
 
     res.status(200).json({
       success: true,
