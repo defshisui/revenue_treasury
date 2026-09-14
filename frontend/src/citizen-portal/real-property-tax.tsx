@@ -164,6 +164,10 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
 
 
   const [rptSearchStep, setRptSearchStep] = useState<1 | 2 | 3>(1);
+  // The RPT/property records table (TDN search results) and this
+  // citizen's submitted service applications are two different data
+  // sets — toggle between them instead of stacking both in one card.
+  const [rptViewMode, setRptViewMode] = useState<"properties" | "applications">("properties");
 
   const [searchTdnInput, setSearchTdnInput] = useState<string>("");
   const [searchType, setSearchType] = useState<string>("Tax Declaration No. (TDN)");
@@ -1161,6 +1165,17 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
           text-decoration: none !important;
         }
 
+        .rpt-portal .rpt-nav-button-active {
+          background: #ffffff !important;
+          color: #1D3F99 !important;
+          border-color: #1D3F99 !important;
+        }
+        .dark .rpt-portal .rpt-nav-button-active {
+          background: #0f172a !important;
+          color: #7dd3fc !important;
+          border-color: #7dd3fc !important;
+        }
+
         .rpt-portal .rpt-back {
           color: #2563EB !important;
           font-family: inherit !important;
@@ -1396,221 +1411,244 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
                       >
                         NEW SERVICE REQUEST
                       </button>
+                      <button
+                        type="button"
+                        onClick={() => setRptViewMode("properties")}
+                        className={`rpt-nav-button cursor-pointer ${rptViewMode === "properties" ? "rpt-nav-button-active" : ""}`}
+                      >
+                        RPT PAYMENT / AMILYAR
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRptViewMode("applications")}
+                        className={`rpt-nav-button cursor-pointer ${rptViewMode === "applications" ? "rpt-nav-button-active" : ""}`}
+                      >
+                        MY SERVICE APPLICATIONS
+                        {applications.length > 0 && (
+                          <span className="ml-1.5 inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-[#0B3B60] text-white text-[9px] font-bold">
+                            {applications.length}
+                          </span>
+                        )}
+                      </button>
                     </div>
 
-                    <div className="rpt-divider border-b pb-5 pt-5">
-                      <p className="rpt-title uppercase">RPT PAYMENT / AMILYAR</p>
-                    </div>
-
-                    {searchError && (
-                      <div className="mt-4 p-3 rounded-lg border border-rose-300 bg-rose-50 text-rose-700 text-[10px] font-bold dark:bg-rose-950 dark:border-rose-800 dark:text-rose-300">
-                        {searchError}
-                      </div>
-                    )}
-
-                    <form onSubmit={handleExecuteTdnSearch} className="mt-5">
-                      <div className="grid grid-cols-1 sm:grid-cols-[1fr_1.2fr_auto_1fr] gap-x-6 gap-y-4 items-end">
-                        <div>
-                          <label className="rpt-label block mb-1.5">
-                            Search By:
-                          </label>
-                          <select
-                            value={searchType}
-                            onChange={(e) => setSearchType(e.target.value)}
-                            className="rpt-field w-full px-3 outline-none"
-                          >
-                            <option value="Tax Declaration No. (TDN)">TDN</option>
-                            <option value="Property Owner">Owner</option>
-                            <option value="Property Identification No. (PIN)">PIN</option>
-                          </select>
+                    {rptViewMode === "properties" && (
+                      <>
+                        <div className="rpt-divider border-b pb-5 pt-5">
+                          <p className="rpt-title uppercase">RPT PAYMENT / AMILYAR</p>
                         </div>
 
-                        <div>
-                          <label className="rpt-label block mb-1.5">
-                            {searchType === "Property Owner"
-                              ? "Owner Name:"
-                              : searchType === "Property Identification No. (PIN)"
-                                ? "PIN / PSPIN:"
-                                : "TDN:"}
-                          </label>
-                          <input
-                            type="text"
-                            value={searchTdnInput}
-                            onChange={(e) => setSearchTdnInput(e.target.value)}
-                            placeholder={
-                              searchType === "Property Owner"
-                                ? "Search owner name..."
-                                : searchType === "Property Identification No. (PIN)"
-                                  ? "Enter PIN..."
-                                  : "Enter TDN or leave empty for all..."
-                            }
-                            className="rpt-field w-full px-3"
-                          />
-                        </div>
+                        {searchError && (
+                          <div className="mt-4 p-3 rounded-lg border border-rose-300 bg-rose-50 text-rose-700 text-[10px] font-bold dark:bg-rose-950 dark:border-rose-800 dark:text-rose-300">
+                            {searchError}
+                          </div>
+                        )}
 
-                        <button
-                          type="submit"
-                          disabled={isSearchingTdn}
-                          className="rpt-action px-4 disabled:opacity-50 cursor-pointer"
-                        >
-                          {isSearchingTdn ? "Searching..." : "Search"}
-                        </button>
+                        <form onSubmit={handleExecuteTdnSearch} className="mt-5">
+                          <div className="grid grid-cols-1 sm:grid-cols-[1fr_1.2fr_auto_1fr] gap-x-6 gap-y-4 items-end">
+                            <div>
+                              <label className="rpt-label block mb-1.5">
+                                Search By:
+                              </label>
+                              <select
+                                value={searchType}
+                                onChange={(e) => setSearchType(e.target.value)}
+                                className="rpt-field w-full px-3 outline-none"
+                              >
+                                <option value="Tax Declaration No. (TDN)">TDN</option>
+                                <option value="Property Owner">Owner</option>
+                                <option value="Property Identification No. (PIN)">PIN</option>
+                              </select>
+                            </div>
 
-                        <div>
-                          <label className="rpt-label block mb-1.5">
-                            Year:
-                          </label>
-                          <select
-                            value={assessmentYear}
-                            onChange={(e) => setAssessmentYear(e.target.value)}
-                            className="rpt-field w-full px-3 outline-none"
-                          >
-                            <option>All Years</option>
-                            <option>2026</option>
-                            <option>2025</option>
-                            <option>2024</option>
-                            <option>2023</option>
-                          </select>
-                        </div>
-                      </div>
-                    </form>
+                            <div>
+                              <label className="rpt-label block mb-1.5">
+                                {searchType === "Property Owner"
+                                  ? "Owner Name:"
+                                  : searchType === "Property Identification No. (PIN)"
+                                    ? "PIN / PSPIN:"
+                                    : "TDN:"}
+                              </label>
+                              <input
+                                type="text"
+                                value={searchTdnInput}
+                                onChange={(e) => setSearchTdnInput(e.target.value)}
+                                placeholder={
+                                  searchType === "Property Owner"
+                                    ? "Search owner name..."
+                                    : searchType === "Property Identification No. (PIN)"
+                                      ? "Enter PIN..."
+                                      : "Enter TDN or leave empty for all..."
+                                }
+                                className="rpt-field w-full px-3"
+                              />
+                            </div>
 
-                    <div className="overflow-x-auto border border-white dark:border-slate-800 mt-6 rpt-table">
-                      <table className="w-full min-w-[760px] text-left border-collapse rpt-table">
-                        <thead className="text-white font-black uppercase">
-                          <tr>
-                            <th>TDN</th>
-                            <th>OWNER</th>
-                            <th>LOCATION</th>
-                            <th>YEAR</th>
-                            <th>ASSESSED</th>
-                            <th>TAX DUE</th>
-                            <th>STATUS</th>
-                            <th>VIEW</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                          {(() => {
-                            // This table shows real property tax records —
-                            // the same data the LGU admin sees in the Master
-                            // Database — filtered by the search above and the
-                            // selected assessment year. It is NOT the list of
-                            // this citizen's submitted service applications.
-                            const filteredProperties = associatedProperties.filter(
-                              (p) =>
-                                assessmentYear === "All Years" ||
-                                String(p.billingYear) === assessmentYear
-                            );
+                            <button
+                              type="submit"
+                              disabled={isSearchingTdn}
+                              className="rpt-action px-4 disabled:opacity-50 cursor-pointer"
+                            >
+                              {isSearchingTdn ? "Searching..." : "Search"}
+                            </button>
 
-                            if (filteredProperties.length === 0) {
-                              return (
-                                <tr>
-                                  <td colSpan={8} className="px-4 py-10 text-center rpt-empty italic">
-                                    {associatedProperties.length === 0
-                                      ? "Search for a Tax Declaration Number to view real property tax records."
-                                      : `No property records found for ${assessmentYear}.`}
-                                  </td>
-                                </tr>
-                              );
-                            }
+                            <div>
+                              <label className="rpt-label block mb-1.5">
+                                Year:
+                              </label>
+                              <select
+                                value={assessmentYear}
+                                onChange={(e) => setAssessmentYear(e.target.value)}
+                                className="rpt-field w-full px-3 outline-none"
+                              >
+                                <option>All Years</option>
+                                <option>2026</option>
+                                <option>2025</option>
+                                <option>2024</option>
+                                <option>2023</option>
+                              </select>
+                            </div>
+                          </div>
+                        </form>
 
-                            return filteredProperties.map((prop) => (
-                              <tr key={String(prop.id ?? prop.taxDeclarationNumber)} className="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition">
-                                <td className="font-mono font-black">{prop.taxDeclarationNumber || "—"}</td>
-                                <td className="font-bold">{prop.ownerName || "—"}</td>
-                                <td>{prop.propertyLocation || prop.barangay || "—"}</td>
-                                <td>{prop.billingYear || "—"}</td>
-                                <td className="font-bold">{formatCurrency(prop.assessedValue || 0)}</td>
-                                <td className="font-bold">{formatCurrency(prop.balance || prop.totalAssessment || 0)}</td>
-                                <td>
-                                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${getPaymentStatusBadgeClass(prop.paymentStatus)}`}>
-                                    {prop.paymentStatus || "Unpaid"}
-                                  </span>
-                                </td>
-                                <td>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setSelectedTdnIds(new Set([prop.taxDeclarationNumber]));
-                                      setVerifiedOwnerName(prop.ownerName || verifiedOwnerName);
-                                      setIsOwnerModalOpen(true);
-                                    }}
-                                    className="rpt-link cursor-pointer text-[10px]"
-                                  >
-                                    View / Pay
-                                  </button>
-                                </td>
-                              </tr>
-                            ));
-                          })()}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    {/* My Service Applications Section */}
-                    <div className="mt-8 border-t border-slate-200 dark:border-slate-700 pt-6">
-                      <p className="rpt-title uppercase mb-4">MY SERVICE APPLICATIONS</p>
-                      {applications.length === 0 ? (
-                        <div className="px-4 py-8 text-center rpt-empty italic">
-                          No service applications found for your account.
-                        </div>
-                      ) : (
-                        <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-xl">
-                          <table className="w-full min-w-[700px] text-left border-collapse text-xs">
-                            <thead className="bg-[#0B3B60] text-white font-black uppercase">
+                        <div className="overflow-x-auto border border-white dark:border-slate-800 mt-6 rpt-table">
+                          <table className="w-full min-w-[760px] text-left border-collapse rpt-table">
+                            <thead className="text-white font-black uppercase">
                               <tr>
-                                <th className="px-4 py-3">Control No.</th>
-                                <th className="px-4 py-3">Service</th>
-                                <th className="px-4 py-3">TDN / PIN</th>
-                                <th className="px-4 py-3">Date Filed</th>
-                                <th className="px-4 py-3">Status</th>
-                                <th className="px-4 py-3">Payment</th>
-                                <th className="px-4 py-3">View</th>
+                                <th>TDN</th>
+                                <th>OWNER</th>
+                                <th>LOCATION</th>
+                                <th>YEAR</th>
+                                <th>ASSESSED</th>
+                                <th>TAX DUE</th>
+                                <th>STATUS</th>
+                                <th>VIEW</th>
                               </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900">
-                              {applications.map((app) => (
-                                <tr key={app.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition">
-                                  <td className="px-4 py-3 font-mono font-bold text-[#0B3B60] dark:text-blue-400">
-                                    {app.controlNumber || app.referenceNumber || '—'}
-                                  </td>
-                                  <td className="px-4 py-3 font-semibold">{app.service || '—'}</td>
-                                  <td className="px-4 py-3 font-mono">
-                                    {app.taxDeclarationNumber || app.pin || '—'}
-                                  </td>
-                                  <td className="px-4 py-3">
-                                    {app.filedDate ? new Date(app.filedDate).toLocaleDateString() : '—'}
-                                  </td>
-                                  <td className="px-4 py-3">
-                                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                                      app.status === 'Approved' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300' :
-                                      app.status === 'Rejected' ? 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300' :
-                                      'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
-                                    }`}>
-                                      {app.status || 'Pending'}
-                                    </span>
-                                  </td>
-                                  <td className="px-4 py-3">
-                                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${getPaymentStatusBadgeClass(app.paymentStatus)}`}>
-                                      {app.paymentStatus || 'Pending'}
-                                    </span>
-                                  </td>
-                                  <td className="px-4 py-3">
-                                    <button
-                                      type="button"
-                                      onClick={() => setSelectedAppDetail(app)}
-                                      className="rpt-link cursor-pointer text-[10px]"
-                                    >
-                                      View
-                                    </button>
-                                  </td>
-                                </tr>
-                              ))}
+                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                              {(() => {
+                                // This table shows real property tax records —
+                                // the same data the LGU admin sees in the Master
+                                // Database — filtered by the search above and the
+                                // selected assessment year. It is NOT the list of
+                                // this citizen's submitted service applications.
+                                const filteredProperties = associatedProperties.filter(
+                                  (p) =>
+                                    assessmentYear === "All Years" ||
+                                    String(p.billingYear) === assessmentYear
+                                );
+
+                                if (filteredProperties.length === 0) {
+                                  return (
+                                    <tr>
+                                      <td colSpan={8} className="px-4 py-10 text-center rpt-empty italic">
+                                        {associatedProperties.length === 0
+                                          ? "Search for a Tax Declaration Number to view real property tax records."
+                                          : `No property records found for ${assessmentYear}.`}
+                                      </td>
+                                    </tr>
+                                  );
+                                }
+
+                                return filteredProperties.map((prop) => (
+                                  <tr key={String(prop.id ?? prop.taxDeclarationNumber)} className="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition">
+                                    <td className="font-mono font-black">{prop.taxDeclarationNumber || "—"}</td>
+                                    <td className="font-bold">{prop.ownerName || "—"}</td>
+                                    <td>{prop.propertyLocation || prop.barangay || "—"}</td>
+                                    <td>{prop.billingYear || "—"}</td>
+                                    <td className="font-bold">{formatCurrency(prop.assessedValue || 0)}</td>
+                                    <td className="font-bold">{formatCurrency(prop.balance || prop.totalAssessment || 0)}</td>
+                                    <td>
+                                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${getPaymentStatusBadgeClass(prop.paymentStatus)}`}>
+                                        {prop.paymentStatus || "Unpaid"}
+                                      </span>
+                                    </td>
+                                    <td>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setSelectedTdnIds(new Set([prop.taxDeclarationNumber]));
+                                          setVerifiedOwnerName(prop.ownerName || verifiedOwnerName);
+                                          setIsOwnerModalOpen(true);
+                                        }}
+                                        className="rpt-link cursor-pointer text-[10px]"
+                                      >
+                                        View / Pay
+                                      </button>
+                                    </td>
+                                  </tr>
+                                ));
+                              })()}
                             </tbody>
                           </table>
                         </div>
-                      )}
-                    </div>
+                      </>
+                    )}
+
+                    {rptViewMode === "applications" && (
+                      <div className="mt-2 border-t border-slate-200 dark:border-slate-700 pt-6">
+                        <p className="rpt-title uppercase mb-4">MY SERVICE APPLICATIONS</p>
+                        {applications.length === 0 ? (
+                          <div className="px-4 py-8 text-center rpt-empty italic">
+                            No service applications found for your account.
+                          </div>
+                        ) : (
+                          <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-xl">
+                            <table className="w-full min-w-[700px] text-left border-collapse text-xs">
+                              <thead className="bg-[#0B3B60] text-white font-black uppercase">
+                                <tr>
+                                  <th className="px-4 py-3">Control No.</th>
+                                  <th className="px-4 py-3">Service</th>
+                                  <th className="px-4 py-3">TDN / PIN</th>
+                                  <th className="px-4 py-3">Date Filed</th>
+                                  <th className="px-4 py-3">Status</th>
+                                  <th className="px-4 py-3">Payment</th>
+                                  <th className="px-4 py-3">View</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900">
+                                {applications.map((app) => (
+                                  <tr key={app.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition">
+                                    <td className="px-4 py-3 font-mono font-bold text-[#0B3B60] dark:text-blue-400">
+                                      {app.controlNumber || app.referenceNumber || '—'}
+                                    </td>
+                                    <td className="px-4 py-3 font-semibold">{app.service || '—'}</td>
+                                    <td className="px-4 py-3 font-mono">
+                                      {app.taxDeclarationNumber || app.pin || '—'}
+                                    </td>
+                                    <td className="px-4 py-3">
+                                      {app.filedDate ? new Date(app.filedDate).toLocaleDateString() : '—'}
+                                    </td>
+                                    <td className="px-4 py-3">
+                                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${app.status === 'Approved' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300' :
+                                          app.status === 'Rejected' ? 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300' :
+                                            'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
+                                        }`}>
+                                        {app.status || 'Pending'}
+                                      </span>
+                                    </td>
+                                    <td className="px-4 py-3">
+                                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${getPaymentStatusBadgeClass(app.paymentStatus)}`}>
+                                        {app.paymentStatus || 'Pending'}
+                                      </span>
+                                    </td>
+                                    <td className="px-4 py-3">
+                                      <button
+                                        type="button"
+                                        onClick={() => setSelectedAppDetail(app)}
+                                        className="rpt-link cursor-pointer text-[10px]"
+                                      >
+                                        View
+                                      </button>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </>
               )}

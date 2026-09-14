@@ -603,11 +603,11 @@ export async function searchRptByTdn(
         `SELECT *
          FROM lgu_rpt_records
          WHERE
-           LOWER(REPLACE(COALESCE(tax_declaration_number, taxdeclarationnumber, ''), ' ', '')) LIKE LOWER(REPLACE($1, ' ', ''))
-           OR LOWER(COALESCE(owner_name, ownername, '')) LIKE LOWER($2)
+           LOWER(REPLACE(COALESCE(tax_declaration_number, ''), ' ', '')) LIKE LOWER(REPLACE($1, ' ', ''))
+           OR LOWER(COALESCE(owner_name, '')) LIKE LOWER($2)
            OR LOWER(COALESCE(pin, '')) LIKE LOWER($2)
-           OR LOWER(COALESCE(new_pspin, newpspin, '')) LIKE LOWER($2)
-           OR LOWER(COALESCE(property_location, propertylocation, '')) LIKE LOWER($2)
+           OR LOWER(COALESCE(new_pspin, '')) LIKE LOWER($2)
+           OR LOWER(COALESCE(property_location, '')) LIKE LOWER($2)
            OR LOWER(COALESCE(barangay, '')) LIKE LOWER($2)
          ORDER BY id ASC`,
         [searchPattern, searchPattern]
@@ -624,12 +624,12 @@ export async function searchRptByTdn(
 
       rows = searchResult.rows;
       const firstRow = rows[0];
-      matchedOwner = firstRow.owner_name || firstRow.ownername || 'Property Owner';
+      matchedOwner = firstRow.owner_name || 'Property Owner';
 
       // Also get all properties by the same owner if found
       if (matchedOwner && matchedOwner !== 'Property Owner') {
         const ownerRecords = await pool.query(
-          `SELECT * FROM lgu_rpt_records WHERE LOWER(TRIM(COALESCE(owner_name, ownername, ''))) = LOWER(TRIM($1)) ORDER BY id ASC`,
+          `SELECT * FROM lgu_rpt_records WHERE LOWER(TRIM(COALESCE(owner_name, ''))) = LOWER(TRIM($1)) ORDER BY id ASC`,
           [matchedOwner]
         );
         if (ownerRecords.rows.length > rows.length) {
