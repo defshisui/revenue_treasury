@@ -3,6 +3,28 @@ import pool from '../db.js';
 import { PayMongoService } from '../services/paymongo.service.js';
 import { recordAudit } from './audit.controller.js';
 
+// PayMongo's API rejects metadata whose values are objects/arrays with
+// "metadata attributes cannot be nested." Every field we build here (RPT,
+// RPT_SERVICE, MARKET_STALL, BUSINESS_TAX) is meant to be a flat string, but
+// this guards against any caller accidentally passing an object (e.g. a
+// whole record instead of just its id) and getting a cryptic 500 back from
+// PayMongo instead of a clear error before the request is even sent.
+function sanitizeMetadata(raw: Record<string, unknown>): Record<string, string> {
+  const clean: Record<string, string> = {};
+  for (const [key, value] of Object.entries(raw)) {
+    if (value === undefined || value === null || value === '') continue;
+    if (typeof value === 'object') {
+      // Never send a nested object/array to PayMongo — flatten it to a
+      // string instead of letting the API call fail outright.
+      console.warn(`[PayMongo] Dropping/flattening non-scalar metadata field "${key}":`, value);
+      clean[key] = JSON.stringify(value).slice(0, 500);
+      continue;
+    }
+    clean[key] = String(value);
+  }
+  return clean;
+}
+
 export async function getPayMongoStatus(_req: Request, res: Response): Promise<void> {
   try {
     const connection = await PayMongoService.testConnection();
@@ -135,7 +157,7 @@ export async function createCheckoutSession(req: Request, res: Response): Promis
       },
       successUrl: successRedirectUrl,
       cancelUrl: cancelRedirectUrl,
-      metadata: {
+      metadata: sanitizeMetadata({
         type: type || 'GENERAL',
         rptRecordId,
         taxDeclarationNumber,
@@ -145,7 +167,7 @@ export async function createCheckoutSession(req: Request, res: Response): Promis
         rptService: rptService || null,
         customerName,
         customerEmail,
-      },
+      }),
     });
 
     await recordAudit(
@@ -1452,73 +1474,73 @@ export async function createQrPaymentIntent(
             : 'Market Stall Rental Payment');
 
     const qrMetadata =
-  paymentType === 'RPT'
-    ? {
-        type: 'RPT',
+      paymentType === 'RPT'
+        ? {
+          type: 'RPT',
 
-        taxDeclarationNumber: taxDeclarationNumber
-          ? String(taxDeclarationNumber)
-          : undefined,
-
-        rptRecordId:
-          rptRecordId !== undefined && rptRecordId !== null
-            ? String(rptRecordId)
+          taxDeclarationNumber: taxDeclarationNumber
+            ? String(taxDeclarationNumber)
             : undefined,
 
-        customerName:
-          customerName
-            ? String(customerName)
-            : undefined,
+          rptRecordId:
+            rptRecordId !== undefined && rptRecordId !== null
+              ? String(rptRecordId)
+              : undefined,
 
-        customerEmail:
-          customerEmail
-            ? String(customerEmail)
-            : undefined,
+          customerName:
+            customerName
+              ? String(customerName)
+              : undefined,
 
-        customerPhone:
-          customerPhone
-            ? String(customerPhone)
-            : undefined,
-      }
-    : {
-        type: paymentType,
+          customerEmail:
+            customerEmail
+              ? String(customerEmail)
+              : undefined,
 
-        leaseId:
-          paymentType === 'MARKET_STALL'
-            ? leaseId
-            : undefined,
+          customerPhone:
+            customerPhone
+              ? String(customerPhone)
+              : undefined,
+        }
+        : {
+          type: paymentType,
 
-        taxDeclarationNumber:
-          paymentType === 'RPT'
-            ? taxDeclarationNumber
-            : undefined,
+          leaseId:
+            paymentType === 'MARKET_STALL'
+              ? leaseId
+              : undefined,
 
-        rptRecordId:
-          paymentType === 'RPT'
-            ? rptRecordId
-            : undefined,
+          taxDeclarationNumber:
+            paymentType === 'RPT'
+              ? taxDeclarationNumber
+              : undefined,
 
-        rptApplicationId:
-          paymentType === 'RPT_SERVICE'
-            ? rptApplicationId
-            : undefined,
+          rptRecordId:
+            paymentType === 'RPT'
+              ? rptRecordId
+              : undefined,
 
-        businessTrackingNumber:
-          paymentType === 'BUSINESS_TAX'
-            ? businessTrackingNumber
-            : undefined,
+          rptApplicationId:
+            paymentType === 'RPT_SERVICE'
+              ? rptApplicationId
+              : undefined,
 
-        customerName,
-        customerEmail,
-        customerPhone,
-      };
+          businessTrackingNumber:
+            paymentType === 'BUSINESS_TAX'
+              ? businessTrackingNumber
+              : undefined,
 
-const result = await PayMongoService.createQrPaymentIntent({
-  amount: numericAmount,
-  description: paymentDescription,
-  referenceNumber,
-  metadata: qrMetadata,
-});
+          customerName,
+          customerEmail,
+          customerPhone,
+        };
+
+    const result = await PayMongoService.createQrPaymentIntent({
+      amount: numericAmount,
+      description: paymentDescription,
+      referenceNumber,
+      metadata: sanitizeMetadata(qrMetadata),
+    });
 
     res.status(200).json({
       success: true,
