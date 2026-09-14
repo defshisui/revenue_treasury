@@ -211,7 +211,7 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
   const [rptPaymentSuccessCountdown, setRptPaymentSuccessCountdown] = useState<number>(5);
   const [rptQrError, setRptQrError] = useState<string>("");
 
-  const [applications, setApplications] = useState<RPTApplicationRecord[]>([]);
+  const [, setApplications] = useState<RPTApplicationRecord[]>([]);
   const [appForm, setAppForm] = useState({
     service: services[0],
     applicantType: "Property Owner" as ApplicantType,
@@ -287,12 +287,9 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
     }, []);
   };
 
-  const getAppStatusBadgeClass = (status?: string): string => {
-    if (status === "Approved" || status === "Ready for Release" || status === "Payment Completed" || status === "Completed") {
-      return "bg-emerald-100 text-emerald-800";
-    }
-    if (status === "Rejected") return "bg-rose-100 text-rose-800";
-    if (status === "For Payment") return "bg-blue-100 text-blue-800";
+  const getPaymentStatusBadgeClass = (status?: string): string => {
+    if (status === "Paid" || status === "Settled") return "bg-emerald-100 text-emerald-800";
+    if (status === "Partially Paid") return "bg-blue-100 text-blue-800";
     return "bg-amber-100 text-amber-800";
   };
 
@@ -1494,42 +1491,55 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                           {(() => {
-                            // Show every RPT application belonging to this account —
-                            // no year filter, no search required. This table is
-                            // driven purely by the citizen's own submitted applications.
-                            if (applications.length === 0) {
+                            // This table shows real property tax records —
+                            // the same data the LGU admin sees in the Master
+                            // Database — filtered by the search above and the
+                            // selected assessment year. It is NOT the list of
+                            // this citizen's submitted service applications.
+                            const filteredProperties = associatedProperties.filter(
+                              (p) =>
+                                assessmentYear === "All Years" ||
+                                String(p.billingYear) === assessmentYear
+                            );
+
+                            if (filteredProperties.length === 0) {
                               return (
                                 <tr>
                                   <td colSpan={8} className="px-4 py-10 text-center rpt-empty italic">
-                                    You have no submitted RPT applications yet.
+                                    {associatedProperties.length === 0
+                                      ? "Search for a Tax Declaration Number to view real property tax records."
+                                      : `No property records found for ${assessmentYear}.`}
                                   </td>
                                 </tr>
                               );
                             }
 
-                            return applications.map((app) => (
-                              <tr key={String(app.id)} className="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition">
-                                <td className="font-mono font-black">{app.taxDeclarationNumber || "For Issuance"}</td>
-                                <td className="font-bold">{app.ownerName || app.applicantName || "—"}</td>
-                                <td>{app.propertyLocation || app.barangay || "—"}</td>
-                                <td>{app.filedDate ? new Date(app.filedDate).getFullYear() : "—"}</td>
-                                <td className="font-bold">—</td>
-                                <td className="font-bold">—</td>
+                            return filteredProperties.map((prop) => (
+                              <tr key={String(prop.id ?? prop.taxDeclarationNumber)} className="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition">
+                                <td className="font-mono font-black">{prop.taxDeclarationNumber || "—"}</td>
+                                <td className="font-bold">{prop.ownerName || "—"}</td>
+                                <td>{prop.propertyLocation || prop.barangay || "—"}</td>
+                                <td>{prop.billingYear || "—"}</td>
+                                <td className="font-bold">{formatCurrency(prop.assessedValue || 0)}</td>
+                                <td className="font-bold">{formatCurrency(prop.balance || prop.totalAssessment || 0)}</td>
                                 <td>
-                                  <div className="flex items-center gap-2">
-                                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${getAppStatusBadgeClass(app.status)}`}>
-                                      {app.status}
-                                    </span>
-                                    <button
-                                      type="button"
-                                      onClick={() => setSelectedAppDetail(app)}
-                                      className="rpt-link cursor-pointer text-[10px]"
-                                    >
-                                      View Details
-                                    </button>
-                                  </div>
+                                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${getPaymentStatusBadgeClass(prop.paymentStatus)}`}>
+                                    {prop.paymentStatus || "Unpaid"}
+                                  </span>
                                 </td>
-                                <td>—</td>
+                                <td>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedTdnIds(new Set([prop.taxDeclarationNumber]));
+                                      setVerifiedOwnerName(prop.ownerName || verifiedOwnerName);
+                                      setIsOwnerModalOpen(true);
+                                    }}
+                                    className="rpt-link cursor-pointer text-[10px]"
+                                  >
+                                    View / Pay
+                                  </button>
+                                </td>
                               </tr>
                             ));
                           })()}
