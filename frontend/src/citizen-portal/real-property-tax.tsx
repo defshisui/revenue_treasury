@@ -1500,96 +1500,33 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                          {associatedProperties.length > 0 ? (
-                            associatedProperties
-                              .filter((property) => assessmentYear === "All Years" || String(property.billingYear) === assessmentYear)
-                              .map((property) => {
-                                const matchedApp = getAppForTdn(property.taxDeclarationNumber);
-                                return (
-                                  <tr key={property.taxDeclarationNumber} className="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition">
-                                    <td className="font-mono font-black">{property.taxDeclarationNumber}</td>
-                                    <td className="font-bold">{property.ownerName}</td>
-                                    <td>{property.propertyLocation || property.barangay || "—"}</td>
-                                    <td>{property.billingYear || "—"}</td>
-                                    <td className="font-bold">{formatCurrency(property.assessedValue)}</td>
-                                    <td className="font-bold">{formatCurrency(property.balance || property.totalAssessment)}</td>
-                                    <td>
-                                      {matchedApp ? (
-                                        <div className="flex items-center gap-2">
-                                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${getAppStatusBadgeClass(matchedApp.status)}`}>
-                                            {matchedApp.status}
-                                          </span>
-                                          <button
-                                            type="button"
-                                            onClick={() => setSelectedAppDetail(matchedApp)}
-                                            className="rpt-link cursor-pointer text-[10px]"
-                                          >
-                                            View Details
-                                          </button>
-                                        </div>
-                                      ) : (
-                                        <span className="text-[10px] text-slate-400 italic">No Application</span>
-                                      )}
-                                    </td>
-                                    <td>
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setSelectedTdnIds(new Set([property.taxDeclarationNumber]));
-                                          setRptSearchStep(2);
-                                        }}
-                                        className="rpt-link cursor-pointer"
-                                      >
-                                        VIEW
-                                      </button>
-                                    </td>
-                                  </tr>
-                                );
-                              })
-                          ) : (
-                            <tr>
-                              <td colSpan={8} className="px-4 py-10 text-center rpt-empty italic">
-                                Search for a Tax Declaration Number to view real property tax records.
-                              </td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    <div className="mt-8">
-                      <h3 className="text-sm font-extrabold text-[#0B3B60] dark:text-blue-300 mb-1">My Submitted Service Requests</h3>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-3">
-                        Applications you've filed (transfer, correction, new assessment, etc.) appear here right away, even before a Tax Declaration Number has been issued.
-                      </p>
-                      <div className="overflow-x-auto border border-white dark:border-slate-800 rpt-table">
-                        <table className="w-full min-w-[760px] text-left border-collapse rpt-table">
-                          <thead className="text-white font-black uppercase">
-                            <tr>
-                              <th>CONTROL NO.</th>
-                              <th>SERVICE</th>
-                              <th>TDN</th>
-                              <th>FILED</th>
-                              <th>STATUS</th>
-                              <th>VIEW</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                            {applications.length > 0 ? (
-                              applications.map((app) => (
-                                <tr key={String(app.id)} className="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition">
-                                  <td className="font-mono font-black">{app.controlNumber || "—"}</td>
-                                  <td>{app.service || "—"}</td>
-                                  <td className="font-mono">{app.taxDeclarationNumber || "For Issuance"}</td>
-                                  <td className="font-mono">
-                                    {app.filedDate ? new Date(app.filedDate).toLocaleDateString("en-PH") : "—"}
+                          {(() => {
+                            // Show every RPT application belonging to this account —
+                            // no year filter, no search required. This table is
+                            // driven purely by the citizen's own submitted applications.
+                            if (applications.length === 0) {
+                              return (
+                                <tr>
+                                  <td colSpan={8} className="px-4 py-10 text-center rpt-empty italic">
+                                    You have no submitted RPT applications yet.
                                   </td>
-                                  <td>
+                                </tr>
+                              );
+                            }
+
+                            return applications.map((app) => (
+                              <tr key={String(app.id)} className="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition">
+                                <td className="font-mono font-black">{app.taxDeclarationNumber || "For Issuance"}</td>
+                                <td className="font-bold">{app.ownerName || app.applicantName || "—"}</td>
+                                <td>{app.propertyLocation || app.barangay || "—"}</td>
+                                <td>{app.filedDate ? new Date(app.filedDate).getFullYear() : "—"}</td>
+                                <td className="font-bold">—</td>
+                                <td className="font-bold">—</td>
+                                <td>
+                                  <div className="flex items-center gap-2">
                                     <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${getAppStatusBadgeClass(app.status)}`}>
                                       {app.status}
                                     </span>
-                                  </td>
-                                  <td>
                                     <button
                                       type="button"
                                       onClick={() => setSelectedAppDetail(app)}
@@ -1597,19 +1534,14 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
                                     >
                                       View Details
                                     </button>
-                                  </td>
-                                </tr>
-                              ))
-                            ) : (
-                              <tr>
-                                <td colSpan={6} className="px-4 py-10 text-center rpt-empty italic">
-                                  You have no submitted RPT service requests yet.
+                                  </div>
                                 </td>
+                                <td>—</td>
                               </tr>
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
+                            ));
+                          })()}
+                        </tbody>
+                      </table>
                     </div>
 
                     <div className="hidden">
