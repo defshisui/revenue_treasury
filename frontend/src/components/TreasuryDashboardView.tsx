@@ -343,7 +343,6 @@ export default function TreasuryDashboardView({
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center bg-white dark:bg-slate-900 p-6 rounded-2xl mb-6 flex-wrap gap-4 border border-slate-200 dark:border-slate-800 shadow-sm">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="h-2 w-2 rounded-full bg-blue-600 animate-pulse"></span>
             <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 tracking-wider uppercase">
               OFFICE OF THE CITY ASSESSOR & TREASURY
             </span>
@@ -415,11 +414,6 @@ export default function TreasuryDashboardView({
       {activeLocalTab === "ALL" && (
         <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-4 mb-6">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm flex items-center gap-4">
-            <div className="p-3 bg-slate-50 dark:bg-slate-800 text-blue-600 dark:text-blue-400 rounded-xl flex items-center justify-center border border-slate-100 dark:border-slate-700">
-              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
-              </svg>
-            </div>
             <div>
               <p className="text-[11px] font-bold tracking-wider text-slate-500 dark:text-slate-400 mb-1 mt-0 uppercase">TOTAL ePAYMENTS</p>
               <p className="text-xl font-bold text-slate-900 dark:text-white m-0">{activeMetrics.totalEpayments.toLocaleString()}</p>
@@ -782,7 +776,7 @@ export default function TreasuryDashboardView({
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-base font-bold text-slate-900 dark:text-white m-0">
-            Live Postgres Transaction Ledger ({activeLocalTab === "ALL" ? "All Modules" : activeLocalTab})
+            Live Transaction Ledger ({activeLocalTab === "ALL" ? "All Modules" : activeLocalTab})
           </h3>
           {activeTxFeed.length > 0 && (
             <button

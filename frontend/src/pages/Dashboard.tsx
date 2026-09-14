@@ -330,9 +330,6 @@ export default function Login() {
 
               <div className="space-y-6">
                 <div className="text-center space-y-2">
-                  <div className="size-14 rounded-2xl bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center text-2xl mx-auto shadow-xs">
-                    ✉️
-                  </div>
                   <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">Verify Your Sign-In</h2>
                   <p className="text-xs text-slate-500 leading-relaxed max-w-xs mx-auto">
                     We sent a 6-digit verification code to <strong className="text-slate-800 font-mono">{email}</strong>.
@@ -341,7 +338,6 @@ export default function Login() {
 
                 {otpNotice && (
                   <div className="p-3.5 bg-blue-50/80 border border-blue-200 rounded-2xl text-xs font-semibold text-blue-900 flex items-center gap-2">
-                    <span>ℹ️</span>
                     <span>{otpNotice}</span>
                   </div>
                 )}
@@ -372,7 +368,7 @@ export default function Login() {
 
                   <div className="flex items-center justify-between text-xs border-t border-slate-100 pt-3">
                     <span className="text-slate-500 font-semibold flex items-center gap-1">
-                      <span>⏱️ Code expires in:</span>
+                      <span>Code expires in:</span>
                       <strong className={`font-mono ${otpExpirySeconds < 60 ? 'text-rose-600' : 'text-slate-800'}`}>
                         {formatOtpTimer(otpExpirySeconds)}
                       </strong>

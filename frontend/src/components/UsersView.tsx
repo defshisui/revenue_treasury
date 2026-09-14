@@ -281,11 +281,6 @@ export default function UsersView({
 
           <div className="flex items-center gap-2.5 flex-wrap">
 
-            <span className="text-xs bg-emerald-50 dark:bg-emerald-500/10 px-3.5 py-2.5 rounded-xl border border-emerald-200 dark:border-emerald-500/25 text-emerald-700 dark:text-emerald-400 font-semibold shadow-xs flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
-              Access Control Configured
-            </span>
-
             <button
               onClick={() => setIsAddModalOpen(true)}
               className="text-xs bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2.5 rounded-xl transition-all shadow-sm cursor-pointer flex items-center gap-1.5"
@@ -306,8 +301,8 @@ export default function UsersView({
             <button
               onClick={() => setMainTab("Active")}
               className={`px-5 py-2 text-xs font-semibold rounded-lg border transition-colors cursor-pointer ${mainTab === "Active"
-                  ? "bg-slate-100 dark:bg-slate-800/80 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-600 shadow-sm"
-                  : "bg-transparent text-slate-500 border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                ? "bg-slate-100 dark:bg-slate-800/80 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-600 shadow-sm"
+                : "bg-transparent text-slate-500 border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/50"
                 }`}
             >
               Active Personnel
@@ -316,8 +311,8 @@ export default function UsersView({
             <button
               onClick={() => setMainTab("Archived")}
               className={`px-5 py-2 text-xs font-semibold rounded-lg border transition-colors cursor-pointer ${mainTab === "Archived"
-                  ? "bg-slate-100 dark:bg-slate-800/80 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-600 shadow-sm"
-                  : "bg-transparent text-slate-500 border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                ? "bg-slate-100 dark:bg-slate-800/80 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-600 shadow-sm"
+                : "bg-transparent text-slate-500 border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/50"
                 }`}
             >
               Archived Accounts

@@ -671,7 +671,7 @@ export default function CityOwnedMarketAdmin({
 
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-2 text-xs text-slate-500 dark:text-slate-400">
           <div className="flex items-center gap-2">
-            <span>Ipakita</span>
+            <span>Showing</span>
             <select
               value={entriesPerPage}
               onChange={(e) => setEntriesPerPage(Number(e.target.value))}
@@ -681,7 +681,7 @@ export default function CityOwnedMarketAdmin({
               <option value={10}>10</option>
               <option value={25}>25</option>
             </select>
-            <span>ng {filteredLeases.length} entries</span>
+            <span>of {filteredLeases.length} entries</span>
           </div>
 
           <div className="flex items-center gap-2">
@@ -692,7 +692,7 @@ export default function CityOwnedMarketAdmin({
                 onChange={(e) => setShowInactive(e.target.checked)}
                 className="w-4 h-4 cursor-pointer rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500"
               />
-              Ipakita ang hindi aktibong lease
+              Show Inactive Leases
             </label>
           </div>
         </div>

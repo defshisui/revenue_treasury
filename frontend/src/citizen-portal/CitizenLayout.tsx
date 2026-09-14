@@ -932,9 +932,6 @@ export default function CitizenLayout({
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
                       {user.email}
                     </p>
-                    <span className="inline-block mt-2 px-2 py-0.5 bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400 text-[10px] font-bold rounded-md border border-blue-200 dark:border-blue-900">
-                      Verified Citizen
-                    </span>
                   </div>
 
                   <div className="border-t border-slate-100 dark:border-slate-800 pt-1">
