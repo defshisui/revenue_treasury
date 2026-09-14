@@ -1749,15 +1749,6 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
                       >
                         Edit Selected TDN(s)
                       </button>
-                      <button
-                        onClick={handleInstantPayMongoCheckout}
-                        className="bg-[#0284C7] hover:bg-sky-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition shadow-md cursor-pointer flex items-center gap-1.5"
-                      >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                        </svg>
-                        <span>Pay via PayMongo</span>
-                      </button>
                     </div>
                   </div>
 

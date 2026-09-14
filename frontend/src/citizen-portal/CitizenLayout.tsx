@@ -133,51 +133,203 @@ export default function CitizenLayout({
     }
   }, []);
 
-  // Load and persist notifications for the citizen user
+  // Build real notifications for the citizen from their actual application/payment
+  // records (RPT, business tax, market stall, hawker association) instead of
+  // placeholder/dummy content. A notification only appears once the underlying
+  // record has actually been approved or its payment has actually been posted.
   useEffect(() => {
     if (!user.email) return;
-    const storageKey = `citizen_notifications_${user.email.toLowerCase().trim()}`;
-    const stored = localStorage.getItem(storageKey);
-    let list: { id: string | number; title: string; desc: string; time: string; link: string; unread: boolean }[] = [];
-    if (stored) {
-      try {
-        list = JSON.parse(stored);
-      } catch {
-        list = [];
-      }
-    }
 
-    if (!list || list.length === 0) {
-      list = [
-        {
-          id: 1,
-          title: 'Account Registered',
-          desc: 'Your citizen tax portal account has been verified and activated.',
-          time: 'Today',
-          link: '/edit-profile',
-          unread: true,
-        },
-        {
-          id: 2,
-          title: '2026 Tax Declaration Notice',
-          desc: 'Annual business tax and real property assessment payments are now available.',
-          time: 'Today',
-          link: '/business-tax-assessment',
-          unread: true,
-        },
-        {
-          id: 3,
-          title: 'Market Stall & Hawker Services',
-          desc: 'Submit lease applications and review active permits directly online.',
-          time: 'Yesterday',
-          link: '/citizen-portal-stall-status',
-          unread: false,
-        },
-      ];
-      localStorage.setItem(storageKey, JSON.stringify(list));
-    }
-    setNotifications(list);
-  }, [user.email]);
+    const emailKey = user.email.toLowerCase().trim();
+    const readStorageKey = `citizen_notifications_read_${emailKey}`;
+
+    const getReadIds = (): string[] => {
+      try {
+        const raw = localStorage.getItem(readStorageKey);
+        return raw ? JSON.parse(raw) : [];
+      } catch {
+        return [];
+      }
+    };
+
+    const authHeaders = (): HeadersInit => {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      return token ? { Authorization: `Bearer ${token}` } : {};
+    };
+
+    const formatTime = (value?: string | null): string => {
+      if (!value) return '';
+      const d = new Date(value);
+      if (isNaN(d.getTime())) return '';
+      const now = new Date();
+      const yesterday = new Date(now);
+      yesterday.setDate(now.getDate() - 1);
+      if (d.toDateString() === now.toDateString()) return 'Today';
+      if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    };
+
+    type NotificationItem = { id: string; title: string; desc: string; time: string; link: string; unread: boolean };
+
+    const buildNotifications = async (): Promise<NotificationItem[]> => {
+      const items: NotificationItem[] = [];
+
+      // Real Property Tax applications — already scoped to this citizen by the API
+      try {
+        const res = await fetch(`${API_BASE_URL}/citizen-rpt-applications`, { headers: authHeaders() });
+        if (res.ok) {
+          const rows = await res.json();
+          (Array.isArray(rows) ? rows : []).forEach((row: any) => {
+            const status = String(row.status || '').toLowerCase();
+            const paymentStatus = String(row.payment_status || '').toLowerCase();
+            const label = row.tax_declaration_number || row.control_number || row.id;
+            if (status === 'approved') {
+              items.push({
+                id: `rpt-approved-${row.id}`,
+                title: 'RPT Application Approved',
+                desc: `Your real property tax application ${label} has been approved.`,
+                time: formatTime(row.updated_at || row.filed_date),
+                link: '/citizen-rpt-applications',
+                unread: true,
+              });
+            }
+            if (paymentStatus === 'paid') {
+              items.push({
+                id: `rpt-paid-${row.id}`,
+                title: 'RPT Payment Confirmed',
+                desc: `Your payment for real property tax application ${label} has been posted.`,
+                time: formatTime(row.updated_at || row.filed_date),
+                link: '/citizen-rpt-applications',
+                unread: true,
+              });
+            }
+          });
+        }
+      } catch {
+        // best-effort — skip RPT notifications if the request fails
+      }
+
+      // Business tax assessments — filtered server-side by the citizen's email
+      try {
+        const res = await fetch(
+          `${API_BASE_URL}/business-assessments?email=${encodeURIComponent(emailKey)}`,
+          { headers: authHeaders() }
+        );
+        if (res.ok) {
+          const data = await res.json();
+          const rows = Array.isArray(data?.assessments) ? data.assessments : [];
+          rows.forEach((row: any) => {
+            const status = String(row.status || '').toLowerCase();
+            const paymentStatus = String(row.paymentStatus || '').toLowerCase();
+            const label = row.businessName || row.trackingNumber;
+            if (status === 'approved') {
+              items.push({
+                id: `biz-approved-${row.id}`,
+                title: 'Business Assessment Approved',
+                desc: `Your business tax assessment for ${label} has been approved.`,
+                time: formatTime(row.applicationDate),
+                link: '/business-tax-assessment',
+                unread: true,
+              });
+            }
+            if (paymentStatus === 'paid') {
+              items.push({
+                id: `biz-paid-${row.id}`,
+                title: 'Business Tax Payment Received',
+                desc: `Your payment for ${label} (Tracking No. ${row.trackingNumber}) has been confirmed.`,
+                time: formatTime(row.applicationDate),
+                link: '/business-tax-assessment',
+                unread: true,
+              });
+            }
+          });
+        }
+      } catch {
+        // best-effort — skip business notifications if the request fails
+      }
+
+      // Market stall leases — no email is stored on the record, so match by
+      // applicant name against the signed-in citizen's full name.
+      try {
+        const res = await fetch(`${API_BASE_URL}/market-leases`, { headers: authHeaders() });
+        if (res.ok) {
+          const rows = await res.json();
+          const fullNameLower = user.fullname.toLowerCase().trim();
+          (Array.isArray(rows) ? rows : []).forEach((row: any) => {
+            const ownerName = `${row.firstName || ''} ${row.lastName || ''}`.toLowerCase().trim();
+            if (!fullNameLower || ownerName !== fullNameLower) return;
+            const leaseStatus = String(row.leaseStatus || '').toLowerCase();
+            const paymentStatus = String(row.paymentStatus || '').toLowerCase();
+            if (leaseStatus === 'active') {
+              items.push({
+                id: `market-active-${row.id}`,
+                title: 'Market Stall Lease Approved',
+                desc: `Your lease for Stall ${row.stallNumber} at ${row.marketName} is now active.`,
+                time: formatTime(row.createdAt),
+                link: '/citizen-portal-stall-status',
+                unread: true,
+              });
+            }
+            if (paymentStatus.includes('paid')) {
+              items.push({
+                id: `market-paid-${row.id}`,
+                title: 'Market Stall Payment Received',
+                desc: `Your payment for Stall ${row.stallNumber} at ${row.marketName} has been confirmed.`,
+                time: formatTime(row.paymentDate || row.createdAt),
+                link: '/citizen-portal-stall-status',
+                unread: true,
+              });
+            }
+          });
+        }
+      } catch {
+        // best-effort — skip market notifications if the request fails
+      }
+
+      // Hawker association applications — match by submitter/chairperson email
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/hawkers`, { headers: authHeaders() });
+        if (res.ok) {
+          const rows = await res.json();
+          (Array.isArray(rows) ? rows : []).forEach((row: any) => {
+            const submitterEmail = String(row.submitterEmail || row.chairperson?.email || '')
+              .toLowerCase()
+              .trim();
+            if (submitterEmail !== emailKey) return;
+            const status = String(row.status || '').toLowerCase();
+            if (status === 'approved') {
+              items.push({
+                id: `hawker-approved-${row.id}`,
+                title: 'Hawker Association Approved',
+                desc: `Your application for ${row.associationName} has been approved.`,
+                time: formatTime(row.submissionDate),
+                link: '/citizen-portal-stall-status',
+                unread: true,
+              });
+            }
+          });
+        }
+      } catch {
+        // best-effort — skip hawker notifications if the request fails
+      }
+
+      return items;
+    };
+
+    let cancelled = false;
+    buildNotifications().then((items) => {
+      if (cancelled) return;
+      const readIds = new Set(getReadIds());
+      const withReadState = items
+        .map((n) => ({ ...n, unread: !readIds.has(n.id) }))
+        .sort((a, b) => (a.unread === b.unread ? 0 : a.unread ? -1 : 1));
+      setNotifications(withReadState);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user.email, user.fullname]);
 
   // Live clock, updated every second
   useEffect(() => {
@@ -688,10 +840,14 @@ export default function CitizenLayout({
                         setNotifications((prev) => {
                           const updated = prev.map((n) => ({ ...n, unread: false }));
                           if (user.email) {
-                            localStorage.setItem(
-                              `citizen_notifications_${user.email.toLowerCase().trim()}`,
-                              JSON.stringify(updated)
-                            );
+                            const readStorageKey = `citizen_notifications_read_${user.email.toLowerCase().trim()}`;
+                            try {
+                              const existing: string[] = JSON.parse(localStorage.getItem(readStorageKey) || '[]');
+                              const merged = Array.from(new Set([...existing, ...updated.map((n) => String(n.id))]));
+                              localStorage.setItem(readStorageKey, JSON.stringify(merged));
+                            } catch {
+                              localStorage.setItem(readStorageKey, JSON.stringify(updated.map((n) => String(n.id))));
+                            }
                           }
                           return updated;
                         });
@@ -711,6 +867,18 @@ export default function CitizenLayout({
                         <div
                           key={n.id}
                           onClick={() => {
+                            if (n.unread && user.email) {
+                              const readStorageKey = `citizen_notifications_read_${user.email.toLowerCase().trim()}`;
+                              try {
+                                const existing: string[] = JSON.parse(localStorage.getItem(readStorageKey) || '[]');
+                                if (!existing.includes(String(n.id))) {
+                                  localStorage.setItem(readStorageKey, JSON.stringify([...existing, String(n.id)]));
+                                }
+                              } catch {
+                                localStorage.setItem(readStorageKey, JSON.stringify([String(n.id)]));
+                              }
+                              setNotifications((prev) => prev.map((item) => (item.id === n.id ? { ...item, unread: false } : item)));
+                            }
                             navigate(n.link);
                             setIsNotificationsOpen(false);
                           }}
