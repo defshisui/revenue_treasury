@@ -10,7 +10,6 @@ import {
 } from "../services/paymongoService";
 import {
   searchRPTByTDN,
-  processGroupRPTPayment,
   getRPTApplications,
   saveRPTApplication,
   type RPTApplicationRecord
@@ -200,8 +199,6 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
   const [successFeedbackMessage, setSuccessFeedbackMessage] = useState<string>("");
 
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
-  const [isCheckingOut, setIsCheckingOut] = useState<boolean>(false);
   const [issuedReceipt, setIssuedReceipt] = useState<ElectronicReceipt | null>(null);
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState<boolean>(false);
 
@@ -609,13 +606,11 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
   };
 
 
-  const handleAddToCart = () => {
-    if (selectedPropertiesList.length === 0) {
-      showToast("No Tax Declaration Numbers selected.", "error");
-      return;
-    }
-
-    const newCartItems: CartItem[] = selectedPropertiesList.map((prop) => {
+  // Builds the payable line items for whatever TDNs are currently
+  // selected, without a separate "add to cart" review step — payment
+  // proceeds straight to PayMongo.
+  const buildSelectedCartItems = (): CartItem[] => {
+    return selectedPropertiesList.map((prop) => {
       const isQuarterly = prop.selectedPaymentOption === "Quarterly";
       const totalPayable = prop.computedPayableAmount || prop.balance || 1020;
       const coverage = isQuarterly
@@ -639,18 +634,17 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
         rawProperty: prop,
       };
     });
-
-    setCart(newCartItems);
-    setIsCartOpen(true);
-    showToast(`Added ${newCartItems.length} Group Bill Set item(s) to Cart!`, "success");
   };
 
   const grandCartTotal = useMemo(() => {
     return cart.reduce((sum, item) => sum + item.totalPayable, 0);
   }, [cart]);
 
-  const generateRPTQrPayment = async () => {
-    if (cart.length === 0) return;
+  const generateRPTQrPayment = async (itemsOverride?: CartItem[]) => {
+    const items = itemsOverride ?? cart;
+    if (items.length === 0) return;
+    const total = items.reduce((sum, item) => sum + item.totalPayable, 0);
+
     setIsGeneratingQr(true);
     setRptQrCodeUrl("");
     setRptQrReferenceNumber("");
@@ -661,13 +655,13 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
 
     try {
       const paymentIntent = await createPayMongoQrPaymentIntent({
-        amount: grandCartTotal,
+        amount: total,
         type: "RPT",
-        taxDeclarationNumber: cart.map((item) => item.tdn).join(", "),
-        rptRecordId: cart[0]?.rawProperty?.id,
-        customerName: currentUser?.fullname || cart[0]?.ownerName || "Taxpayer",
+        taxDeclarationNumber: items.map((item) => item.tdn).join(", "),
+        rptRecordId: items[0]?.rawProperty?.id,
+        customerName: currentUser?.fullname || items[0]?.ownerName || "Taxpayer",
         customerEmail: currentUser?.email || "citizen@gov.ph",
-        description: `RPT Group Payment (${cart.length} Properties)`,
+        description: `RPT Group Payment (${items.length} Properties)`,
       });
 
       setRptQrPaymentIntentId(paymentIntent.paymentIntentId);
@@ -701,14 +695,30 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
     }
   };
 
-  const openRPTQrPayment = async () => {
-    if (cart.length === 0) return;
+  const openRPTQrPayment = async (itemsOverride?: CartItem[]) => {
+    const items = itemsOverride ?? cart;
+    if (items.length === 0) return;
     setIsQrPaymentOpen(true);
-    await generateRPTQrPayment();
+    await generateRPTQrPayment(items);
+  };
+
+  // Skips the cart review step entirely: selecting TDNs and clicking
+  // "Pay via PayMongo" goes straight into the instant PayMongo QR Ph
+  // checkout below.
+  const handleInstantPayMongoCheckout = async () => {
+    if (selectedPropertiesList.length === 0) {
+      showToast("No Tax Declaration Numbers selected.", "error");
+      return;
+    }
+
+    const items = buildSelectedCartItems();
+    setCart(items);
+    await openRPTQrPayment(items);
   };
 
   const closeRPTQrPayment = () => {
     if (isGeneratingQr) return;
+    const wasPaid = rptQrPaid;
     setIsQrPaymentOpen(false);
     setRptQrCodeUrl("");
     setRptQrReferenceNumber("");
@@ -716,6 +726,11 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
     setRptQrError("");
     setRptQrPaid(false);
     setRptQrSecondsRemaining(300);
+    // Only surface the eOR after a completed payment — not when the
+    // citizen just cancels an unfinished QR session.
+    if (wasPaid) {
+      setIsReceiptModalOpen(true);
+    }
   };
 
   useEffect(() => {
@@ -763,10 +778,30 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
           setRptQrPaid(true);
           setRptQrSecondsRemaining(0);
           setRptQrCodeUrl("");
+
+          const paymentDate = new Date().toISOString();
+          const officialReceiptNumber = rptQrReferenceNumber || "QRPH-PAYMENT";
+
+          setIssuedReceipt({
+            officialReceiptNumber,
+            groupReferenceNumber: officialReceiptNumber,
+            paymentDate,
+            customerName: currentUser?.fullname || cart[0]?.ownerName || "Taxpayer",
+            paymentMethod: "PayMongo QR Ph",
+            totalAmount: cart.reduce((sum, item) => sum + item.totalPayable, 0),
+            items: cart.map((item) => ({
+              taxDeclarationNumber: item.tdn,
+              ownerName: item.ownerName,
+              amount: item.totalPayable,
+              officialReceiptNumber,
+              paymentOption: item.paymentOption,
+            })),
+          });
+
           addRPTPaymentHistory(
             cart,
-            new Date().toISOString(),
-            rptQrReferenceNumber || "QRPH-PAYMENT",
+            paymentDate,
+            officialReceiptNumber,
             "PayMongo QR Ph"
           );
           await loadApplications();
@@ -803,64 +838,7 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
     });
   };
 
-  const handleExecuteGroupCheckout = async (method: "PayMongo" | "DirectSimulated") => {
-    if (cart.length === 0) return;
-    setIsCheckingOut(true);
 
-    try {
-      if (method === "PayMongo") {
-        await openRPTQrPayment();
-        setIsCartOpen(false);
-        setIsCheckingOut(false);
-        return;
-      }
-
-      const groupPayload = {
-        items: cart.map((item) => ({
-          id: item.rawProperty.id,
-          taxDeclarationNumber: item.tdn,
-          ownerName: item.ownerName,
-          totalAmount: item.totalPayable,
-          selectedOption: item.paymentOption,
-          billCoverage: item.billCoverage,
-        })),
-        customerName: currentUser?.fullname || cart[0].ownerName || "Taxpayer",
-        customerEmail: currentUser?.email || "citizen@gov.ph",
-        paymentMethod: "Electronic LGU Payment Gateway (Direct)",
-      };
-
-      const result = await processGroupRPTPayment(groupPayload);
-
-      setIssuedReceipt({
-        officialReceiptNumber: result.groupOfficialReceipt,
-        groupReferenceNumber: result.groupReferenceNumber,
-        paymentDate: result.paymentDate,
-        customerName: currentUser?.fullname || cart[0].ownerName || "Taxpayer",
-        paymentMethod: "Electronic LGU Payment Gateway",
-        totalAmount: result.totalAmount,
-        items: result.items || [],
-      });
-
-      addRPTPaymentHistory(
-        cart,
-        result.paymentDate,
-        result.groupOfficialReceipt,
-        "Electronic LGU Payment Gateway"
-      );
-
-      setCart([]);
-      setIsCartOpen(false);
-      setIsReceiptModalOpen(true);
-      showToast("Group Real Property Tax payment completed successfully!", "success");
-
-      loadApplications();
-    } catch (err: any) {
-      console.error(err);
-      showToast(err.message || "Failed to process payment checkout.", "error");
-    } finally {
-      setIsCheckingOut(false);
-    }
-  };
 
 
   const handleAppFileChange = (e: ChangeEvent<HTMLInputElement>, field: string) => {
@@ -1772,13 +1750,13 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
                         Edit Selected TDN(s)
                       </button>
                       <button
-                        onClick={handleAddToCart}
-                        className="bg-[#DC2626] hover:bg-red-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition shadow-md cursor-pointer flex items-center gap-1.5"
+                        onClick={handleInstantPayMongoCheckout}
+                        className="bg-[#0284C7] hover:bg-sky-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition shadow-md cursor-pointer flex items-center gap-1.5"
                       >
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
                         </svg>
-                        <span>Add to Cart</span>
+                        <span>Pay via PayMongo</span>
                       </button>
                     </div>
                   </div>
@@ -1844,10 +1822,10 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
                     </div>
                     <div className="flex items-center gap-3 w-full sm:w-auto">
                       <button
-                        onClick={handleAddToCart}
-                        className="w-full sm:w-auto bg-[#DC2626] hover:bg-red-700 text-white font-extrabold px-8 py-3.5 rounded-2xl text-xs uppercase tracking-wider transition shadow-md cursor-pointer"
+                        onClick={handleInstantPayMongoCheckout}
+                        className="w-full sm:w-auto bg-[#0284C7] hover:bg-sky-700 text-white font-extrabold px-8 py-3.5 rounded-2xl text-xs uppercase tracking-wider transition shadow-md cursor-pointer"
                       >
-                        Add To Cart &amp; Proceed to Checkout →
+                        ▣ Pay via PayMongo QR Ph →
                       </button>
                     </div>
                   </div>
@@ -2470,81 +2448,6 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
         </div>
       )}
 
-      {isCartOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 sm:p-8 max-w-xl w-full shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-              <h3 className="text-base font-extrabold text-[#0B3B60] dark:text-blue-400 flex items-center gap-2">
-                <svg className="w-5 h-5 text-[#0B3B60] dark:text-blue-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-                <span>My Cart - Group Bill Set ({cart.length} Properties)</span>
-              </h3>
-              <button
-                onClick={() => setIsCartOpen(false)}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 font-bold text-lg cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-
-            {cart.length === 0 ? (
-              <div className="p-8 text-center text-slate-400 dark:text-slate-500 text-xs italic bg-slate-50 dark:bg-slate-800/60 rounded-2xl">
-                Your cart is empty. Select TDNs to add them here.
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {cart.map((item, idx) => (
-                  <div key={idx} className="p-4 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl space-y-1 text-xs">
-                    <div className="flex justify-between items-center font-bold">
-                      <span className="text-[#0B3B60] dark:text-blue-400 font-mono">{item.tdn}</span>
-                      <span className="font-mono text-slate-900 dark:text-white">{formatCurrency(item.totalPayable)}</span>
-                    </div>
-                    <p className="text-slate-600 dark:text-slate-300">{item.ownerName} • {item.propertyType}</p>
-                    <div className="flex justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-200 dark:border-slate-700">
-                      <span>Coverage: {item.billCoverage}</span>
-                      <span className="font-semibold">{item.paymentOption}</span>
-                    </div>
-                  </div>
-                ))}
-
-                <div className="p-4 bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800 rounded-2xl space-y-1">
-                  <div className="flex justify-between text-xs text-slate-600 dark:text-slate-300">
-                    <span>Total Assessed Tax Due:</span>
-                    <span className="font-mono font-bold">{formatCurrency(grandCartTotal)}</span>
-                  </div>
-                  <div className="flex justify-between text-xs text-slate-600 dark:text-slate-300">
-                    <span>Convenience / Processing Fee:</span>
-                    <span className="font-mono font-bold text-emerald-700 dark:text-emerald-400">₱0.00 (Waived)</span>
-                  </div>
-                  <div className="flex justify-between text-sm font-black text-[#0B3B60] dark:text-blue-300 pt-2 border-t border-sky-200 dark:border-sky-800">
-                    <span>GRAND TOTAL PAYABLE:</span>
-                    <span className="font-mono">{formatCurrency(grandCartTotal)}</span>
-                  </div>
-                </div>
-
-                <div className="space-y-2 pt-2">
-                  <button
-                    onClick={() => handleExecuteGroupCheckout("PayMongo")}
-                    disabled={isCheckingOut}
-                    className="w-full bg-[#0284C7] hover:bg-sky-700 text-white font-extrabold py-3.5 px-4 rounded-2xl text-xs uppercase tracking-wider transition shadow-md cursor-pointer flex items-center justify-center gap-2"
-                  >
-                    <span>▣ Pay via PayMongo QR Ph</span>
-                  </button>
-                  <button
-                    onClick={() => handleExecuteGroupCheckout("DirectSimulated")}
-                    disabled={isCheckingOut}
-                    className="w-full bg-[#0B3B60] hover:bg-[#082944] text-white font-extrabold py-3.5 px-4 rounded-2xl text-xs uppercase tracking-wider transition cursor-pointer flex items-center justify-center gap-2"
-                  >
-                    <span>Instant Electronic LGU Settlement</span>
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
       {isQrPaymentOpen && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 overflow-y-auto">
           <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl w-full max-w-5xl max-h-[96vh] shadow-2xl border border-slate-200 dark:border-slate-800 overflow-y-auto my-auto">
@@ -3045,8 +2948,8 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
                 <p>Choose between Quarterly (Q1-Q4) or Full Annual payment. You can apply the option to all TDNs with one click!</p>
               </div>
               <div className="p-3 bg-sky-50 dark:bg-sky-950/40 rounded-xl border border-sky-100 dark:border-sky-800">
-                <h4 className="font-bold text-[#0B3B60] dark:text-sky-300 mb-1">Step 5: Checkout &amp; Electronic Official Receipt</h4>
-                <p>Add to Cart and complete payment with GCash, Maya, Cards, or QR Ph. Receive instant downloadable eOR.</p>
+                <h4 className="font-bold text-[#0B3B60] dark:text-sky-300 mb-1">Step 5: Instant PayMongo Payment &amp; Electronic Official Receipt</h4>
+                <p>Click "Pay via PayMongo" to pay instantly via QR Ph. Receive instant downloadable eOR.</p>
               </div>
             </div>
             <div className="rpt-history mt-6">
