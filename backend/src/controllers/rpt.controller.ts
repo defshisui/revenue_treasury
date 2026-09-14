@@ -93,6 +93,55 @@ async function verifyPaymongoSession(
   }
 }
 
+// The rpt_applications table (and the columns returned by `SELECT *`) is
+// snake_case, but the citizen portal (real-property-tax.tsx) reads camelCase
+// fields such as app.paymentStatus / app.officialReceiptNumber /
+// app.controlNumber. Without this mapping, a row that was correctly marked
+// "Paid" in the database would still render as "Pending" in the UI because
+// app.paymentStatus would simply be undefined. Every other module controller
+// (business, market, hawker) already formats its rows this way — this brings
+// RPT in line with that convention.
+function formatRptApplication(row: any): any {
+  if (!row) return row;
+
+  let documents = row.documents;
+  if (typeof documents === 'string') {
+    try {
+      documents = JSON.parse(documents);
+    } catch {
+      // leave as-is if it isn't valid JSON
+    }
+  }
+
+  return {
+    id: row.id,
+    controlNumber: row.control_number,
+    taxDeclarationNumber: row.tax_declaration_number,
+    ownerName: row.owner_name,
+    applicantName: row.applicant_name,
+    applicantType: row.applicant_type,
+    email: row.email,
+    mobileNumber: row.mobile_number,
+    service: row.service,
+    propertyLocation: row.property_location,
+    barangay: row.barangay,
+    propertyType: row.property_type,
+    status: row.status,
+    filedDate: row.filed_date,
+    notes: row.notes,
+    documents: documents || [],
+    assignedOfficer: row.assigned_officer,
+    paymentAmount: row.payment_amount !== null && row.payment_amount !== undefined ? Number(row.payment_amount) : 0,
+    paymentStatus: row.payment_status,
+    paymentDueDate: row.payment_due_date,
+    officialReceiptNumber: row.official_receipt_number,
+    paymentMethod: row.payment_method,
+    paymentReference: row.payment_reference,
+    paymentDate: row.payment_date,
+    createdAt: row.created_at,
+  };
+}
+
 export async function getRptApplications(req: Request, res: Response): Promise<void> {
   try {
     const authenticatedUser = (req as Request & {
@@ -127,7 +176,7 @@ export async function getRptApplications(req: Request, res: Response): Promise<v
          ORDER BY created_at DESC`
       );
 
-      res.json(result.rows);
+      res.json(result.rows.map(formatRptApplication));
       return;
     }
 
@@ -139,7 +188,7 @@ export async function getRptApplications(req: Request, res: Response): Promise<v
       [email]
     );
 
-    res.json(result.rows);
+    res.json(result.rows.map(formatRptApplication));
   } catch (err) {
     console.error('Error fetching RPT applications:', err);
     res.status(500).json({
@@ -369,7 +418,7 @@ export async function createRptApplication(
 
     res.status(201).json({
       message: 'RPT application saved successfully',
-      record: result.rows[0]
+      record: formatRptApplication(result.rows[0])
     });
   } catch (err) {
     console.error(
@@ -551,7 +600,7 @@ export async function updateRptApplicationStatus(
     res.json({
       success: true,
       message: 'Status updated successfully',
-      record: result.rows[0]
+      record: formatRptApplication(result.rows[0])
     });
   } catch (err) {
     console.error(
