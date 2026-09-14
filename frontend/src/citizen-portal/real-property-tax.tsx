@@ -287,13 +287,6 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
     }, []);
   };
 
-  const getAppForTdn = (tdn: string): RPTApplicationRecord | null => {
-    if (!tdn) return null;
-    const matches = applications.filter((app) => app.taxDeclarationNumber === tdn);
-    if (matches.length === 0) return null;
-    return matches.reduce((latest, app) => ((app.filedDate || "") > (latest.filedDate || "") ? app : latest), matches[0]);
-  };
-
   const getAppStatusBadgeClass = (status?: string): string => {
     if (status === "Approved" || status === "Ready for Release" || status === "Payment Completed" || status === "Completed") {
       return "bg-emerald-100 text-emerald-800";
