@@ -75,11 +75,22 @@ export default function ApplicationHistory() {
 
     // Load and aggregate applications across all modules
     const fetchAllApplications = async () => {
+        // Guard: never fetch/filter with an unresolved session. Without this,
+        // this function can run once with user === null (before the session
+        // is read from storage) and once after — and since both calls are
+        // async, the no-user call can resolve last and overwrite the correct,
+        // filtered result with an unfiltered one (see isMatch guards below).
+        if (!user || !user.email) {
+            setUnifiedList([]);
+            setLoading(false);
+            return;
+        }
+
         setLoading(true);
         const combined: UnifiedApplication[] = [];
 
-        const activeEmail = (user?.email || '').toLowerCase().trim();
-        const activeName = (user?.fullname || '').toLowerCase().trim();
+        const activeEmail = (user.email || '').toLowerCase().trim();
+        const activeName = (user.fullname || '').toLowerCase().trim();
 
         // 1. Business Tax Assessments
         try {
@@ -91,8 +102,9 @@ export default function ApplicationHistory() {
                     const itemEmail = (item.email || '').toLowerCase().trim();
                     const itemOwner = (item.businessOwner || item.business_owner || '').toLowerCase().trim();
 
-                    // Match user
-                    const isMatch = !activeEmail || itemEmail === activeEmail || itemOwner.includes(activeName);
+                    // Match user (never fall back to "match everything" — an
+                    // empty activeEmail must never be treated as a wildcard)
+                    const isMatch = itemEmail === activeEmail || (!!activeName && itemOwner.includes(activeName));
                     if (isMatch) {
                         combined.push({
                             id: `btax-${item.id || item.trackingNumber}`,
@@ -125,7 +137,7 @@ export default function ApplicationHistory() {
                 const itemEmail = (item.email || '').toLowerCase().trim();
                 const itemApplicant = (item.applicantName || item.ownerName || '').toLowerCase().trim();
 
-                const isMatch = !activeEmail || itemEmail === activeEmail || itemApplicant.includes(activeName);
+                const isMatch = itemEmail === activeEmail || (!!activeName && itemApplicant.includes(activeName));
                 if (isMatch) {
                     combined.push({
                         id: `rpt-${item.id}`,
@@ -156,7 +168,7 @@ export default function ApplicationHistory() {
             const marketLeases = await getLeases();
             marketLeases.forEach((item: LeaseRecord & { id?: string; createdAt?: string }) => {
                 const holder = `${item.firstName || ''} ${item.lastName || ''}`.toLowerCase().trim();
-                const isMatch = !activeName || holder.includes(activeName) || activeName.includes(holder);
+                const isMatch = !!activeName && (holder.includes(activeName) || activeName.includes(holder));
 
                 if (isMatch) {
                     combined.push({
@@ -190,7 +202,7 @@ export default function ApplicationHistory() {
                 const submitter = (item.submitterEmail || item.chairperson?.email || '').toLowerCase().trim();
                 const chairName = `${item.chairperson?.firstName || ''} ${item.chairperson?.lastName || ''}`.toLowerCase().trim();
 
-                const isMatch = !activeEmail || submitter === activeEmail || chairName.includes(activeName);
+                const isMatch = submitter === activeEmail || (!!activeName && chairName.includes(activeName));
                 if (isMatch) {
                     combined.push({
                         id: `hawker-${item.id || item.associationNumber}`,

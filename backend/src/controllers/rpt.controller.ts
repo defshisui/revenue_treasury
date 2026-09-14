@@ -583,15 +583,21 @@ export async function searchRptByTdn(
     let rows: any[] = [];
     let matchedOwner = 'Property Owner';
 
+    // This is a public, unauthenticated lookup endpoint — it must always be
+    // scoped to a specific TDN/owner/PIN search term. An empty query or the
+    // literal value "ALL" must never fall through to returning every record
+    // in lgu_rpt_records; that would expose every citizen's property and
+    // assessment data to anyone who hits this endpoint.
     if (!rawQuery || rawQuery.toUpperCase() === 'ALL') {
-      const allResult = await pool.query(
-        `SELECT * FROM lgu_rpt_records ORDER BY id ASC`
-      );
-      rows = allResult.rows;
-      if (rows.length > 0) {
-        matchedOwner = rows[0].owner_name || rows[0].ownername || 'Property Owner';
-      }
-    } else {
+      res.status(400).json({
+        found: false,
+        properties: [],
+        message: 'Please provide a specific Tax Declaration Number, PIN, or owner name to search.'
+      });
+      return;
+    }
+
+    {
       const searchPattern = `%${rawQuery}%`;
       const searchResult = await pool.query(
         `SELECT *

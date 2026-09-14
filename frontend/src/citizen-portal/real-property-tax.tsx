@@ -386,10 +386,11 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
 
   const loadCitizenProperties = async (ownerName?: string) => {
     try {
-      let result = ownerName ? await searchRPTByTDN(ownerName) : { found: false, properties: [] };
-      if (!result.found || !result.properties || result.properties.length === 0) {
-        result = await searchRPTByTDN("ALL");
-      }
+      // Never fall back to a wildcard/"ALL" lookup: if this citizen's name
+      // doesn't match a property record, the correct outcome is "no
+      // properties found for this account", not "show every property in
+      // the city".
+      const result = ownerName ? await searchRPTByTDN(ownerName) : { found: false, properties: [] };
 
       if (result.found && result.properties && result.properties.length > 0) {
         const mappedProps: PropertyItem[] = result.properties.map((p: any) => ({
@@ -465,7 +466,11 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
     setIsSearchingTdn(true);
 
     try {
-      const query = searchTdnInput.trim() || (currentUser?.fullname || "ALL");
+      const query = searchTdnInput.trim();
+      if (!query) {
+        setSearchError("Please enter a Tax Declaration Number to search.");
+        return;
+      }
       const result = await searchRPTByTDN(query);
 
       if (result.found && result.properties && result.properties.length > 0) {
@@ -1435,8 +1440,8 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
                             {searchType === "Property Owner"
                               ? "Owner Name:"
                               : searchType === "Property Identification No. (PIN)"
-                              ? "PIN / PSPIN:"
-                              : "TDN:"}
+                                ? "PIN / PSPIN:"
+                                : "TDN:"}
                           </label>
                           <input
                             type="text"
@@ -1446,8 +1451,8 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
                               searchType === "Property Owner"
                                 ? "Search owner name..."
                                 : searchType === "Property Identification No. (PIN)"
-                                ? "Enter PIN..."
-                                : "Enter TDN or leave empty for all..."
+                                  ? "Enter PIN..."
+                                  : "Enter TDN or leave empty for all..."
                             }
                             className="rpt-field w-full px-3"
                           />
