@@ -95,25 +95,25 @@ export default function ApplicationList() {
     const filteredLeases = useMemo(() => {
         let result = [...leases];
 
-        // Filter by user if known (or show all citizen's matched by name / all if demo)
+        // Filter by logged-in user only — require BOTH first AND last name to
+        // match exactly so that users never see another account's applications.
         if (user && user.fullname && user.fullname !== 'Citizen User') {
-            const userFull = user.fullname.toLowerCase();
-            const userFirst = user.firstName.toLowerCase();
-            const userLast = user.lastName.toLowerCase();
+            const userFirst = user.firstName.toLowerCase().trim();
+            const userLast = user.lastName.toLowerCase().trim();
 
-            const userMatches = result.filter(r => {
-                const holderName = `${r.firstName || ''} ${r.lastName || ''}`.toLowerCase();
-                return (
-                    holderName.includes(userFull) ||
-                    (userFirst && holderName.includes(userFirst)) ||
-                    (userLast && holderName.includes(userLast))
-                );
+            result = result.filter(r => {
+                const recordFirst = (r.firstName || '').toLowerCase().trim();
+                const recordLast = (r.lastName || '').toLowerCase().trim();
+
+                // Exact first+last match (most secure, preferred)
+                if (userFirst && userLast) {
+                    return recordFirst === userFirst && recordLast === userLast;
+                }
+                // Fallback: full-name exact match when last name is absent
+                const userFull = user.fullname.toLowerCase().trim();
+                const holderFull = `${recordFirst} ${recordLast}`.trim();
+                return holderFull === userFull;
             });
-
-            // If user has specific matching records, prioritize them
-            if (userMatches.length > 0) {
-                result = userMatches;
-            }
         }
 
         // Filter by Status

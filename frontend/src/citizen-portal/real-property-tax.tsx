@@ -211,7 +211,7 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
   const [rptPaymentSuccessCountdown, setRptPaymentSuccessCountdown] = useState<number>(5);
   const [rptQrError, setRptQrError] = useState<string>("");
 
-  const [, setApplications] = useState<RPTApplicationRecord[]>([]);
+  const [applications, setApplications] = useState<RPTApplicationRecord[]>([]);
   const [appForm, setAppForm] = useState({
     service: services[0],
     applicantType: "Property Owner" as ApplicantType,
@@ -1547,29 +1547,69 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
                       </table>
                     </div>
 
-                    <div className="hidden">
-                      <span>Page 1 of 1</span>
-                      <div className="flex gap-2">
-                        <button type="button" disabled className="px-3 py-1.5 rounded-md border border-slate-200 text-slate-300">
-                          Previous
-                        </button>
-                        <button type="button" disabled className="px-3 py-1.5 rounded-md border border-slate-200 text-slate-300">
-                          Next
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="hidden">
-                      <p className="font-bold text-[#0B3B60] dark:text-blue-300 mb-2 flex items-center gap-2">
-                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300">i</span>
-                        How to search:
-                      </p>
-                      <ol className="list-decimal ml-5 space-y-1">
-                        <li>Select a search type and enter the Tax Declaration Number (TDN) of your property.</li>
-                        <li>Choose the assessment year or leave it as All Years to filter results.</li>
-                        <li>Click the Search button to query the real property tax records.</li>
-                        <li>Click View to continue to the property assessment, payment options, and official receipt records.</li>
-                      </ol>
+                    {/* My Service Applications Section */}
+                    <div className="mt-8 border-t border-slate-200 dark:border-slate-700 pt-6">
+                      <p className="rpt-title uppercase mb-4">MY SERVICE APPLICATIONS</p>
+                      {applications.length === 0 ? (
+                        <div className="px-4 py-8 text-center rpt-empty italic">
+                          No service applications found for your account.
+                        </div>
+                      ) : (
+                        <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-xl">
+                          <table className="w-full min-w-[700px] text-left border-collapse text-xs">
+                            <thead className="bg-[#0B3B60] text-white font-black uppercase">
+                              <tr>
+                                <th className="px-4 py-3">Control No.</th>
+                                <th className="px-4 py-3">Service</th>
+                                <th className="px-4 py-3">TDN / PIN</th>
+                                <th className="px-4 py-3">Date Filed</th>
+                                <th className="px-4 py-3">Status</th>
+                                <th className="px-4 py-3">Payment</th>
+                                <th className="px-4 py-3">View</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900">
+                              {applications.map((app) => (
+                                <tr key={app.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition">
+                                  <td className="px-4 py-3 font-mono font-bold text-[#0B3B60] dark:text-blue-400">
+                                    {app.controlNumber || app.referenceNumber || '—'}
+                                  </td>
+                                  <td className="px-4 py-3 font-semibold">{app.service || '—'}</td>
+                                  <td className="px-4 py-3 font-mono">
+                                    {app.taxDeclarationNumber || app.pin || '—'}
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    {app.filedDate ? new Date(app.filedDate).toLocaleDateString() : '—'}
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                                      app.status === 'Approved' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300' :
+                                      app.status === 'Rejected' ? 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300' :
+                                      'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
+                                    }`}>
+                                      {app.status || 'Pending'}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${getPaymentStatusBadgeClass(app.paymentStatus)}`}>
+                                      {app.paymentStatus || 'Pending'}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <button
+                                      type="button"
+                                      onClick={() => setSelectedAppDetail(app)}
+                                      className="rpt-link cursor-pointer text-[10px]"
+                                    >
+                                      View
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </>
