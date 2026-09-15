@@ -884,7 +884,9 @@ export default function TreasuryDashboardView({
                   {rptLedger.slice(0, 10).map((p: any, idx: number) => (
                     <tr key={p.id || idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
                       <td className="py-3 px-4 font-mono font-semibold text-blue-600 dark:text-blue-400">
-                        {p.official_receipt_number || p.officialreceiptnumber || p.officialReceiptNumber || '—'}
+                        {p.official_receipt_number || p.officialreceiptnumber || p.officialReceiptNumber
+                          || p.payment_reference || p.paymentreference || p.paymentReference
+                          || <span className="text-slate-400 text-[11px] font-normal italic">Pending eOR</span>}
                       </td>
                       <td className="py-3 px-4 font-semibold text-slate-900 dark:text-white">
                         {p.owner_name || p.ownername || p.ownerName || 'N/A'}
