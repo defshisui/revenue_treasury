@@ -462,7 +462,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                   ? 'MY APPOINTMENTS TRACKER'
                   : currentScreen === 'verification'
                     ? 'TAX BILL & O.R. NUMBER VERIFICATION'
-                    : '2026 BUSINESS TAX PAYMENT'}
+                    : 'BUSINESS TAX PAYMENT'}
               </h1>
 
               <p className="text-xs sm:text-sm text-slate-200 mt-1 max-w-xl mx-auto">
@@ -492,8 +492,8 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                     type="button"
                     onClick={() => { setVerificationType('tax-bill'); setVerificationResult(null); setVerificationError(null); }}
                     className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${verificationType === 'tax-bill'
-                        ? 'bg-white dark:bg-slate-900 text-blue-900 dark:text-blue-400 shadow-sm'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                      ? 'bg-white dark:bg-slate-900 text-blue-900 dark:text-blue-400 shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
                       }`}
                   >
                     Verify Tax Bill Number
@@ -502,8 +502,8 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                     type="button"
                     onClick={() => { setVerificationType('or-number'); setVerificationResult(null); setVerificationError(null); }}
                     className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${verificationType === 'or-number'
-                        ? 'bg-white dark:bg-slate-900 text-blue-900 dark:text-blue-400 shadow-sm'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                      ? 'bg-white dark:bg-slate-900 text-blue-900 dark:text-blue-400 shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
                       }`}
                   >
                     Verify Official Receipt (O.R.)

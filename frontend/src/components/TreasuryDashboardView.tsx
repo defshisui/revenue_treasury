@@ -94,6 +94,7 @@ export default function TreasuryDashboardView({
   const [bizAssessments, setBizAssessments] = useState<BusinessAssessmentRecord[]>([]);
   const [rptAssessments, setRptAssessments] = useState<RPTAssessmentRecord[]>([]);
   const [rptPayments, setRptPayments] = useState<any[]>([]);
+  const [rptLedger, setRptLedger] = useState<any[]>([]);
   const [marketPayments, setMarketPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [showAllModal, setShowAllModal] = useState(false);
@@ -159,15 +160,22 @@ export default function TreasuryDashboardView({
       setBizAssessments(Array.isArray(dbBizAssessments) ? dbBizAssessments : []);
       setRptAssessments(Array.isArray(dbRptAssessments) ? dbRptAssessments : []);
 
-      // Fetch RPT payments for revenue trend
+      // Fetch RPT lgu records (settled) for both ledger display and revenue trend
       try {
-        const resRptPay = await fetch(`${API_BASE_URL}/citizen-rpt-payments`);
-        if (resRptPay.ok) {
-          const data = await resRptPay.json();
-          setRptPayments(Array.isArray(data) ? data : []);
+        const resRptLgu = await fetch(`${API_BASE_URL}/lgu-rpt-records`);
+        if (resRptLgu.ok) {
+          const data = await resRptLgu.json();
+          const allLgu = Array.isArray(data) ? data : [];
+          // Settled records (have OR number or Paid/Settled status)
+          const settled = allLgu.filter((r: any) => {
+            const ps = String(r.paymentstatus || r.payment_status || r.paymentStatus || '').toLowerCase();
+            return ps === 'paid' || ps === 'settled' || ps === 'payment completed' || r.official_receipt_number || r.officialreceiptnumber;
+          });
+          setRptLedger(settled);
+          setRptPayments(allLgu);
         }
       } catch (e) {
-        console.error('Failed to fetch RPT payments:', e);
+        console.error('Failed to fetch LGU RPT records:', e);
       }
 
       // Fetch market lease payments for revenue trend
@@ -317,13 +325,15 @@ export default function TreasuryDashboardView({
         return (type.includes('REAL PROPERTY') || type === 'RPT') && matchesMonth;
       })
       .reduce((sum, t) => sum + Number(t?.amount || 0), 0);
-    // From RPT citizen payments
+    // From LGU RPT settled records
     const rptPayAmount = rptPayments
-      .filter(p => {
-        const dateStr = String(p?.payment_date || p?.created_at || p?.paymentDate || '');
-        return dateStr.startsWith(`${fiscalPeriod}-${monthNumStr}`);
+      .filter((p: any) => {
+        const dateStr = String(p?.paymentdate || p?.payment_date || p?.paymentDate || p?.created_at || '');
+        const ps = String(p?.paymentstatus || p?.payment_status || p?.paymentStatus || '').toLowerCase();
+        const isSettled = ps === 'paid' || ps === 'settled' || ps === 'payment completed' || p?.official_receipt_number || p?.officialreceiptnumber;
+        return isSettled && dateStr.startsWith(`${fiscalPeriod}-${monthNumStr}`);
       })
-      .reduce((sum, p) => sum + Number(p?.total_amount || p?.amount || p?.paid_amount || 0), 0);
+      .reduce((sum: number, p: any) => sum + Number(p?.amountpaid || p?.amount_paid || p?.amountPaid || 0), 0);
     return { month: m, amount: txAmount + rptPayAmount };
   });
 
@@ -368,7 +378,7 @@ export default function TreasuryDashboardView({
     const marketLeaseAmount = marketPayments
       .filter(l => {
         const dateStr = String(l?.payment_date || l?.created_at || l?.leaseStartDate || l?.startDate || '');
-        return dateStr.startsWith(`${fiscalPeriod}-${monthNumStr}`) && 
+        return dateStr.startsWith(`${fiscalPeriod}-${monthNumStr}`) &&
           (l?.paymentStatus === 'Paid' || l?.status === 'Active');
       })
       .reduce((sum, l) => sum + Number(l?.amount_due || l?.monthlyRent || l?.amount || 0), 0);
@@ -677,8 +687,7 @@ export default function TreasuryDashboardView({
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm mb-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
           <div className="flex justify-between items-center mb-4">
             <div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-white m-0">Live Postgres RPT Applications</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 m-0 mt-0.5">Showing raw property tax assessment records fetched from PostgreSQL</p>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white m-0">Live RPT Applications</h3>
             </div>
           </div>
 
@@ -733,7 +742,6 @@ export default function TreasuryDashboardView({
           <div className="flex justify-between items-center mb-4">
             <div>
               <h3 className="text-base font-bold text-slate-900 dark:text-white m-0">Market Stalls & Lease Overview</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 m-0 mt-0.5">Active market stall records fetched from PostgreSQL ({stalls.length} total entries)</p>
             </div>
           </div>
 
@@ -780,8 +788,7 @@ export default function TreasuryDashboardView({
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm mb-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
           <div className="flex justify-between items-center mb-4">
             <div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-white m-0">Live Postgres Business Assessments</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 m-0 mt-0.5">Showing raw assessment declarations fetched from PostgreSQL</p>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white m-0">Live Business Assessments</h3>
             </div>
           </div>
 
@@ -837,10 +844,10 @@ export default function TreasuryDashboardView({
               Live Transaction Ledger ({activeLocalTab === "ALL" ? "All Modules" : activeLocalTab})
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 m-0 mt-0.5">
-              {activeLocalTab === "RPT" && "Showing RPT citizen payment records fetched from PostgreSQL"}
-              {activeLocalTab === "BUSINESS" && "Showing business assessment declarations fetched from PostgreSQL"}
-              {activeLocalTab === "MARKET" && "Showing market lease records fetched from PostgreSQL"}
-              {activeLocalTab === "ALL" && "Showing all ePayment transaction records from PostgreSQL"}
+              {activeLocalTab === "RPT" && "Showing RPT citizen payment records"}
+              {activeLocalTab === "BUSINESS" && "Showing business assessment declarations"}
+              {activeLocalTab === "MARKET" && "Showing market lease records"}
+              {activeLocalTab === "ALL" && "Showing all ePayment transaction records"}
             </p>
           </div>
           {activeLocalTab === "ALL" && activeTxFeed.length > 0 && (
@@ -853,38 +860,52 @@ export default function TreasuryDashboardView({
           )}
         </div>
 
-        {/* RPT Tab — show RPT payments */}
+        {/* RPT Tab — show settled RPT payment ledger from lgu_rpt_records */}
         {activeLocalTab === "RPT" && (
-          rptPayments.length === 0 ? (
+          rptLedger.length === 0 ? (
             <p className="text-slate-400 dark:text-slate-500 text-[13px] italic text-center p-8 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl m-0">
-              No RPT payment records found in database.
+              No settled RPT payment records found in database.
             </p>
           ) : (
             <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
               <table className="w-full text-left text-[13px] border-collapse">
                 <thead className="bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-800">
                   <tr>
-                    <th className="py-3 px-4">Payment Ref</th>
-                    <th className="py-3 px-4">Taxpayer / Owner</th>
-                    <th className="py-3 px-4">Property PIN</th>
+                    <th className="py-3 px-4">Official Receipt (eOR)</th>
+                    <th className="py-3 px-4">Property Owner</th>
+                    <th className="py-3 px-4">TDN / Reference No.</th>
                     <th className="py-3 px-4 text-right">Amount Paid</th>
-                    <th className="py-3 px-4">Method</th>
+                    <th className="py-3 px-4">Payment Method</th>
+                    <th className="py-3 px-4">Payment Date</th>
                     <th className="py-3 px-4 text-center">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
-                  {rptPayments.slice(0, 10).map((p, idx) => (
+                  {rptLedger.slice(0, 10).map((p: any, idx: number) => (
                     <tr key={p.id || idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                      <td className="py-3 px-4 font-mono font-semibold text-blue-600 dark:text-blue-400">{p.reference_number || p.referenceNumber || p.id || `RPT-PAY-${idx + 1}`}</td>
-                      <td className="py-3 px-4 font-semibold text-slate-900 dark:text-white">{p.taxpayer_name || p.taxpayerName || p.owner_name || p.applicant_name || 'N/A'}</td>
-                      <td className="py-3 px-4 text-slate-600 dark:text-slate-300 font-mono">{p.pin || p.property_pin || 'N/A'}</td>
-                      <td className="py-3 px-4 text-right font-semibold text-slate-900 dark:text-white">
-                        ₱{Number(p.total_amount || p.amount || p.paid_amount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                      <td className="py-3 px-4 font-mono font-semibold text-blue-600 dark:text-blue-400">
+                        {p.official_receipt_number || p.officialreceiptnumber || p.officialReceiptNumber || '—'}
                       </td>
-                      <td className="py-3 px-4 text-slate-600 dark:text-slate-300">{p.payment_method || p.paymentMethod || 'Online Payment'}</td>
+                      <td className="py-3 px-4 font-semibold text-slate-900 dark:text-white">
+                        {p.owner_name || p.ownername || p.ownerName || 'N/A'}
+                      </td>
+                      <td className="py-3 px-4 text-slate-600 dark:text-slate-300 font-mono text-[11px]">
+                        {p.tax_declaration_number || p.taxdeclarationnumber || p.taxDeclarationNumber || p.tdn || '—'}
+                      </td>
+                      <td className="py-3 px-4 text-right font-semibold text-slate-900 dark:text-white">
+                        ₱{Number(p.amountpaid || p.amount_paid || p.amountPaid || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="py-3 px-4 text-slate-600 dark:text-slate-300">
+                        {p.paymentmethod || p.payment_method || p.paymentMethod || 'Treasury Cashier'}
+                      </td>
+                      <td className="py-3 px-4 text-slate-500 dark:text-slate-400">
+                        {p.paymentdate || p.payment_date || p.paymentDate
+                          ? new Date(p.paymentdate || p.payment_date || p.paymentDate).toLocaleDateString('en-PH')
+                          : '—'}
+                      </td>
                       <td className="py-3 px-4 text-center">
                         <span className="py-0.5 px-2.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                          {p.status || 'Paid'}
+                          Settled
                         </span>
                       </td>
                     </tr>
@@ -930,8 +951,8 @@ export default function TreasuryDashboardView({
                           <span className={`py-0.5 px-2.5 rounded-full text-[11px] font-semibold border ${(b.status || "").toUpperCase() === "APPROVED"
                             ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                             : (b.status || "").toUpperCase() === "REJECTED"
-                            ? "bg-rose-50 text-rose-700 border-rose-200"
-                            : "bg-amber-50 text-amber-700 border-amber-200"
+                              ? "bg-rose-50 text-rose-700 border-rose-200"
+                              : "bg-amber-50 text-amber-700 border-amber-200"
                             }`}>
                             {b.status || 'PENDING'}
                           </span>

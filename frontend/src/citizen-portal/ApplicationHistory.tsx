@@ -365,7 +365,7 @@ export default function ApplicationHistory() {
 
                         <div className="relative z-10 text-center px-4">
                             <h1 className="text-xl sm:text-3xl font-extrabold text-white tracking-wide uppercase">
-                                2026 Citizen Application &amp; Transaction History
+                                Citizen Application &amp; Transaction History
                             </h1>
                             <p className="text-xs sm:text-sm text-slate-200 mt-1 max-w-xl mx-auto">
                                 View and monitor all your filed applications, assessments, appointments, and payments across all municipal services.
@@ -447,7 +447,7 @@ export default function ApplicationHistory() {
                                 <table className="w-full text-left border-collapse text-xs">
                                     <thead>
                                         <tr className="bg-blue-900 dark:bg-blue-950 text-white font-bold uppercase tracking-wider text-[11px]">
-                                            <th className="py-3 px-4">Tracking/Reference No. ↕</th>
+                                            <th className="py-3 px-4">Tracking/Reference No.</th>
                                             <th className="py-3 px-4">Service Category</th>
                                             <th className="py-3 px-4">Details &amp; Particulars</th>
                                             <th className="py-3 px-4">Applicant</th>

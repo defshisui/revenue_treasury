@@ -301,7 +301,7 @@ export default function ApplicationList() {
 
                         <div className="relative z-10 text-center px-4">
                             <h1 className="text-xl sm:text-3xl font-extrabold text-white tracking-wide uppercase">
-                                2026 City-Owned Market Stall Portal
+                                City-Owned Market Stall Portal
                             </h1>
                             <p className="text-xs sm:text-sm text-slate-200 mt-1 max-w-xl mx-auto">
                                 Manage your stall applications, view market assignments, and monitor lease payment status.

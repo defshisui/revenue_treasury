@@ -439,7 +439,7 @@ export default function MarketStallApplication() {
 
                         <div className="relative z-10 text-center px-4">
                             <h1 className="text-xl sm:text-3xl font-extrabold text-white tracking-wide uppercase">
-                                2026 City-Owned Market Stall Portal
+                                City-Owned Market Stall Portal
                             </h1>
                             <p className="text-xs sm:text-sm text-slate-200 mt-1 max-w-xl mx-auto">
                                 Apply for new municipal market stalls and select preferred locations and sections.
@@ -454,485 +454,485 @@ export default function MarketStallApplication() {
                                 <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">NEW MARKET STALL APPLICATION</h2>
                             </div>
 
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-slate-50 dark:bg-slate-800/60 p-5 rounded-2xl border border-slate-200 dark:border-slate-700">
-                        <label htmlFor="palengke-select" className="font-bold text-sm text-slate-700 dark:text-slate-300 w-44">City Markets:</label>
-                        <div className="flex-1 w-full max-w-md">
-                            <select
-                                id="palengke-select"
-                                value={selectedMarket}
-                                onChange={(e) => setSelectedMarket(e.target.value)}
-                                className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-sm font-semibold text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-900 shadow-sm"
-                            >
-                                <option value="">Select a City Market</option>
-                                <option value="Galas">Galas City-Owned Market</option>
-                                <option value="Kamuning">Kamuning City-Owned Market</option>
-                                <option value="Murphy">Murphy City-Owned Market</option>
-                                <option value="Project 2">Project 2 City-Owned Market</option>
-                                <option value="Project 4">Project 4 City-Owned Market (New)</option>
-                                <option value="RA Calalay">R.A. Calalay City-Owned Market - Temporary</option>
-                                <option value="Roxas">Roxas City-Owned Market</option>
-                                <option value="San Jose">San Jose City-Owned Market</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    {marketData && (
-                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 pt-2">
-
-                            <div className="lg:col-span-5 space-y-6">
-                                <div className="space-y-1.5 bg-white dark:bg-slate-800/80 p-5 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
-                                    <h4 className="text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Address:</h4>
-                                    <p className="text-sm font-bold text-slate-800 dark:text-slate-200 leading-relaxed">{marketData.address}</p>
-                                </div>
-
-                                <div className="space-y-2 bg-white dark:bg-slate-800/80 p-5 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
-                                    <h4 className="text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Contact Person:</h4>
-                                    <div className="space-y-1 text-sm">
-                                        <p className="font-bold text-slate-900 dark:text-white">{marketData.name}</p>
-                                        <p className="font-medium text-slate-600 dark:text-slate-300">{marketData.title}</p>
-                                        <p className="font-semibold text-slate-700 dark:text-slate-300">{marketData.phone}</p>
-                                        <a href={`mailto:${marketData.email}`} className="font-semibold text-blue-900 dark:text-blue-400 hover:underline block">{marketData.email}</a>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-2 bg-white dark:bg-slate-800/80 p-5 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
-                                    <h4 className="text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">City Market Information</h4>
-                                    <div className="space-y-1 text-xs font-semibold text-slate-700 dark:text-slate-300">
-                                        <p>Total Number of Stalls: <span className="font-bold text-slate-900 dark:text-white">{marketData.total}</span></p>
-                                        <p>Total Number of Vacant Stalls: <span className="font-bold text-emerald-600 dark:text-emerald-400">{marketData.vacant}</span></p>
-                                        <p>Total Number of Occupied Stalls: <span className="font-bold text-rose-600 dark:text-rose-400">{marketData.occupied}</span></p>
-                                    </div>
-                                </div>
-
-                                <div className="pt-2">
-                                    <button onClick={() => setIsFloorPlanOpen(true)} className="w-full bg-blue-900 hover:bg-blue-800 text-white font-bold px-5 py-3.5 rounded-xl text-xs shadow-md transition-all text-center cursor-pointer">
-                                        View List of Available Stalls
-                                    </button>
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-slate-50 dark:bg-slate-800/60 p-5 rounded-2xl border border-slate-200 dark:border-slate-700">
+                                <label htmlFor="palengke-select" className="font-bold text-sm text-slate-700 dark:text-slate-300 w-44">City Markets:</label>
+                                <div className="flex-1 w-full max-w-md">
+                                    <select
+                                        id="palengke-select"
+                                        value={selectedMarket}
+                                        onChange={(e) => setSelectedMarket(e.target.value)}
+                                        className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-sm font-semibold text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-900 shadow-sm"
+                                    >
+                                        <option value="">Select a City Market</option>
+                                        <option value="Galas">Galas City-Owned Market</option>
+                                        <option value="Kamuning">Kamuning City-Owned Market</option>
+                                        <option value="Murphy">Murphy City-Owned Market</option>
+                                        <option value="Project 2">Project 2 City-Owned Market</option>
+                                        <option value="Project 4">Project 4 City-Owned Market (New)</option>
+                                        <option value="RA Calalay">R.A. Calalay City-Owned Market - Temporary</option>
+                                        <option value="Roxas">Roxas City-Owned Market</option>
+                                        <option value="San Jose">San Jose City-Owned Market</option>
+                                    </select>
                                 </div>
                             </div>
 
-                            <div className="lg:col-span-7 bg-slate-50 dark:bg-slate-800/60 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-6 flex flex-col items-center justify-center min-h-[380px] text-center space-y-3 cursor-pointer hover:border-blue-500 transition-all" onClick={() => setIsFloorPlanOpen(true)}>
-                                <div className="w-16 h-16 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-900 dark:text-blue-400 flex items-center justify-center shadow-inner">
-                                    <svg className="w-8 h-8 text-blue-800 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                                    </svg>
+                            {marketData && (
+                                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 pt-2">
+
+                                    <div className="lg:col-span-5 space-y-6">
+                                        <div className="space-y-1.5 bg-white dark:bg-slate-800/80 p-5 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
+                                            <h4 className="text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Address:</h4>
+                                            <p className="text-sm font-bold text-slate-800 dark:text-slate-200 leading-relaxed">{marketData.address}</p>
+                                        </div>
+
+                                        <div className="space-y-2 bg-white dark:bg-slate-800/80 p-5 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
+                                            <h4 className="text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Contact Person:</h4>
+                                            <div className="space-y-1 text-sm">
+                                                <p className="font-bold text-slate-900 dark:text-white">{marketData.name}</p>
+                                                <p className="font-medium text-slate-600 dark:text-slate-300">{marketData.title}</p>
+                                                <p className="font-semibold text-slate-700 dark:text-slate-300">{marketData.phone}</p>
+                                                <a href={`mailto:${marketData.email}`} className="font-semibold text-blue-900 dark:text-blue-400 hover:underline block">{marketData.email}</a>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2 bg-white dark:bg-slate-800/80 p-5 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
+                                            <h4 className="text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">City Market Information</h4>
+                                            <div className="space-y-1 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                                <p>Total Number of Stalls: <span className="font-bold text-slate-900 dark:text-white">{marketData.total}</span></p>
+                                                <p>Total Number of Vacant Stalls: <span className="font-bold text-emerald-600 dark:text-emerald-400">{marketData.vacant}</span></p>
+                                                <p>Total Number of Occupied Stalls: <span className="font-bold text-rose-600 dark:text-rose-400">{marketData.occupied}</span></p>
+                                            </div>
+                                        </div>
+
+                                        <div className="pt-2">
+                                            <button onClick={() => setIsFloorPlanOpen(true)} className="w-full bg-blue-900 hover:bg-blue-800 text-white font-bold px-5 py-3.5 rounded-xl text-xs shadow-md transition-all text-center cursor-pointer">
+                                                View List of Available Stalls
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="lg:col-span-7 bg-slate-50 dark:bg-slate-800/60 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-6 flex flex-col items-center justify-center min-h-[380px] text-center space-y-3 cursor-pointer hover:border-blue-500 transition-all" onClick={() => setIsFloorPlanOpen(true)}>
+                                        <div className="w-16 h-16 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-900 dark:text-blue-400 flex items-center justify-center shadow-inner">
+                                            <svg className="w-8 h-8 text-blue-800 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <h3 className="font-bold text-slate-800 dark:text-white text-base">Market Floor Plan Preview</h3>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xs">Click here or on the button to open the interactive floor plan layout and check available stalls by floor.</p>
+                                        </div>
+                                        <span className="inline-block bg-white dark:bg-slate-800 text-blue-900 dark:text-blue-400 border border-blue-200 dark:border-blue-800 text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm">Open Floor Plan &rarr;</span>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h3 className="font-bold text-slate-800 dark:text-white text-base">Market Floor Plan Preview</h3>
-                                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xs">Click here or on the button to open the interactive floor plan layout and check available stalls by floor.</p>
+                            )}
+                        </div>
+                    </div>
+
+                    {isFloorPlanOpen && (
+                        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-40 flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+                            <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl max-w-6xl w-full max-h-[94vh] flex flex-col shadow-2xl relative border border-slate-200 dark:border-slate-800 overflow-hidden">
+
+                                <div className="px-4 sm:px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/80">
+                                    <div>
+                                        <span className="text-[10px] font-bold uppercase tracking-wider text-blue-900 dark:text-blue-400">Interactive Layout</span>
+                                        <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">Market Floor Plan - {selectedMarket || "Galas"} City-Owned Market</h3>
+                                    </div>
+                                    <button onClick={() => setIsFloorPlanOpen(false)} className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold flex items-center justify-center transition-colors">✕</button>
                                 </div>
-                                <span className="inline-block bg-white dark:bg-slate-800 text-blue-900 dark:text-blue-400 border border-blue-200 dark:border-blue-800 text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm">Open Floor Plan &rarr;</span>
+
+                                <div className="p-4 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-4">
+                                    <div className="flex items-center space-x-3">
+                                        <label htmlFor="floor-select" className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase">Select a Floor:</label>
+                                        <select
+                                            id="floor-select"
+                                            value={selectedFloor}
+                                            onChange={(e) => setSelectedFloor(e.target.value)}
+                                            className="bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-900 shadow-sm"
+                                        >
+                                            {Array.from({ length: marketData?.floors || 3 }, (_, i) => i + 1).map((f) => (
+                                                <option key={f} value={f}>
+                                                    Floor {f} ({f === 1 ? 'Ground Floor - Wet & Dry / Main' : f === 2 ? 'Dry Goods & Food Stalls' : 'Admin & Storage'})
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-100 dark:bg-slate-950">
+                                    <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-x-auto flex flex-col items-center">
+                                        <div className="relative w-full max-w-4xl bg-white dark:bg-slate-900 border-4 border-slate-800 dark:border-slate-700 rounded-xl p-4 shadow-inner min-h-[500px]">
+
+                                            {selectedFloor === "1" && (
+                                                <div>
+                                                    <div className="text-center font-bold text-xs bg-slate-200 dark:bg-slate-800 py-1 border border-slate-400 dark:border-slate-700 mb-4 tracking-widest text-slate-700 dark:text-slate-300">
+                                                        {(selectedMarket || "GALAS").toUpperCase()} MARKET - GROUND FLOOR (WET & DRY SECTION)
+                                                    </div>
+                                                    <div className="grid grid-cols-12 gap-4 relative py-2">
+                                                        <div className="col-span-6 bg-slate-100 dark:bg-slate-800/80 border-2 border-slate-700 dark:border-slate-600 rounded-lg p-3 relative space-y-4">
+                                                            <div>
+                                                                <div className="text-[10px] font-bold text-center text-blue-900 dark:text-blue-300 bg-blue-100 dark:bg-blue-950/80 py-0.5 border border-blue-300 dark:border-blue-800 mb-2 uppercase">FISH SECTION</div>
+                                                                <div className="grid grid-cols-6 gap-1">
+                                                                    {(() => {
+                                                                        const st1 = getStallRealtimeStatus(1, "Fish");
+                                                                        return (
+                                                                            <button onClick={() => handleStallClick({ stallNum: 1, holder: st1.holder, availability: st1.availability, section: "Fish", type: "Permanent", size: "3 sqm", classification: "Regular", fee: "₱1.00" })} className={`${st1.availability === 'Occupied' ? 'bg-blue-700' : 'bg-blue-500'} hover:opacity-90 text-white text-[10px] font-bold h-10 rounded flex items-center justify-center relative shadow-sm cursor-pointer`}>
+                                                                                1
+                                                                                <span className={`absolute top-1 right-1 w-1.5 h-1.5 ${st1.availability === 'Occupied' ? 'bg-red-500' : 'bg-emerald-300'} rounded-full`}></span>
+                                                                            </button>
+                                                                        );
+                                                                    })()}
+                                                                    {(() => {
+                                                                        const st5 = getStallRealtimeStatus(5, "Fish");
+                                                                        return (
+                                                                            <button onClick={() => handleStallClick({ stallNum: 5, holder: st5.holder, availability: st5.availability, section: "Fish", type: "Permanent", size: "3 sqm", classification: "Regular", fee: "₱1.10" })} className={`${st5.availability === 'Occupied' ? 'bg-blue-700' : 'bg-blue-500'} hover:opacity-90 text-white text-[10px] font-bold h-10 rounded flex items-center justify-center relative shadow-sm cursor-pointer`}>
+                                                                                5
+                                                                                <span className={`absolute top-1 right-1 w-1.5 h-1.5 ${st5.availability === 'Occupied' ? 'bg-red-500' : 'bg-emerald-300'} rounded-full`}></span>
+                                                                            </button>
+                                                                        );
+                                                                    })()}
+                                                                </div>
+                                                            </div>
+                                                            <div className="bg-slate-300 dark:bg-slate-700 text-slate-800 dark:text-slate-200 font-extrabold text-xs text-center py-2 tracking-widest border border-slate-400 dark:border-slate-600">M A I N &nbsp; H A L L W A Y</div>
+                                                            <div>
+                                                                <div className="text-[10px] font-bold text-center text-emerald-900 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/80 py-0.5 border border-emerald-300 dark:border-emerald-800 mb-2 uppercase">VEGETABLE SECTION</div>
+                                                                <div className="grid grid-cols-6 gap-1">
+                                                                    {(() => {
+                                                                        const st12 = getStallRealtimeStatus(12, "Vegetables");
+                                                                        return (
+                                                                            <button onClick={() => handleStallClick({ stallNum: 12, holder: st12.holder, availability: st12.availability, section: "Vegetables", type: "Permanent", size: "3 sqm", classification: "Regular", fee: "₱1.20" })} className={`${st12.availability === 'Occupied' ? 'bg-emerald-700' : 'bg-emerald-400'} hover:opacity-90 text-white text-[10px] font-bold h-10 rounded flex items-center justify-center relative shadow-sm cursor-pointer`}>
+                                                                                12
+                                                                                <span className={`absolute top-1 right-1 w-1.5 h-1.5 ${st12.availability === 'Occupied' ? 'bg-red-500' : 'bg-emerald-200'} rounded-full`}></span>
+                                                                            </button>
+                                                                        );
+                                                                    })()}
+                                                                    {(() => {
+                                                                        const st14 = getStallRealtimeStatus(14, "Vegetables");
+                                                                        return (
+                                                                            <button onClick={() => handleStallClick({ stallNum: 14, holder: st14.holder, availability: st14.availability, section: "Vegetables", type: "Permanent", size: "3 sqm", classification: "Regular", fee: "₱1.30" })} className={`${st14.availability === 'Occupied' ? 'bg-emerald-700' : 'bg-emerald-400'} hover:opacity-90 text-white text-[10px] font-bold h-10 rounded flex items-center justify-center relative shadow-sm cursor-pointer`}>
+                                                                                14
+                                                                                <span className={`absolute top-1 right-1 w-1.5 h-1.5 ${st14.availability === 'Occupied' ? 'bg-red-500' : 'bg-emerald-200'} rounded-full`}></span>
+                                                                            </button>
+                                                                        );
+                                                                    })()}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div className="col-span-6 bg-slate-100 dark:bg-slate-800/80 border-2 border-slate-700 dark:border-slate-600 rounded-lg p-3 relative flex flex-col justify-between space-y-4">
+                                                            <div>
+                                                                <div className="text-[10px] font-bold text-center text-slate-800 dark:text-slate-300 bg-slate-200 dark:bg-slate-700 py-0.5 border border-slate-400 dark:border-slate-600 mb-2 uppercase">DRY GOODS SECTION</div>
+                                                                <div className="grid grid-cols-4 gap-1">
+                                                                    {(() => {
+                                                                        const st102 = getStallRealtimeStatus(102, "Dry Goods");
+                                                                        return (
+                                                                            <button onClick={() => handleStallClick({ stallNum: 102, holder: st102.holder, availability: st102.availability, section: "Dry Goods", type: "Permanent", size: "2.5 sqm", classification: "Regular", fee: "₱1.40" })} className={`${st102.availability === 'Occupied' ? 'bg-slate-700' : 'bg-slate-400'} hover:opacity-90 text-white text-[10px] font-bold h-10 rounded flex items-center justify-center relative shadow-sm cursor-pointer`}>
+                                                                                102
+                                                                                <span className={`absolute top-1 right-1 w-1.5 h-1.5 ${st102.availability === 'Occupied' ? 'bg-red-500' : 'bg-emerald-200'} rounded-full`}></span>
+                                                                            </button>
+                                                                        );
+                                                                    })()}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {selectedFloor === "2" && (
+                                                <div>
+                                                    <div className="text-center font-bold text-xs bg-purple-200 py-1 border border-purple-400 mb-4 tracking-widest text-purple-900">
+                                                        {(selectedMarket || "GALAS").toUpperCase()} MARKET - SECOND FLOOR (APPAREL &amp; FOOD STALLS)
+                                                    </div>
+                                                    <div className="grid grid-cols-4 gap-2">
+                                                        {(() => {
+                                                            const st202 = getStallRealtimeStatus(202, "Apparel");
+                                                            return (
+                                                                <button onClick={() => handleStallClick({ stallNum: 202, holder: st202.holder, availability: st202.availability, section: "Apparel", type: "Permanent", size: "4 sqm", classification: "Commercial", fee: "₱1.50" })} className={`${st202.availability === 'Occupied' ? 'bg-purple-700' : 'bg-purple-400'} hover:opacity-90 text-white text-xs font-bold h-12 rounded flex items-center justify-center relative shadow-sm cursor-pointer`}>
+                                                                    202
+                                                                    <span className={`absolute top-1 right-1 w-2 h-2 ${st202.availability === 'Occupied' ? 'bg-red-500' : 'bg-emerald-300'} rounded-full`}></span>
+                                                                </button>
+                                                            );
+                                                        })()}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {selectedFloor === "3" && (
+                                                <div className="grid grid-cols-12 gap-4 relative py-6 text-center">
+                                                    <div className="col-span-6 bg-slate-200 border-2 border-slate-400 rounded-xl p-6 flex flex-col justify-center items-center">
+                                                        <div className="w-10 h-10 rounded-full bg-slate-300 flex items-center justify-center mb-2">
+                                                            <svg className="w-6 h-6 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                                            </svg>
+                                                        </div>
+                                                        <h4 className="font-bold text-slate-800 text-sm">Market Admin Office</h4>
+                                                        <p className="text-xs text-slate-500 mt-1">Open Monday to Friday, 8AM - 5PM</p>
+                                                    </div>
+                                                    <div className="col-span-6 bg-slate-200 border-2 border-slate-400 rounded-xl p-6 flex flex-col justify-center items-center">
+                                                        <div className="w-10 h-10 rounded-full bg-slate-300 flex items-center justify-center mb-2">
+                                                            <svg className="w-6 h-6 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                                                            </svg>
+                                                        </div>
+                                                        <h4 className="font-bold text-slate-800 text-sm">Cold Storage &amp; Warehouse</h4>
+                                                        <p className="text-xs text-slate-500 mt-1">For vendor cargo and surplus goods</p>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="px-6 py-3 border-t border-slate-200 bg-slate-50 flex justify-end">
+                                    <button onClick={() => setIsFloorPlanOpen(false)} className="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-5 py-2 rounded-xl text-xs transition-colors cursor-pointer">
+                                        Close Floor Plan
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     )}
-                </div>
-            </div>
 
-            {isFloorPlanOpen && (
-                <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-40 flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
-                    <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl max-w-6xl w-full max-h-[94vh] flex flex-col shadow-2xl relative border border-slate-200 dark:border-slate-800 overflow-hidden">
-
-                        <div className="px-4 sm:px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/80">
-                            <div>
-                                <span className="text-[10px] font-bold uppercase tracking-wider text-blue-900 dark:text-blue-400">Interactive Layout</span>
-                                <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">Market Floor Plan - {selectedMarket || "Galas"} City-Owned Market</h3>
-                            </div>
-                            <button onClick={() => setIsFloorPlanOpen(false)} className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold flex items-center justify-center transition-colors">✕</button>
-                        </div>
-
-                        <div className="p-4 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-4">
-                            <div className="flex items-center space-x-3">
-                                <label htmlFor="floor-select" className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase">Select a Floor:</label>
-                                <select
-                                    id="floor-select"
-                                    value={selectedFloor}
-                                    onChange={(e) => setSelectedFloor(e.target.value)}
-                                    className="bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-900 shadow-sm"
-                                >
-                                    {Array.from({ length: marketData?.floors || 3 }, (_, i) => i + 1).map((f) => (
-                                        <option key={f} value={f}>
-                                            Floor {f} ({f === 1 ? 'Ground Floor - Wet & Dry / Main' : f === 2 ? 'Dry Goods & Food Stalls' : 'Admin & Storage'})
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-                        </div>
-
-                        <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-100 dark:bg-slate-950">
-                            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-x-auto flex flex-col items-center">
-                                <div className="relative w-full max-w-4xl bg-white dark:bg-slate-900 border-4 border-slate-800 dark:border-slate-700 rounded-xl p-4 shadow-inner min-h-[500px]">
-
-                                    {selectedFloor === "1" && (
-                                        <div>
-                                            <div className="text-center font-bold text-xs bg-slate-200 dark:bg-slate-800 py-1 border border-slate-400 dark:border-slate-700 mb-4 tracking-widest text-slate-700 dark:text-slate-300">
-                                                {(selectedMarket || "GALAS").toUpperCase()} MARKET - GROUND FLOOR (WET & DRY SECTION)
-                                            </div>
-                                            <div className="grid grid-cols-12 gap-4 relative py-2">
-                                                <div className="col-span-6 bg-slate-100 dark:bg-slate-800/80 border-2 border-slate-700 dark:border-slate-600 rounded-lg p-3 relative space-y-4">
-                                                    <div>
-                                                        <div className="text-[10px] font-bold text-center text-blue-900 dark:text-blue-300 bg-blue-100 dark:bg-blue-950/80 py-0.5 border border-blue-300 dark:border-blue-800 mb-2 uppercase">FISH SECTION</div>
-                                                        <div className="grid grid-cols-6 gap-1">
-                                                            {(() => {
-                                                                const st1 = getStallRealtimeStatus(1, "Fish");
-                                                                return (
-                                                                    <button onClick={() => handleStallClick({ stallNum: 1, holder: st1.holder, availability: st1.availability, section: "Fish", type: "Permanent", size: "3 sqm", classification: "Regular", fee: "₱1.00" })} className={`${st1.availability === 'Occupied' ? 'bg-blue-700' : 'bg-blue-500'} hover:opacity-90 text-white text-[10px] font-bold h-10 rounded flex items-center justify-center relative shadow-sm cursor-pointer`}>
-                                                                        1
-                                                                        <span className={`absolute top-1 right-1 w-1.5 h-1.5 ${st1.availability === 'Occupied' ? 'bg-red-500' : 'bg-emerald-300'} rounded-full`}></span>
-                                                                    </button>
-                                                                );
-                                                            })()}
-                                                            {(() => {
-                                                                const st5 = getStallRealtimeStatus(5, "Fish");
-                                                                return (
-                                                                    <button onClick={() => handleStallClick({ stallNum: 5, holder: st5.holder, availability: st5.availability, section: "Fish", type: "Permanent", size: "3 sqm", classification: "Regular", fee: "₱1.10" })} className={`${st5.availability === 'Occupied' ? 'bg-blue-700' : 'bg-blue-500'} hover:opacity-90 text-white text-[10px] font-bold h-10 rounded flex items-center justify-center relative shadow-sm cursor-pointer`}>
-                                                                        5
-                                                                        <span className={`absolute top-1 right-1 w-1.5 h-1.5 ${st5.availability === 'Occupied' ? 'bg-red-500' : 'bg-emerald-300'} rounded-full`}></span>
-                                                                    </button>
-                                                                );
-                                                            })()}
-                                                        </div>
-                                                    </div>
-                                                    <div className="bg-slate-300 dark:bg-slate-700 text-slate-800 dark:text-slate-200 font-extrabold text-xs text-center py-2 tracking-widest border border-slate-400 dark:border-slate-600">M A I N &nbsp; H A L L W A Y</div>
-                                                    <div>
-                                                        <div className="text-[10px] font-bold text-center text-emerald-900 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/80 py-0.5 border border-emerald-300 dark:border-emerald-800 mb-2 uppercase">VEGETABLE SECTION</div>
-                                                        <div className="grid grid-cols-6 gap-1">
-                                                            {(() => {
-                                                                const st12 = getStallRealtimeStatus(12, "Vegetables");
-                                                                return (
-                                                                    <button onClick={() => handleStallClick({ stallNum: 12, holder: st12.holder, availability: st12.availability, section: "Vegetables", type: "Permanent", size: "3 sqm", classification: "Regular", fee: "₱1.20" })} className={`${st12.availability === 'Occupied' ? 'bg-emerald-700' : 'bg-emerald-400'} hover:opacity-90 text-white text-[10px] font-bold h-10 rounded flex items-center justify-center relative shadow-sm cursor-pointer`}>
-                                                                        12
-                                                                        <span className={`absolute top-1 right-1 w-1.5 h-1.5 ${st12.availability === 'Occupied' ? 'bg-red-500' : 'bg-emerald-200'} rounded-full`}></span>
-                                                                    </button>
-                                                                );
-                                                            })()}
-                                                            {(() => {
-                                                                const st14 = getStallRealtimeStatus(14, "Vegetables");
-                                                                return (
-                                                                    <button onClick={() => handleStallClick({ stallNum: 14, holder: st14.holder, availability: st14.availability, section: "Vegetables", type: "Permanent", size: "3 sqm", classification: "Regular", fee: "₱1.30" })} className={`${st14.availability === 'Occupied' ? 'bg-emerald-700' : 'bg-emerald-400'} hover:opacity-90 text-white text-[10px] font-bold h-10 rounded flex items-center justify-center relative shadow-sm cursor-pointer`}>
-                                                                        14
-                                                                        <span className={`absolute top-1 right-1 w-1.5 h-1.5 ${st14.availability === 'Occupied' ? 'bg-red-500' : 'bg-emerald-200'} rounded-full`}></span>
-                                                                    </button>
-                                                                );
-                                                            })()}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div className="col-span-6 bg-slate-100 dark:bg-slate-800/80 border-2 border-slate-700 dark:border-slate-600 rounded-lg p-3 relative flex flex-col justify-between space-y-4">
-                                                    <div>
-                                                        <div className="text-[10px] font-bold text-center text-slate-800 dark:text-slate-300 bg-slate-200 dark:bg-slate-700 py-0.5 border border-slate-400 dark:border-slate-600 mb-2 uppercase">DRY GOODS SECTION</div>
-                                                        <div className="grid grid-cols-4 gap-1">
-                                                            {(() => {
-                                                                const st102 = getStallRealtimeStatus(102, "Dry Goods");
-                                                                return (
-                                                                    <button onClick={() => handleStallClick({ stallNum: 102, holder: st102.holder, availability: st102.availability, section: "Dry Goods", type: "Permanent", size: "2.5 sqm", classification: "Regular", fee: "₱1.40" })} className={`${st102.availability === 'Occupied' ? 'bg-slate-700' : 'bg-slate-400'} hover:opacity-90 text-white text-[10px] font-bold h-10 rounded flex items-center justify-center relative shadow-sm cursor-pointer`}>
-                                                                        102
-                                                                        <span className={`absolute top-1 right-1 w-1.5 h-1.5 ${st102.availability === 'Occupied' ? 'bg-red-500' : 'bg-emerald-200'} rounded-full`}></span>
-                                                                    </button>
-                                                                );
-                                                            })()}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {selectedFloor === "2" && (
-                                        <div>
-                                            <div className="text-center font-bold text-xs bg-purple-200 py-1 border border-purple-400 mb-4 tracking-widest text-purple-900">
-                                                {(selectedMarket || "GALAS").toUpperCase()} MARKET - SECOND FLOOR (APPAREL &amp; FOOD STALLS)
-                                            </div>
-                                            <div className="grid grid-cols-4 gap-2">
-                                                {(() => {
-                                                    const st202 = getStallRealtimeStatus(202, "Apparel");
-                                                    return (
-                                                        <button onClick={() => handleStallClick({ stallNum: 202, holder: st202.holder, availability: st202.availability, section: "Apparel", type: "Permanent", size: "4 sqm", classification: "Commercial", fee: "₱1.50" })} className={`${st202.availability === 'Occupied' ? 'bg-purple-700' : 'bg-purple-400'} hover:opacity-90 text-white text-xs font-bold h-12 rounded flex items-center justify-center relative shadow-sm cursor-pointer`}>
-                                                            202
-                                                            <span className={`absolute top-1 right-1 w-2 h-2 ${st202.availability === 'Occupied' ? 'bg-red-500' : 'bg-emerald-300'} rounded-full`}></span>
-                                                        </button>
-                                                    );
-                                                })()}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {selectedFloor === "3" && (
-                                        <div className="grid grid-cols-12 gap-4 relative py-6 text-center">
-                                            <div className="col-span-6 bg-slate-200 border-2 border-slate-400 rounded-xl p-6 flex flex-col justify-center items-center">
-                                                <div className="w-10 h-10 rounded-full bg-slate-300 flex items-center justify-center mb-2">
-                                                    <svg className="w-6 h-6 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                                                    </svg>
-                                                </div>
-                                                <h4 className="font-bold text-slate-800 text-sm">Market Admin Office</h4>
-                                                <p className="text-xs text-slate-500 mt-1">Open Monday to Friday, 8AM - 5PM</p>
-                                            </div>
-                                            <div className="col-span-6 bg-slate-200 border-2 border-slate-400 rounded-xl p-6 flex flex-col justify-center items-center">
-                                                <div className="w-10 h-10 rounded-full bg-slate-300 flex items-center justify-center mb-2">
-                                                    <svg className="w-6 h-6 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                                                    </svg>
-                                                </div>
-                                                <h4 className="font-bold text-slate-800 text-sm">Cold Storage &amp; Warehouse</h4>
-                                                <p className="text-xs text-slate-500 mt-1">For vendor cargo and surplus goods</p>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="px-6 py-3 border-t border-slate-200 bg-slate-50 flex justify-end">
-                            <button onClick={() => setIsFloorPlanOpen(false)} className="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-5 py-2 rounded-xl text-xs transition-colors cursor-pointer">
-                                Close Floor Plan
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {activeStall && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[60] flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
-                    <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-sm w-full p-4 sm:p-6 shadow-2xl relative border border-slate-300 dark:border-slate-800 space-y-4">
-                        <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-3">
-                            <div className="flex items-center space-x-2">
-                                <span className={`w-4 h-4 rounded-sm inline-block ${activeStall.availability === 'Occupied' ? 'bg-rose-600' : 'bg-emerald-500'}`}></span>
-                                <h3 className="text-base font-bold text-slate-900 dark:text-white">Stall {activeStall.stallNum}</h3>
-                            </div>
-                            <button onClick={() => setActiveStall(null)} className="text-slate-500 hover:text-slate-800 dark:hover:text-white font-bold text-base px-1 cursor-pointer">✕</button>
-                        </div>
-
-                        <div className="space-y-2 text-xs text-slate-800 dark:text-slate-200">
-                            <p><strong>Stallholder Name:</strong> <span className="text-slate-700 dark:text-slate-300">{activeStall.holder}</span></p>
-                            <p className="flex items-center gap-1.5">
-                                <strong>Stall Availability:</strong>
-                                <span className="inline-flex items-center gap-1 text-slate-700 dark:text-slate-300">
-                                    <span className={`w-2 h-2 rounded-full ${activeStall.availability === 'Occupied' ? 'bg-rose-600' : 'bg-emerald-500'} inline-block`}></span>
-                                    {activeStall.availability}
-                                </span>
-                            </p>
-                            <p><strong>Section:</strong> <span className="text-slate-700 dark:text-slate-300">{activeStall.section}</span></p>
-                            <p><strong>Type:</strong> <span className="text-slate-700 dark:text-slate-300">{activeStall.type}</span></p>
-                            <p><strong>Size:</strong> <span className="text-slate-700 dark:text-slate-300">{activeStall.size}</span></p>
-                            <p><strong>Location Classification:</strong> <span className="text-slate-700 dark:text-slate-300">{activeStall.classification}</span></p>
-                            <p className="pt-1"><strong>Rental Fee (Monthly):</strong> <span className="text-slate-900 dark:text-white">{activeStall.fee}</span></p>
-                        </div>
-
-                        <div className="pt-2">
-                            {activeStall.availability === 'Occupied' ? (
-                                <div className="bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-center font-bold py-2 px-3 rounded text-xs cursor-not-allowed select-none">
-                                    This stall is currently occupied and cannot be applied for.
-                                </div>
-                            ) : currentUser ? (
-                                <button
-                                    onClick={handleOpenApplicationForm}
-                                    className="w-full bg-[#7a92c4] hover:bg-[#6881b5] text-white font-medium py-2 px-4 rounded text-xs shadow-sm transition-all text-center cursor-pointer"
-                                >
-                                    Apply Now
-                                </button>
-                            ) : (
-                                <div className="space-y-1.5">
-                                    <button
-                                        disabled
-                                        className="w-full bg-slate-200 dark:bg-slate-800 text-slate-400 font-medium py-2 px-4 rounded text-xs cursor-not-allowed text-center"
-                                    >
-                                        Apply Now
-                                    </button>
-                                    <p className="text-[10px] text-rose-600 dark:text-rose-400 text-center font-medium">Please log in to your portal account to apply.</p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {isApplicationFormOpen && activeStall && (
-                <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[70] flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
-                    <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full max-h-[94vh] overflow-y-auto p-4 sm:p-6 shadow-2xl relative border border-slate-300 dark:border-slate-800 space-y-4">
-                        <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-3">
-                            <div>
-                                <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase">Stall Lease Application Form</h3>
-                                <p className="text-[11px] text-slate-500 dark:text-slate-400">Stall #{activeStall.stallNum} ({activeStall.section}) - {selectedMarket} Market</p>
-                            </div>
-                            <button onClick={() => setIsApplicationFormOpen(false)} className="text-slate-500 hover:text-slate-800 dark:hover:text-white font-bold text-sm cursor-pointer">✕</button>
-                        </div>
-
-                        <form onSubmit={handleFormSubmit} className="space-y-3 text-xs">
-                            {currentUser && (
-                                <div className="bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-900 p-2.5 rounded-xl text-[11px] text-blue-900 dark:text-blue-300 flex items-center justify-between">
-                                    <span>Logged in as: <strong>{currentUser.fullname}</strong></span>
-                                    <span className="text-[10px] bg-blue-200 dark:bg-blue-900 px-2 py-0.5 rounded font-semibold">Active Session</span>
-                                </div>
-                            )}
-
-                            <div>
-                                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">First Name</label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={firstName}
-                                    onChange={(e) => setFirstName(e.target.value)}
-                                    placeholder="Enter first name..."
-                                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2.5 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-900"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Last Name</label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={lastName}
-                                    onChange={(e) => setLastName(e.target.value)}
-                                    placeholder="Enter last name..."
-                                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2.5 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-900"
-                                />
-                            </div>
-
-                            <div className="bg-slate-50 dark:bg-slate-800/80 p-3 rounded-xl border border-slate-200 dark:border-slate-700 text-[11px] space-y-1 text-slate-600 dark:text-slate-300">
-                                <p><strong>Rental Fee:</strong> {activeStall.fee}</p>
-                                <p><strong>Market Location:</strong> {selectedMarket} Market</p>
-                            </div>
-
-                            <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-                                <button
-                                    type="button"
-                                    onClick={() => setIsApplicationFormOpen(false)}
-                                    className="px-4 py-2 font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white cursor-pointer"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="px-5 py-2.5 bg-blue-900 hover:bg-blue-800 text-white font-bold rounded-xl shadow-md cursor-pointer transition-all"
-                                >
-                                    Proceed to Digital Payment &rarr;
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
-
-            {isPaymentSuccess && activeStall && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-slate-950/75 backdrop-blur-md overflow-y-auto overscroll-contain">
-                    <div className="relative w-full max-w-lg max-h-[94vh] overflow-y-auto rounded-2xl sm:rounded-[28px] bg-white p-5 sm:p-8 shadow-2xl text-center">
-                        <div className="mx-auto mb-4 sm:mb-5 h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-emerald-100 flex items-center justify-center">
-                            <svg viewBox="0 0 52 52" className="h-10 w-10 sm:h-12 sm:w-12 text-emerald-600" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M14 27l8 8 17-19" /></svg>
-                        </div>
-                        <p className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">PAYMENT CONFIRMED</p>
-                        <h2 className="mt-3 sm:mt-4 text-xl sm:text-2xl font-black text-slate-900">Payment Successful!</h2>
-                        <p className="mt-2 text-sm text-slate-500">Your Market Stall payment has been confirmed.</p>
-                        <div className="mt-5 rounded-2xl bg-slate-50 border border-slate-200 p-4 sm:p-5 text-left space-y-3 text-sm overflow-x-auto">
-                            <div className="flex justify-between gap-4"><span className="text-slate-500">Service</span><span className="font-bold text-right">Market Stall Rental</span></div>
-                            <div className="flex justify-between gap-4"><span className="text-slate-500">Amount Paid</span><span className="font-black">{activeStall.fee}</span></div>
-                            <div className="flex justify-between gap-4"><span className="text-slate-500">Reference</span><span className="font-mono font-bold text-right break-all">{qrReferenceNumber || paymentLeaseId || "Confirmed"}</span></div>
-                            <div className="flex justify-between gap-4"><span className="text-slate-500">Date</span><span className="font-bold text-right">{new Date().toLocaleString("en-PH")}</span></div>
-                        </div>
-                        <button type="button" onClick={() => { setIsPaymentSuccess(false); window.location.href = "/citizen-portal-stall-manage-account"; }} className="mt-6 w-full rounded-xl bg-[#1D3F99] hover:bg-[#17357F] text-white py-3 font-extrabold text-sm">Done</button>
-                    </div>
-                </div>
-            )}
-
-            {isPaymentStep && activeStall && (
-                <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[80] flex items-center justify-center p-2 sm:p-4 overflow-y-auto overscroll-contain">
-                    <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[96vh] shadow-2xl relative border border-slate-200 overflow-y-auto my-2 sm:my-4">
-                        <div className="p-4 sm:p-6 lg:p-8">
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
-
-                                <div className="space-y-5">
-                                    <div>
-                                        <h2 className="text-xl sm:text-2xl font-bold text-slate-900">
-                                            Market Stall Lease Payment ({paymentLeaseId || "Generating..."})
-                                        </h2>
+                    {activeStall && (
+                        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[60] flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+                            <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-sm w-full p-4 sm:p-6 shadow-2xl relative border border-slate-300 dark:border-slate-800 space-y-4">
+                                <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-3">
+                                    <div className="flex items-center space-x-2">
+                                        <span className={`w-4 h-4 rounded-sm inline-block ${activeStall.availability === 'Occupied' ? 'bg-rose-600' : 'bg-emerald-500'}`}></span>
+                                        <h3 className="text-base font-bold text-slate-900 dark:text-white">Stall {activeStall.stallNum}</h3>
                                     </div>
+                                    <button onClick={() => setActiveStall(null)} className="text-slate-500 hover:text-slate-800 dark:hover:text-white font-bold text-base px-1 cursor-pointer">✕</button>
+                                </div>
 
-                                    <div className="text-4xl sm:text-5xl font-extrabold text-emerald-600 tracking-tight">
-                                        {activeStall.fee}
-                                    </div>
-
-                                    <p className="text-sm text-slate-500 border-b border-slate-200 pb-5">
-                                        Billed to <span className="font-semibold text-slate-700">{firstName.trim()} {lastName.trim()}</span>
-                                        {currentUser?.email ? <>, {currentUser.email}</> : null}
+                                <div className="space-y-2 text-xs text-slate-800 dark:text-slate-200">
+                                    <p><strong>Stallholder Name:</strong> <span className="text-slate-700 dark:text-slate-300">{activeStall.holder}</span></p>
+                                    <p className="flex items-center gap-1.5">
+                                        <strong>Stall Availability:</strong>
+                                        <span className="inline-flex items-center gap-1 text-slate-700 dark:text-slate-300">
+                                            <span className={`w-2 h-2 rounded-full ${activeStall.availability === 'Occupied' ? 'bg-rose-600' : 'bg-emerald-500'} inline-block`}></span>
+                                            {activeStall.availability}
+                                        </span>
                                     </p>
-
-
-                                    <div className="space-y-3 text-sm">
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-slate-500">Subtotal</span>
-                                            <span className="font-medium text-slate-700">{activeStall.fee}</span>
-                                        </div>
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-slate-500">Fees</span>
-                                            <span className="font-medium text-slate-700">Free</span>
-                                        </div>
-                                    </div>
-
-                                    <div className="border-t border-slate-300 pt-4 flex justify-between items-center">
-                                        <span className="font-bold text-slate-900">Total Due</span>
-                                        <span className="font-extrabold text-slate-900 text-lg">{activeStall.fee}</span>
-                                    </div>
+                                    <p><strong>Section:</strong> <span className="text-slate-700 dark:text-slate-300">{activeStall.section}</span></p>
+                                    <p><strong>Type:</strong> <span className="text-slate-700 dark:text-slate-300">{activeStall.type}</span></p>
+                                    <p><strong>Size:</strong> <span className="text-slate-700 dark:text-slate-300">{activeStall.size}</span></p>
+                                    <p><strong>Location Classification:</strong> <span className="text-slate-700 dark:text-slate-300">{activeStall.classification}</span></p>
+                                    <p className="pt-1"><strong>Rental Fee (Monthly):</strong> <span className="text-slate-900 dark:text-white">{activeStall.fee}</span></p>
                                 </div>
 
-                                <div className="p-4 sm:p-6 lg:p-8 bg-slate-50/60 flex flex-col items-center justify-center min-h-0 lg:min-h-[360px] lg:border-l lg:border-slate-200 min-w-0">
-                                    <div className="w-full text-center">
-                                        <p className="text-base sm:text-lg font-black text-slate-900">Scan QR Ph code to pay</p>
-                                        <p className="text-xs text-slate-500 mt-2">Use your supported banking or e-wallet app.</p>
-                                    </div>
-
-                                    {isGeneratingQr && !qrImageUrl && (
-                                        <div className="w-full max-w-sm mt-5 rounded-2xl border border-slate-200 bg-white p-6 sm:p-10 flex flex-col items-center text-center shadow-sm">
-                                            <div className="h-10 w-10 border-4 border-blue-200 border-t-blue-700 rounded-full animate-spin mb-4" />
-                                            <p className="text-sm font-bold text-slate-800">Generating QR Ph code...</p>
-                                            <p className="text-xs text-slate-500 mt-1">Please wait while PayMongo prepares your secure payment.</p>
+                                <div className="pt-2">
+                                    {activeStall.availability === 'Occupied' ? (
+                                        <div className="bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-center font-bold py-2 px-3 rounded text-xs cursor-not-allowed select-none">
+                                            This stall is currently occupied and cannot be applied for.
+                                        </div>
+                                    ) : currentUser ? (
+                                        <button
+                                            onClick={handleOpenApplicationForm}
+                                            className="w-full bg-[#7a92c4] hover:bg-[#6881b5] text-white font-medium py-2 px-4 rounded text-xs shadow-sm transition-all text-center cursor-pointer"
+                                        >
+                                            Apply Now
+                                        </button>
+                                    ) : (
+                                        <div className="space-y-1.5">
+                                            <button
+                                                disabled
+                                                className="w-full bg-slate-200 dark:bg-slate-800 text-slate-400 font-medium py-2 px-4 rounded text-xs cursor-not-allowed text-center"
+                                            >
+                                                Apply Now
+                                            </button>
+                                            <p className="text-[10px] text-rose-600 dark:text-rose-400 text-center font-medium">Please log in to your portal account to apply.</p>
                                         </div>
                                     )}
-
-                                    {!isGeneratingQr && qrGenerationError && !qrImageUrl && (
-                                        <div className="w-full max-w-sm mt-5 rounded-2xl border border-rose-200 bg-rose-50 p-4 sm:p-5 text-center">
-                                            <p className="text-xs font-bold text-rose-700">{qrGenerationError}</p>
-                                            <button type="button" onClick={() => void handlePayMongoQrPayment(true)} className="mt-4 px-5 py-2.5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold">Generate QR Again</button>
-                                        </div>
-                                    )}
-
-                                    {qrImageUrl && (
-                                        <div className="w-full flex flex-col items-center mt-5">
-                                            <div className="w-full max-w-sm rounded-xl border border-blue-200 bg-blue-50 px-3 sm:px-4 py-3 text-center mb-4">
-                                                <p className="text-[10px] font-black uppercase tracking-widest text-blue-700">QR Code Refreshes In</p>
-                                                <p className="text-xl sm:text-2xl font-black tabular-nums text-blue-700">{formatQrTime(qrTimeLeft)}</p>
-                                                {qrReferenceNumber && <p className="text-[10px] font-mono text-slate-500 mt-1">Ref: {qrReferenceNumber}</p>}
-                                            </div>
-                                            <div className="bg-white border border-slate-200 rounded-2xl p-3 sm:p-4 shadow-md max-w-full">
-                                                <img src={qrImageUrl} alt="PayMongo Dynamic QR Ph payment code" className="w-[min(72vw,18rem)] h-[min(72vw,18rem)] max-w-full object-contain" />
-                                            </div>
-                                            <p className="text-xs text-slate-500 text-center mt-3 max-w-sm px-2">Scan the QR code with your preferred supported payment app. Your payment will be confirmed automatically through PayMongo.</p>
-                                            <div className="mt-4 flex items-center gap-2 text-xs font-bold text-blue-700">
-                                                <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" /> Waiting for payment...
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>                            </div>
-
-                            <div className="mt-8 pt-5 border-t border-slate-200 flex flex-col sm:flex-row gap-3 justify-end">
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        if (!isProcessingPayment) {
-                                            setIsPaymentStep(false);
-                                            setIsApplicationFormOpen(true);
-                                        }
-                                    }}
-                                    disabled={isProcessingPayment}
-                                    className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-xl transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    &larr; Back to Form
-                                </button>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </div>
-            )}
+                    )}
+
+                    {isApplicationFormOpen && activeStall && (
+                        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[70] flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+                            <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full max-h-[94vh] overflow-y-auto p-4 sm:p-6 shadow-2xl relative border border-slate-300 dark:border-slate-800 space-y-4">
+                                <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-3">
+                                    <div>
+                                        <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase">Stall Lease Application Form</h3>
+                                        <p className="text-[11px] text-slate-500 dark:text-slate-400">Stall #{activeStall.stallNum} ({activeStall.section}) - {selectedMarket} Market</p>
+                                    </div>
+                                    <button onClick={() => setIsApplicationFormOpen(false)} className="text-slate-500 hover:text-slate-800 dark:hover:text-white font-bold text-sm cursor-pointer">✕</button>
+                                </div>
+
+                                <form onSubmit={handleFormSubmit} className="space-y-3 text-xs">
+                                    {currentUser && (
+                                        <div className="bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-900 p-2.5 rounded-xl text-[11px] text-blue-900 dark:text-blue-300 flex items-center justify-between">
+                                            <span>Logged in as: <strong>{currentUser.fullname}</strong></span>
+                                            <span className="text-[10px] bg-blue-200 dark:bg-blue-900 px-2 py-0.5 rounded font-semibold">Active Session</span>
+                                        </div>
+                                    )}
+
+                                    <div>
+                                        <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">First Name</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={firstName}
+                                            onChange={(e) => setFirstName(e.target.value)}
+                                            placeholder="Enter first name..."
+                                            className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2.5 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-900"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Last Name</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={lastName}
+                                            onChange={(e) => setLastName(e.target.value)}
+                                            placeholder="Enter last name..."
+                                            className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2.5 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-900"
+                                        />
+                                    </div>
+
+                                    <div className="bg-slate-50 dark:bg-slate-800/80 p-3 rounded-xl border border-slate-200 dark:border-slate-700 text-[11px] space-y-1 text-slate-600 dark:text-slate-300">
+                                        <p><strong>Rental Fee:</strong> {activeStall.fee}</p>
+                                        <p><strong>Market Location:</strong> {selectedMarket} Market</p>
+                                    </div>
+
+                                    <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsApplicationFormOpen(false)}
+                                            className="px-4 py-2 font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white cursor-pointer"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            className="px-5 py-2.5 bg-blue-900 hover:bg-blue-800 text-white font-bold rounded-xl shadow-md cursor-pointer transition-all"
+                                        >
+                                            Proceed to Digital Payment &rarr;
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+
+                    {isPaymentSuccess && activeStall && (
+                        <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-slate-950/75 backdrop-blur-md overflow-y-auto overscroll-contain">
+                            <div className="relative w-full max-w-lg max-h-[94vh] overflow-y-auto rounded-2xl sm:rounded-[28px] bg-white p-5 sm:p-8 shadow-2xl text-center">
+                                <div className="mx-auto mb-4 sm:mb-5 h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-emerald-100 flex items-center justify-center">
+                                    <svg viewBox="0 0 52 52" className="h-10 w-10 sm:h-12 sm:w-12 text-emerald-600" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M14 27l8 8 17-19" /></svg>
+                                </div>
+                                <p className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">PAYMENT CONFIRMED</p>
+                                <h2 className="mt-3 sm:mt-4 text-xl sm:text-2xl font-black text-slate-900">Payment Successful!</h2>
+                                <p className="mt-2 text-sm text-slate-500">Your Market Stall payment has been confirmed.</p>
+                                <div className="mt-5 rounded-2xl bg-slate-50 border border-slate-200 p-4 sm:p-5 text-left space-y-3 text-sm overflow-x-auto">
+                                    <div className="flex justify-between gap-4"><span className="text-slate-500">Service</span><span className="font-bold text-right">Market Stall Rental</span></div>
+                                    <div className="flex justify-between gap-4"><span className="text-slate-500">Amount Paid</span><span className="font-black">{activeStall.fee}</span></div>
+                                    <div className="flex justify-between gap-4"><span className="text-slate-500">Reference</span><span className="font-mono font-bold text-right break-all">{qrReferenceNumber || paymentLeaseId || "Confirmed"}</span></div>
+                                    <div className="flex justify-between gap-4"><span className="text-slate-500">Date</span><span className="font-bold text-right">{new Date().toLocaleString("en-PH")}</span></div>
+                                </div>
+                                <button type="button" onClick={() => { setIsPaymentSuccess(false); window.location.href = "/citizen-portal-stall-manage-account"; }} className="mt-6 w-full rounded-xl bg-[#1D3F99] hover:bg-[#17357F] text-white py-3 font-extrabold text-sm">Done</button>
+                            </div>
+                        </div>
+                    )}
+
+                    {isPaymentStep && activeStall && (
+                        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[80] flex items-center justify-center p-2 sm:p-4 overflow-y-auto overscroll-contain">
+                            <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[96vh] shadow-2xl relative border border-slate-200 overflow-y-auto my-2 sm:my-4">
+                                <div className="p-4 sm:p-6 lg:p-8">
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
+
+                                        <div className="space-y-5">
+                                            <div>
+                                                <h2 className="text-xl sm:text-2xl font-bold text-slate-900">
+                                                    Market Stall Lease Payment ({paymentLeaseId || "Generating..."})
+                                                </h2>
+                                            </div>
+
+                                            <div className="text-4xl sm:text-5xl font-extrabold text-emerald-600 tracking-tight">
+                                                {activeStall.fee}
+                                            </div>
+
+                                            <p className="text-sm text-slate-500 border-b border-slate-200 pb-5">
+                                                Billed to <span className="font-semibold text-slate-700">{firstName.trim()} {lastName.trim()}</span>
+                                                {currentUser?.email ? <>, {currentUser.email}</> : null}
+                                            </p>
+
+
+                                            <div className="space-y-3 text-sm">
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-slate-500">Subtotal</span>
+                                                    <span className="font-medium text-slate-700">{activeStall.fee}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-slate-500">Fees</span>
+                                                    <span className="font-medium text-slate-700">Free</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="border-t border-slate-300 pt-4 flex justify-between items-center">
+                                                <span className="font-bold text-slate-900">Total Due</span>
+                                                <span className="font-extrabold text-slate-900 text-lg">{activeStall.fee}</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="p-4 sm:p-6 lg:p-8 bg-slate-50/60 flex flex-col items-center justify-center min-h-0 lg:min-h-[360px] lg:border-l lg:border-slate-200 min-w-0">
+                                            <div className="w-full text-center">
+                                                <p className="text-base sm:text-lg font-black text-slate-900">Scan QR Ph code to pay</p>
+                                                <p className="text-xs text-slate-500 mt-2">Use your supported banking or e-wallet app.</p>
+                                            </div>
+
+                                            {isGeneratingQr && !qrImageUrl && (
+                                                <div className="w-full max-w-sm mt-5 rounded-2xl border border-slate-200 bg-white p-6 sm:p-10 flex flex-col items-center text-center shadow-sm">
+                                                    <div className="h-10 w-10 border-4 border-blue-200 border-t-blue-700 rounded-full animate-spin mb-4" />
+                                                    <p className="text-sm font-bold text-slate-800">Generating QR Ph code...</p>
+                                                    <p className="text-xs text-slate-500 mt-1">Please wait while PayMongo prepares your secure payment.</p>
+                                                </div>
+                                            )}
+
+                                            {!isGeneratingQr && qrGenerationError && !qrImageUrl && (
+                                                <div className="w-full max-w-sm mt-5 rounded-2xl border border-rose-200 bg-rose-50 p-4 sm:p-5 text-center">
+                                                    <p className="text-xs font-bold text-rose-700">{qrGenerationError}</p>
+                                                    <button type="button" onClick={() => void handlePayMongoQrPayment(true)} className="mt-4 px-5 py-2.5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold">Generate QR Again</button>
+                                                </div>
+                                            )}
+
+                                            {qrImageUrl && (
+                                                <div className="w-full flex flex-col items-center mt-5">
+                                                    <div className="w-full max-w-sm rounded-xl border border-blue-200 bg-blue-50 px-3 sm:px-4 py-3 text-center mb-4">
+                                                        <p className="text-[10px] font-black uppercase tracking-widest text-blue-700">QR Code Refreshes In</p>
+                                                        <p className="text-xl sm:text-2xl font-black tabular-nums text-blue-700">{formatQrTime(qrTimeLeft)}</p>
+                                                        {qrReferenceNumber && <p className="text-[10px] font-mono text-slate-500 mt-1">Ref: {qrReferenceNumber}</p>}
+                                                    </div>
+                                                    <div className="bg-white border border-slate-200 rounded-2xl p-3 sm:p-4 shadow-md max-w-full">
+                                                        <img src={qrImageUrl} alt="PayMongo Dynamic QR Ph payment code" className="w-[min(72vw,18rem)] h-[min(72vw,18rem)] max-w-full object-contain" />
+                                                    </div>
+                                                    <p className="text-xs text-slate-500 text-center mt-3 max-w-sm px-2">Scan the QR code with your preferred supported payment app. Your payment will be confirmed automatically through PayMongo.</p>
+                                                    <div className="mt-4 flex items-center gap-2 text-xs font-bold text-blue-700">
+                                                        <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" /> Waiting for payment...
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>                            </div>
+
+                                    <div className="mt-8 pt-5 border-t border-slate-200 flex flex-col sm:flex-row gap-3 justify-end">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                if (!isProcessingPayment) {
+                                                    setIsPaymentStep(false);
+                                                    setIsApplicationFormOpen(true);
+                                                }
+                                            }}
+                                            disabled={isProcessingPayment}
+                                            className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-xl transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            &larr; Back to Form
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </CitizenLayout>
