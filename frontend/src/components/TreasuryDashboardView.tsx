@@ -50,7 +50,11 @@ export interface TreasuryMetrics {
   amountByType: { type: string; percentage: number }[];
   transactionsByPaymentOption: { option: string; percentage: number; transactions?: number }[];
   amountByPaymentOption: { option: string; percentage: number; amount: number }[];
+  transactionsByService: { service: string; count: number; percentage: number; color: string }[];
+  transactionsByStatus: { status: string; count: number; percentage: number; color: string }[];
+  transactionsByPaymentMethod: { method: string; count: number; percentage: number; color: string }[];
 }
+
 
 export interface TreasuryDashboardViewProps {
   metrics?: TreasuryMetrics;
@@ -73,6 +77,34 @@ const PAYMENT_OPTION_COLORS: Record<string, string> = {
   "Bayad Center": "#bfdbfe",
   "Manual Payment for Landbank of the Philippines": "#dbeafe",
   "Landbank Online": "#1e3a8a"
+};
+
+const SERVICE_COLORS: Record<string, string> = {
+  "Real Property Tax": "#a78bfa",   // purple (matches RPT card)
+  "Business Tax": "#4ade80",         // green (matches Business Tax card)
+  "Market Stall": "#f87171",         // rose/pink (matches Market Stall card)
+};
+
+const STATUS_COLORS: Record<string, string> = {
+  "Posted": "#4ade80",
+  "Paid": "#4ade80",
+  "Settled": "#4ade80",
+  "Verified": "#60a5fa",
+  "Pending": "#fb923c",
+  "Pending Payment": "#fb923c",
+  "For Review": "#facc15",
+  "Processing": "#a78bfa",
+  "Failed": "#f87171",
+  "Cancelled": "#f87171",
+};
+
+const METHOD_COLORS: Record<string, string> = {
+  "E-Wallet": "#60a5fa",
+  "Online Banking": "#4ade80",
+  "QR Payment": "#a78bfa",
+  "Cash / Over-the-Counter": "#fb923c",
+  "Card Payment": "#facc15",
+  "Other": "#94a3b8",
 };
 
 const CHART_COLORS = ["#2563eb", "#60a5fa", "#93c5fd", "#bfdbfe", "#1e3a8a"];
@@ -297,6 +329,70 @@ export default function TreasuryDashboardView({
       percentage: totalAmount > 0 ? Number(((optionAmountMap[option] / totalAmount) * 100).toFixed(2)) : 0
     })).sort((a, b) => b.amount - a.amount);
 
+    // --- Transactions by Service (3 fixed buckets) ---
+    const serviceMap: Record<string, number> = {
+      "Real Property Tax": 0,
+      "Business Tax": 0,
+      "Market Stall": 0,
+    };
+    filteredTxsByTab.forEach(t => {
+      const type = (t?.paymentType || '').toUpperCase();
+      if (type.includes('REAL PROPERTY') || type === 'RPT') serviceMap['Real Property Tax'] += 1;
+      else if (type.includes('BUSINESS') || type.includes('BPLPO') || type.includes('PERMIT')) serviceMap['Business Tax'] += 1;
+      else if (type.includes('MARKET')) serviceMap['Market Stall'] += 1;
+      else {
+        // distribute unknowns based on count heuristic
+        serviceMap['Business Tax'] += 1;
+      }
+    });
+    const transactionsByService = Object.keys(serviceMap).map(service => ({
+      service,
+      count: serviceMap[service],
+      percentage: totalEpayments > 0 ? Math.round((serviceMap[service] / totalEpayments) * 100) : 0,
+      color: SERVICE_COLORS[service] || '#94a3b8',
+    }));
+
+    // --- Transactions by Status ---
+    const statusMap: Record<string, number> = {};
+    // Include all txs + rpt ledger records (passed via props aren't available here, use filteredTxsByTab)
+    filteredTxsByTab.forEach(t => {
+      const status = t?.status || 'Pending';
+      statusMap[status] = (statusMap[status] || 0) + 1;
+    });
+    // If no statuses, add a placeholder
+    if (Object.keys(statusMap).length === 0) statusMap['No Data'] = 1;
+    const totalStatusCount = Object.values(statusMap).reduce((a, b) => a + b, 0);
+    const transactionsByStatus = Object.keys(statusMap).map(status => ({
+      status,
+      count: statusMap[status],
+      percentage: totalStatusCount > 0 ? Math.round((statusMap[status] / totalStatusCount) * 100) : 0,
+      color: STATUS_COLORS[status] || '#94a3b8',
+    })).sort((a, b) => b.count - a.count);
+
+    // --- Transactions by Payment Method (grouped by type) ---
+    const methodGroupMap: Record<string, number> = {};
+    const classifyMethod = (method: string): string => {
+      const m = (method || '').toLowerCase();
+      if (m.includes('gcash') || m.includes('maya') || m.includes('e-wallet') || m.includes('wallet')) return 'E-Wallet';
+      if (m.includes('banking') || m.includes('landbank') || m.includes('paygate') || m.includes('online bank')) return 'Online Banking';
+      if (m.includes('qr') || m.includes('qrph') || m.includes('qr ph')) return 'QR Payment';
+      if (m.includes('cash') || m.includes('over') || m.includes('counter') || m.includes('treasury cashier') || m.includes('bayad')) return 'Cash / Over-the-Counter';
+      if (m.includes('visa') || m.includes('master') || m.includes('card')) return 'Card Payment';
+      return 'Other';
+    };
+    filteredTxsByTab.forEach(t => {
+      const group = classifyMethod(t?.paymentMethod || '');
+      methodGroupMap[group] = (methodGroupMap[group] || 0) + 1;
+    });
+    if (Object.keys(methodGroupMap).length === 0) methodGroupMap['No Data'] = 1;
+    const totalMethodCount = Object.values(methodGroupMap).reduce((a, b) => a + b, 0);
+    const transactionsByPaymentMethod = Object.keys(methodGroupMap).map(method => ({
+      method,
+      count: methodGroupMap[method],
+      percentage: totalMethodCount > 0 ? Math.round((methodGroupMap[method] / totalMethodCount) * 100) : 0,
+      color: METHOD_COLORS[method] || '#94a3b8',
+    })).sort((a, b) => b.count - a.count);
+
     return {
       totalEpayments,
       totalEORs,
@@ -308,7 +404,10 @@ export default function TreasuryDashboardView({
       transactionsByBiller,
       amountByType: transactionsByType,
       transactionsByPaymentOption,
-      amountByPaymentOption
+      amountByPaymentOption,
+      transactionsByService,
+      transactionsByStatus,
+      transactionsByPaymentMethod,
     };
   })();
 
@@ -385,18 +484,29 @@ export default function TreasuryDashboardView({
     return { month: m, amount: txAmount + marketLeaseAmount };
   });
 
-  const generateConicGradient = (items: { percentage: number; option?: string; type?: string }[]) => {
+  const generateConicGradient = (items: { percentage: number; color?: string; option?: string; type?: string }[]) => {
     if (!Array.isArray(items) || items.length === 0) return '#f1f5f9 0% 100%';
     let cumulativePercent = 0;
     return items.map((item, idx) => {
       const start = cumulativePercent;
       cumulativePercent += (item?.percentage || 0);
-      const color = item?.option
-        ? (PAYMENT_OPTION_COLORS[item.option] || '#2563eb')
-        : (CHART_COLORS[idx % CHART_COLORS.length]);
+      const color = item?.color
+        ? item.color
+        : item?.option
+          ? (PAYMENT_OPTION_COLORS[item.option] || '#2563eb')
+          : (CHART_COLORS[idx % CHART_COLORS.length]);
       return `${color} ${start}% ${cumulativePercent}%`;
     }).join(', ');
   };
+
+  // Legend box component
+  const LegendItem = ({ color, label, pct }: { color: string; label: string; pct: number }) => (
+    <div className="flex items-center gap-1.5 text-[11px] text-slate-600 dark:text-slate-400">
+      <span className="inline-block w-3 h-3 rounded-sm flex-shrink-0" style={{ backgroundColor: color }} />
+      <span className="truncate max-w-[120px]">{label}</span>
+      <span className="text-slate-400 font-medium ml-0.5">{pct}%</span>
+    </div>
+  );
 
   return (
     <div
@@ -521,15 +631,20 @@ export default function TreasuryDashboardView({
 
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
             <div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-white m-0 mb-2">ePayment Transactions by Type</h3>
-              <div className="flex justify-center items-center py-4">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white m-0 mb-3">ePayment Transactions by Service</h3>
+              <div className="flex items-center gap-5 py-2">
                 <div
-                  className="w-36 h-36 rounded-full relative flex items-center justify-center shadow-sm"
-                  style={{ background: `conic-gradient(${generateConicGradient(activeMetrics.transactionsByType)})` }}
+                  className="w-32 h-32 rounded-full relative flex-shrink-0 flex items-center justify-center shadow-sm"
+                  style={{ background: `conic-gradient(${generateConicGradient(activeMetrics.transactionsByService)})` }}
                 >
-                  <div className="w-20 h-20 bg-white dark:bg-slate-900 rounded-full flex items-center justify-center">
-                    <span className="text-[10px] font-bold text-slate-700 dark:text-slate-200">Type Ratio</span>
+                  <div className="w-16 h-16 bg-white dark:bg-slate-900 rounded-full flex items-center justify-center">
+                    <span className="text-[9px] font-bold text-slate-700 dark:text-slate-200">Services</span>
                   </div>
+                </div>
+                <div className="flex flex-col gap-2">
+                  {activeMetrics.transactionsByService.map(s => (
+                    <LegendItem key={s.service} color={s.color} label={s.service} pct={s.percentage} />
+                  ))}
                 </div>
               </div>
             </div>
@@ -537,15 +652,20 @@ export default function TreasuryDashboardView({
 
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
             <div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-white m-0 mb-3">ePayment Transactions by Biller</h3>
-              <div className="flex items-center justify-between">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white m-0 mb-3">Transaction Statuses</h3>
+              <div className="flex items-center gap-5 py-2">
                 <div
-                  className="w-32 h-32 rounded-full relative flex items-center justify-center shadow-sm"
-                  style={{ background: `conic-gradient(${generateConicGradient(activeMetrics.transactionsByBiller)})` }}
+                  className="w-32 h-32 rounded-full relative flex-shrink-0 flex items-center justify-center shadow-sm"
+                  style={{ background: `conic-gradient(${generateConicGradient(activeMetrics.transactionsByStatus)})` }}
                 >
                   <div className="w-16 h-16 bg-white dark:bg-slate-900 rounded-full flex items-center justify-center">
-                    <span className="text-[9px] font-bold text-slate-700 dark:text-slate-200">Billers</span>
+                    <span className="text-[9px] font-bold text-slate-700 dark:text-slate-200">Status</span>
                   </div>
+                </div>
+                <div className="flex flex-col gap-2">
+                  {activeMetrics.transactionsByStatus.map(s => (
+                    <LegendItem key={s.status} color={s.color} label={s.status} pct={s.percentage} />
+                  ))}
                 </div>
               </div>
             </div>
@@ -573,7 +693,8 @@ export default function TreasuryDashboardView({
                   const heightPct = Math.round((item.amount / maxAmt) * 100) || 0;
                   return (
                     <div key={index} className="flex-1 flex flex-col items-center h-full justify-end" title={`${item.month}: ₱${item.amount.toLocaleString()}`}>
-                      <div style={{ height: `${Math.max(heightPct, 4)}%` }} className="w-full bg-blue-600 rounded-t-sm transition-all group-hover:bg-blue-500" />
+                      <div style={{ height: `${Math.max(heightPct, 4)}%`, backgroundColor: '#a78bfa' }} className="w-full rounded-t-sm transition-all" />
+
                       <span className="text-[9px] text-slate-500 mt-2">{item.month}</span>
                     </div>
                   );
@@ -602,7 +723,7 @@ export default function TreasuryDashboardView({
                   const heightPct = Math.round((item.amount / maxAmt) * 100) || 0;
                   return (
                     <div key={index} className="flex-1 flex flex-col items-center h-full justify-end" title={`${item.month}: ₱${item.amount.toLocaleString()}`}>
-                      <div style={{ height: `${Math.max(heightPct, 4)}%` }} className="w-full bg-blue-400 rounded-t-sm transition-all group-hover:bg-blue-300" />
+                      <div style={{ height: `${Math.max(heightPct, 4)}%`, backgroundColor: '#4ade80' }} className="w-full rounded-t-sm transition-all" />
                       <span className="text-[9px] text-slate-500 mt-2">{item.month}</span>
                     </div>
                   );
@@ -631,7 +752,7 @@ export default function TreasuryDashboardView({
                   const heightPct = Math.round((item.amount / maxAmt) * 100) || 0;
                   return (
                     <div key={index} className="flex-1 flex flex-col items-center h-full justify-end" title={`${item.month}: ₱${item.amount.toLocaleString()}`}>
-                      <div style={{ height: `${Math.max(heightPct, 4)}%` }} className="w-full bg-blue-500 rounded-t-sm transition-all group-hover:bg-blue-400" />
+                      <div style={{ height: `${Math.max(heightPct, 4)}%`, backgroundColor: '#f87171' }} className="w-full rounded-t-sm transition-all" />
                       <span className="text-[9px] text-slate-500 mt-2">{item.month}</span>
                     </div>
                   );
@@ -644,40 +765,21 @@ export default function TreasuryDashboardView({
       </div>
 
       {activeLocalTab === "ALL" && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
-            <div>
-              <h3 className="text-sm font-bold tracking-wider uppercase text-slate-900 dark:text-white m-0 mb-6">ePayment Transactions by Payment Option</h3>
-              <div className="flex items-center justify-around gap-4 flex-wrap">
-                <div
-                  className="w-44 h-44 rounded-full relative flex items-center justify-center shadow-sm"
-                  style={{ background: `conic-gradient(${generateConicGradient(activeMetrics.transactionsByPaymentOption)})` }}
-                >
-                  <div className="w-24 h-24 bg-white dark:bg-slate-900 rounded-full flex items-center justify-center">
-                    <span className="text-[11px] font-bold text-slate-700 dark:text-slate-200 text-center">
-                      {activeMetrics.transactionsByPaymentOption[0] ? `${activeMetrics.transactionsByPaymentOption[0].percentage}%` : '0%'}
-                    </span>
-                  </div>
-                </div>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm mb-6">
+          <h3 className="text-sm font-bold tracking-wider uppercase text-slate-900 dark:text-white m-0 mb-5">ePayment Transactions by Payment Method</h3>
+          <div className="flex items-center gap-8 flex-wrap">
+            <div
+              className="w-44 h-44 rounded-full relative flex-shrink-0 flex items-center justify-center shadow-sm"
+              style={{ background: `conic-gradient(${generateConicGradient(activeMetrics.transactionsByPaymentMethod)})` }}
+            >
+              <div className="w-24 h-24 bg-white dark:bg-slate-900 rounded-full flex items-center justify-center">
+                <span className="text-[10px] font-bold text-slate-700 dark:text-slate-200 text-center">Method</span>
               </div>
             </div>
-          </div>
-
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
-            <div>
-              <h3 className="text-sm font-bold tracking-wider uppercase text-slate-900 dark:text-white m-0 mb-6">Amount by Payment Option</h3>
-              <div className="flex items-center justify-around gap-4 flex-wrap">
-                <div
-                  className="w-44 h-44 rounded-full relative flex items-center justify-center shadow-sm"
-                  style={{ background: `conic-gradient(${generateConicGradient(activeMetrics.amountByPaymentOption)})` }}
-                >
-                  <div className="w-24 h-24 bg-white dark:bg-slate-900 rounded-full flex items-center justify-center">
-                    <span className="text-[11px] font-bold text-slate-700 dark:text-slate-200 text-center">
-                      {activeMetrics.amountByPaymentOption[0] ? `${activeMetrics.amountByPaymentOption[0].percentage}%` : '0%'}
-                    </span>
-                  </div>
-                </div>
-              </div>
+            <div className="flex flex-col gap-2.5">
+              {activeMetrics.transactionsByPaymentMethod.map(m => (
+                <LegendItem key={m.method} color={m.color} label={m.method} pct={m.percentage} />
+              ))}
             </div>
           </div>
         </div>

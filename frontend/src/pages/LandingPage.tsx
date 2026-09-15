@@ -17,7 +17,7 @@ const TINT: Record<string, string> = {
 const stats = [
     { value: '100%', label: 'Digital Process' },
     { value: '24/7', label: 'System Access' },
-    { value: '5', label: 'Programs' },
+    { value: '3', label: 'Services' },
     { value: 'Real-time', label: 'Updates' },
 ];
 
