@@ -2743,17 +2743,6 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                   </button>
                 </div>
 
-                {activeDocUrl && (
-                  <a
-                    href={activeDocUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold transition"
-                    title="Open in New Tab"
-                  >
-                    <i className="fa-solid fa-arrow-up-right-from-square"></i>
-                  </a>
-                )}
 
                 <button
                   type="button"

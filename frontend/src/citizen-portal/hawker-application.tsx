@@ -36,6 +36,7 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
     const [isLoading, setIsLoading] = useState(true);
     const [loggedInUser, setLoggedInUser] = useState<any>(null);
     const [uploadedDocs, setUploadedDocs] = useState<HawkerDocument[]>([]);
+    const [previewAttachment, setPreviewAttachment] = useState<{ url: string; mime: string } | null>(null);
     const initialFormState = {
         associationName: '',
         secNumber: '',
@@ -164,17 +165,7 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
     };
     const openAttachment = (url: string | undefined, mimeType: string | undefined) => {
         if (!url) return;
-        const newTab = window.open();
-        if (newTab) {
-            newTab.document.body.style.margin = '0';
-            if (mimeType === 'application/pdf') {
-                newTab.document.write(`<iframe src="${url}" width="100%" height="100%" style="border:none;"></iframe>`);
-            } else {
-                newTab.document.write(`<div style="display:flex;justify-content:center;align-items:center;height:100vh;background:#0f172a;"><img src="${url}" style="max-width:100%;max-height:100vh;object-fit:contain;" /></div>`);
-            }
-        } else {
-            alert("Please allow pop-ups to view this document.");
-        }
+        setPreviewAttachment({ url, mime: mimeType || '' });
     };
     const showApplicationForm = () => {
         const currentDate = new Date().toLocaleDateString('en-US', {
@@ -328,6 +319,18 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
     return (
         <CitizenLayout activeTitle="Hawker Association" activeNav="market">
             <div className="w-full font-['Segoe_UI',Tahoma,Geneva,Verdana,sans-serif] space-y-6">
+                {/* Blue Hero Banner - matching other citizen portal pages */}
+                <div className="-mx-4 sm:-mx-6 lg:-mx-8 -mt-4 sm:-mt-6 lg:-mt-8 relative bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 h-36 sm:h-48 overflow-hidden flex items-center justify-center border-b-4 border-blue-600">
+                    <div className="absolute inset-0 opacity-30 bg-[radial-gradient(#3b82f6_1px,transparent_1px)] [background-size:16px_16px]"></div>
+                    <div className="relative z-10 text-center px-4">
+                        <h1 className="text-xl sm:text-3xl font-extrabold text-white tracking-wide uppercase">
+                            Hawkers &amp; Street Vendors Portal
+                        </h1>
+                        <p className="text-xs sm:text-sm text-slate-200 mt-1 max-w-xl mx-auto">
+                            Manage your hawker association applications and track submission status.
+                        </p>
+                    </div>
+                </div>
                 <div className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-lg p-6 md:p-10 relative shadow-md">
                     <div className="flex flex-col md:flex-row justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-5 gap-4">
                         <h1 className="text-slate-800 dark:text-white font-bold text-sm tracking-wide uppercase">
@@ -862,6 +865,43 @@ export default function HawkerAssociationApp({ onSubmitApplication }: Props) {
                                 Yes
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+            {previewAttachment && (
+                <div
+                    className="fixed inset-0 z-[70] bg-black/90 backdrop-blur-sm flex flex-col items-center justify-center p-2 sm:p-4"
+                    onClick={() => setPreviewAttachment(null)}
+                >
+                    <div
+                        className="relative w-full max-w-4xl max-h-[92vh] flex flex-col items-center"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="flex justify-between items-center w-full mb-2 px-1">
+                            <span className="text-white text-xs font-semibold opacity-75">Document Preview</span>
+                            <button
+                                type="button"
+                                onClick={() => setPreviewAttachment(null)}
+                                className="text-white bg-slate-700 hover:bg-slate-600 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold cursor-pointer transition-colors"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                        {previewAttachment.mime === 'application/pdf' ? (
+                            <iframe
+                                src={previewAttachment.url}
+                                className="w-full rounded-xl border border-slate-600"
+                                style={{ height: '80vh' }}
+                                title="Document Preview"
+                            />
+                        ) : (
+                            <img
+                                src={previewAttachment.url}
+                                alt="Document Preview"
+                                className="max-w-full max-h-[80vh] object-contain rounded-xl border border-slate-600 shadow-2xl"
+                            />
+                        )}
+                        <p className="text-slate-400 text-[11px] mt-2">Click anywhere outside to close</p>
                     </div>
                 </div>
             )}

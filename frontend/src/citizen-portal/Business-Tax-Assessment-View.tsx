@@ -102,6 +102,8 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
   const [paymentConfirmedAt, setPaymentConfirmedAt] = useState<Date | null>(null);
 
   const [isPaymentSuccess, setIsPaymentSuccess] = useState<boolean>(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewMime, setPreviewMime] = useState<string>('');
   const handlePayMongoBusinessTaxQrPayment = async (record: AssessmentRecord) => {
     setIsProcessingPayment(true);
     setQrCodeUrl('');
@@ -1145,7 +1147,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                       </span>
                       <button
                         type="button"
-                        onClick={() => window.open(file.url, '_blank', 'noopener,noreferrer')}
+                        onClick={() => { setPreviewUrl(file.url); setPreviewMime(file.url.startsWith('data:application/pdf') ? 'application/pdf' : 'image'); }}
                         className="text-blue-600 dark:text-blue-400 font-bold hover:underline flex items-center gap-1 cursor-pointer"
                       >
                         Preview Document
@@ -1197,6 +1199,43 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                 Close
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {previewUrl && (
+        <div
+          className="fixed inset-0 z-[70] bg-black/90 backdrop-blur-sm flex flex-col items-center justify-center p-2 sm:p-4"
+          onClick={() => setPreviewUrl(null)}
+        >
+          <div
+            className="relative w-full max-w-4xl max-h-[92vh] flex flex-col items-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center w-full mb-2 px-1">
+              <span className="text-white text-xs font-semibold opacity-75">Document Preview</span>
+              <button
+                type="button"
+                onClick={() => setPreviewUrl(null)}
+                className="text-white bg-slate-700 hover:bg-slate-600 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold cursor-pointer transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+            {previewMime === 'application/pdf' ? (
+              <iframe
+                src={previewUrl}
+                className="w-full rounded-xl border border-slate-600"
+                style={{ height: '80vh' }}
+                title="Document Preview"
+              />
+            ) : (
+              <img
+                src={previewUrl}
+                alt="Document Preview"
+                className="max-w-full max-h-[80vh] object-contain rounded-xl border border-slate-600 shadow-2xl"
+              />
+            )}
+            <p className="text-slate-400 text-[11px] mt-2">Click anywhere outside to close</p>
           </div>
         </div>
       )}

@@ -93,6 +93,8 @@ export default function TreasuryDashboardView({
   const [txs, setTxs] = useState<TransactionRecord[]>(initialTransactions);
   const [bizAssessments, setBizAssessments] = useState<BusinessAssessmentRecord[]>([]);
   const [rptAssessments, setRptAssessments] = useState<RPTAssessmentRecord[]>([]);
+  const [rptPayments, setRptPayments] = useState<any[]>([]);
+  const [marketPayments, setMarketPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [showAllModal, setShowAllModal] = useState(false);
 
@@ -156,6 +158,28 @@ export default function TreasuryDashboardView({
       setStalls(Array.isArray(dbStalls) ? dbStalls : []);
       setBizAssessments(Array.isArray(dbBizAssessments) ? dbBizAssessments : []);
       setRptAssessments(Array.isArray(dbRptAssessments) ? dbRptAssessments : []);
+
+      // Fetch RPT payments for revenue trend
+      try {
+        const resRptPay = await fetch(`${API_BASE_URL}/citizen-rpt-payments`);
+        if (resRptPay.ok) {
+          const data = await resRptPay.json();
+          setRptPayments(Array.isArray(data) ? data : []);
+        }
+      } catch (e) {
+        console.error('Failed to fetch RPT payments:', e);
+      }
+
+      // Fetch market lease payments for revenue trend
+      try {
+        const resMarket = await fetch(`${API_BASE_URL}/market-leases`);
+        if (resMarket.ok) {
+          const data = await resMarket.json();
+          setMarketPayments(Array.isArray(data) ? data : (data.data || []));
+        }
+      } catch (e) {
+        console.error('Failed to fetch market leases:', e);
+      }
 
     } catch (error) {
       console.error("Failed to query data from backend:", error);
@@ -282,21 +306,40 @@ export default function TreasuryDashboardView({
 
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-  const rptTrend = months.map(m => {
-    const amount = activeTxFeed
-      .filter(t => t?.paymentType === 'REAL PROPERTY TAX (RPT)' && t?.date?.startsWith(m))
+  const rptTrend = months.map((m, index) => {
+    const monthNumStr = String(index + 1).padStart(2, '0');
+    // From payment transactions
+    const txAmount = activeTxFeed
+      .filter(t => {
+        const type = (t?.paymentType || '').toUpperCase();
+        const dateStr = t?.date || '';
+        const matchesMonth = dateStr.startsWith(`${fiscalPeriod}-${monthNumStr}`);
+        return (type.includes('REAL PROPERTY') || type === 'RPT') && matchesMonth;
+      })
       .reduce((sum, t) => sum + Number(t?.amount || 0), 0);
-    return { month: m, amount };
+    // From RPT citizen payments
+    const rptPayAmount = rptPayments
+      .filter(p => {
+        const dateStr = String(p?.payment_date || p?.created_at || p?.paymentDate || '');
+        return dateStr.startsWith(`${fiscalPeriod}-${monthNumStr}`);
+      })
+      .reduce((sum, p) => sum + Number(p?.total_amount || p?.amount || p?.paid_amount || 0), 0);
+    return { month: m, amount: txAmount + rptPayAmount };
   });
 
   const safeBizAssessments = Array.isArray(bizAssessments) ? bizAssessments : [];
 
   const bizTrend = months.map((m, index) => {
+    const monthNumStr = String(index + 1).padStart(2, '0');
     const txAmount = activeTxFeed
-      .filter(t => (t?.paymentType || "").toUpperCase().includes('BUSINESS') && t?.date?.startsWith(m))
+      .filter(t => {
+        const type = (t?.paymentType || '').toUpperCase();
+        const dateStr = t?.date || '';
+        return (type.includes('BUSINESS') || type.includes('BPLPO') || type.includes('PERMIT')) &&
+          dateStr.startsWith(`${fiscalPeriod}-${monthNumStr}`);
+      })
       .reduce((sum, t) => sum + Number(t?.amount || 0), 0);
 
-    const monthNumStr = String(index + 1).padStart(2, '0');
     const assessmentAmount = safeBizAssessments
       .filter(b => {
         const dateStr = String(b?.applicationDate || b?.dateFiled || "");
@@ -311,11 +354,25 @@ export default function TreasuryDashboardView({
     return { month: m, amount: txAmount + assessmentAmount };
   });
 
-  const marketTrend = months.map(m => {
-    const amount = activeTxFeed
-      .filter(t => (t?.paymentType || "").toUpperCase().includes("MARKET") && t?.date?.startsWith(m))
+  const marketTrend = months.map((m, index) => {
+    const monthNumStr = String(index + 1).padStart(2, '0');
+    // From payment transactions
+    const txAmount = activeTxFeed
+      .filter(t => {
+        const type = (t?.paymentType || '').toUpperCase();
+        const dateStr = t?.date || '';
+        return type.includes('MARKET') && dateStr.startsWith(`${fiscalPeriod}-${monthNumStr}`);
+      })
       .reduce((sum, t) => sum + Number(t?.amount || 0), 0);
-    return { month: m, amount };
+    // From market lease records (amount_due / monthly_rent)
+    const marketLeaseAmount = marketPayments
+      .filter(l => {
+        const dateStr = String(l?.payment_date || l?.created_at || l?.leaseStartDate || l?.startDate || '');
+        return dateStr.startsWith(`${fiscalPeriod}-${monthNumStr}`) && 
+          (l?.paymentStatus === 'Paid' || l?.status === 'Active');
+      })
+      .reduce((sum, l) => sum + Number(l?.amount_due || l?.monthlyRent || l?.amount || 0), 0);
+    return { month: m, amount: txAmount + marketLeaseAmount };
   });
 
   const generateConicGradient = (items: { percentage: number; option?: string; type?: string }[]) => {
@@ -775,10 +832,18 @@ export default function TreasuryDashboardView({
 
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-base font-bold text-slate-900 dark:text-white m-0">
-            Live Transaction Ledger ({activeLocalTab === "ALL" ? "All Modules" : activeLocalTab})
-          </h3>
-          {activeTxFeed.length > 0 && (
+          <div>
+            <h3 className="text-base font-bold text-slate-900 dark:text-white m-0">
+              Live Transaction Ledger ({activeLocalTab === "ALL" ? "All Modules" : activeLocalTab})
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 m-0 mt-0.5">
+              {activeLocalTab === "RPT" && "Showing RPT citizen payment records fetched from PostgreSQL"}
+              {activeLocalTab === "BUSINESS" && "Showing business assessment declarations fetched from PostgreSQL"}
+              {activeLocalTab === "MARKET" && "Showing market lease records fetched from PostgreSQL"}
+              {activeLocalTab === "ALL" && "Showing all ePayment transaction records from PostgreSQL"}
+            </p>
+          </div>
+          {activeLocalTab === "ALL" && activeTxFeed.length > 0 && (
             <button
               onClick={() => setShowAllModal(true)}
               className="text-xs text-blue-600 dark:text-blue-400 font-semibold cursor-pointer hover:underline bg-transparent border-none p-0"
@@ -788,47 +853,183 @@ export default function TreasuryDashboardView({
           )}
         </div>
 
-        {activeTxFeed.length === 0 ? (
-          <p className="text-slate-400 dark:text-slate-500 text-[13px] italic text-center p-8 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl m-0">
-            No transaction records found in database for year {fiscalPeriod}.
-          </p>
-        ) : (
-          <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
-            <table className="w-full text-left text-[13px] border-collapse">
-              <thead className="bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-800">
-                <tr>
-                  <th className="py-3 px-4">Reference</th>
-                  <th className="py-3 px-4">Payer Name</th>
-                  <th className="py-3 px-4">Payment Type</th>
-                  <th className="py-3 px-4 text-right">Amount</th>
-                  <th className="py-3 px-4">Method</th>
-                  <th className="py-3 px-4">Collector</th>
-                  <th className="py-3 px-4 text-center">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
-                {activeTxFeed.slice(0, 5).map((transaction, index) => (
-                  <tr key={transaction.id || transaction.transactionId || index} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                    <td className="py-3 px-4 font-mono font-semibold text-blue-600 dark:text-blue-400">{transaction.referenceNumber || transaction.id}</td>
-                    <td className="py-3 px-4 font-semibold text-slate-900 dark:text-white">{transaction.taxpayer || (transaction as any).payerName}</td>
-                    <td className="py-3 px-4 text-slate-600 dark:text-slate-300">{transaction.paymentType}</td>
-                    <td className="py-3 px-4 text-right font-semibold text-slate-900 dark:text-white">
-                      ₱{Number(transaction.amount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
-                    </td>
-                    <td className="py-3 px-4 text-slate-600 dark:text-slate-300">{transaction.paymentMethod}</td>
-                    <td className="py-3 px-4 text-slate-500 dark:text-slate-400">{transaction.collector}</td>
-                    <td className="py-3 px-4 text-center">
-                      <span className="py-0.5 px-2.5 rounded-full text-[11px] font-semibold bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
-                        {transaction.status || "Posted"}
-                      </span>
-                    </td>
+        {/* RPT Tab — show RPT payments */}
+        {activeLocalTab === "RPT" && (
+          rptPayments.length === 0 ? (
+            <p className="text-slate-400 dark:text-slate-500 text-[13px] italic text-center p-8 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl m-0">
+              No RPT payment records found in database.
+            </p>
+          ) : (
+            <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
+              <table className="w-full text-left text-[13px] border-collapse">
+                <thead className="bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-800">
+                  <tr>
+                    <th className="py-3 px-4">Payment Ref</th>
+                    <th className="py-3 px-4">Taxpayer / Owner</th>
+                    <th className="py-3 px-4">Property PIN</th>
+                    <th className="py-3 px-4 text-right">Amount Paid</th>
+                    <th className="py-3 px-4">Method</th>
+                    <th className="py-3 px-4 text-center">Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                  {rptPayments.slice(0, 10).map((p, idx) => (
+                    <tr key={p.id || idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                      <td className="py-3 px-4 font-mono font-semibold text-blue-600 dark:text-blue-400">{p.reference_number || p.referenceNumber || p.id || `RPT-PAY-${idx + 1}`}</td>
+                      <td className="py-3 px-4 font-semibold text-slate-900 dark:text-white">{p.taxpayer_name || p.taxpayerName || p.owner_name || p.applicant_name || 'N/A'}</td>
+                      <td className="py-3 px-4 text-slate-600 dark:text-slate-300 font-mono">{p.pin || p.property_pin || 'N/A'}</td>
+                      <td className="py-3 px-4 text-right font-semibold text-slate-900 dark:text-white">
+                        ₱{Number(p.total_amount || p.amount || p.paid_amount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="py-3 px-4 text-slate-600 dark:text-slate-300">{p.payment_method || p.paymentMethod || 'Online Payment'}</td>
+                      <td className="py-3 px-4 text-center">
+                        <span className="py-0.5 px-2.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          {p.status || 'Paid'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
+        )}
+
+        {/* BUSINESS Tab — show business assessments as ledger */}
+        {activeLocalTab === "BUSINESS" && (
+          bizAssessments.length === 0 ? (
+            <p className="text-slate-400 dark:text-slate-500 text-[13px] italic text-center p-8 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl m-0">
+              No business assessment records found in database.
+            </p>
+          ) : (
+            <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
+              <table className="w-full text-left text-[13px] border-collapse">
+                <thead className="bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-800">
+                  <tr>
+                    <th className="py-3 px-4">Tracking No.</th>
+                    <th className="py-3 px-4">Business Name</th>
+                    <th className="py-3 px-4">Owner</th>
+                    <th className="py-3 px-4">Date Filed</th>
+                    <th className="py-3 px-4 text-right">Gross Sales</th>
+                    <th className="py-3 px-4 text-center">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                  {bizAssessments.slice(0, 10).map((b, idx) => {
+                    const rawSales = Number(String(b?.grossSales || "0").replace(/[^0-9.-]+/g, "")) || 0;
+                    return (
+                      <tr key={b.trackingNumber || idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                        <td className="py-3 px-4 font-mono font-semibold text-blue-600 dark:text-blue-400">{b.trackingNumber}</td>
+                        <td className="py-3 px-4 font-semibold text-slate-900 dark:text-white">{b.businessName}</td>
+                        <td className="py-3 px-4 text-slate-600 dark:text-slate-300">{b.businessOwner}</td>
+                        <td className="py-3 px-4 text-slate-500 dark:text-slate-400">{b.applicationDate || b.dateFiled || 'N/A'}</td>
+                        <td className="py-3 px-4 text-right font-semibold text-slate-900 dark:text-white">
+                          ₱{rawSales.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <span className={`py-0.5 px-2.5 rounded-full text-[11px] font-semibold border ${(b.status || "").toUpperCase() === "APPROVED"
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                            : (b.status || "").toUpperCase() === "REJECTED"
+                            ? "bg-rose-50 text-rose-700 border-rose-200"
+                            : "bg-amber-50 text-amber-700 border-amber-200"
+                            }`}>
+                            {b.status || 'PENDING'}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )
+        )}
+
+        {/* MARKET Tab — show stall / lease records */}
+        {activeLocalTab === "MARKET" && (
+          stalls.length === 0 ? (
+            <p className="text-slate-400 dark:text-slate-500 text-[13px] italic text-center p-8 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl m-0">
+              No market lease records found in database.
+            </p>
+          ) : (
+            <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
+              <table className="w-full text-left text-[13px] border-collapse">
+                <thead className="bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-800">
+                  <tr>
+                    <th className="py-3 px-4">Stall / ID</th>
+                    <th className="py-3 px-4">Vendor / Lessee</th>
+                    <th className="py-3 px-4">Section / Market</th>
+                    <th className="py-3 px-4 text-right">Monthly Rental</th>
+                    <th className="py-3 px-4 text-center">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                  {stalls.slice(0, 10).map((stall, idx) => (
+                    <tr key={stall.id || idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                      <td className="py-3 px-4 font-mono font-semibold text-blue-600 dark:text-blue-400">{stall.stallNumber || stall.id}</td>
+                      <td className="py-3 px-4 font-semibold text-slate-900 dark:text-white">{stall.lesseeName || stall.vendorName || 'Unassigned'}</td>
+                      <td className="py-3 px-4 text-slate-600 dark:text-slate-300">{stall.section || 'General Market'}</td>
+                      <td className="py-3 px-4 text-right font-semibold text-slate-900 dark:text-white">
+                        ₱{Number(stall.monthlyRent || stall.amount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <span className="py-0.5 px-2.5 rounded-full text-[11px] font-semibold bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
+                          {stall.status || 'Active'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
+        )}
+
+        {/* ALL Tab — show payment transactions */}
+        {activeLocalTab === "ALL" && (
+          activeTxFeed.length === 0 ? (
+            <p className="text-slate-400 dark:text-slate-500 text-[13px] italic text-center p-8 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl m-0">
+              No transaction records found in database for year {fiscalPeriod}.
+            </p>
+          ) : (
+            <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
+              <table className="w-full text-left text-[13px] border-collapse">
+                <thead className="bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-800">
+                  <tr>
+                    <th className="py-3 px-4">Reference</th>
+                    <th className="py-3 px-4">Payer Name</th>
+                    <th className="py-3 px-4">Payment Type</th>
+                    <th className="py-3 px-4 text-right">Amount</th>
+                    <th className="py-3 px-4">Method</th>
+                    <th className="py-3 px-4">Collector</th>
+                    <th className="py-3 px-4 text-center">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                  {activeTxFeed.slice(0, 10).map((transaction, index) => (
+                    <tr key={transaction.id || transaction.transactionId || index} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                      <td className="py-3 px-4 font-mono font-semibold text-blue-600 dark:text-blue-400">{transaction.referenceNumber || transaction.id}</td>
+                      <td className="py-3 px-4 font-semibold text-slate-900 dark:text-white">{transaction.taxpayer || (transaction as any).payerName}</td>
+                      <td className="py-3 px-4 text-slate-600 dark:text-slate-300">{transaction.paymentType}</td>
+                      <td className="py-3 px-4 text-right font-semibold text-slate-900 dark:text-white">
+                        ₱{Number(transaction.amount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="py-3 px-4 text-slate-600 dark:text-slate-300">{transaction.paymentMethod}</td>
+                      <td className="py-3 px-4 text-slate-500 dark:text-slate-400">{transaction.collector}</td>
+                      <td className="py-3 px-4 text-center">
+                        <span className="py-0.5 px-2.5 rounded-full text-[11px] font-semibold bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
+                          {transaction.status || "Posted"}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
         )}
       </div>
+
 
       {showAllModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4">
