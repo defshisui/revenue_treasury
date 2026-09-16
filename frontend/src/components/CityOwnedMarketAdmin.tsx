@@ -137,7 +137,7 @@ export default function CityOwnedMarketAdmin({
 
   const metrics = useMemo(() => {
 
-    const activeRecords = leases.filter((l) => l.leaseStatus !== "Archived");
+    const activeRecords = leases.filter((l) => String(l.leaseStatus || "").trim().toLowerCase() !== "archived");
     const total = activeRecords.length;
     let active = 0;
     let pendingPayment = 0;
@@ -159,7 +159,7 @@ export default function CityOwnedMarketAdmin({
     const lowerLastName = searchLastName.toLowerCase();
 
     return leases.filter((item) => {
-      const isArchived = item.leaseStatus === "Archived";
+      const isArchived = String(item.leaseStatus || "").trim().toLowerCase() === "archived";
 
       if (activeTab === "Active" && isArchived) return false;
       if (activeTab === "Archived" && !isArchived) return false;
@@ -328,13 +328,14 @@ export default function CityOwnedMarketAdmin({
 
   const handleSoftDelete = async (record: LeaseRecord) => {
     if (window.confirm(`Are you sure you want to move lease record ${record.leaseId} to the Archiver?`)) {
-      const updatedRecord = { ...record, leaseStatus: "Archived" as const };
+      const updatedRecord: LeaseRecord = { ...record, leaseStatus: "Archived" };
+      setLeases(prevLeases => prevLeases.map((l) => l.leaseId === record.leaseId ? updatedRecord : l));
+      setActiveTab("Archived");
       try {
         await updateLease(updatedRecord as any);
       } catch (err) {
         console.warn("Archive database update warning, updated local record:", err);
       }
-      setLeases(prevLeases => prevLeases.map((l) => l.leaseId === record.leaseId ? updatedRecord : l));
       if (onUpdateRecord) onUpdateRecord(updatedRecord);
       window.dispatchEvent(new Event("db_treasury_updated"));
     }
@@ -342,13 +343,14 @@ export default function CityOwnedMarketAdmin({
 
   const handleRestore = async (record: LeaseRecord) => {
     if (window.confirm(`Are you sure you want to restore lease record ${record.leaseId}?`)) {
-      const updatedRecord = { ...record, leaseStatus: "Inactive" as const };
+      const updatedRecord: LeaseRecord = { ...record, leaseStatus: "Active" };
+      setLeases(prevLeases => prevLeases.map((l) => l.leaseId === record.leaseId ? updatedRecord : l));
+      setActiveTab("Active");
       try {
         await updateLease(updatedRecord as any);
       } catch (err) {
         console.warn("Restore database update warning, restored local record:", err);
       }
-      setLeases(prevLeases => prevLeases.map((l) => l.leaseId === record.leaseId ? updatedRecord : l));
       if (onUpdateRecord) onUpdateRecord(updatedRecord);
       window.dispatchEvent(new Event("db_treasury_updated"));
     }

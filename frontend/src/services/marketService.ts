@@ -60,39 +60,50 @@ import { API_BASE_URL } from "../config/api";
 const MODE: "LOCALSTORAGE" | "ONLINE" = "ONLINE";
 
 export async function getLeases(): Promise<LeaseRecord[]> {
+  const localData = localStorage.getItem("market_leases");
+  let localList: LeaseRecord[] = [];
+  try {
+    localList = localData ? JSON.parse(localData) : [];
+  } catch {
+    localList = [];
+  }
+
   if (MODE === "ONLINE") {
     try {
       const res = await fetch(`${API_BASE_URL}/market-leases`);
 
-      if (!res.ok) {
-        const responseText = await res.text();
+      if (res.ok) {
+        const serverList = await res.json();
+        if (Array.isArray(serverList)) {
+          const merged = serverList.map((srv: any) => {
+            const loc = localList.find((l: any) => l.leaseId === srv.leaseId);
+            if (loc) {
+              const isLocallyArchived = String(loc.leaseStatus || "").trim().toLowerCase() === "archived";
+              return {
+                ...srv,
+                ...loc,
+                leaseStatus: isLocallyArchived ? "Archived" : (srv.leaseStatus || loc.leaseStatus),
+              };
+            }
+            return srv;
+          });
 
-        let errorBody: any = {};
+          localList.forEach((loc: any) => {
+            if (!merged.some((m: any) => m.leaseId === loc.leaseId)) {
+              merged.push(loc);
+            }
+          });
 
-        try {
-          errorBody = responseText ? JSON.parse(responseText) : {};
-        } catch {
-          errorBody = {};
+          localStorage.setItem("market_leases", JSON.stringify(merged));
+          return merged;
         }
-
-        throw new Error(
-          errorBody.message ||
-          errorBody.error ||
-          responseText ||
-          `Failed to fetch leases from database (Status: ${res.status})`
-        );
       }
-
-      return await res.json();
     } catch (error) {
-      console.error("Online fetch error:", error);
-      return [];
+      console.warn("Online fetch error, using local market leases cache:", error);
     }
   }
 
-
-  const data = localStorage.getItem("market_leases");
-  return data ? JSON.parse(data) : [];
+  return localList;
 }
 
 export async function saveLease(newLease: LeaseRecord): Promise<void> {
