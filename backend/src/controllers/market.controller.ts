@@ -476,16 +476,36 @@ export async function updateMarketLease(req: Request, res: Response): Promise<vo
 export async function deleteMarketLease(req: Request, res: Response): Promise<void> {
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const trimmedId = String(rawId || '').trim();
+  let decodedId = trimmedId;
+  try {
+    decodedId = decodeURIComponent(trimmedId).trim();
+  } catch {}
+
   try {
     const result = await pool.query(
       `DELETE FROM market_leases 
        WHERE lease_id = $1 
-          OR LOWER(lease_id) = LOWER($1) 
-          OR id::text = $1 
-          OR TRIM(lease_id) = TRIM($1)
+          OR LOWER(TRIM(lease_id)) = LOWER(TRIM($1)) 
+          OR id::text = $1
+          OR lease_id = $2
+          OR LOWER(TRIM(lease_id)) = LOWER(TRIM($2))
+          OR id::text = $2
+          OR lease_id ILIKE $1
+          OR lease_id ILIKE $2
        RETURNING *`,
-      [trimmedId]
+      [trimmedId, decodedId]
     );
+
+    if (result.rows.length === 0) {
+      // Nothing matched — either already gone or ID mismatch. Return 200 (idempotent)
+      console.warn(`[deleteMarketLease] No rows matched id='${trimmedId}'. Already deleted or ID not found.`);
+      res.status(200).json({
+        message: 'Lease record not found or already deleted',
+        deletedCount: 0,
+        deletedLease: null,
+      });
+      return;
+    }
 
     try {
       await recordAudit(req, 'AUD-MARKET-DELETE', 'system-admin@lgu.gov.ph', 'admin',

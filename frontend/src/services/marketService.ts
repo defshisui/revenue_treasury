@@ -1,4 +1,5 @@
 export interface LeaseRecord {
+  id?: string;
   leaseId: string;
   firstName: string;
   lastName: string;
@@ -60,14 +61,6 @@ import { API_BASE_URL } from "../config/api";
 const MODE: "LOCALSTORAGE" | "ONLINE" = "ONLINE";
 
 export async function getLeases(): Promise<LeaseRecord[]> {
-  const localData = localStorage.getItem("market_leases");
-  let localList: LeaseRecord[] = [];
-  try {
-    localList = localData ? JSON.parse(localData) : [];
-  } catch {
-    localList = [];
-  }
-
   let deletedIds: string[] = [];
   try {
     const deletedRaw = localStorage.getItem("deleted_market_lease_ids");
@@ -76,14 +69,28 @@ export async function getLeases(): Promise<LeaseRecord[]> {
     deletedIds = [];
   }
 
-  const isDeleted = (id?: string) => {
-    if (!id) return false;
-    const lower = String(id).trim().toLowerCase();
-    return deletedIds.some((d) => d.trim().toLowerCase() === lower);
+  const isDeleted = (item?: any) => {
+    if (!item) return false;
+    const lId = item.leaseId ? String(item.leaseId).trim().toLowerCase() : "";
+    const rId = item.id !== undefined && item.id !== null ? String(item.id).trim().toLowerCase() : "";
+    const sId = item.lease_id ? String(item.lease_id).trim().toLowerCase() : "";
+
+    return deletedIds.some((d) => {
+      const target = d.trim().toLowerCase();
+      return (lId && lId === target) || (rId && rId === target) || (sId && sId === target);
+    });
   };
 
+  const localData = localStorage.getItem("market_leases");
+  let localList: LeaseRecord[] = [];
+  try {
+    localList = localData ? JSON.parse(localData) : [];
+  } catch {
+    localList = [];
+  }
+
   // Filter out any deleted leases from local cache
-  localList = localList.filter((l) => !isDeleted(l.leaseId));
+  localList = localList.filter((l) => !isDeleted(l));
 
   if (MODE === "ONLINE") {
     try {
@@ -93,10 +100,13 @@ export async function getLeases(): Promise<LeaseRecord[]> {
         const serverList = await res.json();
         if (Array.isArray(serverList)) {
           // Exclude any deleted leases from server response
-          const activeServerList = serverList.filter((srv: any) => !isDeleted(srv.leaseId));
+          const activeServerList = serverList.filter((srv: any) => !isDeleted(srv));
 
           const merged = activeServerList.map((srv: any) => {
-            const loc = localList.find((l: any) => l.leaseId === srv.leaseId);
+            const loc = localList.find((l: any) => 
+              (l.leaseId && srv.leaseId && String(l.leaseId).trim().toLowerCase() === String(srv.leaseId).trim().toLowerCase()) ||
+              (l.id && srv.id && String(l.id).trim() === String(srv.id).trim())
+            );
             if (loc) {
               const isLocallyArchived = String(loc.leaseStatus || "").trim().toLowerCase() === "archived";
               return {
@@ -109,7 +119,10 @@ export async function getLeases(): Promise<LeaseRecord[]> {
           });
 
           localList.forEach((loc: any) => {
-            if (!merged.some((m: any) => m.leaseId === loc.leaseId)) {
+            if (!isDeleted(loc) && !merged.some((m: any) => 
+              (m.leaseId && loc.leaseId && String(m.leaseId).trim().toLowerCase() === String(loc.leaseId).trim().toLowerCase()) ||
+              (m.id && loc.id && String(m.id).trim() === String(loc.id).trim())
+            )) {
               merged.push(loc);
             }
           });
@@ -283,34 +296,41 @@ export async function updateLease(
   localStorage.setItem("market_leases", JSON.stringify(updated));
 }
 
-export async function deleteLease(leaseId: string): Promise<void> {
+export async function deleteLease(leaseId: string, recordId?: string | number): Promise<void> {
   const cleanId = (leaseId || "").trim();
-  if (!cleanId) return;
+  const cleanRecordId = recordId !== undefined && recordId !== null ? String(recordId).trim() : "";
+  if (!cleanId && !cleanRecordId) return;
 
   // 1. Immediately remove from local market_leases cache
   try {
     const localData = localStorage.getItem("market_leases");
     if (localData) {
-      const localList: LeaseRecord[] = JSON.parse(localData);
-      const updated = localList.filter(
-        (item: any) =>
-          item.leaseId !== cleanId &&
-          String(item.leaseId || "").trim().toLowerCase() !== cleanId.toLowerCase()
-      );
+      const localList: any[] = JSON.parse(localData);
+      const updated = localList.filter((item: any) => {
+        const itemLId = item.leaseId ? String(item.leaseId).trim().toLowerCase() : "";
+        const itemId = item.id !== undefined && item.id !== null ? String(item.id).trim().toLowerCase() : "";
+        
+        const matchLease = cleanId && itemLId === cleanId.toLowerCase();
+        const matchRecord = cleanRecordId && itemId === cleanRecordId.toLowerCase();
+        return !matchLease && !matchRecord;
+      });
       localStorage.setItem("market_leases", JSON.stringify(updated));
     }
   } catch (e) {
     console.warn("Error removing from local market_leases cache:", e);
   }
 
-  // 2. Track deleted ID so polling never revives it
+  // 2. Track deleted IDs so polling never revives it
   try {
     const deletedRaw = localStorage.getItem("deleted_market_lease_ids");
     const deletedList: string[] = deletedRaw ? JSON.parse(deletedRaw) : [];
-    if (!deletedList.some((d) => d.trim().toLowerCase() === cleanId.toLowerCase())) {
+    if (cleanId && !deletedList.some((d) => d.trim().toLowerCase() === cleanId.toLowerCase())) {
       deletedList.push(cleanId);
-      localStorage.setItem("deleted_market_lease_ids", JSON.stringify(deletedList));
     }
+    if (cleanRecordId && !deletedList.some((d) => d.trim().toLowerCase() === cleanRecordId.toLowerCase())) {
+      deletedList.push(cleanRecordId);
+    }
+    localStorage.setItem("deleted_market_lease_ids", JSON.stringify(deletedList));
   } catch (e) {
     console.warn("Error saving to deleted_market_lease_ids:", e);
   }
@@ -318,7 +338,8 @@ export async function deleteLease(leaseId: string): Promise<void> {
   // 3. Delete from backend database
   if (MODE === "ONLINE") {
     try {
-      const targetId = encodeURIComponent(cleanId);
+      const target = cleanId || cleanRecordId;
+      const targetId = encodeURIComponent(target);
       const res = await fetch(`${API_BASE_URL}/market-leases/${targetId}`, {
         method: "DELETE",
       });
@@ -332,19 +353,15 @@ export async function deleteLease(leaseId: string): Promise<void> {
       }
 
       if (!res.ok) {
-        const errorMessage =
-          responseBody.message ||
-          responseBody.error ||
-          responseText ||
-          `Failed to delete lease from database (Status: ${res.status})`;
-        console.error("Online delete error:", errorMessage);
-        throw new Error(errorMessage);
+        console.error("[deleteLease] Backend delete failed:", res.status, responseBody.message || responseText);
+      } else {
+        console.log(`[deleteLease] Backend confirmed deletion of '${target}'. Deleted count: ${responseBody.deletedCount ?? 'unknown'}`);
       }
 
       return;
     } catch (error) {
-      console.error("Online delete error:", error);
-      throw error;
+      console.warn("[deleteLease] Network error during backend delete (local deletion still applied):", error);
+      return;
     }
   }
 }

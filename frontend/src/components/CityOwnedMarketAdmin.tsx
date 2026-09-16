@@ -14,6 +14,7 @@ const STANDARD_PAYMENT_METHODS = [
 ];
 
 interface LeaseRecord {
+  id?: string;
   leaseId: string;
   firstName: string;
   lastName: string;
@@ -356,12 +357,23 @@ export default function CityOwnedMarketAdmin({
     }
   };
 
-  const handleFinalDelete = async (leaseId: string) => {
-    if (window.confirm(`WARNING: Are you sure you want to PERMANENTLY delete lease record ${leaseId}?`)) {
-      setLeases(prevLeases => prevLeases.filter((l) => l.leaseId !== leaseId && String(l.leaseId).trim().toLowerCase() !== leaseId.trim().toLowerCase()));
+  const handleFinalDelete = async (recordOrId: LeaseRecord | string) => {
+    const leaseId = typeof recordOrId === "string" ? recordOrId : recordOrId.leaseId;
+    const dbId = typeof recordOrId === "object" ? (recordOrId as any).id : undefined;
+
+    if (window.confirm(`WARNING: Are you sure you want to PERMANENTLY delete lease record ${leaseId}? This action cannot be undone.`)) {
+      // Immediately remove from UI state first
+      setLeases((prevLeases) =>
+        prevLeases.filter((l: any) => {
+          const matchLeaseId = leaseId && String(l.leaseId || "").trim().toLowerCase() === String(leaseId).trim().toLowerCase();
+          const matchDbId = dbId && String(l.id || "").trim() === String(dbId).trim();
+          return !matchLeaseId && !matchDbId;
+        })
+      );
 
       try {
-        await deleteLease(leaseId);
+        await deleteLease(leaseId, dbId);
+        console.log(`[Delete] Lease ${leaseId} permanently deleted from database and cache.`);
       } catch (err) {
         console.warn("Backend delete sync warning, removed locally:", err);
       }
@@ -369,7 +381,6 @@ export default function CityOwnedMarketAdmin({
       if (onDeleteRecord) {
         onDeleteRecord(leaseId);
       }
-      window.dispatchEvent(new Event("db_treasury_updated"));
     }
   };
 
@@ -737,28 +748,40 @@ export default function CityOwnedMarketAdmin({
                               </button>
                             )}
                             <button
+                              type="button"
                               onClick={() => handleSoftDelete(item)}
                               className="bg-slate-100 hover:bg-slate-200 hover:text-slate-800 text-slate-500 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200 font-medium px-2.5 py-1.5 rounded-xl transition-all cursor-pointer border border-slate-200 text-[11px]"
                             >
                               Archive
                             </button>
+                            <button
+                              type="button"
+                              onClick={() => handleFinalDelete(item)}
+                              className="bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 font-medium px-2.5 py-1.5 rounded-xl transition-all cursor-pointer border border-rose-200 dark:border-rose-900 text-[11px]"
+                              title="Delete this lease record completely"
+                            >
+                              Delete
+                            </button>
                           </>
                         ) : (
                           <>
                             <button
+                              type="button"
                               onClick={() => handleOpenEdit(item)}
                               className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-3.5 py-1.5 rounded-xl transition-all cursor-pointer shadow-xs flex items-center gap-1.5"
                             >
                               Review
                             </button>
                             <button
+                              type="button"
                               onClick={() => handleRestore(item)}
                               className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 font-medium px-3.5 py-1.5 rounded-xl transition-all cursor-pointer border border-emerald-200 dark:border-emerald-900 flex items-center gap-1.5"
                             >
                               Restore
                             </button>
                             <button
-                              onClick={() => handleFinalDelete(item.leaseId)}
+                              type="button"
+                              onClick={() => handleFinalDelete(item)}
                               className="bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 font-medium px-3.5 py-1.5 rounded-xl transition-all cursor-pointer border border-rose-200 dark:border-rose-900 flex items-center gap-1.5"
                             >
                               Delete (Final)

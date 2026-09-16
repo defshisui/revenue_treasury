@@ -1,7 +1,9 @@
+const isLocalHost = typeof window !== 'undefined' && 
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === '::1');
+
 const rawApiUrl =
   import.meta.env.VITE_API_URL ||
-  'https://revenuetreasury-production.up.railway.app';
-
+  (isLocalHost ? 'http://localhost:3000' : 'https://revenuetreasury-production.up.railway.app');
 
 const sanitizedApiUrl = rawApiUrl.replace(/^VITE_API_URL=/, '');
 

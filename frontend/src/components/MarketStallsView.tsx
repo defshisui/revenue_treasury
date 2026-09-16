@@ -412,8 +412,8 @@ export default function MarketStallsView({
     if (confirm("WARNING: Are you sure you want to PERMANENTLY delete this stall? This action will remove it from the database and cannot be undone.")) {
       const leaseId = (stall as any).leaseId || id;
       try {
-        await deleteLease(leaseId);
-        setStalls(stalls.filter((s) => s.id !== id));
+        await deleteLease(leaseId, id);
+        setStalls(stalls.filter((s) => s.id !== id && (s as any).leaseId !== leaseId));
         if (onDeleteRecord) onDeleteRecord(id);
       } catch (err) {
         console.error("Failed to delete stall permanently:", err);
