@@ -370,19 +370,28 @@ export async function updateMarketLease(req: Request, res: Response): Promise<vo
   const resolvedPaymentMethod = resolvePaymentMethod(body);
   const officialReceiptNumber = body.officialReceiptNumber || body.official_receipt_number || null;
   const paymentReference = body.paymentReference || body.payment_reference || null;
-  const paymentDate = body.paymentDate || body.payment_date || null;
+  let safePaymentDate: string | null = null;
+  const rawDate = body.paymentDate || body.payment_date;
+  if (rawDate && typeof rawDate === 'string' && rawDate.trim() !== '' && rawDate !== 'null' && rawDate !== 'undefined') {
+    const d = new Date(rawDate);
+    if (!isNaN(d.getTime())) {
+      safePaymentDate = d.toISOString();
+    }
+  }
+
   const paymentProof = body.paymentProof !== undefined ? body.paymentProof : (body.payment_proof !== undefined ? body.payment_proof : null);
   const mismatchNotes = body.mismatchNotes !== undefined ? body.mismatchNotes : (body.mismatch_notes !== undefined ? body.mismatch_notes : null);
+  const targetId = id || body.leaseId || body.id;
 
   try {
-    const result = await pool.query(
+    let result = await pool.query(
       `UPDATE market_leases
        SET first_name=$1, last_name=$2, market_name=$3, section=$4, stall_number=$5,
            lease_status=$6, amount_due=$7, helper_approval_status=$8,
            advance_payment_status=$9, payment_status=$10, payment_method=$11,
            official_receipt_number = COALESCE($12, official_receipt_number),
            payment_reference = COALESCE($13, payment_reference),
-           payment_date = COALESCE($14::timestamp, payment_date),
+           payment_date = CASE WHEN $14 IS NOT NULL THEN $14::timestamp ELSE payment_date END,
            payment_proof = CASE WHEN $15 IS NOT NULL THEN $15 ELSE payment_proof END,
            mismatch_notes = CASE
              WHEN $10 = 'Paid' AND ($16 IS NULL OR $16 = '') THEN NULL
@@ -395,12 +404,37 @@ export async function updateMarketLease(req: Request, res: Response): Promise<vo
       [firstName, lastName, marketName, section, stallNumber,
         leaseStatus, amountDue || 0, helperApprovalStatus,
         advancePaymentStatus, paymentStatus, resolvedPaymentMethod,
-        officialReceiptNumber, paymentReference, paymentDate, paymentProof, mismatchNotes, id, email]
+        officialReceiptNumber, paymentReference, safePaymentDate, paymentProof, mismatchNotes, targetId, email]
     );
 
     if (result.rows.length === 0) {
-      res.status(404).json({ message: 'Lease record not found' });
-      return;
+      result = await pool.query(
+        `INSERT INTO market_leases
+         (lease_id, first_name, last_name, email, market_name, section, stall_number,
+          lease_status, amount_due, helper_approval_status, advance_payment_status,
+          payment_status, payment_method, official_receipt_number, payment_reference,
+          payment_proof, mismatch_notes, payment_date, created_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,
+                 CASE WHEN $18 IS NOT NULL THEN $18::timestamp ELSE NULL END, NOW())
+         ON CONFLICT (lease_id) DO UPDATE
+         SET lease_status = EXCLUDED.lease_status,
+             payment_status = EXCLUDED.payment_status,
+             amount_due = EXCLUDED.amount_due,
+             official_receipt_number = COALESCE(EXCLUDED.official_receipt_number, market_leases.official_receipt_number),
+             payment_reference = COALESCE(EXCLUDED.payment_reference, market_leases.payment_reference)
+         RETURNING *`,
+        [
+          body.leaseId || targetId,
+          firstName, lastName, email,
+          marketName, section, stallNumber,
+          leaseStatus, amountDue || 0,
+          helperApprovalStatus, advancePaymentStatus,
+          paymentStatus, resolvedPaymentMethod,
+          officialReceiptNumber, paymentReference,
+          paymentProof, mismatchNotes,
+          safePaymentDate
+        ]
+      );
     }
 
     const row = result.rows[0];

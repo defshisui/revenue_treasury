@@ -169,10 +169,25 @@ export async function updateLease(
         : detectPaymentMethod(updatedRecord),
   };
 
+  try {
+    const localData = localStorage.getItem("market_leases");
+    const localList = localData ? JSON.parse(localData) : [];
+    const idx = localList.findIndex((l: any) => l.leaseId === payload.leaseId);
+    if (idx >= 0) {
+      localList[idx] = payload;
+    } else {
+      localList.unshift(payload);
+    }
+    localStorage.setItem("market_leases", JSON.stringify(localList));
+  } catch (e) {
+    // ignore localStorage sync error
+  }
+
   if (MODE === "ONLINE") {
     try {
+      const targetId = encodeURIComponent(payload.leaseId || (payload as any).id || "");
       const res = await fetch(
-        `${API_BASE_URL}/market-leases/${payload.leaseId}`,
+        `${API_BASE_URL}/market-leases/${targetId}`,
         {
           method: "PUT",
           headers: {
