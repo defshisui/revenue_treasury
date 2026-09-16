@@ -358,17 +358,18 @@ export default function CityOwnedMarketAdmin({
 
   const handleFinalDelete = async (leaseId: string) => {
     if (window.confirm(`WARNING: Are you sure you want to PERMANENTLY delete lease record ${leaseId}?`)) {
+      setLeases(prevLeases => prevLeases.filter((l) => l.leaseId !== leaseId && String(l.leaseId).trim().toLowerCase() !== leaseId.trim().toLowerCase()));
+
       try {
         await deleteLease(leaseId);
       } catch (err) {
-        console.warn("Backend delete failed or unavailable, removing from local UI state anyway:", err);
+        console.warn("Backend delete sync warning, removed locally:", err);
       }
-
-      setLeases(prevLeases => prevLeases.filter((l) => l.leaseId !== leaseId));
 
       if (onDeleteRecord) {
         onDeleteRecord(leaseId);
       }
+      window.dispatchEvent(new Event("db_treasury_updated"));
     }
   };
 

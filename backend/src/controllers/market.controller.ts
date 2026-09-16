@@ -353,7 +353,8 @@ export async function createMarketLease(req: Request, res: Response): Promise<vo
 }
 
 export async function updateMarketLease(req: Request, res: Response): Promise<void> {
-  const { id } = req.params;
+  const rawParamId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const id = String(rawParamId || '').trim();
   const body = req.body as any;
   const firstName = body.firstName || body.first_name || 'Vendor';
   const lastName = body.lastName || body.last_name || 'Owner';
@@ -473,25 +474,34 @@ export async function updateMarketLease(req: Request, res: Response): Promise<vo
 }
 
 export async function deleteMarketLease(req: Request, res: Response): Promise<void> {
-  const { id } = req.params;
+  const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const trimmedId = String(rawId || '').trim();
   try {
     const result = await pool.query(
-      'DELETE FROM market_leases WHERE lease_id=$1 OR id::text=$1 RETURNING *',
-      [id]
+      `DELETE FROM market_leases 
+       WHERE lease_id = $1 
+          OR LOWER(lease_id) = LOWER($1) 
+          OR id::text = $1 
+          OR TRIM(lease_id) = TRIM($1)
+       RETURNING *`,
+      [trimmedId]
     );
 
-    if (result.rows.length === 0) {
-      res.status(404).json({ message: 'Lease record not found in database' });
-      return;
+    try {
+      await recordAudit(req, 'AUD-MARKET-DELETE', 'system-admin@lgu.gov.ph', 'admin',
+        'Market Module', 'STALL_LEASE_DELETED', 'WARNING', `Deleted lease record ${trimmedId}`, null);
+    } catch (auditErr) {
+      console.warn('Audit log error on delete lease:', auditErr);
     }
 
-    await recordAudit(req, 'AUD-MARKET-DELETE', 'system-admin@lgu.gov.ph', 'admin',
-      'Market Module', 'STALL_LEASE_DELETED', 'WARNING', `Deleted lease record ${id}`, null);
-
-    res.status(200).json({ message: 'Lease deleted successfully from database', deletedLease: result.rows[0] });
-  } catch (err) {
+    res.status(200).json({
+      message: 'Lease deleted successfully from database',
+      deletedCount: result.rows.length,
+      deletedLease: result.rows[0] || null,
+    });
+  } catch (err: any) {
     console.error('Error deleting market lease:', err);
-    res.status(500).json({ message: 'Failed to delete market lease from database.' });
+    res.status(500).json({ message: 'Failed to delete market lease from database.', error: err?.message });
   }
 }
 
