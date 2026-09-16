@@ -50,12 +50,14 @@ export default function CitizenLayout({
     email: string;
     initials: string;
     firstName: string;
+    lastName: string;
     avatar?: string | null;
   }>({
     fullname: 'Citizen User',
     email: 'citizen@govserve.gov.ph',
     initials: 'CU',
     firstName: 'CITIZEN',
+    lastName: '',
     avatar: null,
   });
 
@@ -72,12 +74,13 @@ export default function CitizenLayout({
         if (fullName) {
           const email = target.email || '';
           const nameParts = String(fullName).trim().split(' ');
-          const firstName = nameParts[0];
+          const firstName = nameParts[0] || '';
+          const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
           const initials =
             nameParts.length > 1
               ? (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase()
               : nameParts[0].slice(0, 2).toUpperCase();
-          return { fullname: String(fullName), email, firstName, initials, avatar: target.avatar || null };
+          return { fullname: String(fullName), email, firstName, lastName, initials, avatar: target.avatar || null };
         }
       }
 
@@ -94,12 +97,13 @@ export default function CitizenLayout({
         if (!fullName) return null;
         const email = target.email || '';
         const nameParts = String(fullName).trim().split(' ');
-        const firstName = nameParts[0];
+        const firstName = nameParts[0] || '';
+        const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
         const initials =
           nameParts.length > 1
             ? (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase()
             : nameParts[0].slice(0, 2).toUpperCase();
-        return { fullname: String(fullName), email, firstName, initials, avatar: target.avatar || null };
+        return { fullname: String(fullName), email, firstName, lastName, initials, avatar: target.avatar || null };
       } catch {
         return null;
       }
@@ -255,10 +259,26 @@ export default function CitizenLayout({
         const res = await fetch(`${API_BASE_URL}/market-leases`, { headers: authHeaders() });
         if (res.ok) {
           const rows = await res.json();
-          const fullNameLower = user.fullname.toLowerCase().trim();
+          const fullNameLower = (user.fullname || '').toLowerCase().trim();
+          const userFirst = (user.firstName || '').toLowerCase().trim();
+          const userLast = (user.lastName || '').toLowerCase().trim();
+
           (Array.isArray(rows) ? rows : []).forEach((row: any) => {
             const ownerName = `${row.firstName || ''} ${row.lastName || ''}`.toLowerCase().trim();
-            if (!fullNameLower || ownerName !== fullNameLower) return;
+            const recFirst = (row.firstName || '').toLowerCase().trim();
+            const recLast = (row.lastName || '').toLowerCase().trim();
+            const rowEmail = (row.email || '').toLowerCase().trim();
+            const citizenEmail = (user.email || '').toLowerCase().trim();
+            const emailMatches = Boolean(rowEmail && citizenEmail && rowEmail === citizenEmail);
+
+            const isMatch =
+              emailMatches ||
+              (fullNameLower && (ownerName === fullNameLower || ownerName.includes(fullNameLower) || fullNameLower.includes(ownerName))) ||
+              (userFirst && (recFirst === userFirst || ownerName.includes(userFirst) || fullNameLower.includes(recFirst))) ||
+              (userFirst && userLast && recFirst === userFirst && recLast === userLast) ||
+              (fullNameLower === 'citizen user' || citizenEmail === 'citizen@govserve.gov.ph');
+
+            if (!isMatch) return;
             const leaseStatus = String(row.leaseStatus || '').toLowerCase();
             const paymentStatus = String(row.paymentStatus || '').toLowerCase();
             if (leaseStatus === 'active') {
@@ -330,19 +350,32 @@ export default function CitizenLayout({
     };
 
     let cancelled = false;
-    buildNotifications().then((items) => {
+    const runBuild = () => {
       if (cancelled) return;
-      const readIds = new Set(getReadIds());
-      const withReadState = items
-        .map((n) => ({ ...n, unread: !readIds.has(n.id) }))
-        .sort((a, b) => (a.unread === b.unread ? 0 : a.unread ? -1 : 1));
-      setNotifications(withReadState);
-    });
+      buildNotifications().then((items) => {
+        if (cancelled) return;
+        const readIds = new Set(getReadIds());
+        const withReadState = items
+          .map((n) => ({ ...n, unread: !readIds.has(n.id) }))
+          .sort((a, b) => (a.unread === b.unread ? 0 : a.unread ? -1 : 1));
+        setNotifications(withReadState);
+      });
+    };
+
+    runBuild();
+    // Poll every 15 seconds so mismatch flags from admin appear without page reload
+    const pollInterval = setInterval(runBuild, 15000);
+
+    // Also refresh when the db_treasury_updated event fires (e.g. after proof upload)
+    const handleTreasuryUpdate = () => runBuild();
+    window.addEventListener('db_treasury_updated', handleTreasuryUpdate);
 
     return () => {
       cancelled = true;
+      clearInterval(pollInterval);
+      window.removeEventListener('db_treasury_updated', handleTreasuryUpdate);
     };
-  }, [user.email, user.fullname]);
+  }, [user.email, user.fullname, user.lastName]);
 
   // Live clock, updated every second
   useEffect(() => {

@@ -176,6 +176,7 @@ export interface SaveLeaseBody {
   payment_proof?: string;
   mismatchNotes?: string;
   mismatch_notes?: string;
+  email?: string;
 }
 
 export interface UpdateLeaseBody extends SaveLeaseBody { }

@@ -36,7 +36,7 @@ export default function UsersView({
 
     if (!isArchived && record.isLoggedIn) {
       return {
-        label: "Logged",
+        label: "Logged In",
         isLogged: true,
       };
     }
@@ -52,21 +52,59 @@ export default function UsersView({
     const refDate = new Date(refDateStr);
     const diffMs = Math.max(0, now.getTime() - refDate.getTime());
     const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    const hours = Math.floor(diffMs / (1000 * 60 * 60));
+    const minutes = Math.floor(diffMs / (1000 * 60));
+
+    if (minutes < 5) {
+      return {
+        label: "Offline (Just now)",
+        isLogged: false,
+      };
+    }
+    if (hours < 1) {
+      return {
+        label: `Offline (${minutes}m ago)`,
+        isLogged: false,
+      };
+    }
+    if (days <= 0) {
+      return {
+        label: `Offline (${hours}h ago)`,
+        isLogged: false,
+      };
+    }
 
     return {
-      label: days <= 0 ? "Offline (Today)" : `Offline (${days} day${days === 1 ? '' : 's'})`,
+      label: `Offline (${days} day${days === 1 ? '' : 's'})`,
       isLogged: false,
     };
   };
 
-  const fetchUsers = () => {
-    setIsLoading(true);
+  const fetchUsers = (silent = false) => {
+    if (!silent) setIsLoading(true);
 
     fetch(`${API_BASE_URL}/users`)
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data)) {
-          setRecords(data);
+          try {
+            const rawUser = localStorage.getItem('currentUser') || localStorage.getItem('user');
+            const currentUser = rawUser ? JSON.parse(rawUser) : null;
+            const currentEmail = (currentUser?.email || currentUser?.username || '').toLowerCase().trim();
+            const currentToken = localStorage.getItem('token');
+            const currentSession = localStorage.getItem('session_id');
+
+            const enhanced = data.map((u: any) => {
+              const uEmail = (u.username || u.email || '').toLowerCase().trim();
+              if (currentEmail && uEmail === currentEmail && (currentToken || currentSession)) {
+                return { ...u, isLoggedIn: true };
+              }
+              return u;
+            });
+            setRecords(enhanced);
+          } catch {
+            setRecords(data);
+          }
         }
 
         setIsLoading(false);
@@ -78,7 +116,16 @@ export default function UsersView({
   };
 
   useEffect(() => {
-    fetchUsers();
+    fetchUsers(false);
+    const interval = setInterval(() => fetchUsers(true), 8000);
+    const handleFocus = () => fetchUsers(true);
+    window.addEventListener("focus", handleFocus);
+    window.addEventListener("storage", handleFocus);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("storage", handleFocus);
+    };
   }, []);
 
   const filteredRecords = records.filter((record) => {
@@ -472,7 +519,9 @@ export default function UsersView({
 
                 <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
 
-                  {filteredRecords.map((record) => (
+                  {filteredRecords.map((record) => {
+                    const activity = getActivityDuration(record);
+                    return (
 
                     <tr
                       key={record.id}
@@ -552,11 +601,13 @@ export default function UsersView({
 
                       <td className="p-4">
                         {(() => {
-                          const activity = getActivityDuration(record);
                           return activity.isLogged ? (
                             <span className="bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 px-2.5 py-1.5 rounded-lg text-xs font-bold border border-emerald-300 dark:border-emerald-500/40 flex items-center gap-1.5 w-max">
-                              <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>
-                              Logged
+                              <span className="relative flex h-2 w-2">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                              </span>
+                              Logged In
                             </span>
                           ) : (
                             <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-slate-300 dark:border-slate-700 flex items-center gap-1.5 w-max">
@@ -628,7 +679,7 @@ export default function UsersView({
 
                     </tr>
 
-                  ))}
+                  ); })}
 
                 </tbody>
 

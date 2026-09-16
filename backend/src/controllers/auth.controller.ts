@@ -1579,11 +1579,14 @@ export async function logoutUser(req: Request, res: Response): Promise<void> {
     let userEmail = 'Unknown User';
     let userRole = 'User';
 
+    let resolvedUserId: number | null = null;
+
     if (token) {
       try {
         const decoded = jwt.verify(token, JWT_SECRET) as any;
         if (decoded?.id) {
-          const userRes = await pool.query('SELECT email, role, fullname FROM users WHERE id = $1', [decoded.id]);
+          resolvedUserId = decoded.id;
+          const userRes = await pool.query('SELECT email, role, name as fullname FROM users WHERE id = $1', [decoded.id]);
           if (userRes.rows.length > 0) {
             userEmail = userRes.rows[0].email || userRes.rows[0].fullname || userEmail;
             userRole = userRes.rows[0].role || 'User';
@@ -1592,37 +1595,37 @@ export async function logoutUser(req: Request, res: Response): Promise<void> {
       } catch {
         // ignore token error
       }
-    } else if (sessionId) {
-      try {
-        const sessionRes = await pool.query(
-          'SELECT u.email, u.role, u.fullname FROM user_sessions s JOIN users u ON s.user_id = u.id WHERE s.session_id = $1',
-          [sessionId]
-        );
-        if (sessionRes.rows.length > 0) {
-          userEmail = sessionRes.rows[0].email || sessionRes.rows[0].fullname || userEmail;
-          userRole = sessionRes.rows[0].role || 'User';
-        }
-      } catch {
-        // ignore query error
-      }
     }
 
     if (sessionId) {
-      await pool.query("UPDATE user_sessions SET status = 'REVOKED' WHERE session_id = $1", [sessionId]);
+      try {
+        const sessRes = await pool.query(
+          'SELECT s.user_id, u.email, u.role, u.name as fullname FROM user_sessions s JOIN users u ON s.user_id = u.id WHERE s.session_id = $1',
+          [sessionId]
+        );
+        if (sessRes.rows.length > 0) {
+          if (!resolvedUserId) resolvedUserId = sessRes.rows[0].user_id;
+          userEmail = sessRes.rows[0].email || sessRes.rows[0].fullname || userEmail;
+          userRole = sessRes.rows[0].role || 'User';
+        }
+        await pool.query("UPDATE user_sessions SET status = 'REVOKED' WHERE session_id = $1", [sessionId]);
+      } catch (sessErr) {
+        console.error('Error revoking session on logout:', sessErr);
+      }
     }
 
-    if (token) {
+    if (resolvedUserId) {
       try {
-        const decoded = jwt.verify(token, JWT_SECRET) as any;
-        const remaining = await pool.query(
-          "SELECT COUNT(*) FROM user_sessions WHERE user_id = $1 AND status = 'ACTIVE' AND last_heartbeat > NOW() - INTERVAL '15 minutes'",
-          [decoded.id]
-        );
-        if (parseInt(remaining.rows[0].count, 10) === 0) {
-          await pool.query("UPDATE users SET is_logged_in = FALSE WHERE id = $1", [decoded.id]);
-        }
-      } catch {
-        // ignore token error
+        await pool.query("UPDATE user_sessions SET status = 'REVOKED' WHERE user_id = $1", [resolvedUserId]);
+        await pool.query("UPDATE users SET is_logged_in = FALSE, last_active_at = NOW() WHERE id = $1", [resolvedUserId]);
+      } catch (updateErr) {
+        console.error('Error updating user login status on logout:', updateErr);
+      }
+    } else if (userEmail && userEmail !== 'Unknown User') {
+      try {
+        await pool.query("UPDATE users SET is_logged_in = FALSE, last_active_at = NOW() WHERE LOWER(email) = LOWER($1)", [userEmail]);
+      } catch (updateErr) {
+        console.error('Error updating user login status by email on logout:', updateErr);
       }
     }
 

@@ -16,7 +16,12 @@ export async function getUsers(_req: Request, res: Response): Promise<void> {
       ORDER BY u.id ASC
     `);
     const formatted = result.rows.map((row) => {
-      const isOnline = Boolean(row.is_session_active || (row.is_logged_in && row.last_active_at && (Date.now() - new Date(row.last_active_at).getTime() < 5 * 60 * 1000)));
+      const isOnline = Boolean(
+        row.is_logged_in && (
+          row.is_session_active ||
+          (row.last_active_at && (Date.now() - new Date(row.last_active_at).getTime() < 5 * 60 * 1000))
+        )
+      );
       return {
         id: row.id.toString(),
         fullname: row.name || 'System User',

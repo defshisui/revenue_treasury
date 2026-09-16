@@ -1588,7 +1588,11 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
                                 {applications.map((app) => (
                                   <tr key={app.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition">
                                     <td className="px-4 py-3 font-mono font-bold text-[#0B3B60] dark:text-blue-400">
-                                      {app.controlNumber || app.referenceNumber || '—'}
+                                      {(() => {
+                                        const cn = String(app.controlNumber || app.control_number || app.referenceNumber || '').trim();
+                                        if (cn && cn !== '-' && cn !== '—') return cn;
+                                        return app.id ? `RPT-QC-${new Date().getFullYear()}-${String(app.id).replace(/[^0-9A-Za-z]/g, '').slice(0, 6).toUpperCase()}` : `RPT-QC-${new Date().getFullYear()}-001001`;
+                                      })()}
                                     </td>
                                     <td className="px-4 py-3 font-semibold">{app.service || '—'}</td>
                                     <td className="px-4 py-3 font-mono">
@@ -2668,7 +2672,13 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
               <div>
                 <span className="text-[10px] font-bold uppercase text-[#0284C7] dark:text-sky-400">Control Number</span>
-                <h3 className="text-base font-extrabold text-[#0B3B60] dark:text-blue-300">{selectedAppDetail.controlNumber}</h3>
+                <h3 className="text-base font-extrabold text-[#0B3B60] dark:text-blue-300">
+                  {(() => {
+                    const cn = String(selectedAppDetail.controlNumber || selectedAppDetail.control_number || selectedAppDetail.referenceNumber || '').trim();
+                    if (cn && cn !== '-' && cn !== '—') return cn;
+                    return selectedAppDetail.id ? `RPT-QC-${new Date().getFullYear()}-${String(selectedAppDetail.id).replace(/[^0-9A-Za-z]/g, '').slice(0, 6).toUpperCase()}` : `RPT-QC-${new Date().getFullYear()}-001001`;
+                  })()}
+                </h3>
               </div>
               <button
                 onClick={() => setSelectedAppDetail(null)}

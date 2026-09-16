@@ -77,6 +77,9 @@ export default function CityOwnedMarketAdmin({
 
   const [isDocViewerOpen, setIsDocViewerOpen] = useState(false);
   const [docZoom, setDocZoom] = useState(1);
+  const [isMismatchModalOpen, setIsMismatchModalOpen] = useState(false);
+  const [mismatchNoteInput, setMismatchNoteInput] = useState("");
+  const [isSavingMismatch, setIsSavingMismatch] = useState(false);
 
   const fetchAdminLeases = async () => {
     try {
@@ -284,19 +287,28 @@ export default function CityOwnedMarketAdmin({
     }
   };
 
-  const handleFlagMismatchRequestInfo = async () => {
-    if (!selectedRecord) return;
-    const note = prompt(
-      "Enter payment mismatch notes / instructions for the citizen:",
-      selectedRecord.mismatchNotes || "Payment amount or transaction reference does not match. Please upload your proof of transaction or receipt."
+  const handleOpenFlagMismatchModal = (record?: LeaseRecord) => {
+    const target = record || selectedRecord;
+    if (!target) return;
+    setSelectedRecord(target);
+    setMismatchNoteInput(
+      target.mismatchNotes ||
+      "Payment amount or transaction reference does not match. Please upload your proof of transaction or receipt."
     );
-    if (note === null) return;
+    setIsMismatchModalOpen(true);
+  };
+
+  const handleConfirmFlagMismatch = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!selectedRecord) return;
+    setIsSavingMismatch(true);
+    const finalNote = mismatchNoteInput.trim() || "Transaction reference mismatch. Please upload valid proof of transaction.";
 
     try {
       const updatedRecord: LeaseRecord = {
         ...selectedRecord,
         paymentStatus: "Payment Information Requested",
-        mismatchNotes: note.trim() || "Transaction reference mismatch. Please upload valid proof of transaction.",
+        mismatchNotes: finalNote,
       };
 
       await updateLease(updatedRecord);
@@ -304,10 +316,13 @@ export default function CityOwnedMarketAdmin({
       setLeases((prev) => prev.map((l) => (l.leaseId === updatedRecord.leaseId ? updatedRecord : l)));
       if (onUpdateRecord) onUpdateRecord(updatedRecord);
       window.dispatchEvent(new Event("db_treasury_updated"));
+      setIsMismatchModalOpen(false);
       alert("Flagged for transaction mismatch. Citizen has been notified to provide proof of transaction.");
     } catch (err: any) {
       console.error("Failed to flag mismatch:", err);
       alert(err?.message || "Failed to update lease record in database.");
+    } finally {
+      setIsSavingMismatch(false);
     }
   };
 
@@ -695,15 +710,34 @@ export default function CityOwnedMarketAdmin({
                       <div className="flex items-center justify-center gap-2">
                         {activeTab === "Active" ? (
                           <>
-                            <button
-                              onClick={() => handleOpenEdit(item)}
-                              className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-3.5 py-1.5 rounded-xl transition-all cursor-pointer shadow-xs flex items-center gap-1.5"
-                            >
-                              Review
-                            </button>
+                            {item.paymentStatus === "Proof Submitted - For Treasury Verification" ? (
+                              <button
+                                onClick={() => handleOpenEdit(item)}
+                                className="bg-cyan-600 hover:bg-cyan-700 text-white font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer shadow-xs flex items-center gap-1 text-[11px] animate-pulse"
+                                title="Citizen uploaded proof of payment! Click to verify."
+                              >
+                                Review Proof
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleOpenEdit(item)}
+                                className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-3 py-1.5 rounded-xl transition-all cursor-pointer shadow-xs flex items-center gap-1 text-[11px]"
+                              >
+                                Review
+                              </button>
+                            )}
+                            {item.paymentStatus !== "Paid" && (
+                              <button
+                                onClick={() => handleOpenFlagMismatchModal(item)}
+                                className="bg-amber-600 hover:bg-amber-700 text-white font-medium px-2.5 py-1.5 rounded-xl transition-all cursor-pointer shadow-xs flex items-center gap-1 text-[11px]"
+                                title="Flag mismatch & notify citizen"
+                              >
+                                Flag Mismatch
+                              </button>
+                            )}
                             <button
                               onClick={() => handleSoftDelete(item)}
-                              className="bg-slate-100 hover:bg-slate-200 hover:text-slate-800 text-slate-500 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200 font-medium px-2.5 py-1.5 rounded-xl transition-all cursor-pointer border border-slate-200"
+                              className="bg-slate-100 hover:bg-slate-200 hover:text-slate-800 text-slate-500 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200 font-medium px-2.5 py-1.5 rounded-xl transition-all cursor-pointer border border-slate-200 text-[11px]"
                             >
                               Archive
                             </button>
@@ -1079,7 +1113,7 @@ export default function CityOwnedMarketAdmin({
                     </button>
                     <button
                       type="button"
-                      onClick={handleFlagMismatchRequestInfo}
+                      onClick={handleOpenFlagMismatchModal}
                       className="bg-amber-600 hover:bg-amber-700 text-white font-semibold px-4 py-2 rounded-xl text-xs transition-all cursor-pointer shadow-xs flex items-center gap-1.5"
                     >
                       <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1270,6 +1304,100 @@ export default function CityOwnedMarketAdmin({
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Flag Mismatch / Request Proof Modal */}
+      {isMismatchModalOpen && selectedRecord && (
+        <div className="fixed inset-0 z-[100001] bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full border border-slate-200 dark:border-slate-800 shadow-2xl p-6 space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-800 flex items-center justify-center text-amber-700 dark:text-amber-400">
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+                    <line x1="12" y1="9" x2="12" y2="13"/>
+                    <line x1="12" y1="17" x2="12.01" y2="17"/>
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">Flag Payment Mismatch / Request Proof</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Stall #{selectedRecord.stallNumber} ({selectedRecord.leaseId}) — {selectedRecord.firstName} {selectedRecord.lastName}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsMismatchModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer p-1 rounded-lg"
+              >
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+
+            <form onSubmit={handleConfirmFlagMismatch} className="space-y-3.5 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Quick Reason Presets
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    "Amount mismatch: Transaction amount does not match rental due.",
+                    "Reference number invalid: Transaction not verified by Treasury gateway.",
+                    "Proof required: Please upload an official receipt or validated deposit slip.",
+                    "Legibility issue: Uploaded screenshot is unreadable or cropped."
+                  ].map((preset, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setMismatchNoteInput(preset)}
+                      className="px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-amber-50 dark:hover:bg-amber-950/40 text-[11px] text-slate-700 dark:text-slate-300 hover:text-amber-800 dark:hover:text-amber-300 transition-colors cursor-pointer text-left"
+                    >
+                      {preset.split(":")[0]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Instructions / Reason for Citizen <span className="text-rose-500">*</span>
+                </label>
+                <textarea
+                  rows={4}
+                  required
+                  value={mismatchNoteInput}
+                  onChange={(e) => setMismatchNoteInput(e.target.value)}
+                  placeholder="Enter details explaining why the payment is flagged and what proof the citizen should upload..."
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-slate-900 dark:text-slate-100 text-xs focus:ring-2 focus:ring-amber-500 outline-none leading-relaxed"
+                />
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                  This note will be shown directly on the citizen's portal and in their notification dropdown.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsMismatchModalOpen(false)}
+                  className="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingMismatch}
+                  className="px-5 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer flex items-center gap-1.5"
+                >
+                  {isSavingMismatch ? "Notifying..." : "Flag Mismatch & Notify Citizen"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

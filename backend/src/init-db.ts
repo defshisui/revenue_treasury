@@ -397,6 +397,9 @@ export async function initializeDatabase(): Promise<void> {
       ALTER TABLE market_leases
       ADD COLUMN IF NOT EXISTS mismatch_notes TEXT;
 
+      ALTER TABLE market_leases
+      ADD COLUMN IF NOT EXISTS email VARCHAR(255);
+
       ALTER TABLE rpt_applications
       ADD COLUMN IF NOT EXISTS assigned_officer VARCHAR(255);
 
@@ -493,6 +496,10 @@ export async function initializeDatabase(): Promise<void> {
       SET workflow_stage = COALESCE(workflow_stage, status),
           transfer_tax_status = COALESCE(transfer_tax_status, CASE WHEN service = 'Transfer of Ownership' AND payment_status IN ('Paid','Payment Completed') THEN 'Paid' ELSE 'Not Assessed' END)
       WHERE workflow_stage IS NULL OR transfer_tax_status IS NULL;
+
+      UPDATE rpt_applications
+      SET control_number = 'RPT-QC-' || EXTRACT(YEAR FROM COALESCE(created_at, NOW())) || '-' || LPAD(SUBSTRING(REPLACE(id::text, '-', ''), 1, 6), 6, '0')
+      WHERE control_number IS NULL OR control_number = '' OR control_number = '-';
     `);
 
 
@@ -543,8 +550,8 @@ export async function initializeDatabase(): Promise<void> {
       -- LGU RPT Records
       CREATE INDEX IF NOT EXISTS idx_lgu_rpt_pin ON lgu_rpt_records(pin);
       CREATE INDEX IF NOT EXISTS idx_lgu_rpt_status ON lgu_rpt_records(status);
-      CREATE INDEX IF NOT EXISTS idx_lgu_rpt_payment_status ON lgu_rpt_records(paymentstatus);
-      CREATE INDEX IF NOT EXISTS idx_lgu_rpt_owner ON lgu_rpt_records(ownername);
+      CREATE INDEX IF NOT EXISTS idx_lgu_rpt_payment_status ON lgu_rpt_records(payment_status);
+      CREATE INDEX IF NOT EXISTS idx_lgu_rpt_owner ON lgu_rpt_records(owner_name);
 
       -- Citizen RPT Payments
       CREATE INDEX IF NOT EXISTS idx_rpt_payments_record_id ON citizen_rpt_payments(rpt_record_id);
@@ -577,6 +584,66 @@ export async function initializeDatabase(): Promise<void> {
        ON CONFLICT (email) DO NOTHING`,
       [hashedRealAdminPassword]
     );
+
+    // Initial Seed: Market Leases (so Flag Mismatch & proof upload work immediately)
+    await pool.query(`
+      INSERT INTO market_leases (
+        lease_id, first_name, last_name, email, market_name, section, stall_number,
+        lease_status, amount_due, helper_approval_status, advance_payment_status,
+        payment_status, payment_method, payment_reference, mismatch_notes, created_at
+      ) VALUES
+      (
+        'LEASE-QC-001', 'Jomell', 'Cruz', 'jomell@gmail.com', 'Commonwealth Public Market', 'Dry Goods & Textiles', 'STALL-042',
+        'Active', 4500.00, 'Approved', 'Requested',
+        'Payment Information Requested', 'GCash', 'GCASH-TX-882910',
+        'Payment amount mismatch: Gateway shows ₱3,500 received but monthly stall lease assessment is ₱4,500. Please upload proof of payment for the balance or validated receipt.',
+        NOW() - INTERVAL '2 days'
+      ),
+      (
+        'LEASE-QC-002', 'Hero', 'Odiaman', 'dizon.hero.odiaman@gmail.com', 'Balintawak Public Market', 'Wet Market / Seafood', 'STALL-015',
+        'Active', 3200.00, 'Approved', 'Cleared',
+        'Paid', 'PayMongo (QR Ph)', 'PM-QR-918234',
+        NULL,
+        NOW() - INTERVAL '5 days'
+      ),
+      (
+        'LEASE-QC-003', 'Citizen', 'User', 'citizen@govserve.gov.ph', 'Frisco Public Market', 'Fruits & Vegetables', 'STALL-108',
+        'Active', 2800.00, 'Pending', 'Requested',
+        'Payment Information Requested', 'Cash / Direct', 'TX-STALL-108',
+        'Reference number invalid: Transaction not verified by Treasury gateway. Please upload valid proof of transaction.',
+        NOW() - INTERVAL '1 day'
+      )
+      ON CONFLICT (lease_id) DO NOTHING;
+    `);
+
+    // Initial Seed: RPT Applications with verified control numbers
+    await pool.query(`
+      INSERT INTO rpt_applications (
+        id, control_number, tax_declaration_number, owner_name, applicant_name, applicant_type,
+        email, mobile_number, service, property_location, barangay, property_type,
+        status, payment_status, payment_amount, filed_date, created_at
+      ) VALUES
+      (
+        'a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d', 'RPT-QC-2026-001042', 'TDN-2026-001-09482', 'Jomell Cruz', 'Jomell Cruz', 'Property Owner',
+        'jomell@gmail.com', '09171234567', 'Assessment of Real Property', 'Block 12 Lot 4, Commonwealth Avenue, Quezon City', 'Commonwealth', 'Residential',
+        'Approved', 'Paid', 1500.00, '2026-09-10', NOW() - INTERVAL '6 days'
+      ),
+      (
+        'b2c3d4e5-f6a7-4b5c-9d0e-1f2a3b4c5d6e', 'RPT-QC-2026-001088', 'TDN-2026-002-18294', 'Hero Odiaman', 'Hero Odiaman', 'Property Owner',
+        'dizon.hero.odiaman@gmail.com', '09189876543', 'Transfer of Ownership', 'Lot 8, Katipunan Avenue, Quezon City', 'Loyola Heights', 'Commercial',
+        'Under Evaluation', 'Pending', 2500.00, '2026-09-12', NOW() - INTERVAL '4 days'
+      ),
+      (
+        'c3d4e5f6-a7b8-4c5d-0e1f-2a3b4c5d6e7f', 'RPT-QC-2026-001123', 'TDN-2026-003-77491', 'Citizen User', 'Citizen User', 'Property Owner',
+        'citizen@govserve.gov.ph', '09191122334', 'Tax Clearance / Certificate', 'Unit 4B, North Fairview, Quezon City', 'Greater Fairview', 'Residential',
+        'Submitted', 'Pending', 500.00, '2026-09-15', NOW() - INTERVAL '1 day'
+      )
+      ON CONFLICT (id) DO NOTHING;
+
+      UPDATE rpt_applications
+      SET control_number = 'RPT-QC-' || EXTRACT(YEAR FROM COALESCE(created_at, NOW())) || '-' || LPAD(SUBSTRING(REPLACE(id::text, '-', ''), 1, 6), 6, '0')
+      WHERE control_number IS NULL OR control_number = '' OR control_number = '-' OR control_number = '—';
+    `);
 
     console.log('Database tables and performance indexes initialized successfully.');
   } catch (err) {

@@ -39,7 +39,7 @@ const poolConfig: pg.PoolConfig = {
     : {
       host: process.env.PGHOST || process.env.DB_HOST || 'localhost',
       port: Number(process.env.PGPORT || process.env.DB_PORT) || 5432,
-      database: process.env.PGDATABASE || process.env.DB_NAME || 'revenue_treasury',
+      database: process.env.PGDATABASE || process.env.DB_NAME || 'revenue',
       user: process.env.PGUSER || process.env.DB_USER || 'postgres',
       password: String(process.env.PGPASSWORD || process.env.DB_PASSWORD || 'admin'),
     }),

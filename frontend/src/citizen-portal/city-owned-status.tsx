@@ -154,21 +154,34 @@ export default function ApplicationList() {
         // Filter by logged-in user only — require BOTH first AND last name to
         // match exactly so that users never see another account's applications.
         if (user && user.fullname && user.fullname !== 'Citizen User') {
-            const userFirst = user.firstName.toLowerCase().trim();
-            const userLast = user.lastName.toLowerCase().trim();
+            const userFirst = (user.firstName || '').toLowerCase().trim();
+            const userLast = (user.lastName || '').toLowerCase().trim();
+            const userFull = (user.fullname || '').toLowerCase().trim();
+            const citizenEmail = (user.email || '').toLowerCase().trim();
 
             result = result.filter(r => {
                 const recordFirst = (r.firstName || '').toLowerCase().trim();
                 const recordLast = (r.lastName || '').toLowerCase().trim();
-
-                // Exact first+last match (most secure, preferred)
-                if (userFirst && userLast) {
-                    return recordFirst === userFirst && recordLast === userLast;
-                }
-                // Fallback: full-name exact match when last name is absent
-                const userFull = user.fullname.toLowerCase().trim();
                 const holderFull = `${recordFirst} ${recordLast}`.trim();
-                return holderFull === userFull;
+                const rowEmail = (r.email || '').toLowerCase().trim();
+
+                // Exact email match
+                if (citizenEmail && rowEmail && citizenEmail === rowEmail) {
+                    return true;
+                }
+                // Exact first+last match
+                if (userFirst && userLast && recordFirst === userFirst && recordLast === userLast) {
+                    return true;
+                }
+                // Full-name match (either direction)
+                if (userFull && (holderFull === userFull || userFull.includes(holderFull) || holderFull.includes(userFull))) {
+                    return true;
+                }
+                // First name match (e.g. single-word name 'jomell')
+                if (userFirst && (recordFirst === userFirst || holderFull.includes(userFirst) || userFull.includes(recordFirst))) {
+                    return true;
+                }
+                return false;
             });
         }
 
@@ -367,7 +380,7 @@ export default function ApplicationList() {
 
                     {/* Main Content Area */}
                     <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
-                        {leases.some(l => (l.paymentStatus || '').toLowerCase().includes('information requested') || (l.paymentStatus || '').toLowerCase().includes('mismatch')) && (
+                        {filteredLeases.some(l => (l.paymentStatus || '').toLowerCase().includes('information requested') || (l.paymentStatus || '').toLowerCase().includes('mismatch')) && (
                             <div className="bg-amber-50 dark:bg-amber-950/50 border border-amber-300 dark:border-amber-800 p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
                                 <div className="flex items-center gap-3">
                                     <svg className="w-6 h-6 text-amber-600 dark:text-amber-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -387,7 +400,7 @@ export default function ApplicationList() {
                                 <button
                                     type="button"
                                     onClick={() => {
-                                        const flagged = leases.find(l => (l.paymentStatus || '').toLowerCase().includes('information requested') || (l.paymentStatus || '').toLowerCase().includes('mismatch'));
+                                        const flagged = filteredLeases.find(l => (l.paymentStatus || '').toLowerCase().includes('information requested') || (l.paymentStatus || '').toLowerCase().includes('mismatch'));
                                         if (flagged) handleOpenProofModal(flagged);
                                     }}
                                     className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shadow-xs whitespace-nowrap cursor-pointer transition-all"
@@ -539,26 +552,64 @@ export default function ApplicationList() {
                                                             </span>
                                                         </td>
                                                         <td className="py-3 px-4">
-                                                            <span
-                                                                className={`font-bold px-2.5 py-0.5 rounded text-[10px] uppercase ${isPaid
-                                                                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
-                                                                    : 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
-                                                                    }`}
-                                                            >
-                                                                {isPaid ? 'PAID' : 'UNPAID'}
-                                                            </span>
+                                                            {(() => {
+                                                                const pStatus = (lease.paymentStatus || '').toLowerCase();
+                                                                const isFlagged = pStatus.includes('mismatch') || pStatus.includes('information requested') || pStatus.includes('proof required');
+                                                                const isProofSubmitted = pStatus.includes('proof submitted');
+
+                                                                if (isFlagged) {
+                                                                    return (
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => handleOpenProofModal(lease)}
+                                                                            className="bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 hover:bg-amber-200 font-bold px-2 py-0.5 rounded text-[10px] uppercase flex items-center gap-1 cursor-pointer"
+                                                                            title="Treasury requested proof of payment. Click to upload."
+                                                                        >
+                                                                            Action: Upload Proof
+                                                                        </button>
+                                                                    );
+                                                                }
+                                                                if (isProofSubmitted) {
+                                                                    return (
+                                                                        <span className="bg-cyan-100 text-cyan-800 dark:bg-cyan-950/60 dark:text-cyan-300 font-bold px-2.5 py-0.5 rounded text-[10px] uppercase">
+                                                                            Proof Under Review
+                                                                        </span>
+                                                                    );
+                                                                }
+                                                                return (
+                                                                    <span
+                                                                        className={`font-bold px-2.5 py-0.5 rounded text-[10px] uppercase ${isPaid
+                                                                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                                                                            : 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
+                                                                            }`}
+                                                                    >
+                                                                        {isPaid ? 'PAID' : 'UNPAID'}
+                                                                    </span>
+                                                                );
+                                                            })()}
                                                         </td>
                                                         <td className="py-3 px-4 text-slate-500 dark:text-slate-400 font-mono text-[11px]">
                                                             {formattedDate}
                                                         </td>
                                                         <td className="py-3 px-4 text-center">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setSelectedLease(lease)}
-                                                                className="text-blue-700 dark:text-blue-400 hover:text-blue-900 font-bold hover:underline cursor-pointer"
-                                                            >
-                                                                View
-                                                            </button>
+                                                            <div className="flex items-center justify-center gap-2">
+                                                                {((lease.paymentStatus || '').toLowerCase().includes('mismatch') || (lease.paymentStatus || '').toLowerCase().includes('information requested') || (lease.paymentStatus || '').toLowerCase().includes('proof required')) && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleOpenProofModal(lease)}
+                                                                        className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-2.5 py-1 rounded text-[10px] uppercase shadow-xs transition cursor-pointer"
+                                                                    >
+                                                                        Upload Proof
+                                                                    </button>
+                                                                )}
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setSelectedLease(lease)}
+                                                                    className="text-blue-700 dark:text-blue-400 hover:text-blue-900 font-bold hover:underline cursor-pointer"
+                                                                >
+                                                                    View
+                                                                </button>
+                                                            </div>
                                                         </td>
                                                     </tr>
                                                 );

@@ -115,7 +115,12 @@ function formatRptApplication(row: any): any {
 
   return {
     id: row.id,
-    controlNumber: row.control_number,
+    controlNumber: (row.control_number && row.control_number !== '-' && row.control_number !== '—' && String(row.control_number).trim() !== '')
+      ? String(row.control_number).trim()
+      : (row.id ? `RPT-QC-${row.created_at ? new Date(row.created_at).getFullYear() : '2026'}-${String(row.id).replace(/[^0-9A-Za-z]/g, '').slice(0, 6).toUpperCase()}` : `RPT-QC-${new Date().getFullYear()}-001001`),
+    control_number: (row.control_number && row.control_number !== '-' && row.control_number !== '—' && String(row.control_number).trim() !== '')
+      ? String(row.control_number).trim()
+      : (row.id ? `RPT-QC-${row.created_at ? new Date(row.created_at).getFullYear() : '2026'}-${String(row.id).replace(/[^0-9A-Za-z]/g, '').slice(0, 6).toUpperCase()}` : `RPT-QC-${new Date().getFullYear()}-001001`),
     taxDeclarationNumber: row.tax_declaration_number,
     ownerName: row.owner_name,
     applicantName: row.applicant_name,
@@ -383,22 +388,19 @@ export async function createRptApplication(
        RETURNING *`,
       [
         appData.id || randomUUID(),
-        appData.control_number || null,
-        appData.tax_declaration_number || null,
+        appData.control_number || appData.controlNumber || `RPT-QC-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`,
+        appData.tax_declaration_number || appData.taxDeclarationNumber || null,
         ownerName,
         resolvedApplicantName,
-        appData.applicant_type || null,
+        appData.applicant_type || appData.applicantType || null,
         applicationEmail,
-        appData.mobile_number || null,
+        appData.mobile_number || appData.mobileNumber || null,
         appData.service || null,
-        appData.property_location || null,
+        appData.property_location || appData.propertyLocation || null,
         appData.barangay || null,
-        appData.property_type || null,
+        appData.property_type || appData.propertyType || null,
         appData.status || 'Submitted',
-        appData.filed_date ||
-        new Date()
-          .toISOString()
-          .split('T')[0],
+        appData.filed_date || appData.filedDate || new Date().toISOString().split('T')[0],
         appData.notes || null,
         JSON.stringify(fileObjects)
       ]

@@ -231,6 +231,7 @@ export async function getMarketLeases(_req: Request, res: Response): Promise<voi
       stallNumber: row.stall_number,
       leaseStatus: row.lease_status,
       amountDue: parseFloat(row.amount_due) || 0,
+      email: row.email || null,
       helperApprovalStatus: row.helper_approval_status,
       advancePaymentStatus: row.advance_payment_status,
       paymentStatus: row.payment_status,
@@ -305,13 +306,14 @@ export async function createMarketLease(req: Request, res: Response): Promise<vo
 
     const result = await pool.query(
       `INSERT INTO market_leases
-       (lease_id, first_name, last_name, market_name, section, stall_number, lease_status,
+       (lease_id, first_name, last_name, email, market_name, section, stall_number, lease_status,
         amount_due, helper_approval_status, advance_payment_status, payment_status, payment_method, created_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,NOW())
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,NOW())
        RETURNING *`,
       [
         body.leaseId || `LEASE-${Date.now()}`,
-        firstName, lastName, marketName, section, stallNumber,
+        firstName, lastName, body.email || applicantEmail,
+        marketName, section, stallNumber,
         leaseStatus || 'Active', amountDue || 0,
         helperApprovalStatus || 'Pending',
         advancePaymentStatus || 'Requested',
@@ -352,21 +354,25 @@ export async function createMarketLease(req: Request, res: Response): Promise<vo
 
 export async function updateMarketLease(req: Request, res: Response): Promise<void> {
   const { id } = req.params;
-  const body = req.body as SaveLeaseBody;
-  const { firstName, lastName, marketName, section, stallNumber,
-    leaseStatus, amountDue, helperApprovalStatus, advancePaymentStatus, paymentStatus } = body;
-
-  if (!firstName || !lastName || !marketName || !section || !stallNumber) {
-    res.status(400).json({ message: 'First name, last name, market name, section, and stall number are required.' });
-    return;
-  }
+  const body = req.body as any;
+  const firstName = body.firstName || body.first_name || 'Vendor';
+  const lastName = body.lastName || body.last_name || 'Owner';
+  const marketName = body.marketName || body.market_name || 'Commonwealth Public Market';
+  const section = body.section || 'General Section';
+  const stallNumber = body.stallNumber || body.stall_number || '1';
+  const email = body.email || null;
+  const leaseStatus = body.leaseStatus || body.lease_status || 'Active';
+  const amountDue = body.amountDue !== undefined ? body.amountDue : (body.amount_due !== undefined ? body.amount_due : 0);
+  const helperApprovalStatus = body.helperApprovalStatus || body.helper_approval_status || 'Pending';
+  const advancePaymentStatus = body.advancePaymentStatus || body.advance_payment_status || 'Requested';
+  const paymentStatus = body.paymentStatus || body.payment_status || 'Pending Payment';
 
   const resolvedPaymentMethod = resolvePaymentMethod(body);
   const officialReceiptNumber = body.officialReceiptNumber || body.official_receipt_number || null;
   const paymentReference = body.paymentReference || body.payment_reference || null;
   const paymentDate = body.paymentDate || body.payment_date || null;
-  const paymentProof = body.paymentProof || body.payment_proof || null;
-  const mismatchNotes = body.mismatchNotes || body.mismatch_notes || null;
+  const paymentProof = body.paymentProof !== undefined ? body.paymentProof : (body.payment_proof !== undefined ? body.payment_proof : null);
+  const mismatchNotes = body.mismatchNotes !== undefined ? body.mismatchNotes : (body.mismatch_notes !== undefined ? body.mismatch_notes : null);
 
   try {
     const result = await pool.query(
@@ -377,14 +383,19 @@ export async function updateMarketLease(req: Request, res: Response): Promise<vo
            official_receipt_number = COALESCE($12, official_receipt_number),
            payment_reference = COALESCE($13, payment_reference),
            payment_date = COALESCE($14::timestamp, payment_date),
-           payment_proof = COALESCE($15, payment_proof),
-           mismatch_notes = COALESCE($16, mismatch_notes)
+           payment_proof = CASE WHEN $15 IS NOT NULL THEN $15 ELSE payment_proof END,
+           mismatch_notes = CASE
+             WHEN $10 = 'Paid' AND ($16 IS NULL OR $16 = '') THEN NULL
+             WHEN $16 IS NOT NULL THEN $16
+             ELSE mismatch_notes
+           END,
+           email = COALESCE($18, email)
        WHERE lease_id=$17 OR id::text=$17
        RETURNING *`,
       [firstName, lastName, marketName, section, stallNumber,
         leaseStatus, amountDue || 0, helperApprovalStatus,
         advancePaymentStatus, paymentStatus, resolvedPaymentMethod,
-        officialReceiptNumber, paymentReference, paymentDate, paymentProof, mismatchNotes, id]
+        officialReceiptNumber, paymentReference, paymentDate, paymentProof, mismatchNotes, id, email]
     );
 
     if (result.rows.length === 0) {
@@ -392,11 +403,35 @@ export async function updateMarketLease(req: Request, res: Response): Promise<vo
       return;
     }
 
+    const row = result.rows[0];
+    const formatted = {
+      id: row.id.toString(),
+      leaseId: row.lease_id,
+      firstName: row.first_name,
+      lastName: row.last_name,
+      email: row.email || null,
+      marketName: row.market_name,
+      section: row.section,
+      stallNumber: row.stall_number,
+      leaseStatus: row.lease_status,
+      amountDue: parseFloat(row.amount_due) || 0,
+      helperApprovalStatus: row.helper_approval_status,
+      advancePaymentStatus: row.advance_payment_status,
+      paymentStatus: row.payment_status,
+      paymentMethod: autoDetectPaymentMethod(row),
+      officialReceiptNumber: row.official_receipt_number || null,
+      paymentReference: row.payment_reference || null,
+      paymentDate: row.payment_date || null,
+      paymentProof: row.payment_proof || null,
+      mismatchNotes: row.mismatch_notes || null,
+      createdAt: row.created_at,
+    };
+
     await recordAudit(req, 'AUD-MARKET-UPDATE', 'system-admin@lgu.gov.ph', 'admin',
       'Market Module', 'STALL_APPLICATION_UPDATED', 'INFO', null,
-      `Updated lease record for Stall ${stallNumber} (${id}) with payment method: ${resolvedPaymentMethod}`);
+      `Updated lease record for Stall ${stallNumber} (${id}) - Payment Status: ${paymentStatus}`);
 
-    res.status(200).json({ message: 'Lease updated successfully', lease: result.rows[0] });
+    res.status(200).json({ message: 'Lease updated successfully', lease: formatted });
   } catch (err) {
     console.error('Error updating market lease:', err);
     res.status(500).json({ message: 'Failed to update market lease in database.' });

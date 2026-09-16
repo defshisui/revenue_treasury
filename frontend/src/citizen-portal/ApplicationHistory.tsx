@@ -141,7 +141,11 @@ export default function ApplicationHistory() {
                 if (isMatch) {
                     combined.push({
                         id: `rpt-${item.id}`,
-                        referenceNumber: item.controlNumber || item.referenceNumber || item.id,
+                        referenceNumber: (() => {
+                            const cn = String(item.controlNumber || item.control_number || item.referenceNumber || '').trim();
+                            if (cn && cn !== '-' && cn !== '—') return cn;
+                            return item.id ? `RPT-QC-${new Date().getFullYear()}-${String(item.id).replace(/[^0-9A-Za-z]/g, '').slice(0, 6).toUpperCase()}` : `RPT-QC-${new Date().getFullYear()}-001001`;
+                        })(),
                         category: 'RPT',
                         serviceName: `Real Property Tax (${item.service || 'Assessment / Transfer'})`,
                         department: "City Assessor & Treasury Office",
