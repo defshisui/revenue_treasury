@@ -12,8 +12,10 @@ export async function getUsers(_req: Request, res: Response): Promise<void> {
       fullname: row.name || 'System User',
       username: row.email,
       role: row.role || 'admin',
-
       status: row.status || 'Active',
+      createdAt: row.created_at || null,
+      lastLogin: row.last_login || null,
+      lastActiveAt: row.last_active_at || row.last_login || row.created_at || null,
     }));
     res.json(formatted);
   } catch (err) {
@@ -70,7 +72,7 @@ export async function createUser(req: Request, res: Response): Promise<void> {
       `INSERT INTO users (name, email, password, role, status, created_at)
        VALUES ($1, $2, $3, $4, $5, NOW())
        RETURNING id, name, email, role, status`,
-      [fullname.trim(), cleanEmail, hashedPassword, role || 'treasury-staff', 'Active']
+      [fullname.trim(), cleanEmail, hashedPassword, role || 'admin', 'Active']
     );
     const newUser = result.rows[0];
 

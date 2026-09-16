@@ -677,6 +677,30 @@ export default function MarketLeaseSearch() {
                                                 </div>
                                             ) : (
                                                 <>
+                                                    {((selectedLease.paymentStatus || '').toLowerCase().includes('information requested') ||
+                                                        (selectedLease.paymentStatus || '').toLowerCase().includes('mismatch')) && (
+                                                        <div className="mb-4 p-3.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 rounded-xl space-y-2 text-xs">
+                                                            <div className="flex items-center gap-1.5 font-bold text-amber-900 dark:text-amber-200">
+                                                                <span>⚠️</span> Action Required: Payment Proof Needed
+                                                            </div>
+                                                            <p className="text-[11px] text-amber-800 dark:text-amber-300 m-0">
+                                                                Treasury flagged a transaction mismatch for this stall lease.
+                                                            </p>
+                                                            {selectedLease.mismatchNotes && (
+                                                                <p className="text-[11px] text-amber-900 dark:text-amber-200 font-semibold italic m-0 bg-white/70 dark:bg-slate-900/70 p-2 rounded-lg border border-amber-200 dark:border-amber-800">
+                                                                    "{selectedLease.mismatchNotes}"
+                                                                </p>
+                                                            )}
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => { window.location.href = '/citizen-portal-stall-status'; }}
+                                                                className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 rounded-lg text-xs transition cursor-pointer"
+                                                            >
+                                                                Upload Proof on Status Page →
+                                                            </button>
+                                                        </div>
+                                                    )}
+
                                                     <p className="text-[11px] text-blue-800 dark:text-blue-200 leading-relaxed mb-4">
                                                         Pay the posted market stall amount online. Your lease will
                                                         update automatically after PayMongo confirms the payment.

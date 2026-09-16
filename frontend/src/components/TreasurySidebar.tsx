@@ -54,11 +54,21 @@ export default function TreasurySidebar({
     return true;
   });
 
+  const isMarketActive = ["market", "market-city", "hawker"].includes(activeTab);
+
   const handleTabClick = (item: NavItem) => {
     setActiveTab(item.id);
-    if (item.hasDropdown) {
+    if (item.id === "market") {
       if (isCollapsed) setIsCollapsed(false);
-      setIsMarketOpen((prev) => !prev);
+      // If already viewing market, allow toggling; if coming from another module, keep it open
+      if (isMarketActive) {
+        setIsMarketOpen((prev) => !prev);
+      } else {
+        setIsMarketOpen(true);
+      }
+    } else {
+      // Hide market dropdown when user is looking at any other module
+      setIsMarketOpen(false);
     }
   };
 
@@ -165,7 +175,10 @@ export default function TreasurySidebar({
               {isMarketGroup && isMarketOpen && !isCollapsed && (
                 <div className="mt-1 ml-4 pl-3 border-l-2 border-[#1c2541] space-y-1">
                   <button
-                    onClick={() => setActiveTab("market-city")}
+                    onClick={() => {
+                      setActiveTab("market-city");
+                      setIsMarketOpen(true);
+                    }}
                     className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors flex items-center justify-between cursor-pointer ${activeTab === "market-city"
                       ? "bg-[#1d4ed8] text-white font-bold"
                       : "text-slate-400 hover:text-white hover:bg-[#1c2541]"
@@ -174,7 +187,10 @@ export default function TreasurySidebar({
                     <span className="truncate">City-Owned Market</span>
                   </button>
                   <button
-                    onClick={() => setActiveTab("hawker")}
+                    onClick={() => {
+                      setActiveTab("hawker");
+                      setIsMarketOpen(true);
+                    }}
                     className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors flex items-center justify-between cursor-pointer ${activeTab === "hawker"
                       ? "bg-[#1d4ed8] text-white font-bold"
                       : "text-slate-400 hover:text-white hover:bg-[#1c2541]"

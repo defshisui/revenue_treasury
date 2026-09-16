@@ -24,9 +24,19 @@ interface LeaseRecord {
   amountDue: number;
   helperApprovalStatus: string;
   advancePaymentStatus: string;
-  paymentStatus: "Pending Payment" | "For Payment Verification" | "Payment Information Requested" | "Paid";
+  paymentStatus:
+    | "Pending Payment"
+    | "For Payment Verification"
+    | "Payment Information Requested"
+    | "Proof Submitted - For Treasury Verification"
+    | "Paid"
+    | string;
   paymentMethod?: string;
   officialReceiptNumber?: string;
+  paymentReference?: string;
+  paymentProof?: string;
+  mismatchNotes?: string;
+  paymentDate?: string;
 }
 
 interface Props {
@@ -244,6 +254,60 @@ export default function CityOwnedMarketAdmin({
     }
   };
 
+  const handleVerifyAndMatchPayment = async () => {
+    if (!selectedRecord) return;
+    try {
+      const orNumber = selectedRecord.officialReceiptNumber || `OR-MKT-${Math.floor(100000 + Math.random() * 900000)}`;
+      const updatedRecord: LeaseRecord = {
+        ...selectedRecord,
+        paymentStatus: "Paid",
+        leaseStatus: "Active",
+        helperApprovalStatus: "Approved",
+        advancePaymentStatus: "Verified & Cleared",
+        officialReceiptNumber: orNumber,
+        paymentDate: selectedRecord.paymentDate || new Date().toISOString(),
+        paymentMethod: selectedRecord.paymentMethod || "PayMongo (QR Ph)",
+      };
+
+      await updateLease(updatedRecord);
+      setSelectedRecord(updatedRecord);
+      setLeases((prev) => prev.map((l) => (l.leaseId === updatedRecord.leaseId ? updatedRecord : l)));
+      if (onUpdateRecord) onUpdateRecord(updatedRecord);
+      window.dispatchEvent(new Event("db_treasury_updated"));
+      alert(`Payment successfully verified & matched via Gov Pay gateway! Official Receipt issued: ${orNumber}`);
+    } catch (err: any) {
+      console.error("Failed to verify & match payment:", err);
+      alert(err?.message || "Failed to update lease record in database.");
+    }
+  };
+
+  const handleFlagMismatchRequestInfo = async () => {
+    if (!selectedRecord) return;
+    const note = prompt(
+      "Enter payment mismatch notes / instructions for the citizen:",
+      selectedRecord.mismatchNotes || "Payment amount or transaction reference does not match. Please upload your proof of transaction or receipt."
+    );
+    if (note === null) return;
+
+    try {
+      const updatedRecord: LeaseRecord = {
+        ...selectedRecord,
+        paymentStatus: "Payment Information Requested",
+        mismatchNotes: note.trim() || "Transaction reference mismatch. Please upload valid proof of transaction.",
+      };
+
+      await updateLease(updatedRecord);
+      setSelectedRecord(updatedRecord);
+      setLeases((prev) => prev.map((l) => (l.leaseId === updatedRecord.leaseId ? updatedRecord : l)));
+      if (onUpdateRecord) onUpdateRecord(updatedRecord);
+      window.dispatchEvent(new Event("db_treasury_updated"));
+      alert("Flagged for transaction mismatch. Citizen has been notified to provide proof of transaction.");
+    } catch (err: any) {
+      console.error("Failed to flag mismatch:", err);
+      alert(err?.message || "Failed to update lease record in database.");
+    }
+  };
+
   const handleSoftDelete = async (record: LeaseRecord) => {
     if (window.confirm(`Are you sure you want to move lease record ${record.leaseId} to the Archiver?`)) {
       try {
@@ -346,9 +410,12 @@ export default function CityOwnedMarketAdmin({
     switch (status) {
       case "Paid":
         return "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-800";
+      case "Proof Submitted - For Treasury Verification":
+        return "bg-cyan-50 text-cyan-700 border-cyan-200 dark:bg-cyan-950/50 dark:text-cyan-400 dark:border-cyan-800";
       case "For Payment Verification":
         return "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/50 dark:text-blue-400 dark:border-blue-800";
       case "Payment Information Requested":
+      case "Flagged Mismatch / Proof Required":
         return "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/50 dark:text-purple-400 dark:border-purple-800";
       case "Pending Payment":
       default:
@@ -896,54 +963,83 @@ export default function CityOwnedMarketAdmin({
 
 
                 <div className="sm:col-span-2 bg-slate-100/70 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-3 mt-2">
-                  <h4 className="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider flex items-center gap-2">
-                    <span>₱</span> Gateway Transaction Verification
-                  </h4>
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider flex items-center gap-2">
+                      <span>₱</span> Gateway Transaction &amp; Payment Verification
+                    </h4>
+                    {selectedRecord.paymentStatus === "Proof Submitted - For Treasury Verification" && (
+                      <span className="px-2.5 py-1 bg-cyan-100 dark:bg-cyan-950/60 text-cyan-800 dark:text-cyan-300 rounded-full text-[10px] font-bold border border-cyan-300 dark:border-cyan-700 animate-pulse">
+                        ● Proof Uploaded by Citizen
+                      </span>
+                    )}
+                  </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-700">
                     <div>
-                      <span className="text-slate-400 block mb-0.5">Gateway Ref ID:</span>
+                      <span className="text-slate-400 block mb-0.5">Payment Reference:</span>
                       <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
-                        {selectedRecord.leaseId}-TRX-9984
+                        {selectedRecord.paymentReference || `${selectedRecord.leaseId}-TRX-9984`}
                       </span>
                     </div>
                     <div>
-                      <span className="text-slate-400 block mb-0.5">Webhook Timestamp:</span>
-                      <span className="font-mono text-slate-800 dark:text-slate-200">
-                        2026-08-21 (Payment Matched)
+                      <span className="text-slate-400 block mb-0.5">Official Receipt (O.R.):</span>
+                      <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                        {selectedRecord.officialReceiptNumber || (selectedRecord.paymentStatus === "Paid" ? "OR-ISSUED" : "None")}
                       </span>
                     </div>
                   </div>
 
+                  {selectedRecord.paymentProof && (
+                    <div className="bg-cyan-50/70 dark:bg-cyan-950/30 p-3 rounded-xl border border-cyan-200 dark:border-cyan-800/60 space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-cyan-900 dark:text-cyan-200 uppercase tracking-wide flex items-center gap-1.5">
+                          <span>📎</span> Citizen Submitted Proof of Transaction
+                        </span>
+                        <span className="text-[10px] text-cyan-700 dark:text-cyan-400 font-mono">
+                          Ref: {selectedRecord.paymentReference || "Attached"}
+                        </span>
+                      </div>
+                      {selectedRecord.paymentProof.startsWith("data:image") || selectedRecord.paymentProof.startsWith("http") ? (
+                        <div className="mt-1">
+                          <img
+                            src={selectedRecord.paymentProof}
+                            alt="Citizen Payment Proof"
+                            className="max-h-48 rounded-lg border border-cyan-200 dark:border-cyan-800 object-contain bg-white dark:bg-slate-900 p-1"
+                          />
+                        </div>
+                      ) : (
+                        <p className="text-xs text-cyan-900 dark:text-cyan-200 font-medium bg-white/70 dark:bg-slate-900/70 p-2 rounded-lg border border-cyan-200 dark:border-cyan-800">
+                          {selectedRecord.paymentProof}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {selectedRecord.mismatchNotes && (
+                    <div className="bg-amber-50/70 dark:bg-amber-950/30 p-3 rounded-xl border border-amber-200 dark:border-amber-800/60">
+                      <span className="text-[11px] font-bold text-amber-900 dark:text-amber-200 uppercase tracking-wide block mb-1">
+                        ⚠️ Mismatch / Requested Info Notes:
+                      </span>
+                      <p className="text-xs text-amber-800 dark:text-amber-300 italic m-0">
+                        "{selectedRecord.mismatchNotes}"
+                      </p>
+                    </div>
+                  )}
+
                   <div className="pt-1 flex flex-wrap items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => {
-                        setSelectedRecord({
-                          ...selectedRecord,
-                          paymentStatus: "Paid",
-                          leaseStatus: "Active",
-                          helperApprovalStatus: "Approved",
-                          advancePaymentStatus: "Verified & Cleared"
-                        });
-                        alert("Payment successfully verified & matched via Gov Pay gateway!");
-                      }}
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2 rounded-xl text-xs transition-all cursor-pointer shadow-xs"
+                      onClick={handleVerifyAndMatchPayment}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2 rounded-xl text-xs transition-all cursor-pointer shadow-xs flex items-center gap-1.5"
                     >
-                      Verify &amp; Match Payment
+                      <span>✓</span> Verify &amp; Match Payment
                     </button>
                     <button
                       type="button"
-                      onClick={() => {
-                        setSelectedRecord({
-                          ...selectedRecord,
-                          paymentStatus: "Payment Information Requested",
-                        });
-                        alert("Flagged for transaction mismatch. Requesting updated proof from citizen.");
-                      }}
-                      className="bg-amber-600 hover:bg-amber-700 text-white font-semibold px-4 py-2 rounded-xl text-xs transition-all cursor-pointer shadow-xs"
+                      onClick={handleFlagMismatchRequestInfo}
+                      className="bg-amber-600 hover:bg-amber-700 text-white font-semibold px-4 py-2 rounded-xl text-xs transition-all cursor-pointer shadow-xs flex items-center gap-1.5"
                     >
-                      Flag Mismatch / Request Info
+                      <span>⚠</span> Flag Mismatch / Request Info
                     </button>
                   </div>
                 </div>

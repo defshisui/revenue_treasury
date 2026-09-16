@@ -290,6 +290,10 @@ export async function initializeDatabase(): Promise<void> {
       ADD COLUMN IF NOT EXISTS avatar TEXT;
       ALTER TABLE users
       ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS last_login TIMESTAMPTZ DEFAULT NOW();
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS last_active_at TIMESTAMPTZ DEFAULT NOW();
 
       -- AUDIT LOGS
       ALTER TABLE audit_logs
@@ -355,6 +359,12 @@ export async function initializeDatabase(): Promise<void> {
 
       ALTER TABLE market_leases
       ADD COLUMN IF NOT EXISTS payment_date TIMESTAMP;
+
+      ALTER TABLE market_leases
+      ADD COLUMN IF NOT EXISTS payment_proof TEXT;
+
+      ALTER TABLE market_leases
+      ADD COLUMN IF NOT EXISTS mismatch_notes TEXT;
 
       ALTER TABLE rpt_applications
       ADD COLUMN IF NOT EXISTS assigned_officer VARCHAR(255);

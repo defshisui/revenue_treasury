@@ -4,6 +4,9 @@ import { API_BASE_URL } from "../config/api";
 
 interface ExtendedUserRecord extends Omit<UserRecord, "status"> {
   status?: "Active" | "Inactive" | "ARCHIVED" | string;
+  createdAt?: string;
+  lastLogin?: string;
+  lastActiveAt?: string;
 }
 
 export default function UsersView({
@@ -24,8 +27,34 @@ export default function UsersView({
   const [newFullname, setNewFullname] = useState("");
   const [newUsername, setNewUsername] = useState("");
   const [newPassword, setNewPassword] = useState("");
-  const [newRole, setNewRole] = useState("treasury-staff");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const getActivityDuration = (record: ExtendedUserRecord) => {
+    const isArchived = record.status === "ARCHIVED" || record.status === "Inactive";
+    const now = new Date();
+
+    if (isArchived) {
+      const refDateStr = record.lastActiveAt || record.lastLogin || record.createdAt;
+      if (!refDateStr) return { label: "Offline (Unknown)", isOnline: false };
+      const refDate = new Date(refDateStr);
+      const diffMs = Math.max(0, now.getTime() - refDate.getTime());
+      const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      return {
+        label: days <= 0 ? "Offline (Today)" : `Offline (${days} day${days === 1 ? '' : 's'})`,
+        isOnline: false,
+      };
+    } else {
+      const refDateStr = record.createdAt || record.lastLogin;
+      if (!refDateStr) return { label: "Active (Today)", isOnline: true };
+      const refDate = new Date(refDateStr);
+      const diffMs = Math.max(0, now.getTime() - refDate.getTime());
+      const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      return {
+        label: days <= 0 ? "Active (Today)" : `Active (${days} day${days === 1 ? '' : 's'})`,
+        isOnline: true,
+      };
+    }
+  };
 
   const fetchUsers = () => {
     setIsLoading(true);
@@ -86,7 +115,7 @@ export default function UsersView({
           fullname: newFullname,
           username: newUsername,
           password: newPassword,
-          role: newRole,
+          role: "admin",
           status: "Active"
         })
       });
@@ -95,7 +124,6 @@ export default function UsersView({
         setNewFullname("");
         setNewUsername("");
         setNewPassword("");
-        setNewRole("treasury-staff");
         setIsAddModalOpen(false);
 
         fetchUsers();
@@ -426,6 +454,10 @@ export default function UsersView({
                       Access Status
                     </th>
 
+                    <th className="p-4 text-slate-900 dark:text-white font-bold">
+                      Days Active / Offline
+                    </th>
+
                     <th className="p-4 text-slate-900 dark:text-white font-bold text-right">
                       Actions
                     </th>
@@ -513,6 +545,23 @@ export default function UsersView({
 
                         )}
 
+                      </td>
+
+                      <td className="p-4">
+                        {(() => {
+                          const activity = getActivityDuration(record);
+                          return activity.isOnline ? (
+                            <span className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 px-2.5 py-1.5 rounded-lg text-[11px] font-bold border border-emerald-200 dark:border-emerald-500/30 flex items-center gap-1.5 w-max">
+                              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+                              {activity.label}
+                            </span>
+                          ) : (
+                            <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2.5 py-1.5 rounded-lg text-[11px] font-bold border border-slate-300 dark:border-slate-700 flex items-center gap-1.5 w-max">
+                              <span className="w-1.5 h-1.5 bg-slate-400 rounded-full"></span>
+                              {activity.label}
+                            </span>
+                          );
+                        })()}
                       </td>
 
 
@@ -686,35 +735,6 @@ export default function UsersView({
 
 
 
-              <div className="space-y-1">
-
-                <label className="text-[11px] uppercase tracking-wider font-bold text-slate-700 dark:text-slate-300">
-                  Access Role
-                </label>
-
-                <select
-                  value={newRole}
-                  onChange={(e) =>
-                    setNewRole(e.target.value)
-                  }
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-600 cursor-pointer"
-                >
-
-                  <option value="treasury-staff">
-                    Treasury Staff
-                  </option>
-
-                  <option value="auditor">
-                    Auditor
-                  </option>
-
-                  <option value="admin">
-                    Admin
-                  </option>
-
-                </select>
-
-              </div>
 
 
 

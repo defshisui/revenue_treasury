@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CitizenLayout from './CitizenLayout';
-import { getLeases, type LeaseRecord } from '../services/marketService';
+import { getLeases, updateLease, type LeaseRecord } from '../services/marketService';
 import { API_BASE_URL } from '../config/api';
 import {
     createPayMongoQrPaymentIntent,
@@ -48,6 +48,62 @@ export default function ApplicationList() {
     const [qrPaymentPaid, setQrPaymentPaid] = useState<boolean>(false);
     const [paymentConfirmedAt, setPaymentConfirmedAt] = useState<Date | null>(null);
     const [isPaymentSuccess, setIsPaymentSuccess] = useState<boolean>(false);
+
+    // Citizen Proof Submission State
+    const [isProofModalOpen, setIsProofModalOpen] = useState<boolean>(false);
+    const [proofRefNumber, setProofRefNumber] = useState<string>('');
+    const [proofImage, setProofImage] = useState<string>('');
+    const [proofNotes, setProofNotes] = useState<string>('');
+    const [isSubmittingProof, setIsSubmittingProof] = useState<boolean>(false);
+
+    const handleProofFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setProofImage(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const handleOpenProofModal = (lease: EnrichedLeaseRecord) => {
+        setSelectedLease(lease);
+        setProofRefNumber(lease.paymentReference || '');
+        setProofImage('');
+        setProofNotes('');
+        setIsProofModalOpen(true);
+    };
+
+    const handleSubmitProof = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedLease) return;
+        if (!proofRefNumber && !proofImage && !proofNotes) {
+            alert('Please provide at least a transaction reference number or receipt upload.');
+            return;
+        }
+        setIsSubmittingProof(true);
+        try {
+            const updatedRecord: EnrichedLeaseRecord = {
+                ...selectedLease,
+                paymentStatus: 'Proof Submitted - For Treasury Verification',
+                paymentReference: proofRefNumber || selectedLease.paymentReference,
+                paymentProof: proofImage || proofNotes || `Reference No: ${proofRefNumber}`,
+                paymentDate: new Date().toISOString(),
+            };
+
+            await updateLease(updatedRecord);
+            setSelectedLease(updatedRecord);
+            setLeases((prev) => prev.map((l) => (l.leaseId === updatedRecord.leaseId ? updatedRecord : l)));
+            setIsProofModalOpen(false);
+            window.dispatchEvent(new Event('db_treasury_updated'));
+            alert('Proof of transaction submitted successfully! Treasury personnel has been notified and will verify your payment.');
+        } catch (err: any) {
+            console.error('Failed to submit proof:', err);
+            alert(err?.message || 'Failed to submit proof of payment.');
+        } finally {
+            setIsSubmittingProof(false);
+        }
+    };
 
     // Load active citizen session
     useEffect(() => {
@@ -310,7 +366,32 @@ export default function ApplicationList() {
                     </div>
 
                     {/* Main Content Area */}
-                    <div className="max-w-6xl mx-auto px-4 py-6">
+                    <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
+                        {leases.some(l => (l.paymentStatus || '').toLowerCase().includes('information requested') || (l.paymentStatus || '').toLowerCase().includes('mismatch')) && (
+                            <div className="bg-amber-50 dark:bg-amber-950/50 border border-amber-300 dark:border-amber-800 p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+                                <div className="flex items-center gap-3">
+                                    <span className="text-xl">⚠️</span>
+                                    <div>
+                                        <h4 className="text-xs font-bold uppercase tracking-wider text-amber-900 dark:text-amber-200">
+                                            Action Required: Payment Mismatch Flagged
+                                        </h4>
+                                        <p className="text-xs text-amber-800 dark:text-amber-300 m-0">
+                                            The Treasury office has flagged a transaction mismatch and requires proof of payment for your stall lease.
+                                        </p>
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const flagged = leases.find(l => (l.paymentStatus || '').toLowerCase().includes('information requested') || (l.paymentStatus || '').toLowerCase().includes('mismatch'));
+                                        if (flagged) handleOpenProofModal(flagged);
+                                    }}
+                                    className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shadow-xs whitespace-nowrap cursor-pointer transition-all"
+                                >
+                                    Upload Proof of Payment →
+                                </button>
+                            </div>
+                        )}
                         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 sm:p-8 space-y-6">
                             {/* Primary Action Button */}
                             <div className="flex justify-between items-center">
@@ -597,12 +678,66 @@ export default function ApplicationList() {
                                             <span className="font-mono font-bold text-slate-700 dark:text-slate-300">{selectedLease.paymentReference}</span>
                                         </div>
                                     )}
-                                </div>
+                                 </div>
                             </div>
+
+                            {/* Mismatch Notice & Proof Status */}
+                            {((selectedLease.paymentStatus || '').toLowerCase().includes('information requested') ||
+                                (selectedLease.paymentStatus || '').toLowerCase().includes('mismatch') ||
+                                (selectedLease.paymentStatus || '').toLowerCase().includes('proof required')) && (
+                                <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-amber-600 dark:text-amber-400 font-bold text-sm">⚠️</span>
+                                            <h4 className="text-xs font-bold uppercase tracking-wider text-amber-900 dark:text-amber-200">
+                                                Proof of Transaction Required
+                                            </h4>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleOpenProofModal(selectedLease)}
+                                            className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold shadow-xs transition-all cursor-pointer"
+                                        >
+                                            Submit Proof Now
+                                        </button>
+                                    </div>
+                                    <p className="text-xs text-amber-800 dark:text-amber-300">
+                                        The Treasury department flagged a transaction mismatch and requires your updated proof of payment.
+                                    </p>
+                                    {selectedLease.mismatchNotes && (
+                                        <div className="p-2.5 rounded-lg bg-white/80 dark:bg-slate-900/80 border border-amber-200 dark:border-amber-900 text-xs text-amber-800 dark:text-amber-300 italic">
+                                            <strong>Treasury Officer Note:</strong> "{selectedLease.mismatchNotes}"
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {selectedLease.paymentStatus === 'Proof Submitted - For Treasury Verification' && (
+                                <div className="p-4 rounded-xl bg-cyan-50 dark:bg-cyan-950/40 border border-cyan-300 dark:border-cyan-800 space-y-2">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-cyan-600 dark:text-cyan-400 font-bold text-sm">📎</span>
+                                        <h4 className="text-xs font-bold uppercase tracking-wider text-cyan-900 dark:text-cyan-200">
+                                            Proof of Transaction Submitted
+                                        </h4>
+                                    </div>
+                                    <p className="text-xs text-cyan-800 dark:text-cyan-300">
+                                        Your payment proof has been forwarded to the Treasury office. A personnel officer is reviewing your record.
+                                    </p>
+                                    {selectedLease.paymentProof && (
+                                        <div className="text-[11px] text-cyan-900 dark:text-cyan-200 font-mono bg-white/80 dark:bg-slate-900/80 p-2 rounded-lg border border-cyan-200 dark:border-cyan-900">
+                                            {selectedLease.paymentProof.startsWith('data:image') ? (
+                                                <img src={selectedLease.paymentProof} alt="Submitted proof" className="max-h-36 rounded-md object-contain" />
+                                            ) : (
+                                                <span>Proof details: {selectedLease.paymentProof}</span>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
 
                         {/* Modal Footer Actions */}
-                        <div className="bg-slate-50 dark:bg-slate-800/80 px-6 py-4 flex justify-between items-center border-t border-slate-200 dark:border-slate-800">
+                        <div className="bg-slate-50 dark:bg-slate-800/80 px-6 py-4 flex flex-wrap justify-between items-center gap-2 border-t border-slate-200 dark:border-slate-800">
                             <button
                                 type="button"
                                 onClick={() => setSelectedLease(null)}
@@ -611,19 +746,120 @@ export default function ApplicationList() {
                                 Close
                             </button>
 
-                            {!(selectedLease.paymentStatus || '').toLowerCase().includes('paid') && (
+                            <div className="flex items-center gap-2">
+                                {!(selectedLease.paymentStatus || '').toLowerCase().includes('paid') && (
+                                    <>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleOpenProofModal(selectedLease)}
+                                            className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                                        >
+                                            <span>📎</span> Upload Proof
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => openPaymentModal(selectedLease)}
+                                            className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-md transition-all flex items-center gap-2 cursor-pointer"
+                                        >
+                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                                            </svg>
+                                            Pay Online (QR Ph)
+                                        </button>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Proof of Payment Submission Modal */}
+            {isProofModalOpen && selectedLease && (
+                <div className="fixed inset-0 z-50 bg-slate-900/75 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full border border-slate-200 dark:border-slate-800 shadow-2xl p-6 space-y-4 animate-in fade-in zoom-in-95">
+                        <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-3">
+                            <div>
+                                <h3 className="text-base font-bold text-slate-900 dark:text-white">Submit Proof of Payment</h3>
+                                <p className="text-xs text-slate-500 dark:text-slate-400">Stall {selectedLease.stallNumber} ({selectedLease.leaseId})</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setIsProofModalOpen(false)}
+                                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg font-bold cursor-pointer"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        {selectedLease.mismatchNotes && (
+                            <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 rounded-xl text-xs text-amber-800 dark:text-amber-300">
+                                <strong>Treasury Reason:</strong> "{selectedLease.mismatchNotes}"
+                            </div>
+                        )}
+
+                        <form onSubmit={handleSubmitProof} className="space-y-3.5 text-xs">
+                            <div>
+                                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                    Transaction / Reference Number <span className="text-rose-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    required
+                                    placeholder="e.g. GCash Ref / Bank Ref / PayMongo Ref"
+                                    value={proofRefNumber}
+                                    onChange={(e) => setProofRefNumber(e.target.value)}
+                                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-slate-900 dark:text-slate-100 font-mono"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                    Attach Receipt Screenshot / Photo Proof
+                                </label>
+                                <input
+                                    type="file"
+                                    accept="image/*,.pdf"
+                                    onChange={handleProofFileChange}
+                                    className="w-full text-xs text-slate-500 dark:text-slate-400 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 dark:file:bg-blue-950 dark:file:text-blue-300 hover:file:bg-blue-100 cursor-pointer"
+                                />
+                                {proofImage && proofImage.startsWith('data:image') && (
+                                    <div className="mt-2">
+                                        <img src={proofImage} alt="Proof preview" className="max-h-36 rounded-lg border border-slate-200 dark:border-slate-700 object-contain mx-auto" />
+                                    </div>
+                                )}
+                            </div>
+
+                            <div>
+                                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                    Additional Notes / Remarks (Optional)
+                                </label>
+                                <textarea
+                                    rows={2}
+                                    placeholder="Payment date, channel used, or bank name..."
+                                    value={proofNotes}
+                                    onChange={(e) => setProofNotes(e.target.value)}
+                                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-slate-900 dark:text-slate-100"
+                                />
+                            </div>
+
+                            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
                                 <button
                                     type="button"
-                                    onClick={() => openPaymentModal(selectedLease)}
-                                    className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-md transition-all flex items-center gap-2 cursor-pointer"
+                                    onClick={() => setIsProofModalOpen(false)}
+                                    className="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 cursor-pointer"
                                 >
-                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
-                                    </svg>
-                                    Pay Online (QR Ph)
+                                    Cancel
                                 </button>
-                            )}
-                        </div>
+                                <button
+                                    type="submit"
+                                    disabled={isSubmittingProof}
+                                    className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
+                                >
+                                    {isSubmittingProof ? 'Submitting...' : 'Submit Proof to Treasury'}
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}

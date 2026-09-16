@@ -280,6 +280,18 @@ export default function CitizenLayout({
                 unread: true,
               });
             }
+            if (paymentStatus.includes('information requested') || paymentStatus.includes('mismatch') || paymentStatus.includes('proof required')) {
+              items.push({
+                id: `market-mismatch-${row.id}`,
+                title: 'Action Required: Proof of Payment Needed',
+                desc: row.mismatchNotes
+                  ? `Treasury mismatch notice: "${row.mismatchNotes}" (Stall ${row.stallNumber}). Please upload proof of payment.`
+                  : `Treasury flagged a payment mismatch for Stall ${row.stallNumber}. Please upload your proof of transaction.`,
+                time: formatTime(row.paymentDate || row.createdAt),
+                link: '/citizen-portal-stall-status',
+                unread: true,
+              });
+            }
           });
         }
       } catch {

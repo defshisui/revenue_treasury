@@ -166,6 +166,16 @@ export interface SaveLeaseBody {
   paymentStatus?: string;
   paymentMethod?: string;
   payment_method?: string;
+  officialReceiptNumber?: string;
+  official_receipt_number?: string;
+  paymentReference?: string;
+  payment_reference?: string;
+  paymentDate?: string;
+  payment_date?: string;
+  paymentProof?: string;
+  payment_proof?: string;
+  mismatchNotes?: string;
+  mismatch_notes?: string;
 }
 
 export interface UpdateLeaseBody extends SaveLeaseBody { }

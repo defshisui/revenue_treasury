@@ -425,6 +425,12 @@ export async function verifyLoginOtp(
       `Signed in via 2FA Email OTP (RememberMe: ${rememberMe})`
     );
 
+    try {
+      await pool.query('UPDATE users SET last_login = NOW(), last_active_at = NOW() WHERE id = $1', [user.id]);
+    } catch (updateErr) {
+      console.error('Failed to update user last_login:', updateErr);
+    }
+
     res.status(200).json({
       message:
         'Sign-in verified successfully!',

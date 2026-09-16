@@ -330,25 +330,50 @@ export default function TreasuryDashboardView({
     })).sort((a, b) => b.amount - a.amount);
 
     // --- Transactions by Service (3 fixed buckets) ---
+    // Detect all paid transactions across Real Property Tax, Business Tax, and Market Stall
     const serviceMap: Record<string, number> = {
       "Real Property Tax": 0,
       "Business Tax": 0,
       "Market Stall": 0,
     };
+
+    const seenTxRefs = new Set<string>();
     filteredTxsByTab.forEach(t => {
+      const ref = t?.referenceNumber || t?.transactionId || t?.id;
+      if (ref) seenTxRefs.add(String(ref));
       const type = (t?.paymentType || '').toUpperCase();
       if (type.includes('REAL PROPERTY') || type === 'RPT') serviceMap['Real Property Tax'] += 1;
       else if (type.includes('BUSINESS') || type.includes('BPLPO') || type.includes('PERMIT')) serviceMap['Business Tax'] += 1;
       else if (type.includes('MARKET')) serviceMap['Market Stall'] += 1;
       else {
-        // distribute unknowns based on count heuristic
         serviceMap['Business Tax'] += 1;
       }
     });
+
+    // Also include any settled RPT ledger records if not in txs
+    (Array.isArray(rptLedger) ? rptLedger : []).forEach((r: any) => {
+      const ref = String(r?.officialreceiptnumber || r?.official_receipt_number || r?.paymentreference || r?.payment_reference || r?.taxdeclarationnumber || r?.tax_declaration_number || '');
+      if (ref && !seenTxRefs.has(ref)) {
+        seenTxRefs.add(ref);
+        serviceMap['Real Property Tax'] += 1;
+      }
+    });
+
+    // Also include approved/paid business assessments if not in txs
+    (Array.isArray(bizAssessments) ? bizAssessments : []).forEach((b: any) => {
+      const isPaidOrApproved = String(b?.status || '').toUpperCase() === 'APPROVED' || String(b?.remarks || '').toLowerCase().startsWith('paid');
+      const ref = String(b?.taxBillNumber || b?.trackingNumber || b?.id || '');
+      if (isPaidOrApproved && ref && !seenTxRefs.has(ref)) {
+        seenTxRefs.add(ref);
+        serviceMap['Business Tax'] += 1;
+      }
+    });
+
+    const totalServiceCount = serviceMap['Real Property Tax'] + serviceMap['Business Tax'] + serviceMap['Market Stall'];
     const transactionsByService = Object.keys(serviceMap).map(service => ({
       service,
       count: serviceMap[service],
-      percentage: totalEpayments > 0 ? Math.round((serviceMap[service] / totalEpayments) * 100) : 0,
+      percentage: totalServiceCount > 0 ? Math.round((serviceMap[service] / totalServiceCount) * 100) : 0,
       color: SERVICE_COLORS[service] || '#94a3b8',
     }));
 
@@ -764,26 +789,6 @@ export default function TreasuryDashboardView({
         )}
       </div>
 
-      {activeLocalTab === "ALL" && (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm mb-6">
-          <h3 className="text-sm font-bold tracking-wider uppercase text-slate-900 dark:text-white m-0 mb-5">ePayment Transactions by Payment Method</h3>
-          <div className="flex items-center gap-8 flex-wrap">
-            <div
-              className="w-44 h-44 rounded-full relative flex-shrink-0 flex items-center justify-center shadow-sm"
-              style={{ background: `conic-gradient(${generateConicGradient(activeMetrics.transactionsByPaymentMethod)})` }}
-            >
-              <div className="w-24 h-24 bg-white dark:bg-slate-900 rounded-full flex items-center justify-center">
-                <span className="text-[10px] font-bold text-slate-700 dark:text-slate-200 text-center">Method</span>
-              </div>
-            </div>
-            <div className="flex flex-col gap-2.5">
-              {activeMetrics.transactionsByPaymentMethod.map(m => (
-                <LegendItem key={m.method} color={m.color} label={m.method} pct={m.percentage} />
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
 
       {activeLocalTab === "RPT" && (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm mb-6 animate-in fade-in slide-in-from-bottom-4 duration-300">

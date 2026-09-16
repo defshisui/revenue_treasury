@@ -19,10 +19,16 @@ export interface LeaseRecord {
   | "Pending Payment"
   | "For Payment Verification"
   | "Payment Information Requested"
-  | "Paid";
+  | "Flagged Mismatch / Proof Required"
+  | "Proof Submitted - For Treasury Verification"
+  | "Paid"
+  | string;
   paymentMethod?: string;
   officialReceiptNumber?: string;
   paymentReference?: string;
+  paymentProof?: string;
+  mismatchNotes?: string;
+  paymentDate?: string;
 }
 
 export function detectPaymentMethod(record?: Record<string, any> | null): string {

@@ -36,28 +36,178 @@ function resolvePaymentMethod(body: Partial<SaveLeaseBody> & Record<string, any>
 
 export async function getTransactions(_req: Request, res: Response): Promise<void> {
   try {
-    const result = await pool.query('SELECT * FROM market_leases ORDER BY created_at DESC');
-    const formatted = result.rows.map((row) => {
-      let formattedDate = '2026-06-15';
-      if (row.created_at) {
-        const d = new Date(row.created_at);
-        if (!isNaN(d.getTime())) formattedDate = d.toISOString().split('T')[0];
-      }
-      return {
-        id: row.id ? row.id.toString() : '1',
-        transactionId: `TX-${row.lease_id || row.id}`,
-        referenceNumber: row.lease_id || `REF-${row.id}`,
-        taxpayer: `${row.first_name || ''} ${row.last_name || ''}`.trim() || 'Unknown Taxpayer',
-        paymentType: 'Market Rental',
-        amount: parseFloat(row.amount_due) || 0,
-        paymentMethod: autoDetectPaymentMethod(row),
-        collector: 'Municipal Treasury',
-        date: formattedDate,
-        status: row.payment_status?.toLowerCase().includes('paid') ? 'Posted' : 'Pending',
-        remarks: `Stall ${row.stall_number || 'N/A'} (${row.market_name || 'Public Market'})`,
-      };
-    });
-    res.json(formatted);
+    const transactions: any[] = [];
+    const seenRefs = new Set<string>();
+
+    // 1. Market Leases
+    try {
+      const marketResult = await pool.query('SELECT * FROM market_leases ORDER BY created_at DESC');
+      marketResult.rows.forEach((row) => {
+        let formattedDate = '2026-06-15';
+        if (row.payment_date || row.created_at) {
+          const d = new Date(row.payment_date || row.created_at);
+          if (!isNaN(d.getTime())) formattedDate = d.toISOString().split('T')[0];
+        }
+        const ref = row.lease_id || `REF-${row.id}`;
+        seenRefs.add(ref);
+        transactions.push({
+          id: row.id ? row.id.toString() : '1',
+          transactionId: `TX-${row.lease_id || row.id}`,
+          referenceNumber: ref,
+          taxpayer: `${row.first_name || ''} ${row.last_name || ''}`.trim() || 'Unknown Taxpayer',
+          paymentType: 'Market Rental',
+          amount: parseFloat(row.amount_due) || 0,
+          paymentMethod: autoDetectPaymentMethod(row),
+          collector: 'Municipal Treasury',
+          date: formattedDate,
+          status: row.payment_status?.toLowerCase().includes('paid') ? 'Posted' : 'Pending',
+          remarks: `Stall ${row.stall_number || 'N/A'} (${row.market_name || 'Public Market'})`,
+        });
+      });
+    } catch (e) {
+      console.error('Error fetching market transactions:', e);
+    }
+
+    // 2. Real Property Tax - Citizen RPT Payments
+    try {
+      const rptPayResult = await pool.query('SELECT * FROM citizen_rpt_payments ORDER BY payment_date DESC');
+      rptPayResult.rows.forEach((row) => {
+        let formattedDate = '2026-06-15';
+        if (row.payment_date) {
+          const d = new Date(row.payment_date);
+          if (!isNaN(d.getTime())) formattedDate = d.toISOString().split('T')[0];
+        }
+        const ref = row.payment_reference || row.official_receipt_number || `RPT-PAY-${row.id}`;
+        seenRefs.add(ref);
+        if (row.official_receipt_number) seenRefs.add(row.official_receipt_number);
+        transactions.push({
+          id: `rpt-pay-${row.id}`,
+          transactionId: `TX-RPT-${row.official_receipt_number || row.id}`,
+          referenceNumber: ref,
+          taxpayer: row.owner_name || 'RPT Taxpayer',
+          paymentType: 'Real Property Tax',
+          amount: parseFloat(row.amount) || 0,
+          paymentMethod: row.payment_method || 'PayMongo (Online)',
+          collector: 'Office of the City Assessor & Treasury',
+          date: formattedDate,
+          status: 'Posted',
+          remarks: `TDN: ${row.tax_declaration_number || 'N/A'} (${row.payment_option || 'Full'})`,
+        });
+      });
+    } catch (e) {
+      console.error('Error fetching RPT citizen payments:', e);
+    }
+
+    // 3. Real Property Tax - Settled LGU records
+    try {
+      const lguRptResult = await pool.query(
+        "SELECT * FROM lgu_rpt_records WHERE LOWER(COALESCE(paymentstatus, payment_status, '')) IN ('paid', 'settled', 'payment completed') OR officialreceiptnumber IS NOT NULL OR official_receipt_number IS NOT NULL"
+      );
+      lguRptResult.rows.forEach((row) => {
+        const orNum = row.officialreceiptnumber || row.official_receipt_number;
+        const ref = row.paymentreference || row.payment_reference || row.taxdeclarationnumber || row.tax_declaration_number || `LGU-RPT-${row.id}`;
+        if (orNum && seenRefs.has(orNum)) return;
+        if (seenRefs.has(ref)) return;
+        seenRefs.add(ref);
+
+        let formattedDate = '2026-06-15';
+        const dStr = row.paymentdate || row.payment_date;
+        if (dStr) {
+          const d = new Date(dStr);
+          if (!isNaN(d.getTime())) formattedDate = d.toISOString().split('T')[0];
+        }
+
+        const amt = parseFloat(row.amountpaid || row.amount_paid || row.totalassessment || row.total_assessment || 0) || 0;
+        transactions.push({
+          id: `rpt-lgu-${row.id}`,
+          transactionId: `TX-RPT-${orNum || row.id}`,
+          referenceNumber: orNum || ref,
+          taxpayer: row.ownername || row.owner_name || 'RPT Taxpayer',
+          paymentType: 'Real Property Tax',
+          amount: amt,
+          paymentMethod: row.paymentmethod || row.payment_method || 'PayMongo',
+          collector: 'Office of the City Assessor & Treasury',
+          date: formattedDate,
+          status: 'Posted',
+          remarks: `TDN: ${row.taxdeclarationnumber || row.tax_declaration_number || 'N/A'}`,
+        });
+      });
+    } catch (e) {
+      console.error('Error fetching LGU RPT records:', e);
+    }
+
+    // 4. Real Property Tax - RPT Applications
+    try {
+      const rptAppsResult = await pool.query(
+        "SELECT * FROM rpt_applications WHERE LOWER(COALESCE(payment_status, '')) IN ('paid', 'payment completed') ORDER BY created_at DESC"
+      );
+      rptAppsResult.rows.forEach((row) => {
+        const ref = row.official_receipt_number || row.payment_reference || row.reference_number || row.control_number || `RPT-APP-${row.id}`;
+        if (seenRefs.has(ref)) return;
+        seenRefs.add(ref);
+
+        let formattedDate = '2026-06-15';
+        if (row.payment_date || row.created_at) {
+          const d = new Date(row.payment_date || row.created_at);
+          if (!isNaN(d.getTime())) formattedDate = d.toISOString().split('T')[0];
+        }
+
+        transactions.push({
+          id: `rpt-app-${row.id}`,
+          transactionId: `TX-RPT-APP-${row.control_number || row.id}`,
+          referenceNumber: ref,
+          taxpayer: row.applicant_name || row.owner_name || 'RPT Applicant',
+          paymentType: 'Real Property Tax',
+          amount: parseFloat(row.payment_amount || row.transfer_tax_amount || 0) || 0,
+          paymentMethod: row.payment_method || 'PayMongo',
+          collector: 'Office of the City Assessor & Treasury',
+          date: formattedDate,
+          status: 'Posted',
+          remarks: `Application: ${row.service || 'RPT Service'} (${row.control_number || 'N/A'})`,
+        });
+      });
+    } catch (e) {
+      console.error('Error fetching RPT applications:', e);
+    }
+
+    // 5. Business Tax - Business Assessments
+    try {
+      const bizResult = await pool.query(
+        "SELECT * FROM business_assessments WHERE UPPER(COALESCE(status, '')) = 'APPROVED' OR LOWER(COALESCE(remarks, '')) LIKE 'paid via%' ORDER BY application_date DESC"
+      );
+      bizResult.rows.forEach((row) => {
+        const ref = row.tax_bill_number || row.tracking_number || `BIZ-${row.id}`;
+        if (seenRefs.has(ref)) return;
+        seenRefs.add(ref);
+
+        let formattedDate = '2026-06-15';
+        if (row.application_date || row.created_at) {
+          const d = new Date(row.application_date || row.created_at);
+          if (!isNaN(d.getTime())) formattedDate = d.toISOString().split('T')[0];
+        }
+
+        const rawSales = parseFloat(row.gross_sales) || 0;
+        const estTax = rawSales > 0 ? Number((rawSales * 0.02).toFixed(2)) : 2500;
+
+        transactions.push({
+          id: `biz-${row.id}`,
+          transactionId: `TX-BIZ-${row.tax_bill_number || row.tracking_number || row.id}`,
+          referenceNumber: ref,
+          taxpayer: row.business_name ? `${row.business_name} (${row.business_owner || 'Owner'})` : 'Business Taxpayer',
+          paymentType: 'Business Tax',
+          amount: estTax,
+          paymentMethod: row.remarks && row.remarks.includes('PayMongo') ? 'PayMongo' : 'Treasury Cashier',
+          collector: 'BPLO / Treasury',
+          date: formattedDate,
+          status: 'Posted',
+          remarks: `Tracking: ${row.tracking_number || 'N/A'} (Tax Bill: ${row.tax_bill_number || 'N/A'})`,
+        });
+      });
+    } catch (e) {
+      console.error('Error fetching business tax records:', e);
+    }
+
+    res.json(transactions);
   } catch (err) {
     console.error('Error fetching transactions:', err);
     res.status(500).json({ message: 'Error loading transactions' });
@@ -88,6 +238,8 @@ export async function getMarketLeases(_req: Request, res: Response): Promise<voi
       officialReceiptNumber: row.official_receipt_number || null,
       paymentReference: row.payment_reference || null,
       paymentDate: row.payment_date || null,
+      paymentProof: row.payment_proof || null,
+      mismatchNotes: row.mismatch_notes || null,
       createdAt: row.created_at,
     }));
     res.json(formatted);
@@ -210,18 +362,29 @@ export async function updateMarketLease(req: Request, res: Response): Promise<vo
   }
 
   const resolvedPaymentMethod = resolvePaymentMethod(body);
+  const officialReceiptNumber = body.officialReceiptNumber || body.official_receipt_number || null;
+  const paymentReference = body.paymentReference || body.payment_reference || null;
+  const paymentDate = body.paymentDate || body.payment_date || null;
+  const paymentProof = body.paymentProof || body.payment_proof || null;
+  const mismatchNotes = body.mismatchNotes || body.mismatch_notes || null;
 
   try {
     const result = await pool.query(
       `UPDATE market_leases
        SET first_name=$1, last_name=$2, market_name=$3, section=$4, stall_number=$5,
            lease_status=$6, amount_due=$7, helper_approval_status=$8,
-           advance_payment_status=$9, payment_status=$10, payment_method=$11
-       WHERE lease_id=$12 OR id::text=$12
+           advance_payment_status=$9, payment_status=$10, payment_method=$11,
+           official_receipt_number = COALESCE($12, official_receipt_number),
+           payment_reference = COALESCE($13, payment_reference),
+           payment_date = COALESCE($14::timestamp, payment_date),
+           payment_proof = COALESCE($15, payment_proof),
+           mismatch_notes = COALESCE($16, mismatch_notes)
+       WHERE lease_id=$17 OR id::text=$17
        RETURNING *`,
       [firstName, lastName, marketName, section, stallNumber,
         leaseStatus, amountDue || 0, helperApprovalStatus,
-        advancePaymentStatus, paymentStatus, resolvedPaymentMethod, id]
+        advancePaymentStatus, paymentStatus, resolvedPaymentMethod,
+        officialReceiptNumber, paymentReference, paymentDate, paymentProof, mismatchNotes, id]
     );
 
     if (result.rows.length === 0) {
