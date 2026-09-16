@@ -294,6 +294,37 @@ export async function initializeDatabase(): Promise<void> {
       ADD COLUMN IF NOT EXISTS last_login TIMESTAMPTZ DEFAULT NOW();
       ALTER TABLE users
       ADD COLUMN IF NOT EXISTS last_active_at TIMESTAMPTZ DEFAULT NOW();
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS is_logged_in BOOLEAN DEFAULT FALSE;
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS current_session_id TEXT;
+
+      -- USER SESSIONS
+      CREATE TABLE IF NOT EXISTS user_sessions (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        session_id TEXT UNIQUE NOT NULL,
+        token TEXT,
+        device_info TEXT,
+        ip_address TEXT,
+        city_location TEXT,
+        status VARCHAR(20) DEFAULT 'ACTIVE',
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        last_heartbeat TIMESTAMPTZ DEFAULT NOW()
+      );
+
+      -- CONCURRENT LOGIN ALERTS
+      CREATE TABLE IF NOT EXISTS concurrent_login_alerts (
+        id VARCHAR(64) PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        user_email TEXT NOT NULL,
+        new_session_id TEXT NOT NULL,
+        login_time TEXT NOT NULL,
+        browser_info TEXT NOT NULL,
+        city_location TEXT NOT NULL,
+        status VARCHAR(20) DEFAULT 'PENDING',
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
 
       -- AUDIT LOGS
       ALTER TABLE audit_logs

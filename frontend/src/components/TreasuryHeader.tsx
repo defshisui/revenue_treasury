@@ -183,6 +183,73 @@ export default function TreasuryHeader({
     setIsViewAllModalOpen(true);
   };
 
+  const handleAdminLogout = () => {
+    setIsProfileMenuOpen(false);
+
+    let userEmail = 'admin@treasury.gov.ph';
+    let userRole = activeRole || 'Admin';
+
+    try {
+      const stored = localStorage.getItem('currentUser') || localStorage.getItem('user');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        userEmail = parsed.email || parsed.user?.email || userEmail;
+        userRole = parsed.role || parsed.user?.role || userRole;
+      }
+    } catch {}
+
+    const auditPayload = JSON.stringify({
+      auditId: `AUD-${Math.floor(100000 + Math.random() * 900000)}`,
+      user: userEmail,
+      role: userRole,
+      module: 'Authentication',
+      action: 'User Logged Out',
+      severity: 'INFO',
+      ipAddress: '127.0.0.1',
+      userAgent: navigator.userAgent,
+      previousData: `Active session for ${userEmail}`,
+      newData: 'Session terminated / Logged out',
+      timestamp: new Date().toISOString(),
+    });
+
+    try {
+      if (navigator.sendBeacon) {
+        const blob = new Blob([auditPayload], { type: 'application/json' });
+        navigator.sendBeacon(`${API_BASE_URL}/audit-logs`, blob);
+      } else {
+        fetch(`${API_BASE_URL}/audit-logs`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: auditPayload,
+          keepalive: true,
+        }).catch(() => {});
+      }
+    } catch {}
+
+    const token = localStorage.getItem('token');
+    const sessionId = localStorage.getItem('session_id');
+    if (token || sessionId) {
+      fetch(`${API_BASE_URL}/auth/logout`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ sessionId }),
+        keepalive: true,
+      }).catch(() => {});
+    }
+
+    localStorage.removeItem('currentUser');
+    localStorage.removeItem('user');
+    localStorage.removeItem('user_role');
+    localStorage.removeItem('token');
+    localStorage.removeItem('session_id');
+    sessionStorage.clear();
+    notify("You have been logged out.");
+    navigate("/", { replace: true });
+  };
+
   const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
@@ -348,16 +415,7 @@ export default function TreasuryHeader({
               </button>
               <div className="border-t border-slate-100 dark:border-slate-800 my-1"></div>
               <button
-                onClick={() => {
-                  setIsProfileMenuOpen(false);
-                  localStorage.removeItem('currentUser');
-                  localStorage.removeItem('user');
-                  localStorage.removeItem('token');
-                  sessionStorage.removeItem('currentUser');
-                  sessionStorage.removeItem('user');
-                  notify("You have been logged out.");
-                  navigate("/", { replace: true });
-                }}
+                onClick={handleAdminLogout}
                 className="w-full text-left px-4 py-2.5 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
               >
                 Logout Account

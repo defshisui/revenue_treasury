@@ -105,9 +105,17 @@ export default function AuditTrailView({
     const matchesSeverity = selectedSeverity === "ALL" || record.severity === selectedSeverity;
 
     let matchesActionCategory = true;
-    const act = record.action.toLowerCase();
+    const act = (record.action || "").toLowerCase();
+    const next = (record.newData || "").toLowerCase();
     if (actionCategory === "LOGOUT") {
-      matchesActionCategory = act.includes("logout") || act.includes("sign out");
+      matchesActionCategory =
+        act.includes("logout") ||
+        act.includes("log out") ||
+        act.includes("logged out") ||
+        act.includes("sign out") ||
+        act.includes("signout") ||
+        next.includes("logged out") ||
+        next.includes("session terminated");
     } else if (actionCategory === "CREATE_ACCOUNT") {
       matchesActionCategory = act.includes("create") || act.includes("register") || act.includes("signup");
     } else if (actionCategory === "CHANGE_PASSWORD") {
@@ -350,7 +358,33 @@ export default function AuditTrailView({
                         </td>
                         <td className="p-4">
                           <span className="text-xs font-bold text-slate-900 dark:text-white block">{record.module}</span>
-                          <span className="text-[11px] text-blue-600 dark:text-blue-400 font-semibold">{record.action}</span>
+                          {(() => {
+                            const actLower = (record.action || "").toLowerCase();
+                            const isLogout =
+                              actLower.includes("logout") ||
+                              actLower.includes("log out") ||
+                              actLower.includes("logged out") ||
+                              actLower.includes("sign out") ||
+                              actLower.includes("signout");
+                            return (
+                              <span
+                                className={`text-[11px] font-semibold inline-flex items-center gap-1.5 ${
+                                  isLogout
+                                    ? "text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-md border border-amber-200 dark:border-amber-800/60"
+                                    : "text-blue-600 dark:text-blue-400"
+                                }`}
+                              >
+                                {isLogout && (
+                                  <svg className="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                                    <polyline points="16 17 21 12 16 7" />
+                                    <line x1="21" y1="12" x2="9" y2="12" />
+                                  </svg>
+                                )}
+                                {record.action}
+                              </span>
+                            );
+                          })()}
                         </td>
                         <td className="p-4">
                           <span className={`text-[11px] font-bold px-2.5 py-1 rounded-lg border ${getSeverityBadgeStyle(record.severity)}`}>
@@ -401,9 +435,13 @@ export default function AuditTrailView({
               </h3>
               <button
                 onClick={() => setIsClearModalOpen(false)}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 font-bold cursor-pointer"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer p-1 rounded-lg"
+                title="Close"
               >
-                ✕
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
               </button>
             </div>
 
@@ -419,8 +457,11 @@ export default function AuditTrailView({
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-slate-900 dark:text-slate-100 text-[11px] uppercase tracking-wider">Step 1: Mandatory Backup</span>
                   {hasDownloadedBackup && (
-                    <span className="text-emerald-700 dark:text-emerald-300 font-bold text-[10px] bg-emerald-100 dark:bg-emerald-500/20 px-2 py-0.5 rounded-md border border-emerald-300 dark:border-emerald-500/30">
-                      ✓ Backup Downloaded
+                    <span className="text-emerald-700 dark:text-emerald-300 font-bold text-[10px] bg-emerald-100 dark:bg-emerald-500/20 px-2 py-0.5 rounded-md border border-emerald-300 dark:border-emerald-500/30 flex items-center gap-1">
+                      <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                      Backup Downloaded
                     </span>
                   )}
                 </div>
@@ -460,9 +501,13 @@ export default function AuditTrailView({
               <h4 className="font-bold text-slate-900 dark:text-white text-base">Audit Entry Details</h4>
               <button
                 onClick={() => setSelectedRecord(null)}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 font-bold cursor-pointer"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer p-1 rounded-lg"
+                title="Close"
               >
-                ✕
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
               </button>
             </div>
             <div className="space-y-3 text-xs text-slate-700 dark:text-slate-300">

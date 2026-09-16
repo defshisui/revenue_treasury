@@ -202,6 +202,9 @@ export function useLogin(
     if (data.token) {
       localStorage.setItem("token", data.token);
     }
+    if (data.sessionId) {
+      localStorage.setItem("session_id", data.sessionId);
+    }
 
     const userRole = data.user?.role?.toLowerCase() || "";
     if (["admin", "treasury-staff", "auditor"].includes(userRole)) {

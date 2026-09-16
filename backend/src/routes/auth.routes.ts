@@ -7,6 +7,9 @@ import {
   resendOtp,
   initiateForgotPassword,
   resetPassword,
+  getSessionStatus,
+  resolveConcurrentLogin,
+  logoutUser,
 } from '../controllers/auth.controller.js';
 
 const router = Router();
@@ -20,5 +23,9 @@ router.post(['/auth/resend-otp', '/api/auth/resend-otp'], resendOtp);
 
 router.post('/api/auth/forgot-password/init', initiateForgotPassword);
 router.post('/api/auth/forgot-password/reset', resetPassword);
+
+router.get(['/auth/session-status', '/api/auth/session-status'], getSessionStatus);
+router.post(['/auth/resolve-concurrent-login', '/api/auth/resolve-concurrent-login'], resolveConcurrentLogin);
+router.post(['/auth/logout', '/api/auth/logout'], logoutUser);
 
 export default router;

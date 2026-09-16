@@ -137,6 +137,13 @@ export async function login(
 
     const user = result.rows[0];
 
+    if (user.status === 'ARCHIVED' || user.status === 'Inactive') {
+      res.status(403).json({
+        message: 'This account has been archived. Access is revoked.',
+      });
+      return;
+    }
+
     const storedPassword =
       String(user.password).trim();
 
@@ -397,6 +404,13 @@ export async function verifyLoginOtp(
 
     const user = userRes.rows[0];
 
+    if (user.status === 'ARCHIVED' || user.status === 'Inactive') {
+      res.status(403).json({
+        message: 'This account has been archived. Access is revoked.',
+      });
+      return;
+    }
+
     const token = jwt.sign(
       {
         id: user.id,
@@ -425,16 +439,74 @@ export async function verifyLoginOtp(
       `Signed in via 2FA Email OTP (RememberMe: ${rememberMe})`
     );
 
+    const sessionId = 'sess_' + Math.random().toString(36).substring(2, 12) + Date.now().toString(36);
+
+    const rawForwarded = req.headers['x-forwarded-for'];
+    const clientIP = typeof rawForwarded === 'string'
+      ? rawForwarded.split(',')[0].trim()
+      : (Array.isArray(rawForwarded) ? rawForwarded[0].trim() : (req.ip || '127.0.0.1'));
+    const userAgent = (req.headers['user-agent'] as string) || 'Web Browser';
+
+    let browserInfo = 'Web Browser';
+    if (userAgent.includes('Chrome') && !userAgent.includes('Edg')) browserInfo = 'Chrome';
+    else if (userAgent.includes('Edg')) browserInfo = 'Edge';
+    else if (userAgent.includes('Firefox')) browserInfo = 'Firefox';
+    else if (userAgent.includes('Safari') && !userAgent.includes('Chrome')) browserInfo = 'Safari';
+
+    if (userAgent.includes('Windows')) browserInfo += ' on Windows';
+    else if (userAgent.includes('Macintosh') || userAgent.includes('Mac OS')) browserInfo += ' on macOS';
+    else if (userAgent.includes('Android')) browserInfo += ' on Android';
+    else if (userAgent.includes('iPhone') || userAgent.includes('iPad')) browserInfo += ' on iOS';
+
+    const cityLocation = clientIP === '127.0.0.1' || clientIP === '::1' || clientIP === 'Unknown'
+      ? 'Quezon City, PH (Local Network)'
+      : `Quezon City, PH (IP: ${clientIP})`;
+
+    const loginTime = new Date().toLocaleString('en-US', {
+      timeZone: 'Asia/Manila',
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    });
+
     try {
-      await pool.query('UPDATE users SET last_login = NOW(), last_active_at = NOW() WHERE id = $1', [user.id]);
-    } catch (updateErr) {
-      console.error('Failed to update user last_login:', updateErr);
+      // Check if user already has an active session
+      const existingSessionRes = await pool.query(
+        `SELECT * FROM user_sessions
+         WHERE user_id = $1 AND status = 'ACTIVE' AND last_heartbeat > NOW() - INTERVAL '30 minutes'`,
+        [user.id]
+      );
+
+      if (existingSessionRes.rows.length > 0) {
+        // Record concurrent login alert for the currently logged in user to review
+        const alertId = 'cla_' + Math.random().toString(36).substring(2, 10);
+        await pool.query(
+          `INSERT INTO concurrent_login_alerts (id, user_id, user_email, new_session_id, login_time, browser_info, city_location, status, created_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING', NOW())`,
+          [alertId, user.id, user.email, sessionId, loginTime, browserInfo, cityLocation]
+        );
+      }
+
+      await pool.query(
+        `INSERT INTO user_sessions (user_id, session_id, token, device_info, ip_address, city_location, status, created_at, last_heartbeat)
+         VALUES ($1, $2, $3, $4, $5, $6, 'ACTIVE', NOW(), NOW())`,
+        [user.id, sessionId, token, browserInfo, clientIP, cityLocation]
+      );
+
+      await pool.query(
+        `UPDATE users
+         SET last_login = NOW(), last_active_at = NOW(), is_logged_in = TRUE, current_session_id = $2
+         WHERE id = $1`,
+        [user.id, sessionId]
+      );
+    } catch (sessionErr) {
+      console.error('Failed to register session or check concurrent login:', sessionErr);
     }
 
     res.status(200).json({
       message:
         'Sign-in verified successfully!',
       token,
+      sessionId,
       user: {
         id: user.id,
         email: user.email,
@@ -1378,5 +1450,198 @@ export async function resetPassword(
     res.status(500).json({
       message: error?.message || 'Failed to reset password.',
     });
+  }
+}
+
+export async function getSessionStatus(req: Request, res: Response): Promise<void> {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : ((req.query.token as string) || null);
+  const sessionId = (req.headers['x-session-id'] as string) || (req.query.sessionId as string) || null;
+
+  if (!token) {
+    res.status(401).json({ message: 'No authorization token provided' });
+    return;
+  }
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    const userId = decoded.id;
+
+    // 1. Check user status in database
+    const userRes = await pool.query('SELECT id, email, role, status FROM users WHERE id = $1', [userId]);
+    if (userRes.rows.length === 0) {
+      res.json({ loggedOff: true, reason: 'NOT_FOUND', message: 'You have been logged off.' });
+      return;
+    }
+
+    const user = userRes.rows[0];
+    if (user.status === 'ARCHIVED' || user.status === 'Inactive') {
+      res.json({
+        loggedOff: true,
+        reason: 'ARCHIVED',
+        message: 'You have been logged off. Your account has been archived by the administrator.',
+      });
+      return;
+    }
+
+    // 2. Check if this specific session has been revoked
+    if (sessionId) {
+      const sessRes = await pool.query('SELECT status FROM user_sessions WHERE session_id = $1', [sessionId]);
+      if (sessRes.rows.length > 0 && sessRes.rows[0].status === 'REVOKED') {
+        res.json({
+          loggedOff: true,
+          reason: 'REVOKED',
+          message: 'You have been logged off. This session was terminated by the account owner.',
+        });
+        return;
+      }
+
+      // Update heartbeat
+      await pool.query('UPDATE user_sessions SET last_heartbeat = NOW() WHERE session_id = $1', [sessionId]);
+    }
+
+    // Update user active time
+    await pool.query('UPDATE users SET last_active_at = NOW(), is_logged_in = TRUE WHERE id = $1', [user.id]);
+
+    // 3. Check for pending concurrent login alerts that the current user needs to answer
+    const alertRes = await pool.query(
+      `SELECT * FROM concurrent_login_alerts
+       WHERE user_id = $1 AND status = 'PENDING'
+       ORDER BY created_at DESC LIMIT 1`,
+      [user.id]
+    );
+
+    if (alertRes.rows.length > 0) {
+      const alert = alertRes.rows[0];
+      // Only show to the session that did NOT initiate the new login
+      if (!sessionId || alert.new_session_id !== sessionId) {
+        res.json({
+          active: true,
+          user: { id: user.id, email: user.email, role: user.role },
+          concurrentAlert: {
+            id: alert.id,
+            time: alert.login_time,
+            browser: alert.browser_info,
+            location: alert.city_location,
+          },
+        });
+        return;
+      }
+    }
+
+    res.json({
+      active: true,
+      user: { id: user.id, email: user.email, role: user.role },
+    });
+  } catch (err: any) {
+    res.status(401).json({ loggedOff: true, message: 'Invalid or expired session token.' });
+  }
+}
+
+export async function resolveConcurrentLogin(req: Request, res: Response): Promise<void> {
+  const { alertId, action } = req.body;
+
+  if (!alertId || !action) {
+    res.status(400).json({ message: 'alertId and action are required.' });
+    return;
+  }
+
+  try {
+    const alertRes = await pool.query('SELECT * FROM concurrent_login_alerts WHERE id = $1', [alertId]);
+    if (alertRes.rows.length === 0) {
+      res.status(404).json({ message: 'Alert not found.' });
+      return;
+    }
+
+    const alert = alertRes.rows[0];
+
+    if (action.toUpperCase() === 'YES') {
+      await pool.query("UPDATE concurrent_login_alerts SET status = 'APPROVED' WHERE id = $1", [alertId]);
+      res.json({ success: true, message: 'Verified as owner. Concurrent login permitted.' });
+    } else {
+      // action is 'NO' -> Terminate the other session!
+      await pool.query("UPDATE concurrent_login_alerts SET status = 'DENIED' WHERE id = $1", [alertId]);
+      await pool.query("UPDATE user_sessions SET status = 'REVOKED' WHERE session_id = $1", [alert.new_session_id]);
+      res.json({ success: true, message: 'The other session has been logged off.' });
+    }
+  } catch (err: any) {
+    console.error('Error resolving concurrent login:', err);
+    res.status(500).json({ message: 'Failed to resolve login confirmation.' });
+  }
+}
+
+export async function logoutUser(req: Request, res: Response): Promise<void> {
+  const { sessionId } = req.body;
+  const authHeader = req.headers['authorization'];
+  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+
+  try {
+    let userEmail = 'Unknown User';
+    let userRole = 'User';
+
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, JWT_SECRET) as any;
+        if (decoded?.id) {
+          const userRes = await pool.query('SELECT email, role, fullname FROM users WHERE id = $1', [decoded.id]);
+          if (userRes.rows.length > 0) {
+            userEmail = userRes.rows[0].email || userRes.rows[0].fullname || userEmail;
+            userRole = userRes.rows[0].role || 'User';
+          }
+        }
+      } catch {
+        // ignore token error
+      }
+    } else if (sessionId) {
+      try {
+        const sessionRes = await pool.query(
+          'SELECT u.email, u.role, u.fullname FROM user_sessions s JOIN users u ON s.user_id = u.id WHERE s.session_id = $1',
+          [sessionId]
+        );
+        if (sessionRes.rows.length > 0) {
+          userEmail = sessionRes.rows[0].email || sessionRes.rows[0].fullname || userEmail;
+          userRole = sessionRes.rows[0].role || 'User';
+        }
+      } catch {
+        // ignore query error
+      }
+    }
+
+    if (sessionId) {
+      await pool.query("UPDATE user_sessions SET status = 'REVOKED' WHERE session_id = $1", [sessionId]);
+    }
+
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, JWT_SECRET) as any;
+        const remaining = await pool.query(
+          "SELECT COUNT(*) FROM user_sessions WHERE user_id = $1 AND status = 'ACTIVE' AND last_heartbeat > NOW() - INTERVAL '15 minutes'",
+          [decoded.id]
+        );
+        if (parseInt(remaining.rows[0].count, 10) === 0) {
+          await pool.query("UPDATE users SET is_logged_in = FALSE WHERE id = $1", [decoded.id]);
+        }
+      } catch {
+        // ignore token error
+      }
+    }
+
+    // Explicitly record audit log for logout
+    const auditId = 'AUD-' + Math.floor(100000 + Math.random() * 900000);
+    await recordAudit(
+      req,
+      auditId,
+      userEmail,
+      userRole,
+      'Authentication',
+      'User Logged Out',
+      'INFO',
+      `Active session for ${userEmail}`,
+      'Session terminated / Logged out'
+    );
+
+    res.json({ success: true, message: 'Logged out successfully.' });
+  } catch (err: any) {
+    res.status(500).json({ message: 'Error logging out.' });
   }
 }

@@ -7,6 +7,7 @@ interface ExtendedUserRecord extends Omit<UserRecord, "status"> {
   createdAt?: string;
   lastLogin?: string;
   lastActiveAt?: string;
+  isLoggedIn?: boolean;
 }
 
 export default function UsersView({
@@ -33,27 +34,29 @@ export default function UsersView({
     const isArchived = record.status === "ARCHIVED" || record.status === "Inactive";
     const now = new Date();
 
-    if (isArchived) {
-      const refDateStr = record.lastActiveAt || record.lastLogin || record.createdAt;
-      if (!refDateStr) return { label: "Offline (Unknown)", isOnline: false };
-      const refDate = new Date(refDateStr);
-      const diffMs = Math.max(0, now.getTime() - refDate.getTime());
-      const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    if (!isArchived && record.isLoggedIn) {
       return {
-        label: days <= 0 ? "Offline (Today)" : `Offline (${days} day${days === 1 ? '' : 's'})`,
-        isOnline: false,
-      };
-    } else {
-      const refDateStr = record.createdAt || record.lastLogin;
-      if (!refDateStr) return { label: "Active (Today)", isOnline: true };
-      const refDate = new Date(refDateStr);
-      const diffMs = Math.max(0, now.getTime() - refDate.getTime());
-      const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-      return {
-        label: days <= 0 ? "Active (Today)" : `Active (${days} day${days === 1 ? '' : 's'})`,
-        isOnline: true,
+        label: "Logged",
+        isLogged: true,
       };
     }
+
+    const refDateStr = record.lastActiveAt || record.lastLogin || record.createdAt;
+    if (!refDateStr) {
+      return {
+        label: "Offline (Unknown)",
+        isLogged: false,
+      };
+    }
+
+    const refDate = new Date(refDateStr);
+    const diffMs = Math.max(0, now.getTime() - refDate.getTime());
+    const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    return {
+      label: days <= 0 ? "Offline (Today)" : `Offline (${days} day${days === 1 ? '' : 's'})`,
+      isLogged: false,
+    };
   };
 
   const fetchUsers = () => {
@@ -550,14 +553,14 @@ export default function UsersView({
                       <td className="p-4">
                         {(() => {
                           const activity = getActivityDuration(record);
-                          return activity.isOnline ? (
-                            <span className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 px-2.5 py-1.5 rounded-lg text-[11px] font-bold border border-emerald-200 dark:border-emerald-500/30 flex items-center gap-1.5 w-max">
-                              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
-                              {activity.label}
+                          return activity.isLogged ? (
+                            <span className="bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 px-2.5 py-1.5 rounded-lg text-xs font-bold border border-emerald-300 dark:border-emerald-500/40 flex items-center gap-1.5 w-max">
+                              <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>
+                              Logged
                             </span>
                           ) : (
-                            <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2.5 py-1.5 rounded-lg text-[11px] font-bold border border-slate-300 dark:border-slate-700 flex items-center gap-1.5 w-max">
-                              <span className="w-1.5 h-1.5 bg-slate-400 rounded-full"></span>
+                            <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-slate-300 dark:border-slate-700 flex items-center gap-1.5 w-max">
+                              <span className="w-2 h-2 bg-slate-400 rounded-full"></span>
                               {activity.label}
                             </span>
                           );
@@ -658,9 +661,13 @@ export default function UsersView({
                 onClick={() =>
                   setIsAddModalOpen(false)
                 }
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 font-bold cursor-pointer"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer p-1 rounded-lg"
+                title="Close"
               >
-                ✕
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
               </button>
 
             </div>

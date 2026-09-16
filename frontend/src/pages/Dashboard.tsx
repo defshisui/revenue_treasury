@@ -657,8 +657,11 @@ export default function Login() {
             {regStep === 5 && (
               <div className="space-y-6">
                 <div className="text-center space-y-2">
-                  <div className="size-14 rounded-2xl bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center text-2xl mx-auto shadow-xs">
-                    ✉️
+                  <div className="size-14 rounded-2xl bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center mx-auto shadow-xs">
+                    <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect width="20" height="16" x="2" y="4" rx="2"/>
+                      <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                    </svg>
                   </div>
                   <h3 className="text-xl font-extrabold text-slate-900">Verify Your Email</h3>
                   <p className="text-xs text-slate-500 leading-relaxed max-w-sm mx-auto">
@@ -684,8 +687,12 @@ export default function Login() {
                   </div>
 
                   <div className="flex items-center justify-between text-xs border-t border-slate-100 pt-3">
-                    <span className="text-slate-500 font-semibold flex items-center gap-1">
-                      <span>⏱️ Code expires in:</span>
+                    <span className="text-slate-500 font-semibold flex items-center gap-1.5">
+                      <svg className="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                      </svg>
+                      <span>Code expires in:</span>
                       <strong className={`font-mono ${regOtpExpirySeconds < 60 ? 'text-rose-600' : 'text-slate-800'}`}>
                         {formatRegOtpTimer(regOtpExpirySeconds)}
                       </strong>
@@ -718,7 +725,7 @@ export default function Login() {
                       disabled={isVerifyingRegOtp || regOtp.trim().length !== 6 || regOtpExpirySeconds <= 0}
                       className="w-full sm:w-2/3 bg-[#2563EB] hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-3.5 px-4 rounded-2xl text-base shadow-md transition cursor-pointer"
                     >
-                      {isVerifyingRegOtp ? "Verifying..." : "Verify & Complete Registration ✓"}
+                      {isVerifyingRegOtp ? "Verifying..." : "Verify & Complete Registration"}
                     </button>
                   </div>
                 </form>
@@ -735,9 +742,12 @@ export default function Login() {
               type="button"
               onClick={closeForgotPasswordModal}
               aria-label="Close"
-              className="absolute top-5 right-5 text-slate-400 hover:text-slate-700 font-bold text-lg cursor-pointer"
+              className="absolute top-5 right-5 text-slate-400 hover:text-slate-700 cursor-pointer p-1 rounded-lg"
             >
-              ✕
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
             </button>
 
             {fpStep === "email" && (
@@ -793,7 +803,11 @@ export default function Login() {
 
                 {fpNotice && (
                   <div className="mb-5 p-3.5 bg-blue-50/80 border border-blue-200 rounded-2xl text-xs font-semibold text-blue-900 flex items-center gap-2">
-                    <span>ℹ️</span>
+                    <svg className="w-4 h-4 text-blue-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="12" y1="16" x2="12" y2="12"></line>
+                      <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    </svg>
                     <span>{fpNotice}</span>
                   </div>
                 )}
@@ -890,8 +904,10 @@ export default function Login() {
 
             {fpStep === "success" && (
               <div className="space-y-6 text-center">
-                <div className="size-14 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center text-2xl mx-auto shadow-xs">
-                  ✓
+                <div className="size-14 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center mx-auto shadow-xs">
+                  <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
                 </div>
                 <div>
                   <h2 className="text-2xl font-bold tracking-tight text-slate-900">Password Reset</h2>

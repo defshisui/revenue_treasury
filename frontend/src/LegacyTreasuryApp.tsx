@@ -18,6 +18,7 @@ import CityOwnedMarketAdmin from "./components/CityOwnedMarketAdmin";
 import PrivateOwnedMarketAdmin from "./components/Private_Owned_Admin";
 import FraudMonitoringView from "./components/FraudMonitoringView";
 import SessionInactivityModal from "./components/SessionInactivityModal";
+import SessionSecurityWatcher from "./components/SessionSecurityWatcher";
 
 import type {
   AuditRecord,
@@ -525,6 +526,7 @@ export default function LegacyTreasuryApp() {
           />
 
           <SessionInactivityModal idleTimeoutMinutes={10} countdownSeconds={60} />
+          <SessionSecurityWatcher />
 
           {notification && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 animate-in fade-in duration-100">

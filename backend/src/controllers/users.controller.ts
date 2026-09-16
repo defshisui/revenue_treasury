@@ -6,17 +6,29 @@ import { AntiFraudService } from '../services/antiFraud.service.js';
 
 export async function getUsers(_req: Request, res: Response): Promise<void> {
   try {
-    const result = await pool.query('SELECT * FROM users ORDER BY id ASC');
-    const formatted = result.rows.map((row) => ({
-      id: row.id.toString(),
-      fullname: row.name || 'System User',
-      username: row.email,
-      role: row.role || 'admin',
-      status: row.status || 'Active',
-      createdAt: row.created_at || null,
-      lastLogin: row.last_login || null,
-      lastActiveAt: row.last_active_at || row.last_login || row.created_at || null,
-    }));
+    const result = await pool.query(`
+      SELECT u.*,
+        EXISTS (
+          SELECT 1 FROM user_sessions s
+          WHERE s.user_id = u.id AND s.status = 'ACTIVE' AND s.last_heartbeat > NOW() - INTERVAL '5 minutes'
+        ) as is_session_active
+      FROM users u
+      ORDER BY u.id ASC
+    `);
+    const formatted = result.rows.map((row) => {
+      const isOnline = Boolean(row.is_session_active || (row.is_logged_in && row.last_active_at && (Date.now() - new Date(row.last_active_at).getTime() < 5 * 60 * 1000)));
+      return {
+        id: row.id.toString(),
+        fullname: row.name || 'System User',
+        username: row.email,
+        role: row.role || 'admin',
+        status: row.status || 'Active',
+        createdAt: row.created_at || null,
+        lastLogin: row.last_login || null,
+        lastActiveAt: row.last_active_at || row.last_login || row.created_at || null,
+        isLoggedIn: isOnline && row.status !== 'ARCHIVED',
+      };
+    });
     res.json(formatted);
   } catch (err) {
     console.error('Error fetching users:', err);
@@ -126,6 +138,17 @@ export async function updateUserStatus(req: Request, res: Response): Promise<voi
       'UPDATE users SET status = $1 WHERE id = $2',
       [status, id]
     );
+
+    if (status === 'ARCHIVED') {
+      await pool.query(
+        "UPDATE user_sessions SET status = 'REVOKED' WHERE user_id = $1",
+        [id]
+      );
+      await pool.query(
+        "UPDATE users SET is_logged_in = FALSE WHERE id = $1",
+        [id]
+      );
+    }
 
 
     const clientIP = (req?.headers['x-forwarded-for'] as string) || req?.socket?.remoteAddress || 'Unknown';

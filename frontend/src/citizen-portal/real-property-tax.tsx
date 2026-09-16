@@ -1643,7 +1643,11 @@ export default function RealPropertyApplication({ isCollapsed: _isCollapsed = fa
                       </button>
                       <h2 className="text-lg font-extrabold text-[#0B3B60] dark:text-blue-300">Possible properties you might own</h2>
                       <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-1.5">
-                        <span>ℹ️</span>
+                        <svg className="w-4 h-4 text-sky-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="12" cy="12" r="10"></circle>
+                          <line x1="12" y1="16" x2="12" y2="12"></line>
+                          <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                        </svg>
                         <span>Here is the list of other Tax Declaration Numbers (TDNs) in relation to the TDN that you entered.</span>
                       </p>
                     </div>

@@ -327,7 +327,7 @@ export default function LGUMarketSystem({ isCollapsed = false }: Props) {
           )}
 
           <SidebarItem
-            icon="♟"
+            icon="•"
             label="User & Access Control"
             isCollapsed={isCollapsed}
           />
@@ -665,9 +665,13 @@ export default function LGUMarketSystem({ isCollapsed = false }: Props) {
 
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-[#182441] hover:bg-slate-200 dark:hover:bg-[#223252] text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+                className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-[#182441] hover:bg-slate-200 dark:hover:bg-[#223252] text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer flex items-center justify-center"
+                title="Close"
               >
-                ✕
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
               </button>
             </div>
 

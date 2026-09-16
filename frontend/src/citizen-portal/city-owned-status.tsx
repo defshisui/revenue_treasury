@@ -370,7 +370,11 @@ export default function ApplicationList() {
                         {leases.some(l => (l.paymentStatus || '').toLowerCase().includes('information requested') || (l.paymentStatus || '').toLowerCase().includes('mismatch')) && (
                             <div className="bg-amber-50 dark:bg-amber-950/50 border border-amber-300 dark:border-amber-800 p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
                                 <div className="flex items-center gap-3">
-                                    <span className="text-xl">⚠️</span>
+                                    <svg className="w-6 h-6 text-amber-600 dark:text-amber-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+                                        <line x1="12" y1="9" x2="12" y2="13"/>
+                                        <line x1="12" y1="17" x2="12.01" y2="17"/>
+                                    </svg>
                                     <div>
                                         <h4 className="text-xs font-bold uppercase tracking-wider text-amber-900 dark:text-amber-200">
                                             Action Required: Payment Mismatch Flagged
@@ -688,7 +692,11 @@ export default function ApplicationList() {
                                 <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 space-y-2">
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">
-                                            <span className="text-amber-600 dark:text-amber-400 font-bold text-sm">⚠️</span>
+                                            <svg className="w-4 h-4 text-amber-600 dark:text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+                                                <line x1="12" y1="9" x2="12" y2="13"/>
+                                                <line x1="12" y1="17" x2="12.01" y2="17"/>
+                                            </svg>
                                             <h4 className="text-xs font-bold uppercase tracking-wider text-amber-900 dark:text-amber-200">
                                                 Proof of Transaction Required
                                             </h4>
@@ -715,7 +723,9 @@ export default function ApplicationList() {
                             {selectedLease.paymentStatus === 'Proof Submitted - For Treasury Verification' && (
                                 <div className="p-4 rounded-xl bg-cyan-50 dark:bg-cyan-950/40 border border-cyan-300 dark:border-cyan-800 space-y-2">
                                     <div className="flex items-center gap-2">
-                                        <span className="text-cyan-600 dark:text-cyan-400 font-bold text-sm">📎</span>
+                                        <svg className="w-4 h-4 text-cyan-600 dark:text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                                        </svg>
                                         <h4 className="text-xs font-bold uppercase tracking-wider text-cyan-900 dark:text-cyan-200">
                                             Proof of Transaction Submitted
                                         </h4>
@@ -754,7 +764,10 @@ export default function ApplicationList() {
                                             onClick={() => handleOpenProofModal(selectedLease)}
                                             className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
                                         >
-                                            <span>📎</span> Upload Proof
+                                            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                                            </svg>
+                                            Upload Proof
                                         </button>
                                         <button
                                             type="button"
@@ -786,9 +799,13 @@ export default function ApplicationList() {
                             <button
                                 type="button"
                                 onClick={() => setIsProofModalOpen(false)}
-                                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg font-bold cursor-pointer"
+                                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer p-1 rounded-lg"
+                                title="Close"
                             >
-                                ✕
+                                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
                             </button>
                         </div>
 

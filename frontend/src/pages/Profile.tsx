@@ -1134,75 +1134,85 @@ export default function Profile() {
                       <div
                         className={
                           passwordRequirements.minLength
-                            ? "text-emerald-500"
+                            ? "text-emerald-500 font-medium flex items-center gap-1.5"
                             : isDarkMode
-                              ? "text-slate-500"
-                              : "text-slate-400"
+                              ? "text-slate-500 flex items-center gap-1.5"
+                              : "text-slate-400 flex items-center gap-1.5"
                         }
                       >
-                        {passwordRequirements.minLength
-                          ? "✓"
-                          : "○"}{" "}
+                        {passwordRequirements.minLength ? (
+                          <svg className="w-3.5 h-3.5 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                        ) : (
+                          <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                        )}
                         At least 8 characters
                       </div>
 
                       <div
                         className={
                           passwordRequirements.uppercase
-                            ? "text-emerald-500"
+                            ? "text-emerald-500 font-medium flex items-center gap-1.5"
                             : isDarkMode
-                              ? "text-slate-500"
-                              : "text-slate-400"
+                              ? "text-slate-500 flex items-center gap-1.5"
+                              : "text-slate-400 flex items-center gap-1.5"
                         }
                       >
-                        {passwordRequirements.uppercase
-                          ? "✓"
-                          : "○"}{" "}
+                        {passwordRequirements.uppercase ? (
+                          <svg className="w-3.5 h-3.5 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                        ) : (
+                          <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                        )}
                         At least 1 uppercase letter
                       </div>
 
                       <div
                         className={
                           passwordRequirements.lowercase
-                            ? "text-emerald-500"
+                            ? "text-emerald-500 font-medium flex items-center gap-1.5"
                             : isDarkMode
-                              ? "text-slate-500"
-                              : "text-slate-400"
+                              ? "text-slate-500 flex items-center gap-1.5"
+                              : "text-slate-400 flex items-center gap-1.5"
                         }
                       >
-                        {passwordRequirements.lowercase
-                          ? "✓"
-                          : "○"}{" "}
+                        {passwordRequirements.lowercase ? (
+                          <svg className="w-3.5 h-3.5 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                        ) : (
+                          <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                        )}
                         At least 1 lowercase letter
                       </div>
 
                       <div
                         className={
                           passwordRequirements.number
-                            ? "text-emerald-500"
+                            ? "text-emerald-500 font-medium flex items-center gap-1.5"
                             : isDarkMode
-                              ? "text-slate-500"
-                              : "text-slate-400"
+                              ? "text-slate-500 flex items-center gap-1.5"
+                              : "text-slate-400 flex items-center gap-1.5"
                         }
                       >
-                        {passwordRequirements.number
-                          ? "✓"
-                          : "○"}{" "}
+                        {passwordRequirements.number ? (
+                          <svg className="w-3.5 h-3.5 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                        ) : (
+                          <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                        )}
                         At least 1 number
                       </div>
 
                       <div
                         className={
                           passwordRequirements.special
-                            ? "text-emerald-500"
+                            ? "text-emerald-500 font-medium flex items-center gap-1.5"
                             : isDarkMode
-                              ? "text-slate-500"
-                              : "text-slate-400"
+                              ? "text-slate-500 flex items-center gap-1.5"
+                              : "text-slate-400 flex items-center gap-1.5"
                         }
                       >
-                        {passwordRequirements.special
-                          ? "✓"
-                          : "○"}{" "}
+                        {passwordRequirements.special ? (
+                          <svg className="w-3.5 h-3.5 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                        ) : (
+                          <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                        )}
                         At least 1 special character
                       </div>
                     </div>

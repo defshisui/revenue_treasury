@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import logoSystem from '../assets/logo-system.png';
 import { API_BASE_URL } from '../config/api';
 import { initCitizenSecurity, getEncryptedItem } from './citizenSecurity';
+import SessionSecurityWatcher from '../components/SessionSecurityWatcher';
 
 interface CitizenLayoutProps {
   children: React.ReactNode;
@@ -415,13 +416,30 @@ export default function CitizenLayout({
     } catch {
       // best-effort audit log only
     }
+
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    const sessionId = localStorage.getItem('session_id') || sessionStorage.getItem('session_id');
+    if (token || sessionId) {
+      fetch(`${API_BASE_URL}/auth/logout`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ sessionId }),
+        keepalive: true,
+      }).catch(() => {});
+    }
+
     localStorage.removeItem('currentUser');
     localStorage.removeItem('user');
     localStorage.removeItem('__enc_currentUser');
     localStorage.removeItem('__enc_user');
     localStorage.removeItem('token');
+    localStorage.removeItem('session_id');
     sessionStorage.removeItem('currentUser');
     sessionStorage.removeItem('user');
+    sessionStorage.removeItem('session_id');
     setIsProfileDropdownOpen(false);
     navigate('/');
   };
@@ -710,33 +728,6 @@ export default function CitizenLayout({
               <span className="truncate tracking-wide">Application History</span>
             )}
           </button>
-
-          {/* Manage Profile Link */}
-          <button
-            type="button"
-            onClick={() => {
-              navigate('/edit-profile');
-              setIsMobileMenuOpen(false);
-            }}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer group ${location.pathname === '/edit-profile'
-              ? 'bg-[#1a3885] text-white shadow-md'
-              : 'text-slate-300 hover:bg-white/10 hover:text-white'
-              }`}
-            title="My Profile & Security"
-          >
-            <svg
-              className="w-5 h-5 shrink-0 text-slate-400 group-hover:text-blue-300"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-            {!isSidebarCollapsed && (
-              <span className="truncate tracking-wide">Citizen Profile</span>
-            )}
-          </button>
         </div>
 
         {/* User Card at Bottom of Sidebar */}
@@ -964,6 +955,7 @@ export default function CitizenLayout({
         </header>
 
         {/* ===================== SCROLLABLE CONTENT BODY ===================== */}
+        <SessionSecurityWatcher />
         <main className="flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-950 p-4 sm:p-6 lg:p-8 space-y-8">
           {children}
         </main>
