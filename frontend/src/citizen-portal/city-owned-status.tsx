@@ -11,6 +11,7 @@ import {
 
 interface EnrichedLeaseRecord extends LeaseRecord {
     id?: string;
+    email?: string;
     createdAt?: string;
     paymentDate?: string;
 }
