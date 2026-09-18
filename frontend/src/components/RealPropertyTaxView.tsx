@@ -632,13 +632,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     const lowerSearch = searchTerm.toLowerCase();
     return applications.filter((app) => {
       const isArchived = app.status === 'Archived';
-      const isCertificateIssued = app.status === 'Digital Certificate Issued';
-
-      // Once the digital certificate has been issued and the record has
-      // been synchronized to the Master Database, remove it from the
-      // active application queue. The application remains in the backend
-      // for its audit/history record and is represented by the master record.
-      if (queueTab === 'Active' && (isArchived || isCertificateIssued)) return false;
+      if (queueTab === 'Active' && isArchived) return false;
       if (queueTab === 'Archived' && !isArchived) return false;
 
       const isSettled = app.paymentStatus === 'Paid' || app.status === 'Payment Completed';
@@ -866,10 +860,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
   };
 
 
-  const syncApplicationToMaster = async (
-    app: ExtendedApplicationRecord,
-    options: { recordPaymentLedger?: boolean } = {}
-  ) => {
+  const syncApplicationToMaster = async (app: ExtendedApplicationRecord) => {
     const rawApp = app as unknown as Record<string, any>;
     const tdn = String(
       app.propertyDetails?.titleNumber || rawApp.tax_declaration_number || rawApp.taxDeclarationNumber || ''
@@ -881,38 +872,12 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
       )
       : undefined;
 
-    const propertyType =
-      rawApp.property_type ||
-      rawApp.propertyType ||
-      existingMasterRecord?.propertyType ||
-      'Residential';
-
-    const isPaid =
-      app.paymentStatus === 'Paid' ||
-      app.status === 'Payment Completed';
-
-    const applicationPaymentAmount = Number(app.paymentAmount || 0);
-    const applicationOfficialReceipt =
-      app.officialReceiptNumber ||
-      rawApp.official_receipt_number ||
-      `eOR-RPT-${app.id}`;
-    const applicationPaymentMethod =
-      app.paymentMethod ||
-      rawApp.payment_method ||
-      'Online Gateway';
-    const applicationPaymentDate =
-      app.paymentDate ||
-      rawApp.payment_date ||
-      new Date().toISOString();
+    const propertyType = rawApp.property_type || rawApp.propertyType || existingMasterRecord?.propertyType || 'Residential';
 
     if (existingMasterRecord) {
       const updatePayload = {
         ownerName: app.applicantName || existingMasterRecord.ownerName,
-        propertyLocation:
-          app.propertyDetails?.address ||
-          rawApp.property_location ||
-          rawApp.propertyLocation ||
-          existingMasterRecord.location,
+        propertyLocation: app.propertyDetails?.address || rawApp.property_location || rawApp.propertyLocation || existingMasterRecord.location,
         barangay: rawApp.barangay || existingMasterRecord.barangay,
         propertyType,
         marketValue: existingMasterRecord.marketValue,
@@ -922,97 +887,53 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         penalty: existingMasterRecord.penalty,
         discount: existingMasterRecord.discount,
         totalAssessment: existingMasterRecord.totalAssessment,
-        balance: isPaid ? 0 : existingMasterRecord.balance,
-        amountPaid: isPaid
-          ? Math.max(existingMasterRecord.amountPaid || 0, applicationPaymentAmount)
-          : existingMasterRecord.amountPaid,
-        paymentStatus: isPaid ? 'Paid' : existingMasterRecord.paymentStatus,
-        officialReceiptNumber: isPaid
-          ? applicationOfficialReceipt
-          : (existingMasterRecord as any).officialReceiptNumber,
-        paymentMethod: isPaid
-          ? applicationPaymentMethod
-          : (existingMasterRecord as any).paymentMethod,
-        paymentDate: isPaid
-          ? applicationPaymentDate
-          : (existingMasterRecord as any).paymentDate,
+        balance: existingMasterRecord.balance,
+        amountPaid: existingMasterRecord.amountPaid,
+        paymentStatus: existingMasterRecord.paymentStatus,
         status: 'Active',
       };
-
       await updateLguMasterRptRecord(existingMasterRecord.id, updatePayload as any);
     } else {
-      const marketValue = Number(
-        app.propertyDetails?.currentValuation ||
-        rawApp.market_value ||
-        rawApp.marketValue ||
-        1000000
-      );
-      const { assessedVal, basicTax, sefTax, totalDue } =
-        computeTaxBreakdown(marketValue, propertyType);
-
-      const totalAssessment = isPaid && applicationPaymentAmount > 0
-        ? applicationPaymentAmount
-        : totalDue;
+      const marketValue = Number(app.propertyDetails?.currentValuation || rawApp.market_value || rawApp.marketValue || 1000000);
+      const { assessedVal, basicTax, sefTax, totalDue } = computeTaxBreakdown(marketValue, propertyType);
 
       const createPayload = {
         taxDeclarationNumber: tdn || `TDN-${app.referenceNumber}`,
-        pin:
-          app.propertyDetails?.pin ||
-          rawApp.pin ||
-          `PIN-074-${Math.floor(10000 + Math.random() * 90000)}`,
-        newPspin:
-          rawApp.new_pspin ||
-          rawApp.newPspin ||
-          `PSPIN-${Math.floor(100000000 + Math.random() * 900000000)}`,
+        pin: app.propertyDetails?.pin || rawApp.pin || `PIN-074-${Math.floor(10000 + Math.random() * 90000)}`,
+        newPspin: rawApp.new_pspin || rawApp.newPspin || `PSPIN-${Math.floor(100000000 + Math.random() * 900000000)}`,
         ownerName: app.applicantName || 'Taxpayer',
-        propertyLocation:
-          app.propertyDetails?.address ||
-          rawApp.property_location ||
-          rawApp.propertyLocation ||
-          'Quezon City',
+        propertyLocation: app.propertyDetails?.address || rawApp.property_location || rawApp.propertyLocation || 'Quezon City',
         barangay: rawApp.barangay || 'Central',
         propertyType,
-        lotAreaSqM: Number(
-          app.propertyDetails?.lotAreaSqM ||
-          rawApp.lot_area_sqm ||
-          rawApp.lotAreaSqM ||
-          150
-        ),
+        lotAreaSqM: Number(app.propertyDetails?.lotAreaSqM || rawApp.lot_area_sqm || rawApp.lotAreaSqM || 150),
         marketValue,
         assessedValue: assessedVal,
         basicTax,
         sefTax,
-        totalAssessment,
-        balance: isPaid ? 0 : totalAssessment,
-        amountPaid: isPaid ? applicationPaymentAmount : 0,
-        officialReceiptNumber: isPaid ? applicationOfficialReceipt : '',
-        paymentMethod: isPaid ? applicationPaymentMethod : '',
-        paymentDate: isPaid ? applicationPaymentDate : '',
+        totalAssessment: totalDue,
+        balance: totalDue,
+        amountPaid: 0,
         status: 'Active',
-        paymentStatus: isPaid ? 'Paid' : 'Unpaid',
+        paymentStatus: 'Unpaid',
       };
-
       await createLguMasterRptRecord(createPayload as any);
     }
 
-    if (isPaid && options.recordPaymentLedger !== false) {
+    if (app.paymentStatus === 'Paid' || app.status === 'Payment Completed') {
       try {
         await recordPaymentLedgerEntry({
           taxDeclarationNumber: tdn || `TDN-${app.referenceNumber}`,
           ownerName: app.applicantName,
-          amountPaid: applicationPaymentAmount,
-          officialReceiptNumber: applicationOfficialReceipt,
-          paymentDate: applicationPaymentDate,
-          paymentMethod: applicationPaymentMethod,
+          amountPaid: Number(app.paymentAmount || 0),
+          officialReceiptNumber: app.officialReceiptNumber || `eOR-RPT-${app.id}`,
+          paymentDate: app.paymentDate || new Date().toISOString(),
+          paymentMethod: app.paymentMethod || 'Online Gateway',
           quarterCoverage: 'Service Assessment',
           paymentOption: 'Full',
           status: 'Verified',
         });
       } catch (ledgerErr) {
-        console.error(
-          'Failed to sync payment ledger entry for approved application:',
-          ledgerErr
-        );
+        console.error('Failed to sync payment ledger entry for approved application:', ledgerErr);
       }
     }
 
@@ -1387,7 +1308,6 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
   const handleIssueCertificate = async (certificateData: RPTCertificateData) => {
     if (!currentApp) return;
     setIsIssuingCertificate(true);
-
     try {
       const updated = await updateRptApplicationStatus(
         String(currentApp.id),
@@ -1397,44 +1317,10 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
       );
 
       const returned = updated?.record;
-
-      const applicationForMaster: ExtendedApplicationRecord = {
-        ...currentApp,
+      setApplications(prev => prev.map(app => app.id === currentApp.id ? ({
+        ...app,
         ...(returned || {}),
         status: 'Digital Certificate Issued',
-        paymentStatus:
-          (returned?.payment_status || returned?.paymentStatus || currentApp.paymentStatus) as
-            ExtendedApplicationRecord['paymentStatus'],
-        paymentAmount: Number(
-          returned?.payment_amount ??
-          returned?.paymentAmount ??
-          currentApp.paymentAmount ??
-          0
-        ),
-        paymentReference:
-          returned?.payment_reference ||
-          returned?.paymentReference ||
-          certificateData.paymentReference ||
-          currentApp.paymentReference ||
-          '',
-        officialReceiptNumber:
-          certificateData.certificateNumber ||
-          returned?.official_receipt_number ||
-          returned?.officialReceiptNumber ||
-          currentApp.officialReceiptNumber ||
-          '',
-        paymentMethod:
-          certificateData.paymentMethod ||
-          returned?.payment_method ||
-          returned?.paymentMethod ||
-          currentApp.paymentMethod ||
-          'Online Payment',
-        paymentDate:
-          certificateData.issueDate ||
-          returned?.payment_date ||
-          returned?.paymentDate ||
-          currentApp.paymentDate ||
-          new Date().toISOString(),
         digitalRelease: {
           releaseMethod: 'Digital',
           releasedAt: certificateData.issueDate,
@@ -1445,44 +1331,13 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
           downloadCount: 1,
           citizenNotified: true,
         },
-      };
-
-      // The certificate has now been issued. Synchronize the completed
-      // application into the Master Database before closing the modal.
-      // Do not create another payment-ledger entry here because the
-      // approval/payment workflow may already have recorded it.
-      await syncApplicationToMaster(applicationForMaster, {
-        recordPaymentLedger: false,
-      });
-
-      setApplications(prev =>
-        prev.map(app =>
-          app.id === currentApp.id
-            ? applicationForMaster
-            : app
-        )
-      );
-
+      } as ExtendedApplicationRecord) : app));
       setIsCertificateModalOpen(false);
-
-      triggerToast(
-        `Certificate ${certificateData.certificateNumber} was issued, sent to ${currentApp.applicantEmail || currentApp.email || 'the citizen email address'}, and recorded in the Master Database.`,
-        'success'
-      );
-
-      // Refresh the master registry. The issued application remains in the
-      // application table for history/audit, but the Active Applications
-      // view hides "Digital Certificate Issued" records.
-      await Promise.all([
-        loadMasterRecords(),
-        loadPayments(),
-      ]);
+      triggerToast(`Certificate ${certificateData.certificateNumber} was issued and sent to ${currentApp.applicantEmail || currentApp.email || 'the citizen email address'}.`, 'success');
+      await loadApplications();
     } catch (err: any) {
       console.error('Failed to issue RPT certificate:', err);
-      triggerToast(
-        err?.message || 'Failed to issue, synchronize, and email the certificate.',
-        'error'
-      );
+      triggerToast(err?.message || 'Failed to issue and email the certificate.', 'error');
     } finally {
       setIsIssuingCertificate(false);
     }

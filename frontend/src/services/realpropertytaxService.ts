@@ -124,12 +124,6 @@ export const getRPTApplications = async (): Promise<RPTApplicationRecord[]> => {
       email:
         row.email,
 
-      applicantEmail:
-        row.applicant_email ||
-        row.applicantEmail ||
-        row.email ||
-        '',
-
       mobileNumber:
         row.mobile_number ||
         row.mobileNumber,
@@ -219,56 +213,6 @@ export const getRPTApplications = async (): Promise<RPTApplicationRecord[]> => {
         row.payment_due_date ||
         row.paymentDueDate ||
         '',
-
-      certificateData:
-        row.certificate_data ||
-        row.certificateData ||
-        null,
-
-      propertyDetails: (() => {
-        const raw = row.property_details || row.propertyDetails;
-        if (!raw) return undefined;
-
-        let details = raw;
-        if (typeof details === 'string') {
-          try {
-            details = JSON.parse(details);
-          } catch {
-            return undefined;
-          }
-        }
-
-        if (!details || typeof details !== 'object') return undefined;
-
-        return {
-          pin: details.pin || row.pin || '',
-          titleNumber:
-            details.titleNumber ||
-            details.title_number ||
-            row.tax_declaration_number ||
-            row.taxDeclarationNumber ||
-            '',
-          lotAreaSqM: Number(
-            details.lotAreaSqM ??
-            details.lot_area_sqm ??
-            row.lot_area_sqm ??
-            row.lotAreaSqM ??
-            0
-          ),
-          address:
-            details.address ||
-            row.property_location ||
-            row.propertyLocation ||
-            '',
-          currentValuation: Number(
-            details.currentValuation ??
-            details.current_valuation ??
-            row.market_value ??
-            row.marketValue ??
-            0
-          ),
-        };
-      })(),
 
       documents: (() => {
         let docs = row.documents;
@@ -486,18 +430,8 @@ export const processGroupRPTPayment = async (
 export const getLguMasterRptRecords =
   async (): Promise<any[]> => {
     try {
-      const token =
-        localStorage.getItem("token") ||
-        sessionStorage.getItem("token");
-
-      const headers: HeadersInit = {};
-      if (token) headers['Authorization'] = `Bearer ${token}`;
-
       const response = await fetch(
-        `${API_BASE_URL}/lgu-rpt-records`,
-        {
-          headers,
-        }
+        `${API_BASE_URL}/lgu-rpt-records`
       );
 
       if (!response.ok) {
@@ -506,15 +440,7 @@ export const getLguMasterRptRecords =
         );
       }
 
-      const data = await response.json();
-
-      // Some backend implementations return the array directly,
-      // while others wrap it in { records: [...] } or { data: [...] }.
-      if (Array.isArray(data)) return data;
-      if (Array.isArray(data?.records)) return data.records;
-      if (Array.isArray(data?.data)) return data.data;
-
-      return [];
+      return await response.json();
     } catch (error) {
       console.error(
         'Error fetching LGU master records:',
