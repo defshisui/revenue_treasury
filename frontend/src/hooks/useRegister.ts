@@ -22,7 +22,7 @@ export function useRegister(onSuccess: () => void) {
   const [mobileNumber, setMobileNumber] = useState("");
 
   const [regOtp, setRegOtp] = useState("");
-  const [otpExpirySeconds, setOtpExpirySeconds] = useState(300);
+  const [otpExpirySeconds, setOtpExpirySeconds] = useState(60);
   const [resendCooldown, setResendCooldown] = useState(60);
   const [isSubmittingInit, setIsSubmittingInit] = useState(false);
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
@@ -171,7 +171,7 @@ export function useRegister(onSuccess: () => void) {
 
       setRegStep(5);
       setRegOtp("");
-      setOtpExpirySeconds(300);
+      setOtpExpirySeconds(60);
       setResendCooldown(60);
 
       setRegMessage(
@@ -270,7 +270,7 @@ export function useRegister(onSuccess: () => void) {
 
       if (response.ok) {
         setRegOtp("");
-        setOtpExpirySeconds(300);
+        setOtpExpirySeconds(60);
         setResendCooldown(data.retryAfterSeconds || 60);
 
         setRegMessage(

@@ -17,7 +17,7 @@ export function useLogin(
 
   const [isOtpStep, setIsOtpStep] = useState(false);
   const [otp, setOtp] = useState("");
-  const [otpExpirySeconds, setOtpExpirySeconds] = useState(300);
+  const [otpExpirySeconds, setOtpExpirySeconds] = useState(60);
   const [resendCooldown, setResendCooldown] = useState(60);
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
   const [isResendingOtp, setIsResendingOtp] = useState(false);
@@ -85,7 +85,7 @@ export function useLogin(
 
           setIsOtpStep(true);
           setOtp("");
-          setOtpExpirySeconds(300);
+          setOtpExpirySeconds(60);
           setResendCooldown(60);
           setOtpNotice(`A 6-digit verification code was sent to ${data.email || email}.`);
         } else {
@@ -176,7 +176,7 @@ export function useLogin(
 
       if (response.ok) {
         setOtp("");
-        setOtpExpirySeconds(300);
+        setOtpExpirySeconds(60);
         setResendCooldown(data.retryAfterSeconds || 60);
         setOtpNotice("A new 6-digit verification code has been sent to your email.");
       } else {
