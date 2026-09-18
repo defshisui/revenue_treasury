@@ -410,6 +410,9 @@ export async function initializeDatabase(): Promise<void> {
       ALTER TABLE rpt_applications
       ADD COLUMN IF NOT EXISTS notes TEXT;
 
+      ALTER TABLE rpt_applications
+      ADD COLUMN IF NOT EXISTS certificate_data JSONB DEFAULT NULL;
+
       -- Transfer Tax / application payment fields
       ALTER TABLE rpt_applications
       ADD COLUMN IF NOT EXISTS payment_amount NUMERIC(12, 2) DEFAULT 0;
@@ -535,20 +538,6 @@ export async function initializeDatabase(): Promise<void> {
           END IF;
       END
       $$;
-
-      -- ==========================================================
-      -- PAYMENT RECEIPT EMAIL NOTIFICATIONS
-      -- ==========================================================
-      CREATE TABLE IF NOT EXISTS payment_email_notifications (
-        payment_key VARCHAR(255) PRIMARY KEY,
-        email VARCHAR(255) NOT NULL,
-        status VARCHAR(20) NOT NULL DEFAULT 'pending',
-        message_id VARCHAR(255),
-        error_message TEXT,
-        sent_at TIMESTAMPTZ,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      );
 
       -- ==========================================================
       -- PERFORMANCE INDEXES

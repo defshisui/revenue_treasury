@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto';
 import pool from '../db.js';
 import { recordAudit } from './audit.controller.js';
 import type { RptPaymentBody } from '../types/index.js';
+import { EmailService } from '../services/email.service.js';
 
 const PAYMONGO_SECRET_KEY = process.env.PAYMONGO_SECRET_KEY || '';
 
@@ -144,6 +145,7 @@ function formatRptApplication(row: any): any {
     paymentReference: row.payment_reference,
     paymentDate: row.payment_date,
     createdAt: row.created_at,
+    certificateData: row.certificate_data || null,
   };
 }
 
@@ -516,7 +518,8 @@ export async function updateRptApplicationStatus(
     officialReceiptNumber,
     paymentMethod,
     paymentReference,
-    paymentDate
+    paymentDate,
+    certificateData
   } = req.body;
 
   const numericPaymentAmount =
@@ -552,6 +555,7 @@ export async function updateRptApplicationStatus(
        SET
          status = COALESCE($1, status),
          notes = COALESCE($2, notes),
+         certificate_data = COALESCE($12::jsonb, certificate_data),
          assigned_officer = COALESCE($3, assigned_officer),
          payment_amount = COALESCE($4, payment_amount),
          payment_status = COALESCE($5, payment_status),
@@ -576,7 +580,8 @@ export async function updateRptApplicationStatus(
         paymentMethod || null,
         paymentReference || null,
         paymentDate || null,
-        id
+        id,
+        certificateData ? JSON.stringify(certificateData) : null
       ]
     );
 
@@ -598,6 +603,29 @@ export async function updateRptApplicationStatus(
       null,
       `Updated RPT application ${id} status to ${status}`
     );
+
+    if (finalStatus === 'Digital Certificate Issued' && certificateData) {
+      const recipient = String(result.rows[0].email || '').trim();
+      if (!recipient) {
+        res.status(400).json({ message: 'Citizen email address is missing; certificate was not emailed.' });
+        return;
+      }
+
+      try {
+        await EmailService.sendCertificateEmail(
+          recipient,
+          result.rows[0].applicant_name || result.rows[0].owner_name || 'Citizen',
+          certificateData
+        );
+      } catch (emailError: any) {
+        console.error('[RPT] Certificate saved but email delivery failed:', emailError);
+        res.status(502).json({
+          message: `Certificate was saved, but the email could not be sent: ${emailError?.message || 'Email service error'}`,
+          record: formatRptApplication(result.rows[0])
+        });
+        return;
+      }
+    }
 
     res.json({
       success: true,

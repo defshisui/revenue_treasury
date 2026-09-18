@@ -242,187 +242,6 @@ export class EmailService {
   }
 
 
-  public static async sendPaymentReceiptEmail(params: {
-    toEmail: string;
-    customerName?: string;
-    service: string;
-    amount: number;
-    paymentMethod: string;
-    paymentReference: string;
-    officialReceiptNumber: string;
-    paymentDate?: Date | string;
-    accountReference?: string;
-  }): Promise<{ success: boolean; messageId?: string }> {
-    const {
-      toEmail,
-      customerName = 'Citizen Taxpayer',
-      service,
-      amount,
-      paymentMethod,
-      paymentReference,
-      officialReceiptNumber,
-      paymentDate = new Date(),
-      accountReference,
-    } = params;
-
-    const recipient = String(toEmail || '').trim();
-    if (!recipient || !recipient.includes('@')) {
-      throw new Error('A valid citizen email address is required to send the payment receipt.');
-    }
-
-    const date = new Date(paymentDate);
-    const formattedDate = Number.isNaN(date.getTime())
-      ? new Date().toLocaleString('en-PH', { timeZone: 'Asia/Manila' })
-      : date.toLocaleString('en-PH', {
-          timeZone: 'Asia/Manila',
-          dateStyle: 'long',
-          timeStyle: 'short',
-        });
-
-    const formattedAmount = Number(amount || 0).toLocaleString('en-PH', {
-      style: 'currency',
-      currency: 'PHP',
-    });
-
-    const safe = (value: unknown) =>
-      String(value ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-
-    const subject = `Official Payment Receipt ${officialReceiptNumber} - GovServe Treasury`;
-
-    const htmlContent = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Official Payment Receipt</title>
-</head>
-<body style="margin:0;padding:24px;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#1e293b;">
-  <table width="100%" border="0" cellspacing="0" cellpadding="0">
-    <tr>
-      <td align="center">
-        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width:600px;background:#fff;border:1px solid #e2e8f0;border-radius:18px;overflow:hidden;">
-          <tr>
-            <td style="background:#0B3B60;padding:28px 24px;text-align:center;color:#fff;">
-              <div style="font-size:22px;font-weight:800;">GovServe Treasury</div>
-              <div style="font-size:11px;letter-spacing:1px;margin-top:6px;color:#bfdbfe;">OFFICIAL PAYMENT RECEIPT</div>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:30px 28px;">
-              <p style="margin:0 0 8px;font-size:16px;font-weight:700;">Payment Confirmed</p>
-              <p style="margin:0 0 22px;font-size:13px;line-height:1.6;color:#475569;">
-                Hello ${safe(customerName)}, your payment has been successfully recorded in the GovServe Revenue & Treasury Management System.
-              </p>
-
-              <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;font-size:13px;">
-                <tr><td style="padding:10px 0;color:#64748b;">Official Receipt No.</td><td align="right" style="padding:10px 0;font-weight:800;">${safe(officialReceiptNumber)}</td></tr>
-                <tr><td style="padding:10px 0;color:#64748b;">Service</td><td align="right" style="padding:10px 0;font-weight:700;">${safe(service)}</td></tr>
-                ${accountReference ? `<tr><td style="padding:10px 0;color:#64748b;">Reference</td><td align="right" style="padding:10px 0;font-weight:700;">${safe(accountReference)}</td></tr>` : ''}
-                <tr><td style="padding:10px 0;color:#64748b;">Payment Reference</td><td align="right" style="padding:10px 0;font-weight:700;">${safe(paymentReference)}</td></tr>
-                <tr><td style="padding:10px 0;color:#64748b;">Payment Method</td><td align="right" style="padding:10px 0;font-weight:700;">${safe(paymentMethod)}</td></tr>
-                <tr><td style="padding:10px 0;color:#64748b;">Payment Date</td><td align="right" style="padding:10px 0;font-weight:700;">${safe(formattedDate)}</td></tr>
-                <tr><td colspan="2" style="border-top:1px solid #e2e8f0;padding-top:18px;"></td></tr>
-                <tr><td style="padding:8px 0;font-size:16px;font-weight:800;">Amount Paid</td><td align="right" style="padding:8px 0;font-size:20px;font-weight:900;">${safe(formattedAmount)}</td></tr>
-              </table>
-
-              <div style="margin-top:24px;padding:14px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;color:#166534;font-size:12px;line-height:1.5;">
-                Keep this email for your records. Your payment status and official receipt number have been recorded in the system.
-              </div>
-            </td>
-          </tr>
-          <tr>
-            <td style="background:#f8fafc;padding:18px 24px;text-align:center;border-top:1px solid #e2e8f0;font-size:11px;color:#94a3b8;">
-              &copy; ${new Date().getFullYear()} GovServe Revenue & Treasury Management System. All rights reserved.
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`;
-
-    const textContent = [
-      'GovServe Treasury - Official Payment Receipt',
-      '',
-      `Hello ${customerName},`,
-      'Your payment has been successfully recorded.',
-      '',
-      `Official Receipt No.: ${officialReceiptNumber}`,
-      `Service: ${service}`,
-      accountReference ? `Reference: ${accountReference}` : '',
-      `Payment Reference: ${paymentReference}`,
-      `Payment Method: ${paymentMethod}`,
-      `Payment Date: ${formattedDate}`,
-      `Amount Paid: ${formattedAmount}`,
-      '',
-      'Keep this email for your records.',
-    ].filter(Boolean).join('\n');
-
-    const brevoApiKey = process.env.BREVO_API_KEY?.trim();
-    if (brevoApiKey) {
-      return await this.sendViaBrevo(
-        brevoApiKey,
-        recipient,
-        subject,
-        htmlContent,
-        textContent,
-        this.getFromEmail(),
-        'GovServe Treasury'
-      );
-    }
-
-    const resendApiKey = process.env.RESEND_API_KEY?.trim();
-    if (resendApiKey) {
-      return await this.sendViaResend(
-        resendApiKey,
-        recipient,
-        subject,
-        htmlContent,
-        textContent,
-        process.env.SMTP_FROM || 'GovServe Treasury <onboarding@resend.dev>'
-      );
-    }
-
-    const sendgridApiKey = process.env.SENDGRID_API_KEY?.trim();
-    if (sendgridApiKey) {
-      return await this.sendViaSendGrid(
-        sendgridApiKey,
-        recipient,
-        subject,
-        htmlContent,
-        textContent,
-        this.getFromEmail(),
-        'GovServe Treasury'
-      );
-    }
-
-    const transporter = this.getTransporter();
-    const info = await transporter.sendMail({
-      from: process.env.SMTP_FROM || 'GovServe Treasury <govserve.treasury@gmail.com>',
-      to: recipient,
-      subject,
-      text: textContent,
-      html: htmlContent,
-    });
-
-    return { success: true, messageId: info.messageId };
-  }
-
-  private static getFromEmail(): string {
-    const rawFrom = process.env.SMTP_FROM || 'GovServe Treasury <govserve.treasury@gmail.com>';
-    const userEmail = (process.env.SMTP_USER || 'govserve.treasury@gmail.com').trim();
-    return rawFrom.includes('<')
-      ? (rawFrom.match(/<([^>]+)>/)?.[1] || userEmail)
-      : (rawFrom.includes('@') ? rawFrom : userEmail);
-  }
-
   public static async sendOtpEmail(
     toEmail: string,
     otp: string,
@@ -610,7 +429,7 @@ export class EmailService {
                         color:#991b1b;
                       "
                     >
-                       This code expires in 5 minutes.
+                       This code expires in 1 minutes.
                     </div>
                     <div
                       style="
@@ -823,4 +642,55 @@ Purpose: ${actionTitle}
       }
     }
   }
+
+  public static async sendCertificateEmail(
+    toEmail: string,
+    citizenName: string,
+    certificate: Record<string, any>
+  ): Promise<{ success: boolean; messageId?: string }> {
+    const rawFrom = process.env.SMTP_FROM || 'GovServe Treasury <govserve.treasury@gmail.com>';
+    const userEmail = (process.env.SMTP_USER || 'govserve.treasury@gmail.com').trim();
+    const fromName = 'GovServe Treasury';
+    const fromEmail = rawFrom.includes('<')
+      ? (rawFrom.match(/<([^>]+)>/)?.[1] || userEmail)
+      : (rawFrom.includes('@') ? rawFrom : userEmail);
+    const esc = (value: any) => String(value ?? '')
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    const amount = Number(certificate.grandTotal || certificate.total || certificate.amount || 0);
+    const amountText = `₱${amount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}`;
+    const subject = `GovServe Official Receipt / Digital Certificate ${certificate.certificateNumber || ''}`.trim();
+    const logoUrl = String(process.env.SYSTEM_LOGO_URL || '').trim();
+    const logoHtml = logoUrl ? `<img src="${esc(logoUrl)}" style="max-width:85px;max-height:85px" alt="Government seal">` : '<div style="font-weight:900;font-size:11px">QUEZON CITY<br>GOVSERVE</div>';
+    const htmlContent = `<!DOCTYPE html><html><body style="margin:0;background:#eef2f7;padding:24px;font-family:Arial,Helvetica,sans-serif;color:#111827">
+      <div style="max-width:850px;margin:auto;background:#fff;border:2px solid #334155">
+        <div style="display:grid;grid-template-columns:120px 1fr 120px;align-items:center;border-bottom:2px solid #334155;padding:14px">
+          <div style="text-align:center">${logoHtml}</div>
+          <div style="text-align:center"><div style="font-size:28px;font-weight:900;letter-spacing:2px">OFFICIAL RECEIPT</div><div>Republic of the Philippines</div><div>Office of the City Treasurer</div><div>Quezon City</div></div>
+          <div style="text-align:center;border:1px solid #64748b;padding:8px;font-weight:700">ORIGINAL</div>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px"><tr><td style="border-bottom:1px solid #334155;border-right:1px solid #334155;padding:12px"><b>Computerized Official Receipt</b><br>Certificate Type: ${esc(certificate.certificateType)}</td><td style="border-bottom:1px solid #334155;padding:12px"><b>No.</b> ${esc(certificate.certificateNumber)}<br>Issue Date: ${esc(certificate.issueDate)}</td></tr>
+        <tr><td style="border-bottom:1px solid #334155;border-right:1px solid #334155;padding:12px"><b>Machine Validation No.</b><br>${esc(certificate.machineValidationNumber)}</td><td style="border-bottom:1px solid #334155;padding:12px"><b>Bill Number</b><br>${esc(certificate.billNumber)}</td></tr>
+        <tr><td colspan="2" style="border-bottom:1px solid #334155;padding:12px"><b>Payor:</b> ${esc(certificate.registeredOwner || citizenName)}</td></tr>
+        <tr><td style="border-bottom:1px solid #334155;border-right:1px solid #334155;padding:12px"><b>Tax Declaration No.</b><br>${esc(certificate.taxDeclarationNumber)}</td><td style="border-bottom:1px solid #334155;padding:12px"><b>PIN</b><br>${esc(certificate.pin)}</td></tr>
+        <tr><td colspan="2" style="border-bottom:1px solid #334155;padding:12px"><b>Property Address:</b> ${esc(certificate.propertyAddress)}</td></tr></table>
+        <table style="width:100%;border-collapse:collapse;font-size:13px"><tr><th style="border-bottom:1px solid #334155;border-right:1px solid #334155;padding:10px">NATURE OF COLLECTION</th><th style="border-bottom:1px solid #334155;border-right:1px solid #334155;padding:10px">FUND AND ACCOUNT CODE</th><th style="border-bottom:1px solid #334155;padding:10px">AMOUNT</th></tr><tr><td style="border-right:1px solid #334155;padding:14px">${esc(certificate.natureOfCollection)}</td><td style="border-right:1px solid #334155;padding:14px;text-align:center">${esc(certificate.fundAccountCode)}</td><td style="padding:14px;text-align:right;font-weight:bold">${amountText}</td></tr></table>
+        <div style="display:grid;grid-template-columns:1fr 220px;border-top:1px solid #334155"><div style="padding:12px;text-align:right;font-weight:bold">Subtotal<br>Grand Total</div><div style="border-left:1px solid #334155;padding:12px;text-align:right">${esc(certificate.subtotal)}<br>${esc(certificate.grandTotal)}</div></div>
+        <div style="display:grid;grid-template-columns:1fr 220px;border-top:2px solid #334155;font-size:18px;font-weight:900"><div style="padding:14px;text-align:right;letter-spacing:5px">TOTAL</div><div style="border-left:1px solid #334155;padding:14px;text-align:right">${amountText}</div></div>
+        <div style="border-top:1px solid #334155;padding:12px;font-size:13px"><b>Amount in Words:</b> ${esc(certificate.amountInWords)}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;border-top:1px solid #334155;font-size:13px"><div style="padding:16px;border-right:1px solid #334155"><b>Received</b><p>☐ Cash &nbsp;&nbsp; ☐ Check</p><p>☐ Treasury Warrant &nbsp;&nbsp; ☐ Money Order</p><b>Payment Method:</b> ${esc(certificate.paymentMethod)}<br><b>Reference:</b> ${esc(certificate.paymentReference)}</div><div style="padding:16px;text-align:center">Received the Amount stated above.<div style="margin-top:55px;font-weight:bold">${esc(certificate.issuedBy)}</div><div>${esc(certificate.position)}</div></div></div>
+        <div style="border-top:1px solid #334155;padding:12px;font-size:11px"><b>Remarks:</b> ${esc(certificate.remarks)}<br>Generated electronically by GovServe Revenue &amp; Treasury Management System.</div>
+      </div></body></html>`;
+    const textContent = `GovServe Treasury - Official Receipt\n\nDear ${citizenName},\n\nYour official receipt / digital certificate has been issued.\nCertificate No.: ${certificate.certificateNumber}\nBill Number: ${certificate.billNumber}\nAmount: ${amountText}\nIssue Date: ${certificate.issueDate}\nPayment Reference: ${certificate.paymentReference}\n\nThis document was issued electronically by the GovServe Treasury Portal.`;
+    const brevoApiKey = process.env.BREVO_API_KEY?.trim();
+    if (brevoApiKey) return this.sendViaBrevo(brevoApiKey, toEmail, subject, htmlContent, textContent, fromEmail, fromName);
+    const resendApiKey = process.env.RESEND_API_KEY?.trim();
+    if (resendApiKey) return this.sendViaResend(resendApiKey, toEmail, subject, htmlContent, textContent, rawFrom);
+    const sendgridApiKey = process.env.SENDGRID_API_KEY?.trim();
+    if (sendgridApiKey) return this.sendViaSendGrid(sendgridApiKey, toEmail, subject, htmlContent, textContent, fromEmail, fromName);
+    const transporter = this.getTransporter();
+    const info = await transporter.sendMail({ from: rawFrom, to: toEmail, subject, text: textContent, html: htmlContent });
+    return { success: true, messageId: info.messageId };
+  }
+
 }

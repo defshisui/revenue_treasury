@@ -11,6 +11,8 @@ import {
   type RPTApplicationRecord,
 } from '../services/realpropertytaxService';
 import { API_BASE_URL } from '../config/api';
+import RPTCertificateIssueModal from './RPTCertificateIssueModal';
+import type { RPTCertificateData } from '../services/realpropertytaxService';
 
 type ExtendedStatusType =
   | StatusType
@@ -253,6 +255,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
   } | null>(null);
 
   const [isCashierSettleModalOpen, setIsCashierSettleModalOpen] = useState<boolean>(false);
+  const [isCertificateModalOpen, setIsCertificateModalOpen] = useState(false);
+  const [isIssuingCertificate, setIsIssuingCertificate] = useState(false);
   const [cashierOrNumber, setCashierOrNumber] = useState<string>('');
   const [cashierPaymentMethod, setCashierPaymentMethod] = useState<string>('Treasury Cashier (Cash)');
   const [cashierPaymentAmount, setCashierPaymentAmount] = useState<number>(0);
@@ -1296,57 +1300,46 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     });
   }, [paymentsLedger, applications]);
 
-  const handleDigitalRelease = async () => {
+  const handleDigitalRelease = () => {
     if (!currentApp) return;
-    const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 16);
-    const qrCode = `QC-RPT-${currentApp.referenceNumber}-${Date.now()}`;
+    setIsCertificateModalOpen(true);
+  };
 
-    const releasedApp: ExtendedApplicationRecord = {
-      ...currentApp,
-      status: 'Digital Certificate Issued',
-      digitalRelease: {
-        releaseMethod: 'Digital',
-        releasedAt: timestamp,
-        releasedBy: 'City Assessor Officer',
-        certificateType: 'Tax Declaration / CTC',
-        digitalSignatureStatus: 'Signed',
-        qrVerificationCode: qrCode,
-        downloadCount: 1,
-        citizenNotified: true,
-      },
-    };
-
+  const handleIssueCertificate = async (certificateData: RPTCertificateData) => {
+    if (!currentApp) return;
+    setIsIssuingCertificate(true);
     try {
-      await updateRptApplicationStatus(String(currentApp.id), 'Digital Certificate Issued');
-    } catch (err) {
-      console.error('Failed to persist Digital Certificate Issued status:', err);
-    }
-
-    try {
-      await syncApplicationToMaster(currentApp);
-
-      await updateRptApplicationStatus(String(currentApp.id), 'Archived');
-      setApplications((prev) =>
-        prev.map((a) => (a.id === currentApp.id ? { ...releasedApp, status: 'Archived' } : a))
+      const updated = await updateRptApplicationStatus(
+        String(currentApp.id),
+        'Digital Certificate Issued',
+        certificateData.remarks,
+        { certificateData }
       );
 
-      triggerToast(
-        `Digital Tax Certificate issued for ${currentApp.referenceNumber}. Record confirmed in the Master Database and removed from the active queue.`,
-        'success'
-      );
+      const returned = updated?.record;
+      setApplications(prev => prev.map(app => app.id === currentApp.id ? ({
+        ...app,
+        ...(returned || {}),
+        status: 'Digital Certificate Issued',
+        digitalRelease: {
+          releaseMethod: 'Digital',
+          releasedAt: certificateData.issueDate,
+          releasedBy: certificateData.issuedBy,
+          certificateType: 'Tax Declaration / CTC',
+          digitalSignatureStatus: 'Signed',
+          qrVerificationCode: certificateData.certificateNumber,
+          downloadCount: 1,
+          citizenNotified: true,
+        },
+      } as ExtendedApplicationRecord) : app));
+      setIsCertificateModalOpen(false);
+      triggerToast(`Certificate ${certificateData.certificateNumber} was issued and sent to ${currentApp.applicantEmail || currentApp.email || 'the citizen email address'}.`, 'success');
+      await loadApplications();
     } catch (err: any) {
-      const detail =
-        err?.response?.data?.message ||
-        err?.message ||
-        'Unknown error';
-      console.error('Failed to move released application into the Master Database:', err);
-      setApplications((prev) =>
-        prev.map((a) => (a.id === currentApp.id ? releasedApp : a))
-      );
-      triggerToast(
-        `Certificate issued for ${currentApp.referenceNumber}, but it could not be moved into the Master Database automatically (${detail}).`,
-        'warning'
-      );
+      console.error('Failed to issue RPT certificate:', err);
+      triggerToast(err?.message || 'Failed to issue and email the certificate.', 'error');
+    } finally {
+      setIsIssuingCertificate(false);
     }
   };
 
@@ -3160,6 +3153,14 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
           </div>
         </div>
       )}
+
+      <RPTCertificateIssueModal
+        application={currentApp as any}
+        open={isCertificateModalOpen}
+        submitting={isIssuingCertificate}
+        onClose={() => setIsCertificateModalOpen(false)}
+        onSubmit={handleIssueCertificate}
+      />
     </div>
   );
 };

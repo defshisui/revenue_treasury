@@ -1,3 +1,29 @@
+export interface RPTCertificateData {
+  certificateNumber: string;
+  certificateType: string;
+  issueDate: string;
+  issuedBy: string;
+  position: string;
+  registeredOwner: string;
+  billNumber: string;
+  taxDeclarationNumber: string;
+  pin: string;
+  propertyAddress: string;
+  lotArea: string;
+  marketValue: string;
+  assessedValue: string;
+  natureOfCollection: string;
+  fundAccountCode: string;
+  amount: string;
+  subtotal: string;
+  grandTotal: string;
+  amountInWords: string;
+  paymentMethod: string;
+  paymentReference: string;
+  machineValidationNumber: string;
+  remarks: string;
+}
+
 export interface RPTApplicationRecord {
   id: string;
   controlNumber?: string;
@@ -51,6 +77,7 @@ export interface RPTApplicationRecord {
   paymentMethod?: string;
   paymentDate?: string;
   paymentDueDate?: string;
+  certificateData?: RPTCertificateData | null;
   [key: string]: any;
 }
 
@@ -583,6 +610,7 @@ export const updateRptApplicationStatus =
       paymentMethod?: string;
       paymentReference?: string;
       paymentDate?: string;
+      certificateData?: RPTCertificateData;
     }
   ): Promise<any> => {
     const token =
