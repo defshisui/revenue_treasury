@@ -1163,7 +1163,7 @@ Republic of the Philippines - Local Government Unit
       <div style="max-width:850px;margin:auto;background:#fff;border:2px solid #334155">
         <div style="display:grid;grid-template-columns:120px 1fr 120px;align-items:center;border-bottom:2px solid #334155;padding:14px">
           <div style="text-align:center">${logoHtml}</div>
-          <div style="text-align:center"><div style="font-size:28px;font-weight:900;letter-spacing:2px">OFFICIAL RECEIPT</div><div>Republic of the Philippines</div><div>Office of the City Treasurer</div><div>Quezon City</div></div>
+          <div style="text-align:center"><div style="font-size:28px;font-weight:900;letter-spacing:2px">DIGITAL CERTIFICATE</div><div>Republic of the Philippines</div><div>Office of the City Treasurer</div><div>Quezon City</div></div>
           <div style="text-align:center;border:1px solid #64748b;padding:8px;font-weight:700">ORIGINAL</div>
         </div>
         <table style="width:100%;border-collapse:collapse;font-size:13px"><tr><td style="border-bottom:1px solid #334155;border-right:1px solid #334155;padding:12px"><b>Computerized Official Receipt</b><br>Certificate Type: ${esc(certificate.certificateType)}</td><td style="border-bottom:1px solid #334155;padding:12px"><b>No.</b> ${esc(certificate.certificateNumber)}<br>Issue Date: ${esc(certificate.issueDate)}</td></tr>
