@@ -31,6 +31,7 @@ interface LeaseRecord {
   paymentProof?: string;
   mismatchNotes?: string;
   paymentDate?: string;
+  paymongoSessionId?: string;
 }
 
 interface Props {
@@ -256,28 +257,135 @@ export default function CityOwnedMarketAdmin({
 
   const handleVerifyAndMatchPayment = async () => {
     if (!selectedRecord) return;
+
     try {
-      const orNumber = selectedRecord.officialReceiptNumber || `OR-MKT-${Math.floor(100000 + Math.random() * 900000)}`;
+      const sessionId = String(
+        selectedRecord.paymongoSessionId || ""
+      ).trim();
+
+      // Never generate a fake O.R. for an online payment.
+      // The PayMongo checkout session must be verified by the backend first.
+      if (!sessionId) {
+        throw new Error(
+          "PayMongo Checkout Session ID is not available for this lease. Please make sure the payment was completed through the current PayMongo flow, then refresh the record."
+        );
+      }
+
+      const response = await fetch(
+        `${API_BASE_URL}/api/payments/verify-session`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ sessionId }),
+        }
+      );
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok || !data?.paid) {
+        throw new Error(
+          data?.error ||
+            data?.message ||
+            "PayMongo has not confirmed this payment yet."
+        );
+      }
+
+      const serverRecord = data.record || {};
+
       const updatedRecord: LeaseRecord = {
         ...selectedRecord,
-        paymentStatus: "Paid",
-        leaseStatus: "Active",
-        helperApprovalStatus: "Approved",
-        advancePaymentStatus: "Verified & Cleared",
-        officialReceiptNumber: orNumber,
-        paymentDate: selectedRecord.paymentDate || new Date().toISOString(),
-        paymentMethod: selectedRecord.paymentMethod || "PayMongo (QR Ph)",
+        ...serverRecord,
+
+        id: serverRecord.id || selectedRecord.id,
+        leaseId:
+          serverRecord.lease_id ||
+          serverRecord.leaseId ||
+          selectedRecord.leaseId,
+
+        paymentStatus:
+          serverRecord.payment_status ||
+          serverRecord.paymentStatus ||
+          "Paid",
+
+        leaseStatus:
+          serverRecord.lease_status ||
+          serverRecord.leaseStatus ||
+          "Active",
+
+        helperApprovalStatus:
+          serverRecord.helper_approval_status ||
+          serverRecord.helperApprovalStatus ||
+          "Approved",
+
+        advancePaymentStatus:
+          serverRecord.advance_payment_status ||
+          serverRecord.advancePaymentStatus ||
+          "Paid",
+
+        officialReceiptNumber:
+          data.officialReceiptNumber ||
+          serverRecord.official_receipt_number ||
+          serverRecord.officialReceiptNumber ||
+          selectedRecord.officialReceiptNumber ||
+          "",
+
+        paymentReference:
+          data.paymentReference ||
+          serverRecord.payment_reference ||
+          serverRecord.paymentReference ||
+          selectedRecord.paymentReference ||
+          "",
+
+        paymentDate:
+          data.paymentDate ||
+          serverRecord.payment_date ||
+          serverRecord.paymentDate ||
+          new Date().toISOString(),
+
+        paymentMethod:
+          data.paymentMethod ||
+          serverRecord.payment_method ||
+          serverRecord.paymentMethod ||
+          "PayMongo (QR Ph)",
+
+        paymongoSessionId:
+          serverRecord.paymongo_session_id ||
+          serverRecord.paymongoSessionId ||
+          sessionId,
       };
 
+      // Save the verified server result back through the normal lease update.
       await updateLease(updatedRecord);
+
       setSelectedRecord(updatedRecord);
-      setLeases((prev) => prev.map((l) => (l.leaseId === updatedRecord.leaseId ? updatedRecord : l)));
-      if (onUpdateRecord) onUpdateRecord(updatedRecord);
+
+      setLeases((prev) =>
+        prev.map((lease) =>
+          lease.leaseId === selectedRecord.leaseId
+            ? updatedRecord
+            : lease
+        )
+      );
+
+      if (onUpdateRecord) {
+        onUpdateRecord(updatedRecord);
+      }
+
       window.dispatchEvent(new Event("db_treasury_updated"));
-      alert(`Payment successfully verified & matched via Gov Pay gateway! Official Receipt issued: ${orNumber}`);
+
+      alert(
+        `Payment successfully verified with PayMongo. Official Receipt: ${
+          updatedRecord.officialReceiptNumber || "Not returned"
+        }`
+      );
     } catch (err: any) {
       console.error("Failed to verify & match payment:", err);
-      alert(err?.message || "Failed to update lease record in database.");
+      alert(
+        err?.message ||
+          "Failed to verify payment with PayMongo."
+      );
     }
   };
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { API_BASE_URL } from '../config/api';
 import CitizenLayout from './CitizenLayout';
@@ -181,31 +181,69 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
     return () => window.clearInterval(timer);
   }, [isPaymentStep, qrCodeUrl, qrPaymentPaid, paymentAssessment]);
 
+  const qrStatusCheckInProgressRef = useRef(false);
+
   useEffect(() => {
     if (!isPaymentStep || !qrPaymentIntentId || qrPaymentPaid) return;
-    const poll = window.setInterval(async () => {
+
+    let cancelled = false;
+    let pollTimer: number | undefined;
+
+    const checkPaymentStatus = async () => {
+      if (cancelled || qrStatusCheckInProgressRef.current) return;
+
+      qrStatusCheckInProgressRef.current = true;
+
       try {
-        const response = await fetch(`${API_BASE_URL}/api/payments/qr-status/${encodeURIComponent(qrPaymentIntentId)}`);
+        const response = await fetch(
+          `${API_BASE_URL}/api/payments/qr-status/${encodeURIComponent(qrPaymentIntentId)}`
+        );
+
         if (!response.ok) return;
+
         const data = await response.json();
-        if (data.paid) {
-          setQrPaymentPaid(true);
-          setPaymentConfirmedAt(new Date());
-          setQrSecondsRemaining(0);
-          setQrCodeUrl('');
 
+        if (cancelled || !data.paid) return;
 
-          await fetchAssessments();
-          setIsPaymentStep(false);
-          setQrPaymentIntentId('');
-          setQrError('');
-          setIsPaymentSuccess(true);
-        }
+        // Mark the payment as confirmed immediately so the QR disappears
+        // and the existing Payment Successful modal can be displayed
+        // without waiting for the assessment list to refresh.
+        setQrPaymentPaid(true);
+        setPaymentConfirmedAt(new Date());
+        setQrSecondsRemaining(0);
+        setQrCodeUrl('');
+        setQrError('');
+        setQrPaymentIntentId('');
+        setIsPaymentStep(false);
+        setIsPaymentSuccess(true);
+
+        // Refresh the Business Tax records in the background.
+        // This must not delay the Payment Successful screen.
+        void fetchAssessments();
       } catch (error) {
-        console.error('QR payment status check failed:', error);
+        if (!cancelled) {
+          console.error('QR payment status check failed:', error);
+        }
+      } finally {
+        qrStatusCheckInProgressRef.current = false;
       }
-    }, 3000);
-    return () => window.clearInterval(poll);
+    };
+
+    // Check immediately instead of waiting for the first 3-second interval.
+    void checkPaymentStatus();
+
+    // Continue checking once per second while the taxpayer is waiting.
+    pollTimer = window.setInterval(() => {
+      void checkPaymentStatus();
+    }, 1000);
+
+    return () => {
+      cancelled = true;
+      if (pollTimer !== undefined) {
+        window.clearInterval(pollTimer);
+      }
+      qrStatusCheckInProgressRef.current = false;
+    };
   }, [isPaymentStep, qrPaymentIntentId, qrPaymentPaid]);
 
   const openBusinessTaxPayment = (record: AssessmentRecord) => {

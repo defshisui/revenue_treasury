@@ -488,28 +488,131 @@ export async function verifySession(req: Request, res: Response): Promise<void> 
         paymentDate: new Date(),
         accountReference: metadata.taxDeclarationNumber,
       });
-    } else if (type === 'MARKET_STALL' && metadata.leaseId) {
-      await pool.query(
+    } else if (
+      (type === 'MARKET_STALL' || type === 'MARKET') &&
+      metadata.leaseId
+    ) {
+      // Retrieve the lease first so we never overwrite an existing
+      // official receipt with a newly generated number.
+      const existingLeaseResult = await pool.query(
+        `SELECT *
+         FROM market_leases
+         WHERE lease_id = $1 OR id::text = $1
+         LIMIT 1`,
+        [metadata.leaseId]
+      );
+
+      if (existingLeaseResult.rows.length === 0) {
+        res.status(404).json({
+          success: false,
+          paid: false,
+          error: `Market lease ${metadata.leaseId} was not found.`,
+        });
+        return;
+      }
+
+      const existingLease = existingLeaseResult.rows[0];
+      const existingPaymentStatus = String(
+        existingLease.payment_status || ''
+      ).toLowerCase();
+
+      // If the webhook already recorded the payment, return the
+      // database values instead of creating another O.R.
+      if (existingPaymentStatus === 'paid') {
+        const existingOfficialReceiptNumber =
+          existingLease.official_receipt_number ||
+          officialReceiptNumber;
+
+        const existingPaymentReference =
+          existingLease.payment_reference ||
+          paymentReference;
+
+        recordResult = existingLeaseResult;
+
+        res.status(200).json({
+          success: true,
+          paid: true,
+          alreadyRecorded: true,
+          officialReceiptNumber: existingOfficialReceiptNumber,
+          paymentReference: existingPaymentReference,
+          amount: session.amount,
+          paymentMethod:
+            existingLease.payment_method ||
+            `PayMongo (${formattedPaymentMethod})`,
+          paymentDate:
+            existingLease.payment_date ||
+            new Date().toISOString(),
+          record: existingLease,
+        });
+        return;
+      }
+
+      const marketOfficialReceiptNumber =
+        existingLease.official_receipt_number ||
+        officialReceiptNumber;
+
+      const marketPaymentReference =
+        existingLease.payment_reference ||
+        paymentReference;
+
+      const leaseResult = await pool.query(
         `UPDATE market_leases
          SET payment_status = 'Paid',
              advance_payment_status = 'Paid',
-             payment_method = $1
-         WHERE lease_id = $2 OR id::text = $2`,
-        [`PayMongo (${formattedPaymentMethod})`, metadata.leaseId]
+             payment_method = $1,
+             official_receipt_number = $2,
+             payment_reference = $3,
+             payment_date = NOW()
+         WHERE lease_id = $4 OR id::text = $4
+         RETURNING *`,
+        [
+          `PayMongo (${formattedPaymentMethod})`,
+          marketOfficialReceiptNumber,
+          marketPaymentReference,
+          metadata.leaseId,
+        ]
       );
+
+      if (leaseResult.rows.length === 0) {
+        res.status(404).json({
+          success: false,
+          paid: false,
+          error: `Market lease ${metadata.leaseId} could not be updated.`,
+        });
+        return;
+      }
+
+      recordResult = leaseResult;
 
       await sendPaymentReceiptOnce({
         paymentKey: `checkout:${sessionId}`,
-        toEmail: metadata.customerEmail,
-        customerName: metadata.customerName,
+        toEmail: metadata.customerEmail || leaseResult.rows[0]?.email,
+        customerName:
+          metadata.customerName ||
+          `${leaseResult.rows[0]?.first_name || ''} ${leaseResult.rows[0]?.last_name || ''}`.trim(),
         service: 'Market Stall Rental',
         amount: Number(session.amount),
         paymentMethod: `PayMongo (${formattedPaymentMethod})`,
-        paymentReference,
-        officialReceiptNumber,
+        paymentReference: marketPaymentReference,
+        officialReceiptNumber: marketOfficialReceiptNumber,
         paymentDate: new Date(),
         accountReference: metadata.leaseId,
       });
+
+      // Return the same O.R. and database record to the frontend so
+      // Verify & Match Payment can display the actual saved values.
+      res.status(200).json({
+        success: true,
+        paid: true,
+        alreadyRecorded: false,
+        officialReceiptNumber: marketOfficialReceiptNumber,
+        paymentReference: marketPaymentReference,
+        amount: session.amount,
+        paymentMethod: `PayMongo (${formattedPaymentMethod})`,
+        paymentDate: leaseResult.rows[0].payment_date || new Date().toISOString(),
+        record: leaseResult.rows[0],
+      });
+      return;
     } else if (type === 'BUSINESS_TAX' && metadata.businessTrackingNumber) {
       await pool.query(
         `UPDATE business_assessments
@@ -941,6 +1044,9 @@ export async function handlePayMongoWebhook(
         ` Processing market stall payment for lease ${metadata.leaseId}`
       );
 
+      // This variable must be declared in the Market webhook scope.
+      // It preserves the database O.R. when PayMongo sends a duplicate webhook.
+      let marketOfficialReceiptNumber = officialReceiptNumber;
 
       const existingLease = await pool.query(
         `
@@ -957,16 +1063,38 @@ export async function handlePayMongoWebhook(
         console.warn(
           ` No market lease found for leaseId ${metadata.leaseId}`
         );
-      } else if (
-        String(existingLease.rows[0].payment_status).toLowerCase() ===
-        'paid'
-      ) {
+
+        res.status(200).json({
+          received: true,
+          success: false,
+          paymentId,
+          paymentIntentId,
+          amount: amountPhp,
+          paymentReference,
+          message: `Market lease ${metadata.leaseId} was not found.`,
+        });
+
+        return;
+      }
+
+      const existingLeaseRecord = existingLease.rows[0];
+      const existingPaymentStatus = String(
+        existingLeaseRecord.payment_status || ''
+      ).toLowerCase();
+
+      if (existingPaymentStatus === 'paid') {
+        // Keep the existing database O.R. for duplicate webhook events.
+        marketOfficialReceiptNumber =
+          existingLeaseRecord.official_receipt_number ||
+          officialReceiptNumber;
+
         console.log(
-          ` Market lease ${metadata.leaseId} is already Paid.`
+          ` Market lease ${metadata.leaseId} is already Paid with O.R. ${marketOfficialReceiptNumber}.`
         );
       } else {
-        const officialReceiptNumber =
-          existingLease.rows[0].official_receipt_number ||
+        // Use an existing O.R. if one exists; otherwise create one once.
+        marketOfficialReceiptNumber =
+          existingLeaseRecord.official_receipt_number ||
           `OR-PM-${new Date().getFullYear()}-${Math.floor(
             100000 + Math.random() * 900000
           )}`;
@@ -987,30 +1115,50 @@ export async function handlePayMongoWebhook(
           `,
           [
             formattedPaymentMethod,
-            officialReceiptNumber,
+            marketOfficialReceiptNumber,
             paymentReference,
             metadata.leaseId,
           ]
         );
 
-        if (leaseResult.rows.length > 0) {
-          console.log(
-            ` Market lease ${metadata.leaseId} marked as PAID with O.R. ${officialReceiptNumber}.`
+        if (leaseResult.rows.length === 0) {
+          console.warn(
+            ` Market lease could not be updated: ${metadata.leaseId}`
           );
-        }
-      await sendPaymentReceiptOnce({
-        paymentKey: `paymongo:${paymentId || paymentIntentId}`,
-        toEmail: metadata.customerEmail || leaseResult.rows[0]?.email,
-        customerName: metadata.customerName || (leaseResult.rows[0] ? `${leaseResult.rows[0].first_name || ''} ${leaseResult.rows[0].last_name || ''}`.trim() : undefined),
-        service: 'Market Stall Rental',
-        amount: amountPhp,
-        paymentMethod: formattedPaymentMethod,
-        paymentReference,
-        officialReceiptNumber,
-        paymentDate: new Date(),
-        accountReference: metadata.leaseId,
-      });
 
+          res.status(200).json({
+            received: true,
+            success: false,
+            paymentId,
+            paymentIntentId,
+            amount: amountPhp,
+            paymentReference,
+            message: `Market lease ${metadata.leaseId} could not be updated.`,
+          });
+
+          return;
+        }
+
+        console.log(
+          ` Market lease ${metadata.leaseId} marked as PAID with O.R. ${marketOfficialReceiptNumber}.`
+        );
+
+        await sendPaymentReceiptOnce({
+          paymentKey: `paymongo:${paymentId || paymentIntentId}`,
+          toEmail:
+            metadata.customerEmail ||
+            leaseResult.rows[0]?.email,
+          customerName:
+            metadata.customerName ||
+            `${leaseResult.rows[0]?.first_name || ''} ${leaseResult.rows[0]?.last_name || ''}`.trim(),
+          service: 'Market Stall Rental',
+          amount: amountPhp,
+          paymentMethod: formattedPaymentMethod,
+          paymentReference,
+          officialReceiptNumber: marketOfficialReceiptNumber,
+          paymentDate: new Date(),
+          accountReference: metadata.leaseId,
+        });
       }
 
       await recordAudit(
@@ -1022,7 +1170,7 @@ export async function handlePayMongoWebhook(
         'PAYMENT_WEBHOOK_SUCCESS',
         'INFO',
         null,
-        `Market stall payment confirmed via ${formattedPaymentMethod}. Lease ${metadata.leaseId}. Reference ${paymentReference}. Amount ${amountPhp.toFixed(2)}. O.R. ${officialReceiptNumber}.`
+        `Market stall payment confirmed via ${formattedPaymentMethod}. Lease ${metadata.leaseId}. Reference ${paymentReference}. Amount ${amountPhp.toFixed(2)}. O.R. ${marketOfficialReceiptNumber}.`
       );
 
       res.status(200).json({
@@ -1033,7 +1181,7 @@ export async function handlePayMongoWebhook(
         amount: amountPhp,
         paymentMethod: formattedPaymentMethod,
         paymentReference,
-        officialReceiptNumber,
+        officialReceiptNumber: marketOfficialReceiptNumber,
         leaseId: metadata.leaseId,
       });
 

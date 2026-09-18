@@ -30,13 +30,14 @@ export interface LeaseRecord {
   paymentProof?: string;
   mismatchNotes?: string;
   paymentDate?: string;
+  paymongoSessionId?: string;
 }
 
 export function detectPaymentMethod(record?: Record<string, any> | null): string {
   if (!record) return "Cash / Direct";
   const method = record.paymentMethod || record.payment_method;
-  if (method && method.trim() !== "" && method.trim() !== "Not Specified") {
-    return method.trim();
+  if (method && String(method).trim() !== "" && String(method).trim() !== "Not Specified") {
+    return String(method).trim();
   }
   const receipt = record.officialReceiptNumber || record.official_receipt_number || "";
   const ref = record.paymentReference || record.payment_reference || "";
@@ -108,14 +109,77 @@ export async function getLeases(): Promise<LeaseRecord[]> {
               (l.id && srv.id && String(l.id).trim() === String(srv.id).trim())
             );
             if (loc) {
-              const isLocallyArchived = String(loc.leaseStatus || "").trim().toLowerCase() === "archived";
+              const isLocallyArchived =
+                String(loc.leaseStatus || "").trim().toLowerCase() === "archived";
+
+              // The database is authoritative for payment fields.
+              // Do not let an old localStorage copy overwrite a newly
+              // verified PayMongo payment/O.R. from the server.
               return {
-                ...srv,
                 ...loc,
-                leaseStatus: isLocallyArchived ? "Archived" : (srv.leaseStatus || loc.leaseStatus),
+                ...srv,
+                leaseStatus: isLocallyArchived
+                  ? "Archived"
+                  : (srv.leaseStatus || loc.leaseStatus),
+
+                paymentStatus:
+                  srv.paymentStatus ??
+                  srv.payment_status ??
+                  loc.paymentStatus,
+
+                paymentMethod:
+                  srv.paymentMethod ??
+                  srv.payment_method ??
+                  loc.paymentMethod,
+
+                officialReceiptNumber:
+                  srv.officialReceiptNumber ??
+                  srv.official_receipt_number ??
+                  loc.officialReceiptNumber,
+
+                paymentReference:
+                  srv.paymentReference ??
+                  srv.payment_reference ??
+                  loc.paymentReference,
+
+                paymentDate:
+                  srv.paymentDate ??
+                  srv.payment_date ??
+                  loc.paymentDate,
+
+                paymongoSessionId:
+                  srv.paymongoSessionId ??
+                  srv.paymongo_session_id ??
+                  loc.paymongoSessionId,
               };
             }
-            return srv;
+            return {
+              ...srv,
+              paymentStatus:
+                srv.paymentStatus ??
+                srv.payment_status ??
+                "Pending Payment",
+              paymentMethod:
+                srv.paymentMethod ??
+                srv.payment_method ??
+                detectPaymentMethod(srv),
+              officialReceiptNumber:
+                srv.officialReceiptNumber ??
+                srv.official_receipt_number ??
+                "",
+              paymentReference:
+                srv.paymentReference ??
+                srv.payment_reference ??
+                "",
+              paymentDate:
+                srv.paymentDate ??
+                srv.payment_date ??
+                undefined,
+              paymongoSessionId:
+                srv.paymongoSessionId ??
+                srv.paymongo_session_id ??
+                undefined,
+            };
           });
 
           localList.forEach((loc: any) => {
@@ -140,12 +204,19 @@ export async function getLeases(): Promise<LeaseRecord[]> {
 }
 
 export async function saveLease(newLease: LeaseRecord): Promise<void> {
+  const resolvedPaymentMethod =
+    newLease.paymentMethod && newLease.paymentMethod.trim() !== ""
+      ? newLease.paymentMethod
+      : detectPaymentMethod(newLease);
+
   const payload = {
     ...newLease,
-    paymentMethod:
-      newLease.paymentMethod && newLease.paymentMethod.trim() !== ""
-        ? newLease.paymentMethod
-        : detectPaymentMethod(newLease),
+    paymentMethod: resolvedPaymentMethod,
+    payment_method: resolvedPaymentMethod,
+    official_receipt_number: newLease.officialReceiptNumber || "",
+    payment_reference: newLease.paymentReference || "",
+    payment_date: newLease.paymentDate || undefined,
+    paymongo_session_id: newLease.paymongoSessionId || undefined,
   };
 
   try {
@@ -215,13 +286,20 @@ export async function saveLease(newLease: LeaseRecord): Promise<void> {
 export async function updateLease(
   updatedRecord: LeaseRecord
 ): Promise<void> {
+  const resolvedPaymentMethod =
+    updatedRecord.paymentMethod &&
+      updatedRecord.paymentMethod.trim() !== ""
+      ? updatedRecord.paymentMethod
+      : detectPaymentMethod(updatedRecord);
+
   const payload = {
     ...updatedRecord,
-    paymentMethod:
-      updatedRecord.paymentMethod &&
-        updatedRecord.paymentMethod.trim() !== ""
-        ? updatedRecord.paymentMethod
-        : detectPaymentMethod(updatedRecord),
+    paymentMethod: resolvedPaymentMethod,
+    payment_method: resolvedPaymentMethod,
+    official_receipt_number: updatedRecord.officialReceiptNumber || "",
+    payment_reference: updatedRecord.paymentReference || "",
+    payment_date: updatedRecord.paymentDate || undefined,
+    paymongo_session_id: updatedRecord.paymongoSessionId || undefined,
   };
 
   try {
