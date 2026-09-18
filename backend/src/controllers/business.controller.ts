@@ -39,8 +39,13 @@ export async function getBusinessAssessments(req: Request, res: Response): Promi
         }
 
         if (search) {
-            if (searchType === 'Business Name') {
+            const normalizedSearchType = String(searchType || 'Tracking/MP No.').trim();
+
+            if (normalizedSearchType === 'Business Name') {
                 query += ` AND business_name ILIKE $${paramIndex++}`;
+                params.push(`%${search}%`);
+            } else if (normalizedSearchType === 'Business Owner') {
+                query += ` AND business_owner ILIKE $${paramIndex++}`;
                 params.push(`%${search}%`);
             } else {
                 query += ` AND tracking_number ILIKE $${paramIndex++}`;
@@ -91,9 +96,50 @@ export async function getBusinessAssessments(req: Request, res: Response): Promi
             computedFees: row.computed_fees || {}
         }));
 
+        const countParams: any[] = [];
+        let countIndex = 1;
+        const countClauses: string[] = ['1=1'];
+
+        if (status && status !== 'ALL') {
+            countClauses.push(`status = $${countIndex++}`);
+            countParams.push(status);
+        }
+
+        if (email) {
+            countClauses.push(`email = $${countIndex++}`);
+            countParams.push(email);
+        }
+
+        if (search) {
+            const normalizedSearchType = String(searchType || 'Tracking/MP No.').trim();
+
+            if (normalizedSearchType === 'Business Name') {
+                countClauses.push(`business_name ILIKE $${countIndex++}`);
+            } else if (normalizedSearchType === 'Business Owner') {
+                countClauses.push(`business_owner ILIKE $${countIndex++}`);
+            } else {
+                countClauses.push(`tracking_number ILIKE $${countIndex++}`);
+            }
+
+            countParams.push(`%${search}%`);
+        }
+
+        const countResult = await pool.query(
+            `SELECT COUNT(*)::int AS total
+             FROM business_assessments
+             WHERE ${countClauses.join(' AND ')}`,
+            countParams
+        );
+
+        const totalRecords = Number(countResult.rows[0]?.total || 0);
+        const totalPages = Math.max(1, Math.ceil(totalRecords / limitNum));
+
         res.json({
             assessments: formatted,
-            totalPages: 1
+            totalPages,
+            totalRecords,
+            currentPage: pageNum,
+            pageSize: limitNum
         });
 
     } catch (err) {

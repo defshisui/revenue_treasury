@@ -425,31 +425,111 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
     return orMatch?.[1] ? String(orMatch[1]) : '';
   };
 
-  const handleExportCSV = () => {
-    if (filteredAssessments.length === 0) {
-      alert("No data available to export.");
-      return;
-    }
-    const headers = ["Tracking Number", "Business Name", "Owner", "TIN", "Gross Sales", "Status", "Payment Status", "Date Filed"];
-    const rows = filteredAssessments.map(item => [
-      item.trackingNumber,
-      `"${item.businessName}"`,
-      `"${item.businessOwner}"`,
-      item.tin || 'N/A',
-      item.grossSales || 0,
-      item.paymentStatus || 'UNPAID',
-      item.status,
-      item.applicationDate
-    ]);
+  const handleExportCSV = async () => {
+    try {
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (adminUser?.token) headers['Authorization'] = `Bearer ${adminUser.token}`;
 
-    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `LGU_Business_Assessments_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      // Build the exact same filters currently used by the assessment list.
+      const baseParams = new URLSearchParams();
+      if (statusFilter !== 'ALL') baseParams.append('status', statusFilter);
+      if (searchQuery.trim()) baseParams.append('search', searchQuery.trim());
+      baseParams.append('searchType', searchType);
+      baseParams.append('limit', '100');
+      baseParams.append('includeAttachments', 'false');
+
+      // The screen is paginated, so fetch every matching page for the CSV.
+      // This prevents exporting only the records visible on the current page.
+      const allRecords: AssessmentRecord[] = [];
+      let page = 1;
+      let totalPagesFromServer = 1;
+
+      do {
+        const pageParams = new URLSearchParams(baseParams);
+        pageParams.set('page', String(page));
+
+        const response = await fetch(
+          `${API_BASE_URL}/admin/business-assessments?${pageParams.toString()}`,
+          { headers }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch export data: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        const pageRecords: AssessmentRecord[] = Array.isArray(data)
+          ? data
+          : (data.assessments || []);
+
+        allRecords.push(...pageRecords);
+
+        totalPagesFromServer = Math.max(
+          1,
+          Number(data.totalPages || 1)
+        );
+
+        page += 1;
+      } while (page <= totalPagesFromServer);
+
+      // Match the same Active/Archived tab shown on screen.
+      const exportList = allRecords.filter((item) => {
+        const isArchived = item.status === 'ARCHIVED';
+        return assessmentTab === 'Active' ? !isArchived : isArchived;
+      });
+
+      if (exportList.length === 0) {
+        alert("No data available to export for the current filters.");
+        return;
+      }
+
+      const escapeCSV = (value: unknown) => {
+        const text = value === null || value === undefined ? '' : String(value);
+        return `"${text.replace(/"/g, '""')}"`;
+      };
+
+      const headersRow = [
+        "Tracking Number",
+        "Business Name",
+        "Business Owner",
+        "TIN",
+        "Gross Sales",
+        "Status",
+        "Payment Status",
+        "Date Filed"
+      ];
+
+      const rows = exportList.map(item => [
+        escapeCSV(item.trackingNumber),
+        escapeCSV(item.businessName),
+        escapeCSV(item.businessOwner),
+        escapeCSV(item.tin || 'N/A'),
+        escapeCSV(
+          Number(item.grossSales || 0).toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+          })
+        ),
+        escapeCSV(item.status),
+        escapeCSV(item.paymentStatus || 'UNPAID'),
+        escapeCSV(item.applicationDate)
+      ]);
+
+      const csvContent = [headersRow.map(escapeCSV).join(","), ...rows.map(row => row.join(","))].join("\n");
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+
+      link.href = url;
+      link.download = `LGU_Business_Assessments_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      console.error("Error exporting business assessments:", err);
+      alert(err?.message || "Failed to export business assessment records.");
+    }
   };
 
   return (
@@ -567,11 +647,12 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
                 <label className="font-semibold text-slate-700 dark:text-slate-300">Search Parameter</label>
                 <select
                   value={searchType}
-                  onChange={(e) => setSearchType(e.target.value)}
+                  onChange={(e) => { setSearchType(e.target.value); setCurrentPage(1); }}
                   className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white outline-none cursor-pointer focus:border-blue-500 transition-all"
                 >
                   <option value="Tracking/MP No.">Tracking/MP No.</option>
                   <option value="Business Name">Business Name</option>
+                  <option value="Business Owner">Business Owner</option>
                 </select>
               </div>
 
