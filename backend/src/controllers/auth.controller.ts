@@ -13,7 +13,7 @@ const loginAttemptsTracker = new Map<string, { count: number; lockUntil: number 
 const LOCKOUT_LIMIT = 5;
 const LOCKOUT_DURATION_SECONDS = 60;
 const OTP_RESEND_COOLDOWN_SECONDS = 60;
-const OTP_EXPIRY_MINUTES = 5;
+const OTP_EXPIRY_MINUTES = 1;
 
 function isStrongPassword(password: string): boolean {
   return (
