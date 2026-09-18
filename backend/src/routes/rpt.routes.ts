@@ -1,7 +1,11 @@
 import { Router } from 'express';
 
 import { upload } from '../middleware/upload.js';
-import { authenticateToken, optionalAuthToken } from '../middleware/auth.js';
+
+import {
+  authenticateToken,
+  optionalAuthToken,
+} from '../middleware/auth.js';
 
 import {
   getRptApplications,
@@ -29,7 +33,6 @@ router.get(
   getRptApplications
 );
 
-
 router.post(
   '/citizen-rpt-applications',
   optionalAuthToken,
@@ -49,7 +52,9 @@ router.patch(
   updateRptApplicationStatus
 );
 
-router.get('/api/rpt/search', searchRptByTdn);
+// If this router is mounted with app.use('/api', rptRoutes),
+// use '/rpt/search' rather than '/api/rpt/search'.
+router.get('/rpt/search', searchRptByTdn);
 
 router.get(
   '/lgu-rpt-records/search/:tdn',
@@ -93,6 +98,10 @@ router.get(
   '/citizen-rpt-payments',
   getRptPayments
 );
+
+// ===============================
+// PAYMENT LEDGER ARCHIVER
+// ===============================
 
 router.get(
   '/rpt-payment-ledger-archives',

@@ -1828,9 +1828,87 @@ export async function archiveRptPaymentLedgerEntry(
   res: Response
 ): Promise<void> {
   try {
-    const { sourceType, sourceId, receiptNumber, identifier, payor } = req.body || {};
-    if (!sourceType || !sourceId) {
-      res.status(400).json({ message: 'sourceType and sourceId are required.' });
+    const body = req.body || {};
+    const receiptNumber = body.receiptNumber ?? body.receipt_number ?? '';
+    const identifier = body.identifier ?? body.tdn ?? body.taxDeclarationNumber ?? body.tax_declaration_number ?? '';
+    const payor = body.payor ?? body.ownerName ?? body.owner_name ?? '';
+
+    // The Payment Ledger contains rows coming from two different sources:
+    // citizen_rpt_payments (MASTER) and citizen_rpt_applications (APPLICATION).
+    // Older/client-side rows may not carry sourceType/sourceId, so derive a
+    // stable archive key instead of rejecting an otherwise valid payment.
+    // Accept both the new payload fields and older ledger-row shapes.
+    // archiveKey is supported as a final fallback because the frontend can
+    // still identify a payment even when an older row has no numeric id.
+    let sourceType = String(
+      body.sourceType ??
+      body.source_type ??
+      ''
+    ).trim().toUpperCase();
+
+    let sourceId = String(
+      body.sourceId ??
+      body.source_id ??
+      body.paymentId ??
+      body.payment_id ??
+      body.applicationId ??
+      body.application_id ??
+      body.id ??
+      ''
+    ).trim();
+
+    const archiveKey = String(
+      body.archiveKey ??
+      body.archive_key ??
+      ''
+    ).trim();
+
+    // If the client sends "MASTER:<id>" or "APPLICATION:<id>",
+    // use that as the archive identity.
+    if ((!sourceType || !sourceId) && archiveKey.includes(':')) {
+      const separator = archiveKey.indexOf(':');
+      const keyType = archiveKey.slice(0, separator).trim().toUpperCase();
+      const keyId = archiveKey.slice(separator + 1).trim();
+
+      if (!sourceType && (keyType === 'MASTER' || keyType === 'APPLICATION')) {
+        sourceType = keyType;
+      }
+
+      if (!sourceId && keyId) {
+        sourceId = keyId;
+      }
+    }
+
+    if (!sourceType) {
+      const identifierText = String(identifier).toUpperCase();
+      sourceType = identifierText.startsWith('RPT-QC-')
+        ? 'APPLICATION'
+        : 'MASTER';
+    }
+
+    // Only the two known source types are valid for this archive table.
+    if (sourceType !== 'MASTER' && sourceType !== 'APPLICATION') {
+      res.status(400).json({
+        message: 'Invalid payment ledger source type.'
+      });
+      return;
+    }
+
+    if (!sourceId) {
+      // Receipt numbers and identifiers are available for the existing
+      // settled ledger rows, so use them when a database id is unavailable.
+      sourceId = String(
+        receiptNumber ||
+        identifier ||
+        archiveKey ||
+        ''
+      ).trim();
+    }
+
+    if (!sourceId) {
+      res.status(400).json({
+        message: 'A valid payment identifier is required to archive this ledger entry.'
+      });
       return;
     }
 
@@ -1844,7 +1922,7 @@ export async function archiveRptPaymentLedgerEntry(
                      payor = EXCLUDED.payor,
                      archived_at = CURRENT_TIMESTAMP
        RETURNING *`,
-      [String(sourceType).toUpperCase(), String(sourceId), receiptNumber || '', identifier || '', payor || '']
+      [sourceType, sourceId, String(receiptNumber), String(identifier), String(payor)]
     );
 
     res.status(201).json(result.rows[0]);

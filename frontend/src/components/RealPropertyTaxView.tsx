@@ -405,11 +405,19 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
       method: 'POST',
       headers,
       body: JSON.stringify({
-        sourceType: pay.sourceType,
-        sourceId: String(pay.sourceId),
-        receiptNumber: pay.receiptNumber,
-        identifier: pay.identifier,
-        payor: pay.payor,
+        // Always send a concrete archive key. Some older ledger records may
+        // not have sourceId mapped, so fall back to the row id / receipt.
+        sourceType: pay.sourceType || (String(pay.identifier || '').toUpperCase().startsWith('RPT-QC-') ? 'APPLICATION' : 'MASTER'),
+        sourceId: String(
+          pay.sourceId ??
+          pay.receiptNumber ??
+          pay.identifier ??
+          pay.archiveKey ??
+          ''
+        ),
+        receiptNumber: pay.receiptNumber || '',
+        identifier: pay.identifier || '',
+        payor: pay.payor || '',
       }),
     });
     if (!response.ok) {
