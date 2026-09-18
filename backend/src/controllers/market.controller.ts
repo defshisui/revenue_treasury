@@ -356,134 +356,255 @@ export async function updateMarketLease(req: Request, res: Response): Promise<vo
   const rawParamId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = String(rawParamId || '').trim();
   const body = req.body as any;
-  const firstName = body.firstName || body.first_name || 'Vendor';
-  const lastName = body.lastName || body.last_name || 'Owner';
-  const marketName = body.marketName || body.market_name || 'Commonwealth Public Market';
-  const section = body.section || 'General Section';
-  const stallNumber = body.stallNumber || body.stall_number || '1';
-  const email = body.email || null;
-  const leaseStatus = body.leaseStatus || body.lease_status || 'Active';
-  const amountDue = body.amountDue !== undefined ? body.amountDue : (body.amount_due !== undefined ? body.amount_due : 0);
-  const helperApprovalStatus = body.helperApprovalStatus || body.helper_approval_status || 'Pending';
-  const advancePaymentStatus = body.advancePaymentStatus || body.advance_payment_status || 'Requested';
-  const paymentStatus = body.paymentStatus || body.payment_status || 'Pending Payment';
+
+  const targetId = id || String(body.leaseId || body.lease_id || body.id || '').trim();
+
+  if (!targetId) {
+    res.status(400).json({ message: 'Lease ID is required to update this record.' });
+    return;
+  }
+
+  const firstName = String(body.firstName ?? body.first_name ?? '').trim();
+  const lastName = String(body.lastName ?? body.last_name ?? '').trim();
+  const marketName = String(body.marketName ?? body.market_name ?? '').trim();
+  const section = String(body.section ?? '').trim();
+  const stallNumber = String(body.stallNumber ?? body.stall_number ?? '').trim();
+
+  if (!firstName || !lastName || !marketName || !section || !stallNumber) {
+    res.status(400).json({
+      message: 'First name, last name, market name, section, and stall number are required.',
+    });
+    return;
+  }
+
+  const leaseStatus = String(
+    body.leaseStatus ?? body.lease_status ?? 'Active'
+  ).trim();
+
+  const rawAmount =
+    body.amountDue !== undefined
+      ? body.amountDue
+      : body.amount_due !== undefined
+        ? body.amount_due
+        : 0;
+
+  const amountDue = Number(rawAmount);
+  if (!Number.isFinite(amountDue)) {
+    res.status(400).json({ message: 'Amount Due must be a valid number.' });
+    return;
+  }
+
+  const helperApprovalStatus = String(
+    body.helperApprovalStatus ??
+      body.helper_approval_status ??
+      'Pending'
+  ).trim();
+
+  const advancePaymentStatus = String(
+    body.advancePaymentStatus ??
+      body.advance_payment_status ??
+      'Requested'
+  ).trim();
+
+  const paymentStatus = String(
+    body.paymentStatus ??
+      body.payment_status ??
+      'Pending Payment'
+  ).trim();
 
   const resolvedPaymentMethod = resolvePaymentMethod(body);
-  const officialReceiptNumber = body.officialReceiptNumber || body.official_receipt_number || null;
-  const paymentReference = body.paymentReference || body.payment_reference || null;
+
+  const officialReceiptNumber =
+    body.officialReceiptNumber !== undefined
+      ? body.officialReceiptNumber || null
+      : body.official_receipt_number !== undefined
+        ? body.official_receipt_number || null
+        : null;
+
+  const paymentReference =
+    body.paymentReference !== undefined
+      ? body.paymentReference || null
+      : body.payment_reference !== undefined
+        ? body.payment_reference || null
+        : null;
+
+  const email =
+    body.email !== undefined && body.email !== ''
+      ? String(body.email).trim()
+      : null;
+
+  const paymentProof =
+    body.paymentProof !== undefined
+      ? body.paymentProof
+      : body.payment_proof !== undefined
+        ? body.payment_proof
+        : null;
+
+  const mismatchNotes =
+    body.mismatchNotes !== undefined
+      ? body.mismatchNotes
+      : body.mismatch_notes !== undefined
+        ? body.mismatch_notes
+        : null;
+
   let safePaymentDate: string | null = null;
-  const rawDate = body.paymentDate || body.payment_date;
-  if (rawDate && typeof rawDate === 'string' && rawDate.trim() !== '' && rawDate !== 'null' && rawDate !== 'undefined') {
-    const d = new Date(rawDate);
-    if (!isNaN(d.getTime())) {
-      safePaymentDate = d.toISOString();
+  const rawDate = body.paymentDate ?? body.payment_date;
+
+  if (
+    rawDate !== undefined &&
+    rawDate !== null &&
+    String(rawDate).trim() !== '' &&
+    String(rawDate) !== 'null' &&
+    String(rawDate) !== 'undefined'
+  ) {
+    const parsedDate = new Date(String(rawDate));
+
+    if (!Number.isNaN(parsedDate.getTime())) {
+      safePaymentDate = parsedDate.toISOString();
     }
   }
 
-  const paymentProof = body.paymentProof !== undefined ? body.paymentProof : (body.payment_proof !== undefined ? body.payment_proof : null);
-  const mismatchNotes = body.mismatchNotes !== undefined ? body.mismatchNotes : (body.mismatch_notes !== undefined ? body.mismatch_notes : null);
-  const targetId = id || body.leaseId || body.id;
-
   try {
-    let result = await pool.query(
+    /*
+     * Build the UPDATE from columns that actually exist in the Railway
+     * database. This makes Save Changes tolerant of older market_leases
+     * schemas while still saving every supported field.
+     */
+    const columnResult = await pool.query(
+      `SELECT column_name
+         FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'market_leases'`
+    );
+
+    const availableColumns = new Set(
+      columnResult.rows.map((row: any) => String(row.column_name))
+    );
+
+    const fields: Array<{ column: string; value: any }> = [
+      { column: 'first_name', value: firstName },
+      { column: 'last_name', value: lastName },
+      { column: 'market_name', value: marketName },
+      { column: 'section', value: section },
+      { column: 'stall_number', value: stallNumber },
+      { column: 'lease_status', value: leaseStatus },
+      { column: 'amount_due', value: amountDue },
+      { column: 'helper_approval_status', value: helperApprovalStatus },
+      { column: 'advance_payment_status', value: advancePaymentStatus },
+      { column: 'payment_status', value: paymentStatus },
+      { column: 'payment_method', value: resolvedPaymentMethod },
+      { column: 'official_receipt_number', value: officialReceiptNumber },
+      { column: 'payment_reference', value: paymentReference },
+      { column: 'payment_date', value: safePaymentDate },
+      { column: 'payment_proof', value: paymentProof },
+      { column: 'mismatch_notes', value: mismatchNotes },
+      { column: 'email', value: email },
+    ];
+
+    const updateFields = fields.filter((field) =>
+      availableColumns.has(field.column)
+    );
+
+    if (updateFields.length === 0) {
+      res.status(500).json({
+        message: 'The market_leases table has no editable columns available.',
+      });
+      return;
+    }
+
+    const setParts = updateFields.map(
+      (field, index) => `"${field.column}" = $${index + 1}`
+    );
+
+    const values = updateFields.map((field) => field.value);
+    const targetParam = values.length + 1;
+    values.push(targetId);
+
+    /*
+     * Match either the public lease_id or PostgreSQL numeric id.
+     * Casting id to text avoids changing the parameter type.
+     */
+    const result = await pool.query(
       `UPDATE market_leases
-       SET first_name=$1, last_name=$2, market_name=$3, section=$4, stall_number=$5,
-           lease_status=$6, amount_due=$7, helper_approval_status=$8,
-           advance_payment_status=$9, payment_status=$10, payment_method=$11,
-           official_receipt_number = COALESCE($12, official_receipt_number),
-           payment_reference = COALESCE($13, payment_reference),
-           payment_date = CASE WHEN $14 IS NOT NULL THEN $14::timestamp ELSE payment_date END,
-           payment_proof = CASE WHEN $15 IS NOT NULL THEN $15 ELSE payment_proof END,
-           mismatch_notes = CASE
-             WHEN $10 = 'Paid' AND ($16 IS NULL OR $16 = '') THEN NULL
-             WHEN $16 IS NOT NULL THEN $16
-             ELSE mismatch_notes
-           END,
-           email = COALESCE($18, email)
-       WHERE lease_id=$17 OR id::text=$17
-       RETURNING *`,
-      [firstName, lastName, marketName, section, stallNumber,
-        leaseStatus, amountDue || 0, helperApprovalStatus,
-        advancePaymentStatus, paymentStatus, resolvedPaymentMethod,
-        officialReceiptNumber, paymentReference, safePaymentDate, paymentProof, mismatchNotes, targetId, email]
+          SET ${setParts.join(', ')}
+        WHERE lease_id = $${targetParam}
+           OR id::text = $${targetParam}
+        RETURNING *`,
+      values
     );
 
     if (result.rows.length === 0) {
-      result = await pool.query(
-        `INSERT INTO market_leases
-         (lease_id, first_name, last_name, email, market_name, section, stall_number,
-          lease_status, amount_due, helper_approval_status, advance_payment_status,
-          payment_status, payment_method, official_receipt_number, payment_reference,
-          payment_proof, mismatch_notes, payment_date, created_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,
-                 CASE WHEN $18 IS NOT NULL THEN $18::timestamp ELSE NULL END, NOW())
-         ON CONFLICT (lease_id) DO UPDATE
-         SET lease_status = EXCLUDED.lease_status,
-             payment_status = EXCLUDED.payment_status,
-             amount_due = EXCLUDED.amount_due,
-             official_receipt_number = COALESCE(EXCLUDED.official_receipt_number, market_leases.official_receipt_number),
-             payment_reference = COALESCE(EXCLUDED.payment_reference, market_leases.payment_reference)
-         RETURNING *`,
-        [
-          body.leaseId || targetId,
-          firstName, lastName, email,
-          marketName, section, stallNumber,
-          leaseStatus, amountDue || 0,
-          helperApprovalStatus, advancePaymentStatus,
-          paymentStatus, resolvedPaymentMethod,
-          officialReceiptNumber, paymentReference,
-          paymentProof, mismatchNotes,
-          safePaymentDate
-        ]
-      );
+      res.status(404).json({
+        message: `Lease record '${targetId}' was not found in the database.`,
+      });
+      return;
     }
 
     const row = result.rows[0];
+
     const formatted = {
-      id: row.id.toString(),
+      id: row.id !== undefined && row.id !== null ? String(row.id) : targetId,
       leaseId: row.lease_id,
       firstName: row.first_name,
       lastName: row.last_name,
-      email: row.email || null,
+      email: row.email ?? null,
       marketName: row.market_name,
       section: row.section,
       stallNumber: row.stall_number,
       leaseStatus: row.lease_status,
-      amountDue: parseFloat(row.amount_due) || 0,
+      amountDue: Number(row.amount_due) || 0,
       helperApprovalStatus: row.helper_approval_status,
       advancePaymentStatus: row.advance_payment_status,
       paymentStatus: row.payment_status,
       paymentMethod: autoDetectPaymentMethod(row),
-      officialReceiptNumber: row.official_receipt_number || null,
-      paymentReference: row.payment_reference || null,
-      paymentDate: row.payment_date || null,
-      paymentProof: row.payment_proof || null,
-      mismatchNotes: row.mismatch_notes || null,
+      officialReceiptNumber: row.official_receipt_number ?? null,
+      paymentReference: row.payment_reference ?? null,
+      paymentDate: row.payment_date ?? null,
+      paymentProof: row.payment_proof ?? null,
+      mismatchNotes: row.mismatch_notes ?? null,
       createdAt: row.created_at,
     };
 
-    // Audit logging must not make a successfully saved lease look like
-    // a failed database update. If audit logging fails, keep the lease update.
+    // Audit failure must never turn a successful database update into a 500.
     try {
-      await recordAudit(req, 'AUD-MARKET-UPDATE', 'system-admin@lgu.gov.ph', 'admin',
-        'Market Module', 'STALL_APPLICATION_UPDATED', 'INFO', null,
-        `Updated lease record for Stall ${stallNumber} (${id}) - Payment Status: ${paymentStatus}`);
-    } catch (auditErr) {
-      console.warn('Market lease updated, but audit logging failed:', auditErr);
+      await recordAudit(
+        req,
+        'AUD-MARKET-UPDATE',
+        email || 'system-admin@lgu.gov.ph',
+        'admin',
+        'Market Module',
+        'STALL_APPLICATION_UPDATED',
+        'INFO',
+        null,
+        `Updated lease record ${row.lease_id || targetId} for Stall ${row.stall_number || stallNumber}`
+      );
+    } catch (auditError) {
+      console.warn(
+        'Market lease updated successfully, but audit logging failed:',
+        auditError
+      );
     }
 
-    res.status(200).json({ message: 'Lease updated successfully', lease: formatted });
+    res.status(200).json({
+      success: true,
+      message: 'Lease updated successfully',
+      lease: formatted,
+    });
   } catch (err: any) {
     console.error('Error updating market lease:', err);
 
-    // Return the real PostgreSQL/API error so the Admin UI can show
-    // what actually prevented Save Changes from completing.
+    /*
+     * Send the actual PostgreSQL error as message so marketService.ts
+     * and the Admin UI can display the real reason if something unusual
+     * still exists in the Railway database.
+     */
     res.status(500).json({
-      message: 'Failed to update market lease in database.',
+      success: false,
+      message: err?.message || 'Failed to update market lease in database.',
       error: err?.message || 'Unknown database error',
-      code: err?.code || undefined,
-      detail: err?.detail || undefined,
-      hint: err?.hint || undefined,
+      code: err?.code,
+      detail: err?.detail,
+      hint: err?.hint,
     });
   }
 }

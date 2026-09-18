@@ -254,8 +254,8 @@ export async function updateLease(
 
       if (!res.ok) {
         const errorMessage =
-          responseBody.message ||
           responseBody.error ||
+          responseBody.message ||
           responseText ||
           `Failed to update lease in database (Status: ${res.status})`;
 
