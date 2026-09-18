@@ -243,7 +243,7 @@ Generated On: ${new Date().toLocaleDateString()}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
             <div>
               <div className="flex justify-between items-start mb-2">
-                <h3 className="text-base font-bold text-slate-900 dark:text-white m-0">Daily Collection Report</h3>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white m-0">Collection Report</h3>
                 <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
                   Synced with Market DB
                 </span>
