@@ -16,6 +16,9 @@ import {
   createRptPayment,
   createGroupRptPayment,
   getRptPayments,
+  getRptPaymentLedgerArchives,
+  archiveRptPaymentLedgerEntry,
+  restoreRptPaymentLedgerEntry,
 } from '../controllers/rpt.controller.js';
 
 const router = Router();
@@ -89,6 +92,24 @@ router.post(
 router.get(
   '/citizen-rpt-payments',
   getRptPayments
+);
+
+router.get(
+  '/rpt-payment-ledger-archives',
+  authenticateToken,
+  getRptPaymentLedgerArchives
+);
+
+router.post(
+  '/rpt-payment-ledger-archives',
+  authenticateToken,
+  archiveRptPaymentLedgerEntry
+);
+
+router.delete(
+  '/rpt-payment-ledger-archives/:key',
+  authenticateToken,
+  restoreRptPaymentLedgerEntry
 );
 
 export default router;

@@ -492,6 +492,26 @@ export async function initializeDatabase(): Promise<void> {
 
       ALTER TABLE citizen_rpt_payments
       ADD COLUMN IF NOT EXISTS quarter_coverage VARCHAR(50);
+
+      -- ==========================================================
+      -- RPT PAYMENT LEDGER ARCHIVER
+      -- ==========================================================
+
+      CREATE TABLE IF NOT EXISTS rpt_payment_ledger_archives (
+          id SERIAL PRIMARY KEY,
+          source_type VARCHAR(30) NOT NULL,
+          source_id VARCHAR(100) NOT NULL,
+          receipt_number VARCHAR(150),
+          identifier VARCHAR(150),
+          payor VARCHAR(255),
+          archived_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE (source_type, source_id)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_rpt_payment_ledger_archives_source
+        ON rpt_payment_ledger_archives(source_type, source_id);
+      CREATE INDEX IF NOT EXISTS idx_rpt_payment_ledger_archives_date
+        ON rpt_payment_ledger_archives(archived_at DESC);
     `);
 
     await pool.query(`

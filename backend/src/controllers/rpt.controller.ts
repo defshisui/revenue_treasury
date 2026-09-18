@@ -1806,6 +1806,82 @@ export async function createGroupRptPayment(
   }
 }
 
+export async function getRptPaymentLedgerArchives(
+  _req: Request,
+  res: Response
+): Promise<void> {
+  try {
+    const result = await pool.query(
+      `SELECT id, source_type, source_id, receipt_number, identifier, payor, archived_at
+       FROM rpt_payment_ledger_archives
+       ORDER BY archived_at DESC`
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching RPT payment ledger archives:', err);
+    res.status(500).json({ message: 'Error loading payment ledger archives' });
+  }
+}
+
+export async function archiveRptPaymentLedgerEntry(
+  req: Request,
+  res: Response
+): Promise<void> {
+  try {
+    const { sourceType, sourceId, receiptNumber, identifier, payor } = req.body || {};
+    if (!sourceType || !sourceId) {
+      res.status(400).json({ message: 'sourceType and sourceId are required.' });
+      return;
+    }
+
+    const result = await pool.query(
+      `INSERT INTO rpt_payment_ledger_archives
+        (source_type, source_id, receipt_number, identifier, payor)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (source_type, source_id)
+       DO UPDATE SET receipt_number = EXCLUDED.receipt_number,
+                     identifier = EXCLUDED.identifier,
+                     payor = EXCLUDED.payor,
+                     archived_at = CURRENT_TIMESTAMP
+       RETURNING *`,
+      [String(sourceType).toUpperCase(), String(sourceId), receiptNumber || '', identifier || '', payor || '']
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error('Error archiving RPT payment ledger entry:', err);
+    res.status(500).json({ message: 'Failed to archive payment ledger entry.' });
+  }
+}
+
+export async function restoreRptPaymentLedgerEntry(
+  req: Request,
+  res: Response
+): Promise<void> {
+  try {
+    const key = String(req.params.key || '');
+    const separator = key.indexOf(':');
+    if (separator <= 0) {
+      res.status(400).json({ message: 'Invalid payment ledger archive key.' });
+      return;
+    }
+
+    const sourceType = key.slice(0, separator).toUpperCase();
+    const sourceId = key.slice(separator + 1);
+
+    await pool.query(
+      `DELETE FROM rpt_payment_ledger_archives
+       WHERE source_type = $1 AND source_id = $2`,
+      [sourceType, sourceId]
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Error restoring RPT payment ledger entry:', err);
+    res.status(500).json({ message: 'Failed to restore payment ledger entry.' });
+  }
+}
+
 export async function getRptPayments(
   _req: Request,
   res: Response

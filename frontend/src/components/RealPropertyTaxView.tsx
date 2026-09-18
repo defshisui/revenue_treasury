@@ -70,6 +70,7 @@ export interface PaymentLedgerRecord {
   paymentOption?: string;
   paymongoSessionId?: string;
   status: string;
+  archived?: boolean;
 }
 
 export interface ApplicationDocument {
@@ -263,6 +264,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
   const [isSubmittingSettle, setIsSubmittingSettle] = useState<boolean>(false);
 
   const [ledgerCategoryFilter, setLedgerCategoryFilter] = useState<'ALL' | 'MASTER' | 'APPLICATION'>('ALL');
+  const [paymentLedgerTab, setPaymentLedgerTab] = useState<'Active' | 'Archived'>('Active');
+  const [paymentLedgerArchives, setPaymentLedgerArchives] = useState<Set<string>>(new Set());
 
   const triggerToast = (text: string, type: 'success' | 'warning' | 'error') => {
     setToastMessage({ text, type });
@@ -374,6 +377,86 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
       console.error('Failed to load payments ledger:', e);
     }
   }, []);
+
+  const loadPaymentLedgerArchives = useCallback(async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/rpt-payment-ledger-archives`);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const raw = await response.json();
+      const rows: any[] = Array.isArray(raw) ? raw : Array.isArray(raw?.data) ? raw.data : [];
+      setPaymentLedgerArchives(new Set(rows.map((row) => `${String(row.source_type || row.sourceType || '')}:${String(row.source_id || row.sourceId || '')}`)));
+    } catch (e) {
+      console.error('Failed to load payment ledger archives:', e);
+    }
+  }, []);
+
+  const archivePaymentLedgerEntry = async (pay: {
+    archiveKey: string;
+    sourceType: 'MASTER' | 'APPLICATION';
+    sourceId: string | number;
+    receiptNumber: string;
+    identifier: string;
+    payor: string;
+  }) => {
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    const headers: HeadersInit = { 'Content-Type': 'application/json' };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const response = await fetch(`${API_BASE_URL}/rpt-payment-ledger-archives`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        sourceType: pay.sourceType,
+        sourceId: String(pay.sourceId),
+        receiptNumber: pay.receiptNumber,
+        identifier: pay.identifier,
+        payor: pay.payor,
+      }),
+    });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.message || `Failed to archive payment ledger entry (HTTP ${response.status}).`);
+    }
+  };
+
+  const restorePaymentLedgerEntry = async (pay: { archiveKey: string }) => {
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    const headers: HeadersInit = {};
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const response = await fetch(`${API_BASE_URL}/rpt-payment-ledger-archives/${encodeURIComponent(pay.archiveKey)}`, {
+      method: 'DELETE',
+      headers,
+    });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.message || `Failed to restore payment ledger entry (HTTP ${response.status}).`);
+    }
+  };
+
+  const handleArchivePaymentLedgerEntry = async (pay: any) => {
+    if (!(await confirmAction(`Are you sure you want to move payment ${pay.receiptNumber} for ${pay.payor} to the Archiver?`))) return;
+    try {
+      await archivePaymentLedgerEntry(pay);
+      setPaymentLedgerArchives((prev) => new Set(prev).add(pay.archiveKey));
+      triggerToast(`Payment ${pay.receiptNumber} moved to Archiver.`, 'success');
+    } catch (err: any) {
+      triggerToast(err?.message || 'Failed to archive payment ledger entry.', 'error');
+    }
+  };
+
+  const handleRestorePaymentLedgerEntry = async (pay: any) => {
+    if (!(await confirmAction(`Are you sure you want to restore payment ${pay.receiptNumber} to the Active Ledger?`))) return;
+    try {
+      await restorePaymentLedgerEntry(pay);
+      setPaymentLedgerArchives((prev) => {
+        const next = new Set(prev);
+        next.delete(pay.archiveKey);
+        return next;
+      });
+      triggerToast(`Payment ${pay.receiptNumber} restored to the Active Ledger.`, 'success');
+    } catch (err: any) {
+      triggerToast(err?.message || 'Failed to restore payment ledger entry.', 'error');
+    }
+  };
 
   const recordPaymentLedgerEntry = async (payload: {
     taxDeclarationNumber: string;
@@ -506,15 +589,16 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
   }, []);
 
   const refreshAllData = useCallback(async () => {
-    await Promise.all([loadMasterRecords(), loadPayments(), loadApplications()]);
+    await Promise.all([loadMasterRecords(), loadPayments(), loadApplications(), loadPaymentLedgerArchives()]);
     triggerToast('RPT Admin data synchronized.', 'success');
-  }, [loadMasterRecords, loadPayments, loadApplications]);
+  }, [loadMasterRecords, loadPayments, loadApplications, loadPaymentLedgerArchives]);
 
   useEffect(() => {
     loadMasterRecords();
     loadPayments();
     loadApplications();
-  }, [loadMasterRecords, loadPayments, loadApplications]);
+    loadPaymentLedgerArchives();
+  }, [loadMasterRecords, loadPayments, loadApplications, loadPaymentLedgerArchives]);
 
   const currentApp = useMemo(() => {
     return applications.find((app) => app.id === selectedAppId);
@@ -1261,6 +1345,9 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
       paymentDate: string;
       amount: number;
       type: 'MASTER' | 'APPLICATION';
+      sourceId: string | number;
+      archiveKey: string;
+      archived: boolean;
     }> = [];
 
     paymentsLedger.forEach((p) => {
@@ -1274,6 +1361,9 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         paymentDate: p.paymentDate || '',
         amount: Number(p.amountPaid || 0),
         type: 'MASTER',
+        sourceId: p.id,
+        archiveKey: `MASTER:${String(p.id)}`,
+        archived: paymentLedgerArchives.has(`MASTER:${String(p.id)}`),
       });
     });
 
@@ -1289,6 +1379,9 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
           paymentDate: a.paymentDate || a.submissionDate || '',
           amount: Number(a.paymentAmount || 0),
           type: 'APPLICATION',
+          sourceId: a.id,
+          archiveKey: `APPLICATION:${String(a.id)}`,
+          archived: paymentLedgerArchives.has(`APPLICATION:${String(a.id)}`),
         });
       }
     });
@@ -1298,7 +1391,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
       const dateB = b.paymentDate ? new Date(b.paymentDate).getTime() : 0;
       return dateB - dateA;
     });
-  }, [paymentsLedger, applications]);
+  }, [paymentsLedger, applications, paymentLedgerArchives]);
 
   const handleDigitalRelease = () => {
     if (!currentApp) return;
@@ -2367,6 +2460,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex space-x-1 bg-slate-200/60 dark:bg-slate-800/60 p-1.5 rounded-xl w-full sm:w-auto">
               <button
+                type="button"
                 onClick={() => setLedgerCategoryFilter('ALL')}
                 className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${ledgerCategoryFilter === 'ALL'
                   ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
@@ -2376,8 +2470,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                 <i className="fa-solid fa-receipt text-xs"></i>
                 <span>All Settled</span>
               </button>
-
               <button
+                type="button"
                 onClick={() => setLedgerCategoryFilter('MASTER')}
                 className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${ledgerCategoryFilter === 'MASTER'
                   ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
@@ -2387,8 +2481,8 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                 <i className="fa-solid fa-landmark text-xs"></i>
                 <span>Annual Taxes</span>
               </button>
-
               <button
+                type="button"
                 onClick={() => setLedgerCategoryFilter('APPLICATION')}
                 className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${ledgerCategoryFilter === 'APPLICATION'
                   ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
@@ -2406,6 +2500,31 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                 {formatCurrency(metrics.totalPaidRevenue)}
               </strong>
             </div>
+          </div>
+
+          <div className="flex items-center gap-2 bg-slate-200/60 dark:bg-slate-800/60 p-1.5 rounded-xl w-fit">
+            <button
+              type="button"
+              onClick={() => setPaymentLedgerTab('Active')}
+              className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-2 ${paymentLedgerTab === 'Active'
+                ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                }`}
+            >
+              <i className="fa-solid fa-list-check text-xs"></i>
+              <span>Active Ledger</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setPaymentLedgerTab('Archived')}
+              className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-2 ${paymentLedgerTab === 'Archived'
+                ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                }`}
+            >
+              <i className="fa-solid fa-box-archive text-xs"></i>
+              <span>Archiver</span>
+            </button>
           </div>
 
           <div className="relative w-full sm:w-80">
@@ -2432,12 +2551,15 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                     <th className="p-4">Payment Date</th>
                     <th className="p-4 text-right">Amount Settled</th>
                     <th className="p-4 text-center">Status</th>
+                    <th className="p-4 text-center">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                   {combinedSettledPayments
                     .filter((pay) => {
                       if (ledgerCategoryFilter !== 'ALL' && pay.type !== ledgerCategoryFilter) return false;
+                      if (paymentLedgerTab === 'Active' && pay.archived) return false;
+                      if (paymentLedgerTab === 'Archived' && !pay.archived) return false;
                       const lower = paymentSearch.toLowerCase();
                       return (
                         !lower ||
@@ -2448,7 +2570,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                       );
                     })
                     .map((pay) => (
-                      <tr key={pay.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition">
+                      <tr key={pay.archiveKey} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition">
                         <td className="p-4 font-mono font-bold text-emerald-600 dark:text-emerald-400">
                           {pay.receiptNumber}
                         </td>
@@ -2459,18 +2581,14 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                           {pay.payor}
                         </td>
                         <td className="p-4 text-slate-600 dark:text-slate-300">
-                          <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${pay.type === 'MASTER'
-                              ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300'
-                              : 'bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300'
-                              }`}
-                          >
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${pay.type === 'MASTER'
+                            ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300'
+                            : 'bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300'
+                            }`}>
                             {pay.category}
                           </span>
                         </td>
-                        <td className="p-4 text-slate-600 dark:text-slate-300">
-                          {pay.paymentMethod}
-                        </td>
+                        <td className="p-4 text-slate-600 dark:text-slate-300">{pay.paymentMethod}</td>
                         <td className="p-4 font-mono text-slate-500">
                           {pay.paymentDate ? new Date(pay.paymentDate).toLocaleDateString() : 'Recorded'}
                         </td>
@@ -2478,15 +2596,46 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                           {formatCurrency(pay.amount)}
                         </td>
                         <td className="p-4 text-center">
-                          <span className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 px-2.5 py-1 rounded-full text-[10px] font-extrabold flex items-center justify-center gap-1">
+                          <span className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 px-2.5 py-1 rounded-full text-[10px] font-extrabold inline-flex items-center justify-center gap-1">
                             <i className="fa-solid fa-circle-check text-[9px]"></i> Settled
                           </span>
+                        </td>
+                        <td className="p-4 text-center">
+                          {pay.archived ? (
+                            <button
+                              type="button"
+                              onClick={() => handleRestorePaymentLedgerEntry(pay)}
+                              className="px-2.5 py-1.5 rounded-lg bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 text-[10px] font-bold hover:bg-blue-100 dark:hover:bg-blue-900/70 transition cursor-pointer"
+                              title="Restore to Active Ledger"
+                            >
+                              <i className="fa-solid fa-rotate-left mr-1"></i> Restore
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleArchivePaymentLedgerEntry(pay)}
+                              className="px-2.5 py-1.5 rounded-lg bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 text-[10px] font-bold hover:bg-amber-100 dark:hover:bg-amber-900/70 transition cursor-pointer"
+                              title="Move to Archiver"
+                            >
+                              <i className="fa-solid fa-box-archive mr-1"></i> Archive
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}
                 </tbody>
               </table>
             </div>
+            {combinedSettledPayments.filter((pay) => {
+              if (ledgerCategoryFilter !== 'ALL' && pay.type !== ledgerCategoryFilter) return false;
+              return paymentLedgerTab === 'Active' ? !pay.archived : pay.archived;
+            }).length === 0 && (
+              <div className="p-8 text-center text-xs text-slate-400">
+                {paymentLedgerTab === 'Archived'
+                  ? 'No archived payment ledger records found in the archiver.'
+                  : 'No active settled payment ledger records found matching the selected filters.'}
+              </div>
+            )}
           </div>
         </section>
       )}
