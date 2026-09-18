@@ -1334,7 +1334,13 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
       } as ExtendedApplicationRecord) : app));
       setIsCertificateModalOpen(false);
       triggerToast(`Certificate ${certificateData.certificateNumber} was issued and sent to ${currentApp.applicantEmail || currentApp.email || 'the citizen email address'}.`, 'success');
-      await loadApplications();
+      // The backend also syncs the issued application into
+      // lgu_rpt_records (Master Database). Reload it immediately so the
+      // new/updated master record appears without a page refresh.
+      await Promise.all([
+        loadApplications(),
+        loadMasterRecords(),
+      ]);
     } catch (err: any) {
       console.error('Failed to issue RPT certificate:', err);
       triggerToast(err?.message || 'Failed to issue and email the certificate.', 'error');

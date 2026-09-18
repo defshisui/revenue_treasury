@@ -549,6 +549,51 @@ export async function updateRptApplicationStatus(
       ? 'Payment Completed'
       : undefined);
 
+  // When a certificate is issued, use the certificate values as fallbacks
+  // for the official receipt and payment fields.
+  const certificate = (
+    certificateData &&
+    typeof certificateData === 'object'
+  )
+    ? certificateData as Record<string, any>
+    : null;
+
+  const resolvedOfficialReceiptNumber =
+    officialReceiptNumber ||
+    certificate?.certificateNumber ||
+    null;
+
+  const resolvedPaymentMethod =
+    paymentMethod ||
+    certificate?.paymentMethod ||
+    null;
+
+  const resolvedPaymentReference =
+    paymentReference ||
+    certificate?.paymentReference ||
+    null;
+
+  const certificateAmountRaw =
+    certificate?.grandTotal ??
+    certificate?.amount ??
+    null;
+
+  const certificateAmount =
+    certificateAmountRaw === null ||
+    certificateAmountRaw === undefined ||
+    certificateAmountRaw === ''
+      ? null
+      : Number(certificateAmountRaw);
+
+  const resolvedPaymentAmount =
+    numericPaymentAmount !== null
+      ? numericPaymentAmount
+      : (
+        Number.isFinite(certificateAmount as number)
+          ? certificateAmount as number
+          : null
+      );
+
   try {
     const result = await pool.query(
       `UPDATE rpt_applications
@@ -573,12 +618,12 @@ export async function updateRptApplicationStatus(
         finalStatus,
         notes,
         assignedOfficer,
-        numericPaymentAmount,
+        resolvedPaymentAmount,
         paymentStatus,
         paymentDueDate || null,
-        officialReceiptNumber || null,
-        paymentMethod || null,
-        paymentReference || null,
+        resolvedOfficialReceiptNumber,
+        resolvedPaymentMethod,
+        resolvedPaymentReference,
         paymentDate || null,
         id,
         certificateData ? JSON.stringify(certificateData) : null
@@ -590,6 +635,176 @@ export async function updateRptApplicationStatus(
         message: 'RPT application not found'
       });
       return;
+    }
+
+    /*
+     * rpt_applications and lgu_rpt_records are separate tables.
+     * Previously, issuing a certificate updated only rpt_applications,
+     * so the application never appeared in Master Database.
+     *
+     * Mirror an issued certificate into lgu_rpt_records.  The TDN is the
+     * master-record key, so an existing record is updated instead of
+     * creating a duplicate.
+     */
+    if (finalStatus === 'Digital Certificate Issued' && certificateData) {
+      const application = result.rows[0];
+
+      const masterTdn = String(
+        certificate?.taxDeclarationNumber ||
+        application.tax_declaration_number ||
+        ''
+      ).trim();
+
+      if (!masterTdn) {
+        throw new Error(
+          'Tax Declaration Number is required before the issued application can be added to Master Database.'
+        );
+      }
+
+      const masterPin = String(
+        certificate?.pin ||
+        application.pin ||
+        ''
+      ).trim() || null;
+
+      const masterOwner = String(
+        certificate?.registeredOwner ||
+        application.owner_name ||
+        application.applicant_name ||
+        'Taxpayer'
+      ).trim();
+
+      const masterLocation = String(
+        certificate?.propertyAddress ||
+        application.property_location ||
+        'N/A'
+      ).trim();
+
+      const masterBarangay = String(
+        application.barangay ||
+        'Central'
+      ).trim();
+
+      const masterPropertyType = String(
+        application.property_type ||
+        'Residential'
+      ).trim();
+
+      const masterAmount =
+        Number.isFinite(resolvedPaymentAmount as number)
+          ? Number(resolvedPaymentAmount)
+          : Number(application.payment_amount || 0);
+
+      const rawMasterPaymentStatus = String(
+        application.payment_status ||
+        paymentStatus ||
+        (masterAmount > 0 ? 'Paid' : 'Unpaid')
+      ).trim();
+
+      const masterPaymentStatus =
+        rawMasterPaymentStatus === 'Payment Completed' ||
+        rawMasterPaymentStatus === 'Settled'
+          ? 'Paid'
+          : rawMasterPaymentStatus;
+
+      const masterIsPaid =
+        masterPaymentStatus === 'Paid';
+
+      const masterAmountPaid = masterIsPaid
+        ? masterAmount
+        : Number(application.payment_amount || 0);
+
+      const masterTotalAssessment = masterAmount;
+      const masterBalance = masterIsPaid
+        ? 0
+        : Math.max(
+            0,
+            masterTotalAssessment - masterAmountPaid
+          );
+
+      const masterBillingYear = new Date(
+        application.created_at || Date.now()
+      ).getFullYear();
+
+      await pool.query(
+        `INSERT INTO lgu_rpt_records (
+           tax_declaration_number,
+           pin,
+           new_pspin,
+           owner_name,
+           property_location,
+           barangay,
+           property_type,
+           billing_year,
+           quarter,
+           bill_expiry_date,
+           lot_area_sqm,
+           market_value,
+           assessed_value,
+           basic_tax,
+           sef_tax,
+           shttc_applied,
+           penalty,
+           discount,
+           total_assessment,
+           amount_paid,
+           balance,
+           status,
+           payment_status,
+           payment_method,
+           official_receipt_number,
+           payment_reference,
+           payment_date,
+           quarterly_amounts
+         )
+         VALUES (
+           $1, $2, NULL, $3, $4, $5, $6, $7, 'Q1-Q4', NULL,
+           $8, $9, $10, 0, 0, 0, 0, 0, $11, $12, $13,
+           $14, $15, $16, $17, $18, $19, '{}'::jsonb
+         )
+         ON CONFLICT (tax_declaration_number)
+         DO UPDATE SET
+           pin = COALESCE(EXCLUDED.pin, lgu_rpt_records.pin),
+           owner_name = EXCLUDED.owner_name,
+           property_location = EXCLUDED.property_location,
+           barangay = EXCLUDED.barangay,
+           property_type = EXCLUDED.property_type,
+           billing_year = EXCLUDED.billing_year,
+           lot_area_sqm = EXCLUDED.lot_area_sqm,
+           market_value = EXCLUDED.market_value,
+           assessed_value = EXCLUDED.assessed_value,
+           total_assessment = EXCLUDED.total_assessment,
+           amount_paid = EXCLUDED.amount_paid,
+           balance = EXCLUDED.balance,
+           status = EXCLUDED.status,
+           payment_status = EXCLUDED.payment_status,
+           payment_method = COALESCE(EXCLUDED.payment_method, lgu_rpt_records.payment_method),
+           official_receipt_number = COALESCE(EXCLUDED.official_receipt_number, lgu_rpt_records.official_receipt_number),
+           payment_reference = COALESCE(EXCLUDED.payment_reference, lgu_rpt_records.payment_reference),
+           payment_date = COALESCE(EXCLUDED.payment_date, lgu_rpt_records.payment_date)
+         RETURNING *`,
+        [
+          masterTdn,
+          masterPin,
+          masterOwner,
+          masterLocation,
+          masterBarangay,
+          masterPropertyType,
+          masterBillingYear,
+          Number(certificate?.lotArea || 0) || 0,
+          Number(certificate?.marketValue || 0) || 0,
+          Number(certificate?.assessedValue || 0) || 0,
+          masterTotalAssessment,
+          masterAmountPaid,
+          masterBalance,
+          'Digital Certificate Issued',
+          masterPaymentStatus,
+          resolvedPaymentMethod,
+          resolvedOfficialReceiptNumber,
+          resolvedPaymentReference,
+          paymentDate || application.payment_date || null
+        ]
+      );
     }
 
     await recordAudit(
