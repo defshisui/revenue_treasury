@@ -24,21 +24,37 @@ export class EmailService {
   ): Promise<{ success: boolean; messageId?: string }> {
     console.log(`[EmailService] Dispatching email via Brevo HTTPS API to ${toEmail}...`);
 
-    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
-      method: 'POST',
-      headers: {
-        accept: 'application/json',
-        'api-key': apiKey.trim(),
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        sender: { name: fromName, email: fromEmail },
-        to: [{ email: toEmail }],
-        subject,
-        htmlContent,
-        textContent,
-      }),
-    });
+    // Brevo's API should respond quickly after accepting the message.
+    // Do not let a slow network connection keep the login request hanging.
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+
+    let response: Response;
+    try {
+      response = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+          accept: 'application/json',
+          'api-key': apiKey.trim(),
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          sender: { name: fromName, email: fromEmail },
+          to: [{ email: toEmail }],
+          subject,
+          htmlContent,
+          textContent,
+        }),
+        signal: controller.signal,
+      });
+    } catch (error: any) {
+      if (error?.name === 'AbortError') {
+        throw new Error('Brevo API request timed out after 8 seconds.');
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeout);
+    }
 
     const data = (await response.json().catch(() => ({}))) as any;
 
@@ -429,7 +445,7 @@ export class EmailService {
                         color:#991b1b;
                       "
                     >
-                       This code expires in 1 minutes.
+                       This code expires in 1 minute.
                     </div>
                     <div
                       style="
@@ -493,7 +509,7 @@ GovServe Treasury - Republic of the Philippines
 
 Your verification code is: ${otp}
 
-This code expires in 5 minutes.
+This code expires in 1 minute.
 
 Do not share this code with anyone.
 
