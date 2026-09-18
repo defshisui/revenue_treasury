@@ -537,6 +537,20 @@ export async function initializeDatabase(): Promise<void> {
       $$;
 
       -- ==========================================================
+      -- PAYMENT RECEIPT EMAIL NOTIFICATIONS
+      -- ==========================================================
+      CREATE TABLE IF NOT EXISTS payment_email_notifications (
+        payment_key VARCHAR(255) PRIMARY KEY,
+        email VARCHAR(255) NOT NULL,
+        status VARCHAR(20) NOT NULL DEFAULT 'pending',
+        message_id VARCHAR(255),
+        error_message TEXT,
+        sent_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      -- ==========================================================
       -- PERFORMANCE INDEXES
       -- ==========================================================
       -- RPT Applications

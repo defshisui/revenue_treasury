@@ -2,20 +2,14 @@ import type { Request, Response } from 'express';
 import pool from '../db.js';
 import { PayMongoService } from '../services/paymongo.service.js';
 import { recordAudit } from './audit.controller.js';
+import { EmailService } from '../services/email.service.js';
 
-// PayMongo's API rejects metadata whose values are objects/arrays with
-// "metadata attributes cannot be nested." Every field we build here (RPT,
-// RPT_SERVICE, MARKET_STALL, BUSINESS_TAX) is meant to be a flat string, but
-// this guards against any caller accidentally passing an object (e.g. a
-// whole record instead of just its id) and getting a cryptic 500 back from
-// PayMongo instead of a clear error before the request is even sent.
+
 function sanitizeMetadata(raw: Record<string, unknown>): Record<string, string> {
   const clean: Record<string, string> = {};
   for (const [key, value] of Object.entries(raw)) {
     if (value === undefined || value === null || value === '') continue;
     if (typeof value === 'object') {
-      // Never send a nested object/array to PayMongo — flatten it to a
-      // string instead of letting the API call fail outright.
       console.warn(`[PayMongo] Dropping/flattening non-scalar metadata field "${key}":`, value);
       clean[key] = JSON.stringify(value).slice(0, 500);
       continue;
@@ -23,6 +17,90 @@ function sanitizeMetadata(raw: Record<string, unknown>): Record<string, string> 
     clean[key] = String(value);
   }
   return clean;
+}
+async function sendPaymentReceiptOnce(params: {
+  paymentKey: string;
+  toEmail?: string | null;
+  customerName?: string | null;
+  service: string;
+  amount: number;
+  paymentMethod: string;
+  paymentReference: string;
+  officialReceiptNumber: string;
+  paymentDate?: Date | string;
+  accountReference?: string | null;
+}): Promise<void> {
+  const email = String(params.toEmail || '').trim();
+  if (!email || !email.includes('@')) {
+    console.warn(
+      `[ReceiptEmail] No valid citizen email for payment ${params.paymentKey}; receipt email was not sent.`
+    );
+    return;
+  }
+
+  try {
+    const claim = await pool.query(
+      `INSERT INTO payment_email_notifications
+         (payment_key, email, status)
+       VALUES ($1, $2, 'pending')
+       ON CONFLICT (payment_key)
+       DO UPDATE SET
+         email = EXCLUDED.email,
+         status = CASE
+           WHEN payment_email_notifications.status = 'sent'
+             THEN payment_email_notifications.status
+           ELSE 'pending'
+         END,
+         updated_at = NOW()
+       WHERE payment_email_notifications.status <> 'sent'
+       RETURNING payment_key`,
+      [params.paymentKey, email]
+    );
+
+    if (claim.rows.length === 0) {
+      console.log(`[ReceiptEmail] Receipt already sent for ${params.paymentKey}.`);
+      return;
+    }
+
+    const result = await EmailService.sendPaymentReceiptEmail({
+      toEmail: email,
+      customerName: params.customerName || 'Citizen Taxpayer',
+      service: params.service,
+      amount: params.amount,
+      paymentMethod: params.paymentMethod,
+      paymentReference: params.paymentReference,
+      officialReceiptNumber: params.officialReceiptNumber,
+      paymentDate: params.paymentDate,
+      accountReference: params.accountReference || undefined,
+    });
+
+    await pool.query(
+      `UPDATE payment_email_notifications
+       SET status = 'sent',
+           message_id = $2,
+           sent_at = NOW(),
+           updated_at = NOW()
+       WHERE payment_key = $1`,
+      [params.paymentKey, result.messageId || null]
+    );
+
+    console.log(`[ReceiptEmail] Official receipt ${params.officialReceiptNumber} sent to ${email}.`);
+  } catch (error: any) {
+    await pool.query(
+      `UPDATE payment_email_notifications
+       SET status = 'failed',
+           error_message = $2,
+           updated_at = NOW()
+       WHERE payment_key = $1`,
+      [params.paymentKey, String(error?.message || error).slice(0, 1000)]
+    ).catch(() => undefined);
+
+    // Do not make an already-paid transaction fail just because email delivery failed.
+    console.error(
+      `[ReceiptEmail] Failed to send receipt for ${params.paymentKey}:`,
+      error?.message || error
+    );
+  }
 }
 
 export async function getPayMongoStatus(_req: Request, res: Response): Promise<void> {
@@ -317,6 +395,19 @@ export async function verifySession(req: Request, res: Response): Promise<void> 
         `RPT service payment confirmed for ${application.service || metadata.rptService || 'RPT Service'}. Application ${metadata.rptApplicationId}. Reference ${paymentReference}. Amount ${assessedAmount.toFixed(2)}. O.R. ${officialReceiptNumber}.`
       );
 
+      await sendPaymentReceiptOnce({
+        paymentKey: `checkout:${sessionId}`,
+        toEmail: metadata.customerEmail || application.email,
+        customerName: metadata.customerName || application.applicant_name || application.owner_name,
+        service: application.service || metadata.rptService || 'RPT Service',
+        amount: assessedAmount,
+        paymentMethod: `PayMongo (${formattedPaymentMethod})`,
+        paymentReference,
+        officialReceiptNumber,
+        paymentDate: new Date(),
+        accountReference: application.control_number || application.tax_declaration_number,
+      });
+
       res.status(200).json({
         success: true,
         paid: true,
@@ -384,6 +475,19 @@ export async function verifySession(req: Request, res: Response): Promise<void> 
           sessionId,
         ]
       );
+
+      await sendPaymentReceiptOnce({
+        paymentKey: `checkout:${sessionId}`,
+        toEmail: metadata.customerEmail,
+        customerName: metadata.customerName,
+        service: 'Real Property Tax',
+        amount: Number(session.amount),
+        paymentMethod: `PayMongo (${formattedPaymentMethod})`,
+        paymentReference,
+        officialReceiptNumber,
+        paymentDate: new Date(),
+        accountReference: metadata.taxDeclarationNumber,
+      });
     } else if (type === 'MARKET_STALL' && metadata.leaseId) {
       await pool.query(
         `UPDATE market_leases
@@ -393,6 +497,19 @@ export async function verifySession(req: Request, res: Response): Promise<void> 
          WHERE lease_id = $2 OR id::text = $2`,
         [`PayMongo (${formattedPaymentMethod})`, metadata.leaseId]
       );
+
+      await sendPaymentReceiptOnce({
+        paymentKey: `checkout:${sessionId}`,
+        toEmail: metadata.customerEmail,
+        customerName: metadata.customerName,
+        service: 'Market Stall Rental',
+        amount: Number(session.amount),
+        paymentMethod: `PayMongo (${formattedPaymentMethod})`,
+        paymentReference,
+        officialReceiptNumber,
+        paymentDate: new Date(),
+        accountReference: metadata.leaseId,
+      });
     } else if (type === 'BUSINESS_TAX' && metadata.businessTrackingNumber) {
       await pool.query(
         `UPDATE business_assessments
@@ -401,6 +518,19 @@ export async function verifySession(req: Request, res: Response): Promise<void> 
          WHERE tracking_number = $2 OR id::text = $2`,
         [`Paid via PayMongo (${formattedPaymentMethod}) - OR: ${officialReceiptNumber}`, metadata.businessTrackingNumber]
       );
+
+      await sendPaymentReceiptOnce({
+        paymentKey: `checkout:${sessionId}`,
+        toEmail: metadata.customerEmail,
+        customerName: metadata.customerName,
+        service: 'Business Tax and Regulatory Fee',
+        amount: Number(session.amount),
+        paymentMethod: `PayMongo (${formattedPaymentMethod})`,
+        paymentReference,
+        officialReceiptNumber,
+        paymentDate: new Date(),
+        accountReference: metadata.businessTrackingNumber,
+      });
     }
 
     await recordAudit(
@@ -711,6 +841,19 @@ export async function handlePayMongoWebhook(
         `RPT service payment confirmed via webhook. Service: ${application.service || metadata.rptService || 'RPT Service'}. Application: ${metadata.rptApplicationId}. Reference ${paymentReference}. Amount ${amountPhp.toFixed(2)}. O.R. ${officialReceiptNumber}.`
       );
 
+      await sendPaymentReceiptOnce({
+        paymentKey: `paymongo:${paymentId || paymentIntentId}`,
+        toEmail: metadata.customerEmail || application.email,
+        customerName: metadata.customerName || application.applicant_name || application.owner_name,
+        service: application.service || metadata.rptService || 'RPT Service',
+        amount: amountPhp,
+        paymentMethod: formattedPaymentMethod,
+        paymentReference,
+        officialReceiptNumber,
+        paymentDate: new Date(),
+        accountReference: application.control_number || application.tax_declaration_number,
+      });
+
       res.status(200).json({
         received: true,
         success: true,
@@ -761,6 +904,19 @@ export async function handlePayMongoWebhook(
         `RPT payment confirmed via ${formattedPaymentMethod}. TDN(s) ${tdns.join(', ')}. Reference ${paymentReference}. Amount ${amountPhp.toFixed(2)}. O.R. ${officialReceiptNumber}.`
       );
 
+      await sendPaymentReceiptOnce({
+        paymentKey: `paymongo:${paymentId || paymentIntentId}`,
+        toEmail: metadata.customerEmail,
+        customerName: metadata.customerName,
+        service: 'Real Property Tax',
+        amount: amountPhp,
+        paymentMethod: formattedPaymentMethod,
+        paymentReference,
+        officialReceiptNumber,
+        paymentDate: new Date(),
+        accountReference: tdns.join(', '),
+      });
+
       res.status(200).json({
         received: true,
         success: true,
@@ -788,7 +944,7 @@ export async function handlePayMongoWebhook(
 
       const existingLease = await pool.query(
         `
-        SELECT payment_status
+        SELECT payment_status, email, first_name, last_name, official_receipt_number
         FROM market_leases
         WHERE lease_id = $1
            OR id::text = $1
@@ -842,6 +998,19 @@ export async function handlePayMongoWebhook(
             ` Market lease ${metadata.leaseId} marked as PAID with O.R. ${officialReceiptNumber}.`
           );
         }
+      await sendPaymentReceiptOnce({
+        paymentKey: `paymongo:${paymentId || paymentIntentId}`,
+        toEmail: metadata.customerEmail || leaseResult.rows[0]?.email,
+        customerName: metadata.customerName || (leaseResult.rows[0] ? `${leaseResult.rows[0].first_name || ''} ${leaseResult.rows[0].last_name || ''}`.trim() : undefined),
+        service: 'Market Stall Rental',
+        amount: amountPhp,
+        paymentMethod: formattedPaymentMethod,
+        paymentReference,
+        officialReceiptNumber,
+        paymentDate: new Date(),
+        accountReference: metadata.leaseId,
+      });
+
       }
 
       await recordAudit(
@@ -988,6 +1157,19 @@ export async function handlePayMongoWebhook(
         null,
         `Business tax payment confirmed via ${formattedPaymentMethod}. Tracking #${metadata.businessTrackingNumber}. Reference ${paymentReference}. Amount ${amountPhp.toFixed(2)}. O.R. ${officialReceiptNumber}.`
       );
+
+      await sendPaymentReceiptOnce({
+        paymentKey: `paymongo:${paymentId || paymentIntentId}`,
+        toEmail: metadata.customerEmail,
+        customerName: metadata.customerName,
+        service: 'Business Tax and Regulatory Fee',
+        amount: amountPhp,
+        paymentMethod: formattedPaymentMethod,
+        paymentReference,
+        officialReceiptNumber,
+        paymentDate: new Date(),
+        accountReference: metadata.businessTrackingNumber,
+      });
 
       res.status(200).json({
         received: true,
@@ -1163,6 +1345,19 @@ export async function getQrPaymentStatus(
         null,
         `Business tax payment confirmed via PayMongo QR Ph. Tracking #${metadata.businessTrackingNumber}. Amount ${(Number(attributes.amount || 0) / 100).toFixed(2)}. O.R. ${officialReceiptNumber}.`
       );
+
+      await sendPaymentReceiptOnce({
+        paymentKey: `paymongo:${paymentIntentId}`,
+        toEmail: metadata.customerEmail || businessResult.rows[0]?.email,
+        customerName: metadata.customerName,
+        service: 'Business Tax and Regulatory Fee',
+        amount: Number(attributes.amount || 0) / 100,
+        paymentMethod: 'PayMongo (QR Ph)',
+        paymentReference: metadata.referenceNumber || attributes.external_reference_number || `REF-${paymentIntentId.slice(-8)}`,
+        officialReceiptNumber,
+        paymentDate: new Date(),
+        accountReference: metadata.businessTrackingNumber,
+      });
     }
 
 
@@ -1229,6 +1424,21 @@ export async function getQrPaymentStatus(
           ` Market lease not found: ${metadata.leaseId}`
         );
       }
+
+      if (marketOfficialReceiptNumber) {
+        await sendPaymentReceiptOnce({
+          paymentKey: `paymongo:${paymentIntentId}`,
+          toEmail: metadata.customerEmail || leaseResult.rows[0]?.email,
+          customerName: metadata.customerName || (leaseResult.rows[0] ? `${leaseResult.rows[0].first_name || ''} ${leaseResult.rows[0].last_name || ''}`.trim() : undefined),
+          service: 'Market Stall Rental',
+          amount: Number(attributes.amount || 0) / 100,
+          paymentMethod: 'PayMongo (QR Ph)',
+          paymentReference,
+          officialReceiptNumber: marketOfficialReceiptNumber,
+          paymentDate: new Date(),
+          accountReference: metadata.leaseId,
+        });
+      }
     }
 
 
@@ -1277,6 +1487,19 @@ export async function getQrPaymentStatus(
               ]
             );
 
+            await sendPaymentReceiptOnce({
+              paymentKey: `paymongo:${paymentIntentId}`,
+              toEmail: metadata.customerEmail || application.email,
+              customerName: metadata.customerName || application.applicant_name || application.owner_name,
+              service: application.service || metadata.rptService || 'RPT Service',
+              amount: assessedAmount,
+              paymentMethod: 'PayMongo (QR Ph)',
+              paymentReference,
+              officialReceiptNumber,
+              paymentDate: new Date(),
+              accountReference: application.control_number || application.tax_declaration_number,
+            });
+
             await recordAudit(
               req,
               'AUD-PAYMONGO-QR',
@@ -1312,6 +1535,15 @@ export async function getQrPaymentStatus(
         .map((value: string) => value.trim())
         .filter(Boolean);
 
+      const rptOfficialReceiptNumber =
+        `OR-PM-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
+      const rptPaymentReference =
+        metadata.referenceNumber ||
+        attributes.external_reference_number ||
+        `REF-${paymentIntentId.slice(-8)}`;
+      let rptOwnerName = metadata.customerName || 'Taxpayer';
+      let rptEmail = metadata.customerEmail || '';
+
       for (const tdn of tdns) {
         const rptResult = await pool.query(
           `
@@ -1322,19 +1554,35 @@ export async function getQrPaymentStatus(
             status = 'Paid',
             payment_status = 'Paid',
             payment_method = 'PayMongo (QR Ph)',
+            official_receipt_number = $2,
+            payment_reference = $3,
             payment_date = NOW()
           WHERE tax_declaration_number ILIKE $1
           RETURNING *
           `,
-          [tdn]
+          [tdn, rptOfficialReceiptNumber, rptPaymentReference]
         );
 
         if (rptResult.rows.length > 0) {
           console.log(` RPT ${tdn} marked as PAID.`);
+          rptOwnerName = metadata.customerName || rptResult.rows[0].owner_name || rptOwnerName;
         } else {
           console.warn(` RPT record not found: ${tdn}`);
         }
       }
+
+      await sendPaymentReceiptOnce({
+        paymentKey: `paymongo:${paymentIntentId}`,
+        toEmail: rptEmail,
+        customerName: rptOwnerName,
+        service: 'Real Property Tax',
+        amount: Number(attributes.amount || 0) / 100,
+        paymentMethod: 'PayMongo (QR Ph)',
+        paymentReference: rptPaymentReference,
+        officialReceiptNumber: rptOfficialReceiptNumber,
+        paymentDate: new Date(),
+        accountReference: tdns.join(', '),
+      });
     }
 
     res.status(200).json({
