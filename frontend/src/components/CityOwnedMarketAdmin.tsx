@@ -249,9 +249,15 @@ export default function CityOwnedMarketAdmin({
 
       setIsModalOpen(false);
       setSelectedRecord(null);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to update lease record:", err);
-      alert("Error saving lease updates.");
+
+      // Show the actual backend/API error instead of hiding it
+      // behind the generic "Error saving lease updates." message.
+      alert(
+        err?.message ||
+          "Error saving lease updates. Please check the backend response."
+      );
     }
   };
 

@@ -462,14 +462,29 @@ export async function updateMarketLease(req: Request, res: Response): Promise<vo
       createdAt: row.created_at,
     };
 
-    await recordAudit(req, 'AUD-MARKET-UPDATE', 'system-admin@lgu.gov.ph', 'admin',
-      'Market Module', 'STALL_APPLICATION_UPDATED', 'INFO', null,
-      `Updated lease record for Stall ${stallNumber} (${id}) - Payment Status: ${paymentStatus}`);
+    // Audit logging must not make a successfully saved lease look like
+    // a failed database update. If audit logging fails, keep the lease update.
+    try {
+      await recordAudit(req, 'AUD-MARKET-UPDATE', 'system-admin@lgu.gov.ph', 'admin',
+        'Market Module', 'STALL_APPLICATION_UPDATED', 'INFO', null,
+        `Updated lease record for Stall ${stallNumber} (${id}) - Payment Status: ${paymentStatus}`);
+    } catch (auditErr) {
+      console.warn('Market lease updated, but audit logging failed:', auditErr);
+    }
 
     res.status(200).json({ message: 'Lease updated successfully', lease: formatted });
-  } catch (err) {
+  } catch (err: any) {
     console.error('Error updating market lease:', err);
-    res.status(500).json({ message: 'Failed to update market lease in database.' });
+
+    // Return the real PostgreSQL/API error so the Admin UI can show
+    // what actually prevented Save Changes from completing.
+    res.status(500).json({
+      message: 'Failed to update market lease in database.',
+      error: err?.message || 'Unknown database error',
+      code: err?.code || undefined,
+      detail: err?.detail || undefined,
+      hint: err?.hint || undefined,
+    });
   }
 }
 

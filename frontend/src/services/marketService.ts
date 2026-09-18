@@ -204,34 +204,38 @@ export async function updateLease(
     ...updatedRecord,
     paymentMethod:
       updatedRecord.paymentMethod &&
-        updatedRecord.paymentMethod.trim() !== ""
+      updatedRecord.paymentMethod.trim() !== ""
         ? updatedRecord.paymentMethod
         : detectPaymentMethod(updatedRecord),
   };
 
-  try {
-    const localData = localStorage.getItem("market_leases");
-    const localList = localData ? JSON.parse(localData) : [];
-    const idx = localList.findIndex((l: any) => l.leaseId === payload.leaseId);
-    if (idx >= 0) {
-      localList[idx] = payload;
-    } else {
-      localList.unshift(payload);
-    }
-    localStorage.setItem("market_leases", JSON.stringify(localList));
-  } catch (e) {
-    // ignore localStorage sync error
-  }
-
   if (MODE === "ONLINE") {
     try {
-      const targetId = encodeURIComponent(payload.leaseId || (payload as any).id || "");
+      const targetId = encodeURIComponent(
+        payload.leaseId || (payload as any).id || ""
+      );
+
+      if (!targetId) {
+        throw new Error("Lease ID is required to update this record.");
+      }
+
+      // Use the same authentication token as the rest of the admin system.
+      const token =
+        localStorage.getItem("token") ||
+        sessionStorage.getItem("token") ||
+        "";
+
       const res = await fetch(
         `${API_BASE_URL}/market-leases/${targetId}`,
         {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
+            ...(token
+              ? {
+                  Authorization: `Bearer ${token}`,
+                }
+              : {}),
           },
           body: JSON.stringify(payload),
         }
@@ -240,9 +244,10 @@ export async function updateLease(
       const responseText = await res.text();
 
       let responseBody: any = {};
-
       try {
-        responseBody = responseText ? JSON.parse(responseText) : {};
+        responseBody = responseText
+          ? JSON.parse(responseText)
+          : {};
       } catch {
         responseBody = {};
       }
@@ -254,9 +259,10 @@ export async function updateLease(
           responseText ||
           `Failed to update lease in database (Status: ${res.status})`;
 
-        console.error("Market lease update failed:", {
+        console.error("[updateLease] Backend update failed:", {
           status: res.status,
           statusText: res.statusText,
+          url: `${API_BASE_URL}/market-leases/${targetId}`,
           response: responseBody,
           payload,
         });
@@ -264,21 +270,78 @@ export async function updateLease(
         throw new Error(errorMessage);
       }
 
+      console.log(
+        "[updateLease] Database update successful:",
+        responseBody.lease || payload
+      );
+
+      // IMPORTANT:
+      // Synchronize localStorage ONLY after the database update succeeds.
+      // This prevents the browser cache from showing changes that were
+      // never actually saved to PostgreSQL.
+      try {
+        const localData = localStorage.getItem("market_leases");
+        const localList: any[] = localData
+          ? JSON.parse(localData)
+          : [];
+
+        const updatedLease =
+          responseBody?.lease || payload;
+
+        const idx = localList.findIndex(
+          (item: any) =>
+            String(item.leaseId || "").trim().toLowerCase() ===
+            String(
+              updatedLease.leaseId || payload.leaseId || ""
+            )
+              .trim()
+              .toLowerCase() ||
+            (
+              item.id !== undefined &&
+              updatedLease.id !== undefined &&
+              String(item.id).trim() ===
+                String(updatedLease.id).trim()
+            )
+        );
+
+        if (idx >= 0) {
+          localList[idx] = {
+            ...localList[idx],
+            ...updatedLease,
+          };
+        } else {
+          localList.unshift(updatedLease);
+        }
+
+        localStorage.setItem(
+          "market_leases",
+          JSON.stringify(localList)
+        );
+      } catch (cacheError) {
+        console.warn(
+          "[updateLease] Database update succeeded, but local cache synchronization failed:",
+          cacheError
+        );
+      }
+
       return;
     } catch (error) {
-      console.error("Online update error:", error);
+      console.error("[updateLease] Online update error:", error);
       throw error;
     }
   }
 
-
+  // LOCALSTORAGE mode
   const existing = await getLeases();
 
   const updated = existing.map((item) =>
     item.leaseId === payload.leaseId ? payload : item
   );
 
-  localStorage.setItem("market_leases", JSON.stringify(updated));
+  localStorage.setItem(
+    "market_leases",
+    JSON.stringify(updated)
+  );
 }
 
 export async function deleteLease(leaseId: string, recordId?: string | number): Promise<void> {
