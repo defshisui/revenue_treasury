@@ -4,13 +4,6 @@ import { API_BASE_URL } from "../config/api";
 
 const STANDARD_PAYMENT_METHODS = [
   "PayMongo (QR Ph)",
-  "QR Ph",
-  "PayMongo",
-  "PayMongo (GCash)",
-  "PayMongo (Maya)",
-  "PayMongo (Card)",
-  "PayMongo (GrabPay)",
-  "PayMongo (Dobopay)"
 ];
 
 interface LeaseRecord {
