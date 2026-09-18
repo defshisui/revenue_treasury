@@ -20,12 +20,20 @@ import {
   createRptPayment,
   createGroupRptPayment,
   getRptPayments,
+
+  // Payment Ledger Archiver
   getRptPaymentLedgerArchives,
   archiveRptPaymentLedgerEntry,
   restoreRptPaymentLedgerEntry,
+  deleteRptPaymentLedgerEntry,
 } from '../controllers/rpt.controller.js';
 
 const router = Router();
+
+
+// ==========================================================
+// RPT CITIZEN APPLICATIONS
+// ==========================================================
 
 router.get(
   '/citizen-rpt-applications',
@@ -52,14 +60,28 @@ router.patch(
   updateRptApplicationStatus
 );
 
+
+// ==========================================================
+// RPT SEARCH
+// ==========================================================
+
 // If this router is mounted with app.use('/api', rptRoutes),
 // use '/rpt/search' rather than '/api/rpt/search'.
-router.get('/rpt/search', searchRptByTdn);
+
+router.get(
+  '/rpt/search',
+  searchRptByTdn
+);
 
 router.get(
   '/lgu-rpt-records/search/:tdn',
   searchRptByTdn
 );
+
+
+// ==========================================================
+// LGU RPT MASTER DATABASE
+// ==========================================================
 
 router.get(
   '/lgu-rpt-records',
@@ -84,6 +106,11 @@ router.delete(
   deleteLguRptRecord
 );
 
+
+// ==========================================================
+// RPT PAYMENTS
+// ==========================================================
+
 router.post(
   '/citizen-rpt-payments',
   createRptPayment
@@ -99,26 +126,41 @@ router.get(
   getRptPayments
 );
 
-// ===============================
-// PAYMENT LEDGER ARCHIVER
-// ===============================
 
+// ==========================================================
+// PAYMENT LEDGER ARCHIVER
+// ==========================================================
+
+// Get archived payment ledger entries
 router.get(
   '/rpt-payment-ledger-archives',
   authenticateToken,
   getRptPaymentLedgerArchives
 );
 
+
+// Archive an active payment ledger entry
 router.post(
   '/rpt-payment-ledger-archives',
   authenticateToken,
   archiveRptPaymentLedgerEntry
 );
 
+
+// Restore an archived payment back to Active Ledger
 router.delete(
   '/rpt-payment-ledger-archives/:key',
   authenticateToken,
   restoreRptPaymentLedgerEntry
 );
+
+
+// Delete an archived payment from the Archiver
+router.delete(
+  '/rpt-payment-ledger-archives/:key/permanent',
+  authenticateToken,
+  deleteRptPaymentLedgerEntry
+);
+
 
 export default router;

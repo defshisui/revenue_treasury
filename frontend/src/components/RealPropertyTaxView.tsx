@@ -466,6 +466,57 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     }
   };
 
+  const deletePaymentLedgerArchive = async (pay: { archiveKey: string }) => {
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    const headers: HeadersInit = {};
+    if (token) headers.Authorization = `Bearer ${token}`;
+
+    const response = await fetch(
+      `${API_BASE_URL}/rpt-payment-ledger-archives/${encodeURIComponent(pay.archiveKey)}/permanent`,
+      {
+        method: 'DELETE',
+        headers,
+      }
+    );
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(
+        data.message ||
+        `Failed to permanently delete archived payment ledger entry (HTTP ${response.status}).`
+      );
+    }
+  };
+
+  const handleDeletePaymentLedgerArchive = async (pay: any) => {
+    const confirmed = await confirmAction(
+      `WARNING: Are you sure you want to permanently delete archived payment ${pay.receiptNumber}? This removes the archived copy from the Archiver and cannot be undone.`,
+      'danger'
+    );
+
+    if (!confirmed) return;
+
+    try {
+      await deletePaymentLedgerArchive(pay);
+
+      setPaymentLedgerArchives((prev) => {
+        const next = new Set(prev);
+        next.delete(pay.archiveKey);
+        return next;
+      });
+
+      triggerToast(
+        `Archived payment ${pay.receiptNumber} permanently deleted.`,
+        'success'
+      );
+    } catch (err: any) {
+      triggerToast(
+        err?.message || 'Failed to permanently delete archived payment ledger entry.',
+        'error'
+      );
+    }
+  };
+
   const recordPaymentLedgerEntry = async (payload: {
     taxDeclarationNumber: string;
     ownerName: string;
@@ -2610,14 +2661,25 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                         </td>
                         <td className="p-4 text-center">
                           {pay.archived ? (
-                            <button
-                              type="button"
-                              onClick={() => handleRestorePaymentLedgerEntry(pay)}
-                              className="px-2.5 py-1.5 rounded-lg bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 text-[10px] font-bold hover:bg-blue-100 dark:hover:bg-blue-900/70 transition cursor-pointer"
-                              title="Restore to Active Ledger"
-                            >
-                              <i className="fa-solid fa-rotate-left mr-1"></i> Restore
-                            </button>
+                            <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                              <button
+                                type="button"
+                                onClick={() => handleRestorePaymentLedgerEntry(pay)}
+                                className="px-2.5 py-1.5 rounded-lg bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 text-[10px] font-bold hover:bg-blue-100 dark:hover:bg-blue-900/70 transition cursor-pointer"
+                                title="Restore to Active Ledger"
+                              >
+                                <i className="fa-solid fa-rotate-left mr-1"></i> Restore
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleDeletePaymentLedgerArchive(pay)}
+                                className="px-2.5 py-1.5 rounded-lg bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 text-[10px] font-bold hover:bg-rose-100 dark:hover:bg-rose-900/70 transition cursor-pointer"
+                                title="Permanently Delete Archived Entry"
+                              >
+                                <i className="fa-solid fa-trash mr-1"></i> Delete
+                              </button>
+                            </div>
                           ) : (
                             <button
                               type="button"

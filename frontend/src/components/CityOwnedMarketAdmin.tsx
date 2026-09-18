@@ -386,7 +386,7 @@ export default function CityOwnedMarketAdmin({
 
   const handleExportCSV = () => {
 
-    const exportList = activeTab === "Active" ? leases.filter((l) => l.leaseStatus !== "Archived") : filteredLeases;
+    const exportList = filteredLeases;
     const headers = [
       "Lease ID", "First Name", "Last Name", "Market Name", "Section",
       "Stall Number", "Lease Status", "Amount Due", "Helper Approval Status",

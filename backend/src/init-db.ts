@@ -505,13 +505,21 @@ export async function initializeDatabase(): Promise<void> {
           identifier VARCHAR(150),
           payor VARCHAR(255),
           archived_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          is_deleted BOOLEAN DEFAULT FALSE,
           UNIQUE (source_type, source_id)
       );
+
+      -- Support deletion from the Archiver without deleting the
+      -- original payment/application record from the database.
+      ALTER TABLE rpt_payment_ledger_archives
+      ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE;
 
       CREATE INDEX IF NOT EXISTS idx_rpt_payment_ledger_archives_source
         ON rpt_payment_ledger_archives(source_type, source_id);
       CREATE INDEX IF NOT EXISTS idx_rpt_payment_ledger_archives_date
         ON rpt_payment_ledger_archives(archived_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_rpt_payment_ledger_archives_deleted
+        ON rpt_payment_ledger_archives(is_deleted);
     `);
 
     await pool.query(`

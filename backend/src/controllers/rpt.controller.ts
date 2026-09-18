@@ -1812,14 +1812,26 @@ export async function getRptPaymentLedgerArchives(
 ): Promise<void> {
   try {
     const result = await pool.query(
-      `SELECT id, source_type, source_id, receipt_number, identifier, payor, archived_at
+      `SELECT
+         id,
+         source_type,
+         source_id,
+         receipt_number,
+         identifier,
+         payor,
+         archived_at,
+         COALESCE(is_deleted, FALSE) AS is_deleted
        FROM rpt_payment_ledger_archives
+       WHERE COALESCE(is_deleted, FALSE) = FALSE
        ORDER BY archived_at DESC`
     );
+
     res.json(result.rows);
   } catch (err) {
     console.error('Error fetching RPT payment ledger archives:', err);
-    res.status(500).json({ message: 'Error loading payment ledger archives' });
+    res.status(500).json({
+      message: 'Error loading payment ledger archives'
+    });
   }
 }
 
@@ -1914,15 +1926,23 @@ export async function archiveRptPaymentLedgerEntry(
 
     const result = await pool.query(
       `INSERT INTO rpt_payment_ledger_archives
-        (source_type, source_id, receipt_number, identifier, payor)
-       VALUES ($1, $2, $3, $4, $5)
+        (source_type, source_id, receipt_number, identifier, payor, is_deleted)
+       VALUES ($1, $2, $3, $4, $5, FALSE)
        ON CONFLICT (source_type, source_id)
-       DO UPDATE SET receipt_number = EXCLUDED.receipt_number,
-                     identifier = EXCLUDED.identifier,
-                     payor = EXCLUDED.payor,
-                     archived_at = CURRENT_TIMESTAMP
+       DO UPDATE SET
+         receipt_number = EXCLUDED.receipt_number,
+         identifier = EXCLUDED.identifier,
+         payor = EXCLUDED.payor,
+         is_deleted = FALSE,
+         archived_at = CURRENT_TIMESTAMP
        RETURNING *`,
-      [sourceType, sourceId, String(receiptNumber), String(identifier), String(payor)]
+      [
+        sourceType,
+        sourceId,
+        String(receiptNumber),
+        String(identifier),
+        String(payor)
+      ]
     );
 
     res.status(201).json(result.rows[0]);
@@ -1939,24 +1959,143 @@ export async function restoreRptPaymentLedgerEntry(
   try {
     const key = String(req.params.key || '');
     const separator = key.indexOf(':');
+
     if (separator <= 0) {
-      res.status(400).json({ message: 'Invalid payment ledger archive key.' });
+      res.status(400).json({
+        message: 'Invalid payment ledger archive key.'
+      });
       return;
     }
 
     const sourceType = key.slice(0, separator).toUpperCase();
-    const sourceId = key.slice(separator + 1);
+    const sourceId = key.slice(separator + 1).trim();
 
-    await pool.query(
+    if (
+      sourceType !== 'MASTER' &&
+      sourceType !== 'APPLICATION'
+    ) {
+      res.status(400).json({
+        message: 'Invalid payment ledger source type.'
+      });
+      return;
+    }
+
+    if (!sourceId) {
+      res.status(400).json({
+        message: 'Payment ledger source ID is required.'
+      });
+      return;
+    }
+
+    const result = await pool.query(
       `DELETE FROM rpt_payment_ledger_archives
-       WHERE source_type = $1 AND source_id = $2`,
+       WHERE source_type = $1
+         AND source_id = $2
+       RETURNING *`,
       [sourceType, sourceId]
     );
 
-    res.json({ success: true });
+    if (result.rowCount === 0) {
+      res.status(404).json({
+        message: 'Archived payment ledger entry not found.'
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      message: 'Payment ledger entry restored successfully.'
+    });
   } catch (err) {
-    console.error('Error restoring RPT payment ledger entry:', err);
-    res.status(500).json({ message: 'Failed to restore payment ledger entry.' });
+    console.error(
+      'Error restoring RPT payment ledger entry:',
+      err
+    );
+
+    res.status(500).json({
+      message: 'Failed to restore payment ledger entry.'
+    });
+  }
+}
+
+export async function deleteRptPaymentLedgerEntry(
+  req: Request,
+  res: Response
+): Promise<void> {
+  try {
+    const key = String(req.params.key || '');
+    const separator = key.indexOf(':');
+
+    if (separator <= 0) {
+      res.status(400).json({
+        message: 'Invalid payment ledger archive key.'
+      });
+      return;
+    }
+
+    const sourceType = key.slice(0, separator).toUpperCase();
+    const sourceId = key.slice(separator + 1).trim();
+
+    if (
+      sourceType !== 'MASTER' &&
+      sourceType !== 'APPLICATION'
+    ) {
+      res.status(400).json({
+        message: 'Invalid payment ledger source type.'
+      });
+      return;
+    }
+
+    if (!sourceId) {
+      res.status(400).json({
+        message: 'Payment ledger source ID is required.'
+      });
+      return;
+    }
+
+    const result = await pool.query(
+      `DELETE FROM rpt_payment_ledger_archives
+       WHERE source_type = $1
+         AND source_id = $2
+       RETURNING *`,
+      [sourceType, sourceId]
+    );
+
+    if (result.rowCount === 0) {
+      res.status(404).json({
+        message: 'Archived payment ledger entry not found.'
+      });
+      return;
+    }
+
+    // This removes the entry only from the Archiver.
+    // The original payment in citizen_rpt_payments or
+    // rpt_applications remains untouched.
+    await recordAudit(
+      req,
+      'AUD-RPT-LEDGER-ARCHIVE-DELETE',
+      'Admin',
+      'Admin',
+      'RPT Module',
+      'RPT_PAYMENT_LEDGER_ARCHIVE_DELETED',
+      'WARNING',
+      null,
+      `Deleted archived payment ledger entry ${sourceType}:${sourceId}`
+    );
+
+    res.json({
+      success: true,
+      message: 'Archived payment ledger entry deleted successfully.'
+    });
+  } catch (err) {
+    console.error(
+      'Error deleting RPT payment ledger entry:',
+      err
+    );
+
+    res.status(500).json({
+      message: 'Failed to delete payment ledger entry.'
+    });
   }
 }
 
