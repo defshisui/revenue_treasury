@@ -30,14 +30,13 @@ export interface LeaseRecord {
   paymentProof?: string;
   mismatchNotes?: string;
   paymentDate?: string;
-  paymongoSessionId?: string;
 }
 
 export function detectPaymentMethod(record?: Record<string, any> | null): string {
   if (!record) return "Cash / Direct";
   const method = record.paymentMethod || record.payment_method;
-  if (method && String(method).trim() !== "" && String(method).trim() !== "Not Specified") {
-    return String(method).trim();
+  if (method && method.trim() !== "" && method.trim() !== "Not Specified") {
+    return method.trim();
   }
   const receipt = record.officialReceiptNumber || record.official_receipt_number || "";
   const ref = record.paymentReference || record.payment_reference || "";
@@ -100,103 +99,25 @@ export async function getLeases(): Promise<LeaseRecord[]> {
       if (res.ok) {
         const serverList = await res.json();
         if (Array.isArray(serverList)) {
-          // Exclude any deleted leases from server response
+          // IMPORTANT:
+          // The database/API is the source of truth when ONLINE.
+          // Do NOT merge old localStorage records back into the server result.
+          // Otherwise, records deleted by an admin from the database can
+          // reappear in the citizen portal from an older browser cache.
           const activeServerList = serverList.filter((srv: any) => !isDeleted(srv));
 
-          const merged = activeServerList.map((srv: any) => {
-            const loc = localList.find((l: any) => 
-              (l.leaseId && srv.leaseId && String(l.leaseId).trim().toLowerCase() === String(srv.leaseId).trim().toLowerCase()) ||
-              (l.id && srv.id && String(l.id).trim() === String(srv.id).trim())
-            );
-            if (loc) {
-              const isLocallyArchived =
-                String(loc.leaseStatus || "").trim().toLowerCase() === "archived";
-
-              // The database is authoritative for payment fields.
-              // Do not let an old localStorage copy overwrite a newly
-              // verified PayMongo payment/O.R. from the server.
-              return {
-                ...loc,
-                ...srv,
-                leaseStatus: isLocallyArchived
-                  ? "Archived"
-                  : (srv.leaseStatus || loc.leaseStatus),
-
-                paymentStatus:
-                  srv.paymentStatus ??
-                  srv.payment_status ??
-                  loc.paymentStatus,
-
-                paymentMethod:
-                  srv.paymentMethod ??
-                  srv.payment_method ??
-                  loc.paymentMethod,
-
-                officialReceiptNumber:
-                  srv.officialReceiptNumber ??
-                  srv.official_receipt_number ??
-                  loc.officialReceiptNumber,
-
-                paymentReference:
-                  srv.paymentReference ??
-                  srv.payment_reference ??
-                  loc.paymentReference,
-
-                paymentDate:
-                  srv.paymentDate ??
-                  srv.payment_date ??
-                  loc.paymentDate,
-
-                paymongoSessionId:
-                  srv.paymongoSessionId ??
-                  srv.paymongo_session_id ??
-                  loc.paymongoSessionId,
-              };
-            }
-            return {
-              ...srv,
-              paymentStatus:
-                srv.paymentStatus ??
-                srv.payment_status ??
-                "Pending Payment",
-              paymentMethod:
-                srv.paymentMethod ??
-                srv.payment_method ??
-                detectPaymentMethod(srv),
-              officialReceiptNumber:
-                srv.officialReceiptNumber ??
-                srv.official_receipt_number ??
-                "",
-              paymentReference:
-                srv.paymentReference ??
-                srv.payment_reference ??
-                "",
-              paymentDate:
-                srv.paymentDate ??
-                srv.payment_date ??
-                undefined,
-              paymongoSessionId:
-                srv.paymongoSessionId ??
-                srv.paymongo_session_id ??
-                undefined,
-            };
-          });
-
-          localList.forEach((loc: any) => {
-            if (!isDeleted(loc) && !merged.some((m: any) => 
-              (m.leaseId && loc.leaseId && String(m.leaseId).trim().toLowerCase() === String(loc.leaseId).trim().toLowerCase()) ||
-              (m.id && loc.id && String(m.id).trim() === String(loc.id).trim())
-            )) {
-              merged.push(loc);
-            }
-          });
-
-          localStorage.setItem("market_leases", JSON.stringify(merged));
-          return merged;
+          // Replace the local cache with the current database result.
+          // This also clears stale records when the backend returns [].
+          localStorage.setItem("market_leases", JSON.stringify(activeServerList));
+          return activeServerList;
         }
       }
     } catch (error) {
-      console.warn("Online fetch error, using local market leases cache:", error);
+      // ONLINE mode must not fall back to stale localStorage records.
+      // Returning [] prevents deleted database records from reappearing
+      // when the API is temporarily unavailable.
+      console.warn("Online fetch error; not using stale local market leases cache:", error);
+      return [];
     }
   }
 
@@ -204,19 +125,12 @@ export async function getLeases(): Promise<LeaseRecord[]> {
 }
 
 export async function saveLease(newLease: LeaseRecord): Promise<void> {
-  const resolvedPaymentMethod =
-    newLease.paymentMethod && newLease.paymentMethod.trim() !== ""
-      ? newLease.paymentMethod
-      : detectPaymentMethod(newLease);
-
   const payload = {
     ...newLease,
-    paymentMethod: resolvedPaymentMethod,
-    payment_method: resolvedPaymentMethod,
-    official_receipt_number: newLease.officialReceiptNumber || "",
-    payment_reference: newLease.paymentReference || "",
-    payment_date: newLease.paymentDate || undefined,
-    paymongo_session_id: newLease.paymongoSessionId || undefined,
+    paymentMethod:
+      newLease.paymentMethod && newLease.paymentMethod.trim() !== ""
+        ? newLease.paymentMethod
+        : detectPaymentMethod(newLease),
   };
 
   try {
@@ -286,20 +200,13 @@ export async function saveLease(newLease: LeaseRecord): Promise<void> {
 export async function updateLease(
   updatedRecord: LeaseRecord
 ): Promise<void> {
-  const resolvedPaymentMethod =
-    updatedRecord.paymentMethod &&
-      updatedRecord.paymentMethod.trim() !== ""
-      ? updatedRecord.paymentMethod
-      : detectPaymentMethod(updatedRecord);
-
   const payload = {
     ...updatedRecord,
-    paymentMethod: resolvedPaymentMethod,
-    payment_method: resolvedPaymentMethod,
-    official_receipt_number: updatedRecord.officialReceiptNumber || "",
-    payment_reference: updatedRecord.paymentReference || "",
-    payment_date: updatedRecord.paymentDate || undefined,
-    paymongo_session_id: updatedRecord.paymongoSessionId || undefined,
+    paymentMethod:
+      updatedRecord.paymentMethod &&
+        updatedRecord.paymentMethod.trim() !== ""
+        ? updatedRecord.paymentMethod
+        : detectPaymentMethod(updatedRecord),
   };
 
   try {
