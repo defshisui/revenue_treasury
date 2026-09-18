@@ -144,6 +144,9 @@ function formatRptApplication(row: any): any {
     paymentMethod: row.payment_method,
     paymentReference: row.payment_reference,
     paymentDate: row.payment_date,
+    paymentLedgerArchived: Boolean(row.payment_ledger_archived),
+    paymentLedgerArchivedAt: row.payment_ledger_archived_at || null,
+    paymentLedgerArchivedBy: row.payment_ledger_archived_by || null,
     createdAt: row.created_at,
     certificateData: row.certificate_data || null,
   };
@@ -1595,6 +1598,115 @@ export async function getRptPayments(
 
     res.status(500).json({
       message: 'Error loading payments'
+    });
+  }
+}
+
+/**
+ * Archives/restores a payment-LEDGER entry without deleting the actual
+ * payment, master assessment, or citizen application. This keeps the
+ * financial history intact while allowing the Treasury Payment Ledger
+ * screen to separate active and archived entries.
+ */
+export async function setRptPaymentLedgerArchive(
+  req: Request,
+  res: Response
+): Promise<void> {
+  const { id } = req.params;
+  const sourceType = String(req.body?.sourceType || '').trim().toUpperCase();
+  const archived = req.body?.archived !== false;
+
+  if (!id) {
+    res.status(400).json({ message: 'Payment ledger record ID is required.' });
+    return;
+  }
+
+  if (sourceType !== 'MASTER' && sourceType !== 'APPLICATION') {
+    res.status(400).json({ message: 'sourceType must be MASTER or APPLICATION.' });
+    return;
+  }
+
+  const authenticatedUser = (req as Request & {
+    user?: { id?: number | string; email?: string; role?: string };
+  }).user;
+
+  const role = String(authenticatedUser?.role || '').trim().toLowerCase();
+  const isStaff = ['admin', 'treasury-staff'].includes(role);
+
+  if (!isStaff) {
+    res.status(403).json({
+      message: 'Only Treasury administrators or treasury staff can archive payment ledger entries.'
+    });
+    return;
+  }
+
+  const archivedBy = String(
+    authenticatedUser?.email || authenticatedUser?.id || 'Treasury Staff'
+  ).slice(0, 255);
+
+  try {
+    let result;
+
+    if (sourceType === 'MASTER') {
+      result = await pool.query(
+        `UPDATE citizen_rpt_payments
+         SET
+           payment_ledger_archived = $2,
+           payment_ledger_archived_at = CASE WHEN $2 THEN NOW() ELSE NULL END,
+           payment_ledger_archived_by = CASE WHEN $2 THEN $3 ELSE NULL END
+         WHERE id = $1
+         RETURNING *`,
+        [id, archived, archivedBy]
+      );
+    } else {
+      result = await pool.query(
+        `UPDATE rpt_applications
+         SET
+           payment_ledger_archived = $2,
+           payment_ledger_archived_at = CASE WHEN $2 THEN NOW() ELSE NULL END,
+           payment_ledger_archived_by = CASE WHEN $2 THEN $3 ELSE NULL END
+         WHERE id = $1
+           AND (LOWER(COALESCE(payment_status, '')) IN ('paid', 'settled', 'payment completed') OR LOWER(COALESCE(status, '')) = 'payment completed')
+         RETURNING *`,
+        [id, archived, archivedBy]
+      );
+    }
+
+    if (result.rowCount === 0) {
+      res.status(404).json({
+        message: 'Payment ledger entry not found or is not a settled payment.'
+      });
+      return;
+    }
+
+    const record = result.rows[0];
+    const receiptNumber =
+      record.official_receipt_number ||
+      record.officialReceiptNumber ||
+      `PAY-${id}`;
+
+    await recordAudit(
+      req,
+      'AUD-RPT-PAY-LEDGER-ARCHIVE',
+      archivedBy,
+      'Treasury',
+      'RPT Payment Ledger',
+      archived ? 'RPT_PAYMENT_LEDGER_ARCHIVED' : 'RPT_PAYMENT_LEDGER_RESTORED',
+      'INFO',
+      null,
+      `${archived ? 'Archived' : 'Restored'} ${sourceType} payment ledger entry ${receiptNumber}`
+    );
+
+    res.json({
+      success: true,
+      archived,
+      sourceType,
+      record
+    });
+  } catch (err: any) {
+    console.error('Error updating RPT payment ledger archive state:', err);
+    res.status(500).json({
+      message: err?.message || 'Failed to update payment ledger archive state.'
     });
   }
 }

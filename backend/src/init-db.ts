@@ -216,6 +216,26 @@ export async function initializeDatabase(): Promise<void> {
           paymongo_session_id VARCHAR(255)
       );
 
+      -- Payment Ledger archive metadata. These fields archive only the
+      -- Treasury ledger entry; they do NOT delete or change the payment itself.
+      ALTER TABLE citizen_rpt_payments
+      ADD COLUMN IF NOT EXISTS payment_ledger_archived BOOLEAN NOT NULL DEFAULT FALSE;
+
+      ALTER TABLE citizen_rpt_payments
+      ADD COLUMN IF NOT EXISTS payment_ledger_archived_at TIMESTAMP NULL;
+
+      ALTER TABLE citizen_rpt_payments
+      ADD COLUMN IF NOT EXISTS payment_ledger_archived_by VARCHAR(255);
+
+      ALTER TABLE rpt_applications
+      ADD COLUMN IF NOT EXISTS payment_ledger_archived BOOLEAN NOT NULL DEFAULT FALSE;
+
+      ALTER TABLE rpt_applications
+      ADD COLUMN IF NOT EXISTS payment_ledger_archived_at TIMESTAMP NULL;
+
+      ALTER TABLE rpt_applications
+      ADD COLUMN IF NOT EXISTS payment_ledger_archived_by VARCHAR(255);
+
       -- ==========================================================
       -- OTP VERIFICATIONS
       -- ==========================================================

@@ -16,6 +16,7 @@ import {
   createRptPayment,
   createGroupRptPayment,
   getRptPayments,
+  setRptPaymentLedgerArchive,
 } from '../controllers/rpt.controller.js';
 
 const router = Router();
@@ -89,6 +90,12 @@ router.post(
 router.get(
   '/citizen-rpt-payments',
   getRptPayments
+);
+
+router.patch(
+  '/citizen-rpt-payments/:id/ledger-archive',
+  authenticateToken,
+  setRptPaymentLedgerArchive
 );
 
 export default router;

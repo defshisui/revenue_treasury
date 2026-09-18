@@ -70,6 +70,9 @@ export interface PaymentLedgerRecord {
   paymentOption?: string;
   paymongoSessionId?: string;
   status: string;
+  paymentLedgerArchived?: boolean;
+  paymentLedgerArchivedAt?: string;
+  paymentLedgerArchivedBy?: string;
 }
 
 export interface ApplicationDocument {
@@ -96,6 +99,9 @@ interface ExtendedApplicationRecord extends Omit<RPTApplicationRecord, 'document
   paymentMethod?: string;
   paymentDate?: string;
   paymentDueDate?: string;
+  paymentLedgerArchived?: boolean;
+  paymentLedgerArchivedAt?: string;
+  paymentLedgerArchivedBy?: string;
   penaltyFee: number;
   propertyDetails: {
     pin: string;
@@ -263,6 +269,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
   const [isSubmittingSettle, setIsSubmittingSettle] = useState<boolean>(false);
 
   const [ledgerCategoryFilter, setLedgerCategoryFilter] = useState<'ALL' | 'MASTER' | 'APPLICATION'>('ALL');
+  const [paymentLedgerTab, setPaymentLedgerTab] = useState<'Active' | 'Archived'>('Active');
 
   const triggerToast = (text: string, type: 'success' | 'warning' | 'error') => {
     setToastMessage({ text, type });
@@ -367,6 +374,9 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
             paymentOption: p.payment_option || p.paymentOption || 'Full',
             paymongoSessionId: p.paymongo_session_id || p.paymongoSessionId || '',
             status: p.status || 'Verified',
+            paymentLedgerArchived: Boolean(p.payment_ledger_archived ?? p.paymentLedgerArchived),
+            paymentLedgerArchivedAt: p.payment_ledger_archived_at || p.paymentLedgerArchivedAt || '',
+            paymentLedgerArchivedBy: p.payment_ledger_archived_by || p.paymentLedgerArchivedBy || '',
           }))
         );
       }
@@ -455,6 +465,9 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
           paymentMethod: item.payment_method || item.paymentMethod || '',
           paymentDate: item.payment_date || item.paymentDate || '',
           paymentDueDate: item.payment_due_date || item.paymentDueDate || '',
+          paymentLedgerArchived: Boolean(item.payment_ledger_archived ?? item.paymentLedgerArchived),
+          paymentLedgerArchivedAt: item.payment_ledger_archived_at || item.paymentLedgerArchivedAt || '',
+          paymentLedgerArchivedBy: item.payment_ledger_archived_by || item.paymentLedgerArchivedBy || '',
           propertyDetails: item.propertyDetails || {
             pin: item.pin || '',
             titleNumber: item.tax_declaration_number || item.taxDeclarationNumber || '',
@@ -538,7 +551,6 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
       (a) => a.paymentStatus === 'Paid' || a.status === 'Payment Completed'
     );
     const settledAppsCount = settledApps.length;
-    const settledAppRevenue = settledApps.reduce((sum, a) => sum + Number(a.paymentAmount || 0), 0);
 
     const pendingPaymentApps = nonArchivedApps.filter(
       (a) =>
@@ -560,8 +572,18 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         a.status !== 'For Payment'
     ).length;
 
-    const masterPaidRevenue = paymentsLedger.reduce((sum, p) => sum + (p.amountPaid || 0), 0);
-    const totalPaidRevenue = masterPaidRevenue + settledAppRevenue;
+    const activePaymentLedger = paymentsLedger.filter((p) => !p.paymentLedgerArchived);
+    const activeApplicationPayments = nonArchivedApps.filter(
+      (a) =>
+        !a.paymentLedgerArchived &&
+        (a.paymentStatus === 'Paid' || a.status === 'Payment Completed')
+    );
+    const masterPaidRevenue = activePaymentLedger.reduce((sum, p) => sum + (p.amountPaid || 0), 0);
+    const activeSettledAppRevenue = activeApplicationPayments.reduce(
+      (sum, a) => sum + Number(a.paymentAmount || 0),
+      0
+    );
+    const totalPaidRevenue = masterPaidRevenue + activeSettledAppRevenue;
 
     const pendingMasterBalance = activeMaster.reduce((sum, p) => {
       if (p.paymentStatus !== 'Paid') {
@@ -578,7 +600,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
       pendingMasterCount,
       activeApps: totalApps,
       settledAppsCount,
-      settledAppRevenue,
+      settledAppRevenue: activeSettledAppRevenue,
       pendingPaymentAppsCount,
       pendingAppFees,
       underReviewAppsCount,
@@ -586,7 +608,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
       totalPaidRevenue,
       pendingBalance: pendingMasterBalance,
       totalPendingReceivables,
-      totalSettledReceipts: paymentsLedger.length + settledAppsCount,
+      totalSettledReceipts: activePaymentLedger.length + activeApplicationPayments.length,
       unpaidCount: pendingMasterCount,
     };
   }, [masterProperties, applications, paymentsLedger]);
@@ -1250,6 +1272,76 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     }
   };
 
+  const handleArchivePaymentLedgerEntry = async (payment: {
+    id: string | number;
+    receiptNumber: string;
+    sourceId: string | number;
+    type: 'MASTER' | 'APPLICATION';
+    isArchived?: boolean;
+  }) => {
+    const actionLabel = payment.isArchived ? 'restore' : 'archive';
+
+    if (
+      !(await confirmAction(
+        `Are you sure you want to ${actionLabel} payment ledger entry ${payment.receiptNumber}?`
+      ))
+    ) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/citizen-rpt-payments/${encodeURIComponent(String(payment.sourceId))}/ledger-archive`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sourceType: payment.type,
+            archived: !payment.isArchived,
+          }),
+        }
+      );
+
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(body?.message || `Failed to ${actionLabel} payment ledger entry.`);
+      }
+
+      if (payment.type === 'MASTER') {
+        setPaymentsLedger((prev) =>
+          prev.map((p) =>
+            String(p.id) === String(payment.sourceId)
+              ? {
+                  ...p,
+                  paymentLedgerArchived: !payment.isArchived,
+                  paymentLedgerArchivedAt: !payment.isArchived ? new Date().toISOString() : '',
+                }
+              : p
+          )
+        );
+      } else {
+        setApplications((prev) =>
+          prev.map((app) =>
+            String(app.id) === String(payment.sourceId)
+              ? {
+                  ...app,
+                  paymentLedgerArchived: !payment.isArchived,
+                  paymentLedgerArchivedAt: !payment.isArchived ? new Date().toISOString() : '',
+                }
+              : app
+          )
+        );
+      }
+
+      triggerToast(
+        `${payment.receiptNumber} ${payment.isArchived ? 'restored to the active ledger' : 'moved to the Archiver'}.`,
+        'success'
+      );
+    } catch (err: any) {
+      triggerToast(err?.message || `Failed to ${actionLabel} payment ledger entry.`, 'error');
+    }
+  };
+
   const combinedSettledPayments = useMemo(() => {
     const list: Array<{
       id: string | number;
@@ -1261,6 +1353,10 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
       paymentDate: string;
       amount: number;
       type: 'MASTER' | 'APPLICATION';
+      sourceId: string | number;
+      isArchived: boolean;
+      archivedAt?: string;
+      archivedBy?: string;
     }> = [];
 
     paymentsLedger.forEach((p) => {
@@ -1274,6 +1370,10 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
         paymentDate: p.paymentDate || '',
         amount: Number(p.amountPaid || 0),
         type: 'MASTER',
+        sourceId: p.id,
+        isArchived: Boolean(p.paymentLedgerArchived),
+        archivedAt: p.paymentLedgerArchivedAt,
+        archivedBy: p.paymentLedgerArchivedBy,
       });
     });
 
@@ -1289,6 +1389,10 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
           paymentDate: a.paymentDate || a.submissionDate || '',
           amount: Number(a.paymentAmount || 0),
           type: 'APPLICATION',
+          sourceId: a.id,
+          isArchived: Boolean(a.paymentLedgerArchived),
+          archivedAt: a.paymentLedgerArchivedAt,
+          archivedBy: a.paymentLedgerArchivedBy,
         });
       }
     });
@@ -2358,8 +2462,41 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
 
       {mainViewTab === 'payments' && (
         <section className="bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-xs space-y-5">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex space-x-1 bg-slate-200/60 dark:bg-slate-800/60 p-1.5 rounded-xl w-full sm:w-auto">
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+              <div className="flex space-x-1 bg-slate-200/60 dark:bg-slate-800/60 p-1.5 rounded-xl w-fit">
+                <button
+                  onClick={() => setPaymentLedgerTab('Active')}
+                  className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${paymentLedgerTab === 'Active'
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                    : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                    }`}
+                >
+                  <i className="fa-solid fa-receipt text-xs"></i>
+                  <span>Active Ledger</span>
+                </button>
+                <button
+                  onClick={() => setPaymentLedgerTab('Archived')}
+                  className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${paymentLedgerTab === 'Archived'
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                    : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                    }`}
+                >
+                  <i className="fa-solid fa-box-archive text-xs"></i>
+                  <span>Archiver</span>
+                </button>
+              </div>
+
+              <div className="text-xs text-slate-500 font-semibold flex items-center gap-2">
+                <span>Total Settled Revenue:</span>
+                <strong className="text-emerald-600 dark:text-emerald-400 font-mono text-base">
+                  {formatCurrency(metrics.totalPaidRevenue)}
+                </strong>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="flex space-x-1 bg-slate-200/60 dark:bg-slate-800/60 p-1.5 rounded-xl w-full sm:w-auto">
               <button
                 onClick={() => setLedgerCategoryFilter('ALL')}
                 className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${ledgerCategoryFilter === 'ALL'
@@ -2392,13 +2529,7 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                 <i className="fa-solid fa-file-invoice text-xs"></i>
                 <span>Application Fees</span>
               </button>
-            </div>
-
-            <div className="text-xs text-slate-500 font-semibold flex items-center gap-2">
-              <span>Total Settled Revenue:</span>
-              <strong className="text-emerald-600 dark:text-emerald-400 font-mono text-base">
-                {formatCurrency(metrics.totalPaidRevenue)}
-              </strong>
+              </div>
             </div>
           </div>
 
@@ -2426,11 +2557,14 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                     <th className="p-4">Payment Date</th>
                     <th className="p-4 text-right">Amount Settled</th>
                     <th className="p-4 text-center">Status</th>
+                    <th className="p-4 text-center">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                   {combinedSettledPayments
                     .filter((pay) => {
+                      if (paymentLedgerTab === 'Active' && pay.isArchived) return false;
+                      if (paymentLedgerTab === 'Archived' && !pay.isArchived) return false;
                       if (ledgerCategoryFilter !== 'ALL' && pay.type !== ledgerCategoryFilter) return false;
                       const lower = paymentSearch.toLowerCase();
                       return (
@@ -2472,9 +2606,29 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                           {formatCurrency(pay.amount)}
                         </td>
                         <td className="p-4 text-center">
-                          <span className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 px-2.5 py-1 rounded-full text-[10px] font-extrabold flex items-center justify-center gap-1">
-                            <i className="fa-solid fa-circle-check text-[9px]"></i> Settled
-                          </span>
+                          {pay.isArchived ? (
+                            <span className="bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 px-2.5 py-1 rounded-full text-[10px] font-extrabold inline-flex items-center justify-center gap-1">
+                              <i className="fa-solid fa-box-archive text-[9px]"></i> Archived
+                            </span>
+                          ) : (
+                            <span className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 px-2.5 py-1 rounded-full text-[10px] font-extrabold inline-flex items-center justify-center gap-1">
+                              <i className="fa-solid fa-circle-check text-[9px]"></i> Settled
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-4 text-center whitespace-nowrap">
+                          <button
+                            type="button"
+                            onClick={() => handleArchivePaymentLedgerEntry(pay)}
+                            className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition cursor-pointer ${pay.isArchived
+                              ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100'
+                              : 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 hover:bg-amber-100'
+                              }`}
+                            title={pay.isArchived ? 'Restore to Active Ledger' : 'Move to Archiver'}
+                          >
+                            <i className={`fa-solid ${pay.isArchived ? 'fa-rotate-left' : 'fa-box-archive'} mr-1`}></i>
+                            {pay.isArchived ? 'Restore' : 'Archive'}
+                          </button>
                         </td>
                       </tr>
                     ))}
