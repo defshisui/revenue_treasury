@@ -466,57 +466,6 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     }
   };
 
-  const deletePaymentLedgerArchive = async (pay: { archiveKey: string }) => {
-    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-    const headers: HeadersInit = {};
-    if (token) headers.Authorization = `Bearer ${token}`;
-
-    const response = await fetch(
-      `${API_BASE_URL}/rpt-payment-ledger-archives/${encodeURIComponent(pay.archiveKey)}/permanent`,
-      {
-        method: 'DELETE',
-        headers,
-      }
-    );
-
-    if (!response.ok) {
-      const data = await response.json().catch(() => ({}));
-      throw new Error(
-        data.message ||
-        `Failed to permanently delete archived payment ledger entry (HTTP ${response.status}).`
-      );
-    }
-  };
-
-  const handleDeletePaymentLedgerArchive = async (pay: any) => {
-    const confirmed = await confirmAction(
-      `WARNING: Are you sure you want to permanently delete archived payment ${pay.receiptNumber}? This removes the archived copy from the Archiver and cannot be undone.`,
-      'danger'
-    );
-
-    if (!confirmed) return;
-
-    try {
-      await deletePaymentLedgerArchive(pay);
-
-      setPaymentLedgerArchives((prev) => {
-        const next = new Set(prev);
-        next.delete(pay.archiveKey);
-        return next;
-      });
-
-      triggerToast(
-        `Archived payment ${pay.receiptNumber} permanently deleted.`,
-        'success'
-      );
-    } catch (err: any) {
-      triggerToast(
-        err?.message || 'Failed to permanently delete archived payment ledger entry.',
-        'error'
-      );
-    }
-  };
-
   const recordPaymentLedgerEntry = async (payload: {
     taxDeclarationNumber: string;
     ownerName: string;
@@ -961,13 +910,22 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     }));
   };
 
+  // Export the SAME filtered dataset currently shown in the Archiver.
+  // Search Records + Property Type + Payment Status are all respected.
+  // Pagination is intentionally not applied, so every matching archived
+  // record is included in the exported CSV.
   const handleExportArchivedCSV = () => {
-    const list = masterProperties.filter((p) => p.status === 'Archived');
+    const list = filteredMasterProperties.filter((p) => p.status === 'Archived');
 
     if (list.length === 0) {
-      triggerToast('No archived records available to export.', 'warning');
+      triggerToast('No archived records match the current filters.', 'warning');
       return;
     }
+
+    const escapeCsv = (value: string | number | null | undefined) => {
+      const text = String(value ?? '');
+      return `"${text.replace(/"/g, '""')}"`;
+    };
 
     const headers = [
       'Tax Declaration No.',
@@ -981,26 +939,45 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
     ];
 
     const rows = list.map((p) => [
-      `"${p.taxDeclarationNumber}"`,
-      `"${p.ownerName}"`,
-      `"${p.barangay}"`,
-      `"${p.propertyType}"`,
+      escapeCsv(p.taxDeclarationNumber),
+      escapeCsv(p.ownerName),
+      escapeCsv(p.barangay),
+      escapeCsv(p.propertyType),
       p.assessedValue || 0,
       p.balance || p.totalAssessment || 0,
-      `"${p.paymentStatus}"`,
-      `"${p.status}"`,
+      escapeCsv(p.paymentStatus),
+      escapeCsv(p.status),
     ]);
 
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+    const csvContent =
+      'data:text/csv;charset=utf-8,' +
+      [headers.map(escapeCsv).join(','), ...rows.map((row) => row.join(','))].join('\n');
+
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `QC_RPT_Archived_Assessment_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute(
+      'download',
+      `QC_RPT_Archived_Assessment_Filtered_${new Date().toISOString().slice(0, 10)}.csv`
+    );
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    triggerToast('Archived assessment CSV exported successfully.', 'success');
+
+    triggerToast(
+      `${list.length} filtered archived record${list.length === 1 ? '' : 's'} exported successfully.`,
+      'success'
+    );
   };
+
+  // Keep pagination aligned with the active filters. If a filter reduces
+  // the result set while the user is on a later page, return to page 1.
+  useEffect(() => {
+    const totalPages = Math.ceil(filteredMasterProperties.length / masterEntriesPerPage) || 1;
+    if (masterCurrentPage > totalPages) {
+      setMasterCurrentPage(1);
+    }
+  }, [filteredMasterProperties.length, masterEntriesPerPage, masterCurrentPage]);
 
 
   const syncApplicationToMaster = async (app: ExtendedApplicationRecord) => {
@@ -2661,25 +2638,14 @@ export const RealPropertyTaxView: React.FC<RealPropertyTaxViewProps> = ({
                         </td>
                         <td className="p-4 text-center">
                           {pay.archived ? (
-                            <div className="flex items-center justify-center gap-1.5 flex-wrap">
-                              <button
-                                type="button"
-                                onClick={() => handleRestorePaymentLedgerEntry(pay)}
-                                className="px-2.5 py-1.5 rounded-lg bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 text-[10px] font-bold hover:bg-blue-100 dark:hover:bg-blue-900/70 transition cursor-pointer"
-                                title="Restore to Active Ledger"
-                              >
-                                <i className="fa-solid fa-rotate-left mr-1"></i> Restore
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() => handleDeletePaymentLedgerArchive(pay)}
-                                className="px-2.5 py-1.5 rounded-lg bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 text-[10px] font-bold hover:bg-rose-100 dark:hover:bg-rose-900/70 transition cursor-pointer"
-                                title="Permanently Delete Archived Entry"
-                              >
-                                <i className="fa-solid fa-trash mr-1"></i> Delete
-                              </button>
-                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleRestorePaymentLedgerEntry(pay)}
+                              className="px-2.5 py-1.5 rounded-lg bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 text-[10px] font-bold hover:bg-blue-100 dark:hover:bg-blue-900/70 transition cursor-pointer"
+                              title="Restore to Active Ledger"
+                            >
+                              <i className="fa-solid fa-rotate-left mr-1"></i> Restore
+                            </button>
                           ) : (
                             <button
                               type="button"
