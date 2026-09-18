@@ -144,7 +144,7 @@ export default function RPTCertificateIssueModal({ application, open, submitting
               <div className="grid grid-cols-[1fr_190px] border-t-2 border-slate-700 text-lg font-black"><div className="p-3 text-right tracking-[0.4em]">TOTAL</div><div className="border-l border-slate-700 p-3 text-right">{money(total)}</div></div>
               <div className="border-t border-slate-700 p-3 text-sm"><b>Amount in Words:</b> {form.amountInWords}</div>
               <div className="grid grid-cols-2 border-t border-slate-700 text-sm">
-                <div className="p-4 border-r border-slate-700"><b>Received</b><div className="mt-3">□ Cash &nbsp;&nbsp; □ Check</div><div>□ Treasury Warrant &nbsp;&nbsp; □ Money Order</div><div className="mt-4"><b>Payment Method:</b> {form.paymentMethod}</div><div><b>Reference:</b> {form.paymentReference}</div></div>
+                <div className="p-4 border-r border-slate-700"><div className="mt-1"><b>Payment Method:</b> {form.paymentMethod}</div><div><b>Reference:</b> {form.paymentReference}</div></div>
                 <div className="p-4 text-center"><div>Received the Amount stated above.</div><div className="mt-12 font-bold">{form.issuedBy}</div><div>{form.position}</div><div className="mt-4 text-[10px] font-mono break-all">{form.machineValidationNumber}</div></div>
               </div>
               <div className="border-t border-slate-700 p-3 text-[10px] flex justify-between gap-4"><span>Remarks: {form.remarks}</span><span>Generated electronically • GovServe Treasury</span></div>

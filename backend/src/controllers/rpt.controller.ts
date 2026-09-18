@@ -495,6 +495,242 @@ export async function deleteRptApplication(
   }
 }
 
+
+/**
+ * Moves an issued RPT application into the LGU master RPT database.
+ *
+ * This is intentionally handled on the backend so issuing a certificate cannot
+ * leave the application only in the Citizen Applications queue.
+ * Existing master records are updated; otherwise a new master record is created.
+ */
+async function syncIssuedRptApplicationToMaster(application: any): Promise<any> {
+  const taxDeclarationNumber = String(
+    application?.tax_declaration_number ||
+    application?.taxDeclarationNumber ||
+    ''
+  ).trim();
+
+  if (!taxDeclarationNumber) {
+    throw new Error(
+      'Tax Declaration Number is required before an RPT application can be moved to the Master Database.'
+    );
+  }
+
+  const paymentStatusRaw = String(
+    application?.payment_status ||
+    application?.paymentStatus ||
+    ''
+  ).trim();
+
+  const normalizedPaymentStatus =
+    paymentStatusRaw === 'Settled' ||
+    paymentStatusRaw === 'Payment Completed' ||
+    paymentStatusRaw === 'Paid'
+      ? 'Paid'
+      : (paymentStatusRaw || 'Unpaid');
+
+  const amountPaid = Number(application?.payment_amount ?? 0) || 0;
+
+  const existing = await pool.query(
+    `SELECT id
+       FROM lgu_rpt_records
+      WHERE LOWER(REPLACE(COALESCE(tax_declaration_number, ''), ' ', '')) =
+            LOWER(REPLACE($1, ' ', ''))
+      ORDER BY id ASC
+      LIMIT 1`,
+    [taxDeclarationNumber]
+  );
+
+  if (existing.rowCount && existing.rows[0]?.id !== undefined) {
+    const result = await pool.query(
+      `UPDATE lgu_rpt_records
+          SET owner_name = COALESCE($1, owner_name),
+              property_location = COALESCE($2, property_location),
+              barangay = COALESCE($3, barangay),
+              property_type = COALESCE($4, property_type),
+              payment_status = CASE
+                WHEN $5 = 'Paid' THEN 'Paid'
+                ELSE COALESCE(NULLIF($5, ''), payment_status)
+              END,
+              amount_paid = CASE
+                WHEN $5 = 'Paid' AND $6 > 0 THEN $6
+                ELSE amount_paid
+              END,
+              balance = CASE
+                WHEN $5 = 'Paid' THEN 0
+                ELSE balance
+              END,
+              status = CASE
+                WHEN $5 = 'Paid' THEN 'Paid'
+                ELSE status
+              END,
+              official_receipt_number = COALESCE($7, official_receipt_number),
+              payment_method = COALESCE($8, payment_method),
+              payment_date = COALESCE($9, payment_date),
+              quarterly_amounts = COALESCE($10::jsonb, quarterly_amounts)
+        WHERE id = $11
+        RETURNING *`,
+      [
+        application.owner_name || application.applicant_name || null,
+        application.property_location || null,
+        application.barangay || null,
+        application.property_type || null,
+        normalizedPaymentStatus,
+        amountPaid,
+        application.official_receipt_number || null,
+        application.payment_method || null,
+        application.payment_date || null,
+        application.quarterly_amounts
+          ? JSON.stringify(application.quarterly_amounts)
+          : null,
+        existing.rows[0].id,
+      ]
+    );
+
+    return {
+      action: 'updated',
+      record: result.rows[0],
+    };
+  }
+
+  const propertyDetails =
+    application?.property_details ||
+    application?.propertyDetails ||
+    {};
+
+  const totalAssessment =
+    Number(
+      application?.payment_amount ??
+      application?.total_assessment ??
+      propertyDetails?.totalAssessment ??
+      0
+    ) || 0;
+
+  const isPaid = normalizedPaymentStatus === 'Paid';
+
+  const result = await pool.query(
+    `INSERT INTO lgu_rpt_records (
+       tax_declaration_number,
+       pin,
+       new_pspin,
+       owner_name,
+       property_location,
+       barangay,
+       property_type,
+       billing_year,
+       quarter,
+       bill_expiry_date,
+       lot_area_sqm,
+       market_value,
+       assessed_value,
+       basic_tax,
+       sef_tax,
+       shttc_applied,
+       penalty,
+       discount,
+       total_assessment,
+       amount_paid,
+       balance,
+       status,
+       payment_status,
+       official_receipt_number,
+       payment_method,
+       payment_date,
+       quarterly_amounts
+     )
+     VALUES (
+       $1,
+       $2,
+       $3,
+       $4,
+       $5,
+       $6,
+       $7,
+       $8,
+       $9,
+       $10,
+       $11,
+       $12,
+       $13,
+       $14,
+       $15,
+       $16,
+       $17,
+       $18,
+       $19,
+       $20,
+       $21,
+       $22,
+       $23,
+       $24,
+       $25,
+       $26,
+       $27::jsonb
+     )
+     RETURNING *`,
+    [
+      taxDeclarationNumber,
+      application.pin || propertyDetails?.pin || null,
+      application.new_pspin || application.newPspin || propertyDetails?.newPspin || null,
+      application.owner_name || application.applicant_name || 'Taxpayer',
+      application.property_location ||
+        propertyDetails?.address ||
+        'N/A',
+      application.barangay || 'Central',
+      application.property_type ||
+        propertyDetails?.propertyType ||
+        'Residential',
+      Number(application.billing_year || application.billingYear) || new Date().getFullYear(),
+      application.quarter || 'Q1-Q4',
+      application.bill_expiry_date ||
+        application.billExpiryDate ||
+        null,
+      Number(
+        application.lot_area_sqm ||
+        application.lotAreaSqM ||
+        propertyDetails?.lotAreaSqM ||
+        0
+      ) || 0,
+      Number(
+        application.market_value ||
+        application.marketValue ||
+        propertyDetails?.marketValue ||
+        0
+      ) || 0,
+      Number(
+        application.assessed_value ||
+        application.assessedValue ||
+        propertyDetails?.assessedValue ||
+        0
+      ) || 0,
+      Number(application.basic_tax || application.basicTax || 0) || 0,
+      Number(application.sef_tax || application.sefTax || 0) || 0,
+      Number(application.shttc_applied || application.shttcApplied || 0) || 0,
+      Number(application.penalty || 0) || 0,
+      Number(application.discount || 0) || 0,
+      totalAssessment,
+      isPaid ? amountPaid : Number(application.amount_paid || 0) || 0,
+      isPaid
+        ? 0
+        : Number(
+            application.balance ??
+            Math.max(0, totalAssessment - amountPaid)
+          ) || 0,
+      isPaid ? 'Paid' : (application.status || 'Active'),
+      normalizedPaymentStatus,
+      application.official_receipt_number || null,
+      application.payment_method || null,
+      application.payment_date || null,
+      JSON.stringify(application.quarterly_amounts || {}),
+    ]
+  );
+
+  return {
+    action: 'created',
+    record: result.rows[0],
+  };
+}
+
 export async function updateRptApplicationStatus(
   req: Request,
   res: Response
@@ -621,6 +857,36 @@ export async function updateRptApplicationStatus(
         console.error('[RPT] Certificate saved but email delivery failed:', emailError);
         res.status(502).json({
           message: `Certificate was saved, but the email could not be sent: ${emailError?.message || 'Email service error'}`,
+          record: formatRptApplication(result.rows[0])
+        });
+        return;
+      }
+
+      // Once the certificate has been successfully emailed, move/sync the
+      // completed application into the LGU Master Database.
+      try {
+        const masterSync = await syncIssuedRptApplicationToMaster(result.rows[0]);
+
+        await recordAudit(
+          req,
+          'AUD-RPT-MASTER-SYNC',
+          authenticatedEmail || 'admin@gov.ph',
+          'Admin',
+          'RPT Module',
+          'RPT_APPLICATION_MOVED_TO_MASTER',
+          'INFO',
+          null,
+          `Moved issued RPT application ${id} to LGU Master Database (${masterSync.action}).`
+        );
+      } catch (masterError: any) {
+        console.error(
+          '[RPT] Certificate/email succeeded but Master Database sync failed:',
+          masterError
+        );
+
+        res.status(500).json({
+          message:
+            `Certificate was issued and emailed, but the application could not be moved to the Master Database: ${masterError?.message || 'Master Database sync error'}`,
           record: formatRptApplication(result.rows[0])
         });
         return;
