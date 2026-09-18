@@ -22,7 +22,6 @@ interface AppNotification {
 
 export default function TreasuryHeader({
   activeRole,
-  notify,
   isCollapsed,
 }: TreasuryHeaderProps) {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
@@ -246,7 +245,8 @@ export default function TreasuryHeader({
     localStorage.removeItem('token');
     localStorage.removeItem('session_id');
     sessionStorage.clear();
-    notify("You have been logged out.");
+    // Do not show a logout notification/toast here.
+    // The audit requests above use keepalive/sendBeacon and do not block navigation.
     navigate("/", { replace: true });
   };
 
