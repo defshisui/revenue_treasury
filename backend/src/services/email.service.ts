@@ -643,6 +643,503 @@ Purpose: ${actionTitle}
     }
   }
 
+
+  public static async sendPaymentReceiptEmail(params: {
+    toEmail: string;
+    customerName?: string;
+    service: string;
+    amount: number;
+    paymentMethod: string;
+    paymentReference: string;
+    officialReceiptNumber: string;
+    paymentDate?: Date | string;
+    accountReference?: string;
+  }): Promise<{ success: boolean; messageId?: string }> {
+    const {
+      toEmail,
+      customerName,
+      service,
+      amount,
+      paymentMethod,
+      paymentReference,
+      officialReceiptNumber,
+      paymentDate,
+      accountReference,
+    } = params;
+
+    if (!toEmail || !toEmail.includes('@')) {
+      throw new Error('A valid recipient email address is required.');
+    }
+
+    const rawFrom =
+      process.env.SMTP_FROM ||
+      'GovServe Treasury <govserve.treasury@gmail.com>';
+
+    const userEmail =
+      (process.env.SMTP_USER || 'govserve.treasury@gmail.com').trim();
+
+    const fromName = 'GovServe Treasury';
+
+    const fromEmail = rawFrom.includes('<')
+      ? (rawFrom.match(/<([^>]+)>/)?.[1] || userEmail)
+      : (rawFrom.includes('@') ? rawFrom : userEmail);
+
+    const esc = (value: any) =>
+      String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+
+    const numericAmount = Number(amount || 0);
+
+    const amountText = `₱${numericAmount.toLocaleString('en-PH', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+
+    const formattedDate = paymentDate
+      ? new Date(paymentDate).toLocaleString('en-PH', {
+          dateStyle: 'medium',
+          timeStyle: 'short',
+        })
+      : new Date().toLocaleString('en-PH', {
+          dateStyle: 'medium',
+          timeStyle: 'short',
+        });
+
+    const subject =
+      `Payment Received - Official Receipt ${officialReceiptNumber}`.trim();
+
+    const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GovServe Payment Confirmation</title>
+</head>
+
+<body
+  style="
+    margin:0;
+    padding:24px;
+    background:#f1f5f9;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;
+    color:#1e293b;
+  "
+>
+  <table width="100%" border="0" cellspacing="0" cellpadding="0">
+    <tr>
+      <td align="center">
+
+        <table
+          width="100%"
+          border="0"
+          cellspacing="0"
+          cellpadding="0"
+          style="
+            max-width:600px;
+            background:#ffffff;
+            border:1px solid #e2e8f0;
+            border-radius:18px;
+            overflow:hidden;
+          "
+        >
+
+          <!-- HEADER -->
+          <tr>
+            <td
+              style="
+                background:#0B3B60;
+                padding:28px 24px;
+                text-align:center;
+              "
+            >
+              <div
+                style="
+                  color:#ffffff;
+                  font-size:23px;
+                  font-weight:800;
+                "
+              >
+                GovServe Treasury
+              </div>
+
+              <div
+                style="
+                  color:#bfdbfe;
+                  font-size:11px;
+                  font-weight:700;
+                  letter-spacing:1px;
+                  margin-top:6px;
+                  text-transform:uppercase;
+                "
+              >
+                Revenue &amp; Treasury Management System
+              </div>
+            </td>
+          </tr>
+
+          <!-- BODY -->
+          <tr>
+            <td style="padding:32px 28px;">
+
+              <div
+                style="
+                  font-size:20px;
+                  font-weight:800;
+                  color:#0f172a;
+                  margin-bottom:8px;
+                "
+              >
+                Payment Successfully Recorded
+              </div>
+
+              <div
+                style="
+                  font-size:14px;
+                  color:#475569;
+                  line-height:1.6;
+                  margin-bottom:24px;
+                "
+              >
+                Dear ${esc(customerName || 'Citizen Taxpayer')}, your payment
+                has been successfully recorded in the GovServe Treasury system.
+              </div>
+
+              <!-- AMOUNT -->
+              <div
+                style="
+                  background:#f0fdf4;
+                  border:1px solid #bbf7d0;
+                  border-radius:14px;
+                  padding:22px;
+                  text-align:center;
+                  margin-bottom:24px;
+                "
+              >
+                <div
+                  style="
+                    font-size:11px;
+                    color:#64748b;
+                    font-weight:700;
+                    text-transform:uppercase;
+                    letter-spacing:1px;
+                  "
+                >
+                  Amount Paid
+                </div>
+
+                <div
+                  style="
+                    font-size:32px;
+                    font-weight:900;
+                    color:#166534;
+                    margin-top:6px;
+                  "
+                >
+                  ${amountText}
+                </div>
+              </div>
+
+              <!-- PAYMENT DETAILS -->
+              <table
+                width="100%"
+                border="0"
+                cellspacing="0"
+                cellpadding="0"
+                style="
+                  border-collapse:collapse;
+                  font-size:13px;
+                  margin-bottom:24px;
+                "
+              >
+
+                <tr>
+                  <td
+                    style="
+                      padding:11px 0;
+                      border-bottom:1px solid #e2e8f0;
+                      color:#64748b;
+                      width:42%;
+                    "
+                  >
+                    Service
+                  </td>
+                  <td
+                    style="
+                      padding:11px 0;
+                      border-bottom:1px solid #e2e8f0;
+                      font-weight:700;
+                      text-align:right;
+                    "
+                  >
+                    ${esc(service)}
+                  </td>
+                </tr>
+
+                <tr>
+                  <td
+                    style="
+                      padding:11px 0;
+                      border-bottom:1px solid #e2e8f0;
+                      color:#64748b;
+                    "
+                  >
+                    Official Receipt No.
+                  </td>
+                  <td
+                    style="
+                      padding:11px 0;
+                      border-bottom:1px solid #e2e8f0;
+                      font-weight:700;
+                      text-align:right;
+                    "
+                  >
+                    ${esc(officialReceiptNumber)}
+                  </td>
+                </tr>
+
+                <tr>
+                  <td
+                    style="
+                      padding:11px 0;
+                      border-bottom:1px solid #e2e8f0;
+                      color:#64748b;
+                    "
+                  >
+                    Payment Reference
+                  </td>
+                  <td
+                    style="
+                      padding:11px 0;
+                      border-bottom:1px solid #e2e8f0;
+                      font-weight:700;
+                      text-align:right;
+                      word-break:break-all;
+                    "
+                  >
+                    ${esc(paymentReference)}
+                  </td>
+                </tr>
+
+                <tr>
+                  <td
+                    style="
+                      padding:11px 0;
+                      border-bottom:1px solid #e2e8f0;
+                      color:#64748b;
+                    "
+                  >
+                    Payment Method
+                  </td>
+                  <td
+                    style="
+                      padding:11px 0;
+                      border-bottom:1px solid #e2e8f0;
+                      font-weight:700;
+                      text-align:right;
+                    "
+                  >
+                    ${esc(paymentMethod)}
+                  </td>
+                </tr>
+
+                <tr>
+                  <td
+                    style="
+                      padding:11px 0;
+                      border-bottom:1px solid #e2e8f0;
+                      color:#64748b;
+                    "
+                  >
+                    Payment Date
+                  </td>
+                  <td
+                    style="
+                      padding:11px 0;
+                      border-bottom:1px solid #e2e8f0;
+                      font-weight:700;
+                      text-align:right;
+                    "
+                  >
+                    ${esc(formattedDate)}
+                  </td>
+                </tr>
+
+                ${
+                  accountReference
+                    ? `
+                <tr>
+                  <td
+                    style="
+                      padding:11px 0;
+                      color:#64748b;
+                    "
+                  >
+                    Account / Reference
+                  </td>
+                  <td
+                    style="
+                      padding:11px 0;
+                      font-weight:700;
+                      text-align:right;
+                      word-break:break-word;
+                    "
+                  >
+                    ${esc(accountReference)}
+                  </td>
+                </tr>
+                `
+                    : ''
+                }
+
+              </table>
+
+              <!-- NOTICE -->
+              <div
+                style="
+                  background:#eff6ff;
+                  border-left:4px solid #2563eb;
+                  padding:12px 14px;
+                  border-radius:8px;
+                  font-size:12px;
+                  color:#1e40af;
+                  line-height:1.5;
+                "
+              >
+                Please keep this email for your records. This message confirms
+                that the payment information above was recorded by the GovServe
+                Revenue &amp; Treasury Management System.
+              </div>
+
+            </td>
+          </tr>
+
+          <!-- FOOTER -->
+          <tr>
+            <td
+              style="
+                background:#f8fafc;
+                padding:18px 24px;
+                text-align:center;
+                border-top:1px solid #e2e8f0;
+              "
+            >
+              <div
+                style="
+                  font-size:11px;
+                  color:#94a3b8;
+                  line-height:1.5;
+                "
+              >
+                GovServe Revenue &amp; Treasury Management System<br>
+                Republic of the Philippines - Local Government Unit
+              </div>
+            </td>
+          </tr>
+
+        </table>
+
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+`;
+
+    const textContent = `
+GovServe Treasury - Payment Confirmation
+
+Dear ${customerName || 'Citizen Taxpayer'},
+
+Your payment has been successfully recorded.
+
+Service: ${service}
+Amount Paid: ${amountText}
+Official Receipt No.: ${officialReceiptNumber}
+Payment Reference: ${paymentReference}
+Payment Method: ${paymentMethod}
+Payment Date: ${formattedDate}
+${accountReference ? `Account / Reference: ${accountReference}` : ''}
+
+Please keep this email for your records.
+
+GovServe Revenue & Treasury Management System
+Republic of the Philippines - Local Government Unit
+`;
+
+    // ============================================
+    // BREVO - HTTPS / PORT 443
+    // ============================================
+    const brevoApiKey = process.env.BREVO_API_KEY?.trim();
+
+    if (brevoApiKey) {
+      return await this.sendViaBrevo(
+        brevoApiKey,
+        toEmail,
+        subject,
+        htmlContent,
+        textContent,
+        fromEmail,
+        fromName
+      );
+    }
+
+    // ============================================
+    // RESEND - HTTPS / PORT 443
+    // ============================================
+    const resendApiKey = process.env.RESEND_API_KEY?.trim();
+
+    if (resendApiKey) {
+      return await this.sendViaResend(
+        resendApiKey,
+        toEmail,
+        subject,
+        htmlContent,
+        textContent,
+        rawFrom
+      );
+    }
+
+    // ============================================
+    // SENDGRID - HTTPS / PORT 443
+    // ============================================
+    const sendgridApiKey = process.env.SENDGRID_API_KEY?.trim();
+
+    if (sendgridApiKey) {
+      return await this.sendViaSendGrid(
+        sendgridApiKey,
+        toEmail,
+        subject,
+        htmlContent,
+        textContent,
+        fromEmail,
+        fromName
+      );
+    }
+
+    // ============================================
+    // SMTP FALLBACK
+    // ============================================
+    const transporter = this.getTransporter();
+
+    const info = await transporter.sendMail({
+      from: rawFrom,
+      to: toEmail,
+      subject,
+      text: textContent,
+      html: htmlContent,
+    });
+
+    return {
+      success: true,
+      messageId: info.messageId,
+    };
+  }
+
   public static async sendCertificateEmail(
     toEmail: string,
     citizenName: string,
