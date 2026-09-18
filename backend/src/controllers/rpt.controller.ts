@@ -649,15 +649,31 @@ export async function updateRptApplicationStatus(
     if (finalStatus === 'Digital Certificate Issued' && certificateData) {
       const application = result.rows[0];
 
-      const masterTdn = String(
-        certificate?.taxDeclarationNumber ||
-        application.tax_declaration_number ||
-        ''
+      const certificateTdn = String(
+        certificate?.taxDeclarationNumber || ''
       ).trim();
+      const applicationTdn = String(
+        application.tax_declaration_number || ''
+      ).trim();
+
+      // New/undeclared properties can temporarily use "For Issuance" in
+      // the certificate modal. That value cannot be used as a master key
+      // because multiple applications would overwrite the same row. Use the
+      // unique application reference/control number until an actual TDN is
+      // assigned.
+      const placeholderTdn = /^(for issuance|for issuance\.|pending|n\/?a|-)$/i;
+      let masterTdn = certificateTdn || applicationTdn;
+      if (!masterTdn || placeholderTdn.test(masterTdn)) {
+        masterTdn = String(
+          application.reference_number ||
+          application.control_number ||
+          `RPT-${application.id}`
+        ).trim();
+      }
 
       if (!masterTdn) {
         throw new Error(
-          'Tax Declaration Number is required before the issued application can be added to Master Database.'
+          'A unique Tax Declaration Number or application reference is required before the issued application can be added to Master Database.'
         );
       }
 
