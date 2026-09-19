@@ -2,810 +2,982 @@ import type { Request, Response } from 'express';
 import { randomUUID } from 'crypto';
 import pool from '../db.js';
 import { recordAudit } from './audit.controller.js';
+import type { AuthenticatedRequest } from '../middleware/auth.js';
+
+type BusinessStatus =
+  | 'SUBMITTED'
+  | 'FOR_COMPLIANCE'
+  | 'FOR_FINAL_REVIEW'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'ARCHIVED';
+
+type DocumentRequirementKey =
+  | 'sales_declaration'
+  | 'mayors_permit'
+  | 'latest_tax_bill'
+  | 'latest_official_receipt'
+  | 'bir_tax_return'
+  | 'previous_itr'
+  | 'audited_financial_statements'
+  | 'notarized_gross_sales'
+  | 'branch_permits_and_ors'
+  | 'branch_sales_breakdown'
+  | 'line_of_business_sales_breakdown'
+  | 'cedula'
+  | 'summary_list_of_sales'
+  | 'incentive_exemption';
+
+const BASE_REQUIREMENTS: Array<{ key: DocumentRequirementKey; label: string }> = [
+  { key: 'sales_declaration', label: 'Gross Receipts / Sales Declaration Form' },
+  { key: 'mayors_permit', label: 'Latest Mayor’s / Business Permit' },
+  { key: 'latest_tax_bill', label: 'Latest Business Tax Bill' },
+  { key: 'latest_official_receipt', label: 'Latest Business Tax Official Receipt' },
+];
+
+const DOCUMENT_LABELS: Record<DocumentRequirementKey, string> = {
+  sales_declaration: 'Gross Receipts / Sales Declaration Form',
+  mayors_permit: 'Latest Mayor’s / Business Permit',
+  latest_tax_bill: 'Latest Business Tax Bill',
+  latest_official_receipt: 'Latest Business Tax Official Receipt',
+  bir_tax_return: 'Preceding Year VAT Return / Percentage Tax Return / ITR',
+  previous_itr: 'Previous-Preceding Year Income Tax Return',
+  audited_financial_statements: 'Previous-Preceding Year Audited Financial Statements',
+  notarized_gross_sales: 'Notarized Certification of Gross Sales',
+  branch_permits_and_ors: 'Other Branch Mayor’s Permits and Official Receipts',
+  branch_sales_breakdown: 'Certified Breakdown of Sales for Other Branches',
+  line_of_business_sales_breakdown: 'Certified Breakdown of Sales by Line of Business',
+  cedula: 'Current-Year Community Tax Certificate / Cedula',
+  summary_list_of_sales: 'Previous-Year Summary List of Sales Received by BIR',
+  incentive_exemption: 'Certificate of Incentives / Exemption',
+};
+
+const STAFF_ROLES = new Set(['admin', 'treasury-staff', 'treasury_admin', 'staff', 'treasurer']);
+
+function isStaff(req: Request): boolean {
+  const role = String((req as AuthenticatedRequest).user?.role || '').toLowerCase();
+  return STAFF_ROLES.has(role);
+}
+
+function normalizeBoolean(value: unknown, fallback = false): boolean {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value !== 0;
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (['true', '1', 'yes', 'y'].includes(normalized)) return true;
+    if (['false', '0', 'no', 'n'].includes(normalized)) return false;
+  }
+  return fallback;
+}
+
+function parseJsonObject(value: unknown): Record<string, any> {
+  if (!value) return {};
+  if (typeof value === 'object') return value as Record<string, any>;
+  try {
+    return JSON.parse(String(value));
+  } catch {
+    return {};
+  }
+}
+
+function parseJsonArray(value: unknown): any[] {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+  try {
+    const parsed = JSON.parse(String(value));
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function buildRequiredDocumentKeys(record: any): DocumentRequirementKey[] {
+  const required = BASE_REQUIREMENTS.map((item) => item.key);
+  const birRegistered = normalizeBoolean(record.bir_registered, true);
+  const hasOtherBranches = normalizeBoolean(record.has_other_branches, false);
+  const hasMultipleLines = normalizeBoolean(record.has_multiple_lines, false);
+
+  if (birRegistered) {
+    required.push('bir_tax_return', 'previous_itr', 'audited_financial_statements');
+  } else {
+    required.push('notarized_gross_sales');
+  }
+
+  if (hasOtherBranches) {
+    required.push('branch_permits_and_ors', 'branch_sales_breakdown');
+  }
+
+  if (hasMultipleLines) {
+    required.push('line_of_business_sales_breakdown');
+  }
+
+  return required;
+}
+
+function getUploadedDocumentKeys(attachments: unknown): Set<string> {
+  const set = new Set<string>();
+  for (const item of parseJsonArray(attachments)) {
+    const key = String(item?.type || '').trim();
+    if (key) set.add(key);
+  }
+  return set;
+}
+
+function getMissingDocuments(record: any): Array<{ key: string; label: string }> {
+  const uploaded = getUploadedDocumentKeys(record.attachments);
+  return buildRequiredDocumentKeys(record)
+    .filter((key) => !uploaded.has(key))
+    .map((key) => ({ key, label: DOCUMENT_LABELS[key] || key }));
+}
+
+function getDocumentChecklist(record: any): Record<string, boolean> {
+  const stored = parseJsonObject(record.document_checklist);
+  const uploaded = getUploadedDocumentKeys(record.attachments);
+  const checklist: Record<string, boolean> = {};
+
+  for (const key of buildRequiredDocumentKeys(record)) {
+    checklist[key] = Boolean(stored[key]) || uploaded.has(key) ? Boolean(stored[key]) : false;
+  }
+
+  return checklist;
+}
+
+function hasVerifiedRequiredDocuments(record: any): boolean {
+  const stored = parseJsonObject(record.document_checklist);
+  return buildRequiredDocumentKeys(record).every((key) => stored[key] === true);
+}
+
+function generateReference(prefix: string, value: string | number): string {
+  const year = new Date().getFullYear();
+  const random = Math.floor(100000 + Math.random() * 900000);
+  return `${prefix}-${year}-${String(value).replace(/[^A-Za-z0-9]/g, '').slice(-12)}-${random}`;
+}
 
 async function generateUniqueTaxBillNumber(year: string | number): Promise<string> {
-    for (let attempt = 0; attempt < 10; attempt++) {
-        const taxBillNumber = `TB-${year}-${Math.floor(100000 + Math.random() * 900000)}`;
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const taxBillNumber = `TB-${year}-${Math.floor(100000 + Math.random() * 900000)}`;
+    const existing = await pool.query(
+      'SELECT id FROM business_assessments WHERE tax_bill_number = $1 LIMIT 1',
+      [taxBillNumber]
+    );
+    if (existing.rows.length === 0) return taxBillNumber;
+  }
+  throw new Error('Unable to generate a unique Tax Bill Number. Please try again.');
+}
 
-        const existing = await pool.query(
-            'SELECT id FROM business_assessments WHERE tax_bill_number = $1 LIMIT 1',
-            [taxBillNumber]
-        );
+function normalizeAttachments(files: any[], documentTypes: string[]): any[] {
+  return files.map((file, index) => ({
+    type: String(documentTypes[index] || 'supporting_document').trim(),
+    name: String(file.originalname || `document-${index + 1}`),
+    mimeType: String(file.mimetype || 'application/octet-stream'),
+    size: Number(file.size || 0),
+    uploadedAt: new Date().toISOString(),
+    url: `data:${file.mimetype};base64,${file.buffer.toString('base64')}`,
+  }));
+}
 
-        if (existing.rows.length === 0) {
-            return taxBillNumber;
-        }
-    }
+function formatAssessment(row: any) {
+  const computedFees = parseJsonObject(row.computed_fees);
+  const attachments = parseJsonArray(row.attachments);
+  const documentChecklist = parseJsonObject(row.document_checklist);
 
-    throw new Error('Unable to generate a unique Tax Bill Number. Please try again.');
+  return {
+    id: row.id,
+    trackingNumber: row.tracking_number,
+    taxBillNumber: row.tax_bill_number || null,
+    orderOfPaymentNumber: row.order_of_payment_number || null,
+    businessName: row.business_name,
+    businessOwner: row.business_owner,
+    businessAddress: row.business_address || '',
+    barangay: row.barangay || '',
+    businessType: row.business_type || '',
+    lineOfBusiness: row.line_of_business || '',
+    businessAreaSqm: Number(row.business_area_sqm || 0),
+    registrationType: row.registration_type || '',
+    registrationNumber: row.registration_number || '',
+    mayorPermitNumber: row.mayors_permit_number || '',
+    birRegistered: normalizeBoolean(row.bir_registered, true),
+    hasOtherBranches: normalizeBoolean(row.has_other_branches, false),
+    hasMultipleLines: normalizeBoolean(row.has_multiple_lines, false),
+    taxYear: Number(row.tax_year || new Date().getFullYear()),
+    assessmentPeriod: row.assessment_period || 'ANNUAL_RENEWAL',
+    quarter: row.quarter || 'ANNUAL',
+    dueDate: row.due_date || null,
+    status: row.status,
+    applicationDate: row.application_date,
+    psicCode: row.psic_code || '',
+    grossSales: Number(row.gross_sales || 0),
+    tin: row.tin || '',
+    email: row.email || '',
+    attachments,
+    documentChecklist,
+    missingDocuments: getMissingDocuments(row),
+    remarks: row.remarks || '',
+    complianceRemarks: row.compliance_remarks || '',
+    reviewedBy: row.reviewed_by || '',
+    reviewedAt: row.reviewed_at || null,
+    approvedBy: row.approved_by || '',
+    approvedAt: row.approved_at || null,
+    paymentStatus: String(row.payment_status || 'UNPAID').toUpperCase() === 'PAID' ? 'PAID' : 'UNPAID',
+    paymentAmount: Number(row.payment_amount || computedFees.total || 0),
+    paidAmount: Number(row.paid_amount || 0),
+    paymentMethod: row.payment_method || '',
+    paymentReference: row.payment_reference || '',
+    paymentDate: row.payment_date || null,
+    officialReceiptNumber: row.official_receipt_number || '',
+    paymongoPaymentId: row.paymongo_payment_id || '',
+    computedFees,
+  };
 }
 
 export async function getBusinessAssessments(req: Request, res: Response): Promise<void> {
-    const { status, email, search, searchType, page = '1', limit = '10' } = req.query;
+  const { status, email, search, searchType, page = '1', limit = '10' } = req.query;
+  const staff = isStaff(req);
+  const authEmail = String((req as AuthenticatedRequest).user?.email || '').trim().toLowerCase();
 
-    try {
-        let query = 'SELECT * FROM business_assessments WHERE 1=1';
-        const params: any[] = [];
-        let paramIndex = 1;
+  try {
+    let query = 'SELECT * FROM business_assessments WHERE 1=1';
+    const params: any[] = [];
+    let paramIndex = 1;
 
-        if (status && status !== 'ALL') {
-            query += ` AND status = $${paramIndex++}`;
-            params.push(status);
-        }
-
-        if (email) {
-            query += ` AND email = $${paramIndex++}`;
-            params.push(email);
-        }
-
-        if (search) {
-            const normalizedSearchType = String(searchType || 'Tracking/MP No.').trim();
-
-            if (normalizedSearchType === 'Business Name') {
-                query += ` AND business_name ILIKE $${paramIndex++}`;
-                params.push(`%${search}%`);
-            } else if (normalizedSearchType === 'Business Owner') {
-                query += ` AND business_owner ILIKE $${paramIndex++}`;
-                params.push(`%${search}%`);
-            } else {
-                query += ` AND tracking_number ILIKE $${paramIndex++}`;
-                params.push(`%${search}%`);
-            }
-        }
-
-        const pageNum = Math.max(1, parseInt(String(page || '1'), 10) || 1);
-        const limitNum = Math.min(200, Math.max(1, parseInt(String(limit || '50'), 10) || 50));
-        const offset = (pageNum - 1) * limitNum;
-
-        query += ` ORDER BY application_date DESC LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
-        params.push(limitNum, offset);
-
-        const result = await pool.query(query, params);
-
-        const formatted = result.rows.map(row => ({
-            id: row.id,
-
-            trackingNumber: row.tracking_number,
-
-            taxBillNumber: row.tax_bill_number || null,
-
-            businessName: row.business_name,
-            businessOwner: row.business_owner,
-            status: row.status,
-            applicationDate: row.application_date,
-            psicCode: row.psic_code,
-            grossSales: Number(row.gross_sales || row.grossSales || 0),
-            tin: row.tin,
-            businessType: row.business_type,
-            attachments: row.attachments || [],
-            remarks: row.remarks || '',
-
-            paymentStatus: String(row.remarks || '').toLowerCase().startsWith('paid via')
-                ? 'PAID'
-                : 'UNPAID',
-
-            officialReceiptNumber:
-                row.official_receipt_number ||
-                row.officialReceiptNumber ||
-                (() => {
-                    const remarks = String(row.remarks || '');
-                    const match = remarks.match(/(?:OR|O\.R\.)\s*:\s*([^\s]+)/i);
-                    return match ? match[1] : '';
-                })(),
-
-            computedFees: row.computed_fees || {}
-        }));
-
-        const countParams: any[] = [];
-        let countIndex = 1;
-        const countClauses: string[] = ['1=1'];
-
-        if (status && status !== 'ALL') {
-            countClauses.push(`status = $${countIndex++}`);
-            countParams.push(status);
-        }
-
-        if (email) {
-            countClauses.push(`email = $${countIndex++}`);
-            countParams.push(email);
-        }
-
-        if (search) {
-            const normalizedSearchType = String(searchType || 'Tracking/MP No.').trim();
-
-            if (normalizedSearchType === 'Business Name') {
-                countClauses.push(`business_name ILIKE $${countIndex++}`);
-            } else if (normalizedSearchType === 'Business Owner') {
-                countClauses.push(`business_owner ILIKE $${countIndex++}`);
-            } else {
-                countClauses.push(`tracking_number ILIKE $${countIndex++}`);
-            }
-
-            countParams.push(`%${search}%`);
-        }
-
-        const countResult = await pool.query(
-            `SELECT COUNT(*)::int AS total
-             FROM business_assessments
-             WHERE ${countClauses.join(' AND ')}`,
-            countParams
-        );
-
-        const totalRecords = Number(countResult.rows[0]?.total || 0);
-        const totalPages = Math.max(1, Math.ceil(totalRecords / limitNum));
-
-        res.json({
-            assessments: formatted,
-            totalPages,
-            totalRecords,
-            currentPage: pageNum,
-            pageSize: limitNum
-        });
-
-    } catch (err) {
-        console.error('Error fetching business assessments:', err);
-        res.status(500).json({
-            message: 'Error loading business tax assessments'
-        });
+    if (!staff) {
+      if (!authEmail) {
+        res.status(401).json({ message: 'Authenticated citizen email is required.' });
+        return;
+      }
+      query += ` AND LOWER(email) = $${paramIndex++}`;
+      params.push(authEmail);
+    } else if (email) {
+      query += ` AND LOWER(email) = $${paramIndex++}`;
+      params.push(String(email).trim().toLowerCase());
     }
+
+    if (status && status !== 'ALL') {
+      query += ` AND status = $${paramIndex++}`;
+      params.push(String(status));
+    }
+
+    if (search) {
+      const normalizedSearchType = String(searchType || 'Tracking/MP No.').trim();
+      if (normalizedSearchType === 'Business Name') {
+        query += ` AND business_name ILIKE $${paramIndex++}`;
+      } else if (normalizedSearchType === 'Business Owner') {
+        query += ` AND business_owner ILIKE $${paramIndex++}`;
+      } else if (normalizedSearchType === 'Mayor\'s Permit No.') {
+        query += ` AND mayors_permit_number ILIKE $${paramIndex++}`;
+      } else if (normalizedSearchType === 'Tax Bill Number') {
+        query += ` AND tax_bill_number ILIKE $${paramIndex++}`;
+      } else {
+        query += ` AND tracking_number ILIKE $${paramIndex++}`;
+      }
+      params.push(`%${String(search)}%`);
+    }
+
+    const pageNum = Math.max(1, Number.parseInt(String(page), 10) || 1);
+    const limitNum = Math.min(200, Math.max(1, Number.parseInt(String(limit), 10) || 10));
+    const offset = (pageNum - 1) * limitNum;
+
+    query += ` ORDER BY application_date DESC LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
+    params.push(limitNum, offset);
+
+    const result = await pool.query(query, params);
+
+    const countParams: any[] = [];
+    let countIndex = 1;
+    const countClauses: string[] = ['1=1'];
+
+    if (!staff) {
+      countClauses.push(`LOWER(email) = $${countIndex++}`);
+      countParams.push(authEmail);
+    } else if (email) {
+      countClauses.push(`LOWER(email) = $${countIndex++}`);
+      countParams.push(String(email).trim().toLowerCase());
+    }
+
+    if (status && status !== 'ALL') {
+      countClauses.push(`status = $${countIndex++}`);
+      countParams.push(String(status));
+    }
+
+    if (search) {
+      const normalizedSearchType = String(searchType || 'Tracking/MP No.').trim();
+      if (normalizedSearchType === 'Business Name') countClauses.push(`business_name ILIKE $${countIndex++}`);
+      else if (normalizedSearchType === 'Business Owner') countClauses.push(`business_owner ILIKE $${countIndex++}`);
+      else if (normalizedSearchType === 'Mayor\'s Permit No.') countClauses.push(`mayors_permit_number ILIKE $${countIndex++}`);
+      else if (normalizedSearchType === 'Tax Bill Number') countClauses.push(`tax_bill_number ILIKE $${countIndex++}`);
+      else countClauses.push(`tracking_number ILIKE $${countIndex++}`);
+      countParams.push(`%${String(search)}%`);
+    }
+
+    const countResult = await pool.query(
+      `SELECT COUNT(*)::int AS total FROM business_assessments WHERE ${countClauses.join(' AND ')}`,
+      countParams
+    );
+
+    const totalRecords = Number(countResult.rows[0]?.total || 0);
+    const totalPages = Math.max(1, Math.ceil(totalRecords / limitNum));
+
+    res.json({
+      assessments: result.rows.map(formatAssessment),
+      totalPages,
+      totalRecords,
+      currentPage: pageNum,
+      pageSize: limitNum,
+    });
+  } catch (err) {
+    console.error('Error fetching business assessments:', err);
+    res.status(500).json({ message: 'Error loading business tax assessments' });
+  }
 }
 
 export async function createSalesDeclaration(req: Request, res: Response): Promise<void> {
-    const {
+  const body = req.body || {};
+  const businessName = String(body.businessName || '').trim();
+  const businessOwner = String(body.businessOwner || '').trim();
+  const businessAddress = String(body.businessAddress || '').trim();
+  const barangay = String(body.barangay || '').trim();
+  const businessType = String(body.businessType || '').trim();
+  const lineOfBusiness = String(body.lineOfBusiness || '').trim();
+  const registrationType = String(body.registrationType || '').trim();
+  const registrationNumber = String(body.registrationNumber || '').trim();
+  const mayorsPermitNumber = String(body.mayorsPermitNumber || '').trim();
+  const birRegistered = normalizeBoolean(body.birRegistered, true);
+  const hasOtherBranches = normalizeBoolean(body.hasOtherBranches, false);
+  const hasMultipleLines = normalizeBoolean(body.hasMultipleLines, false);
+  const grossSales = Number(body.grossSales);
+  const businessAreaSqm = Number(body.businessAreaSqm || 0);
+  const taxYear = Number(body.year || new Date().getFullYear());
+  const assessmentPeriod = String(body.assessmentPeriod || 'ANNUAL_RENEWAL').trim();
+  const quarter = String(body.quarter || 'ANNUAL').trim();
+  const psicCode = String(body.psicCode || '').trim();
+  const tin = String(body.tin || '').trim();
+  const email = String(body.email || '').trim().toLowerCase();
+
+  if (!businessName || !businessOwner || !businessAddress || !barangay || !businessType || !lineOfBusiness || !mayorsPermitNumber || !tin || !email) {
+    res.status(400).json({ message: 'Business name, owner, address, barangay, business type, line of business, Mayor’s Permit number, TIN, and email are required.' });
+    return;
+  }
+
+  if (!Number.isFinite(grossSales) || grossSales < 0) {
+    res.status(400).json({ message: 'Gross sales must be a valid non-negative number.' });
+    return;
+  }
+
+  if (!Number.isFinite(businessAreaSqm) || businessAreaSqm < 0) {
+    res.status(400).json({ message: 'Business area must be a valid non-negative number.' });
+    return;
+  }
+
+  if (!Number.isInteger(taxYear) || taxYear < 2000 || taxYear > 2100) {
+    res.status(400).json({ message: 'A valid tax year is required.' });
+    return;
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    res.status(400).json({ message: 'Invalid email address format.' });
+    return;
+  }
+
+  const files = Array.isArray((req as any).files) ? (req as any).files : [];
+  let documentTypes: string[] = [];
+  try {
+    const parsed = JSON.parse(String(body.documentTypes || '[]'));
+    documentTypes = Array.isArray(parsed) ? parsed.map((x) => String(x)) : [];
+  } catch {
+    documentTypes = [];
+  }
+
+  const attachments = normalizeAttachments(files, documentTypes);
+  const id = randomUUID();
+  const trackingNumber = `BT-${taxYear}-${Math.floor(100000 + Math.random() * 900000)}`;
+
+  try {
+    // Submission creates a tracking reference only. The official tax bill and OP
+    // are generated only after Treasurer approval, matching the assessment flow.
+    const result = await pool.query(
+      `INSERT INTO business_assessments (
+        id, tracking_number, tax_bill_number, order_of_payment_number,
+        business_name, business_owner, business_address, barangay,
+        business_type, line_of_business, business_area_sqm,
+        registration_type, registration_number, mayors_permit_number,
+        bir_registered, has_other_branches, has_multiple_lines,
+        status, psic_code, gross_sales, tin, email, tax_year,
+        assessment_period, quarter, attachments, document_checklist,
+        payment_status, payment_amount, paid_amount
+      ) VALUES (
+        $1, $2, NULL, NULL,
+        $3, $4, $5, $6,
+        $7, $8, $9,
+        $10, $11, $12,
+        $13, $14, $15,
+        'SUBMITTED', $16, $17, $18, $19, $20,
+        $21, $22, $23, $24, '{}'::jsonb,
+        'UNPAID', 0, 0
+      )
+      RETURNING *`,
+      [
+        id,
+        trackingNumber,
         businessName,
+        businessOwner,
+        businessAddress,
+        barangay,
+        businessType,
+        lineOfBusiness,
+        businessAreaSqm,
+        registrationType,
+        registrationNumber,
+        mayorsPermitNumber,
+        birRegistered,
+        hasOtherBranches,
+        hasMultipleLines,
+        psicCode || null,
         grossSales,
-        year,
-        psicCode,
         tin,
-        email
-    } = req.body;
+        email,
+        taxYear,
+        assessmentPeriod,
+        quarter,
+        JSON.stringify(attachments),
+      ]
+    );
 
-    if (!businessName || grossSales === undefined || !year || !psicCode || !tin || !email) {
-        res.status(400).json({
-            message: 'Business name, gross sales, year, psic code, tin, and email are required.'
-        });
-        return;
+    const missingDocuments = getMissingDocuments(result.rows[0]);
+
+    await recordAudit(
+      req,
+      'AUD-BIZ-SUBMIT',
+      email,
+      'Citizen',
+      'Business Tax Module',
+      'BUSINESS_TAX_ASSESSMENT_SUBMITTED',
+      'INFO',
+      null,
+      `Submitted Business Tax assessment for ${businessName}. Tracking ${trackingNumber}. Missing documents at submission: ${missingDocuments.length}.`
+    );
+
+    res.status(201).json({
+      message: 'Business Tax assessment submitted successfully.',
+      trackingNumber,
+      missingDocuments,
+      record: formatAssessment(result.rows[0]),
+    });
+  } catch (err: any) {
+    console.error('Error saving Business Tax assessment:', err);
+    if (String(err?.code) === '23505') {
+      res.status(409).json({ message: 'A duplicate tracking/reference number was generated. Please submit again.' });
+      return;
+    }
+    res.status(500).json({ message: 'Failed to submit Business Tax assessment.' });
+  }
+}
+
+export async function uploadBusinessComplianceDocuments(req: Request, res: Response): Promise<void> {
+  const { id } = req.params;
+  const authEmail = String((req as AuthenticatedRequest).user?.email || '').trim().toLowerCase();
+  const files = Array.isArray((req as any).files) ? (req as any).files : [];
+
+  if (!authEmail) {
+    res.status(401).json({ message: 'Authenticated citizen email is required.' });
+    return;
+  }
+
+  if (files.length === 0) {
+    res.status(400).json({ message: 'Please upload at least one additional document.' });
+    return;
+  }
+
+  let documentTypes: string[] = [];
+  try {
+    const parsed = JSON.parse(String(req.body?.documentTypes || '[]'));
+    documentTypes = Array.isArray(parsed) ? parsed.map((x) => String(x)) : [];
+  } catch {
+    documentTypes = [];
+  }
+
+  try {
+    const recordResult = await pool.query(
+      `SELECT * FROM business_assessments WHERE id = $1 LIMIT 1`,
+      [id]
+    );
+
+    if (recordResult.rows.length === 0) {
+      res.status(404).json({ message: 'Business Tax assessment not found.' });
+      return;
     }
 
-    const numericSales = Number(grossSales);
-
-    if (isNaN(numericSales) || numericSales < 0) {
-        res.status(400).json({
-            message: 'Gross sales must be a valid non-negative number.'
-        });
-        return;
+    const record = recordResult.rows[0];
+    if (!isStaff(req) && String(record.email || '').trim().toLowerCase() !== authEmail) {
+      res.status(403).json({ message: 'You are not authorized to update this assessment.' });
+      return;
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-    if (!emailRegex.test(email)) {
-        res.status(400).json({
-            message: 'Invalid email address format.'
-        });
-        return;
+    if (String(record.status || '').toUpperCase() !== 'FOR_COMPLIANCE') {
+      res.status(409).json({ message: 'Additional compliance documents can only be submitted for returned assessments.' });
+      return;
     }
 
-    const file = (req as any).file;
+    const existing = parseJsonArray(record.attachments);
+    const additions = normalizeAttachments(files, documentTypes);
+    const merged = [...existing, ...additions];
 
-    const trackingNumber = `MP-${year}-${Math.floor(100000 + Math.random() * 900000)}`;
+    const result = await pool.query(
+      `UPDATE business_assessments
+       SET attachments = $1::jsonb,
+           status = 'SUBMITTED',
+           compliance_remarks = NULL,
+           remarks = NULL,
+           reviewed_at = NULL,
+           reviewed_by = NULL,
+           updated_at = NOW()
+       WHERE id = $2
+       RETURNING *`,
+      [JSON.stringify(merged), id]
+    );
 
-    const taxBillNumber = await generateUniqueTaxBillNumber(year);
+    await recordAudit(
+      req,
+      'AUD-BIZ-COMPLIANCE',
+      authEmail,
+      'Citizen',
+      'Business Tax Module',
+      'BUSINESS_TAX_COMPLIANCE_DOCUMENTS_SUBMITTED',
+      'INFO',
+      record.attachments,
+      JSON.stringify(merged)
+    );
 
-    const id = randomUUID();
-
-    try {
-        const fileAttachment = file
-            ? [{
-                name: file.originalname,
-                url: `data:${file.mimetype};base64,${file.buffer.toString('base64')}`
-            }]
-            : [{
-                name: 'Financial_Statement.pdf',
-                url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf'
-            }];
-
-        const result = await pool.query(
-            `INSERT INTO business_assessments 
-            (
-                id,
-                tracking_number,
-                tax_bill_number,
-                business_name,
-                business_owner,
-                status,
-                psic_code,
-                gross_sales,
-                tin,
-                email,
-                attachments
-            )
-            VALUES ($1, $2, $3, $4, $5, 'PENDING', $6, $7, $8, $9, $10)
-            RETURNING *`,
-            [
-                id,
-                trackingNumber,
-                taxBillNumber,
-                businessName || 'Unnamed Business',
-                email ? email.split('@')[0] : 'Declared Owner',
-                psicCode || '47110',
-                grossSales || 0,
-                tin || '',
-                email || '',
-                JSON.stringify(fileAttachment)
-            ]
-        );
-
-        await recordAudit(
-            req,
-            'AUD-BIZ-SUBMIT',
-            email || 'citizen@gov.ph',
-            'Citizen',
-            'Business Tax Module',
-            'SALES_DECLARATION_SUBMITTED',
-            'INFO',
-            null,
-            `Submitted sales declaration for ${businessName} with tracking ${trackingNumber} and Tax Bill Number ${taxBillNumber}`
-        );
-
-        res.status(201).json({
-            message: 'Sales declaration saved successfully',
-            record: result.rows[0],
-
-            taxBillNumber
-        });
-
-    } catch (err) {
-        console.error('Error saving sales declaration:', err);
-
-        res.status(500).json({
-            message: 'Failed to submit sales declaration.'
-        });
-    }
+    res.status(200).json({
+      message: 'Additional Business Tax documents submitted successfully.',
+      record: formatAssessment(result.rows[0]),
+      missingDocuments: getMissingDocuments(result.rows[0]),
+    });
+  } catch (err: any) {
+    console.error('Error uploading compliance documents:', err);
+    res.status(500).json({ message: 'Failed to upload additional documents.' });
+  }
 }
 
 export async function updateAssessmentStatus(req: Request, res: Response): Promise<void> {
-    const { id } = req.params;
-    const { status, remarks, computedFees } = req.body;
+  const { id } = req.params;
+  const status = String(req.body?.status || '').toUpperCase() as BusinessStatus;
+  const remarks = String(req.body?.remarks || '').trim();
+  const suppliedFees = parseJsonObject(req.body?.computedFees);
+  const suppliedChecklist = parseJsonObject(req.body?.documentChecklist);
 
-    try {
-        const result = await pool.query(
-            `UPDATE business_assessments 
-            SET status = $1,
-                remarks = $2,
-                computed_fees = $3
-            WHERE id = $4
-            RETURNING *`,
-            [
-                status,
-                remarks,
-                JSON.stringify(computedFees || {}),
-                id
-            ]
-        );
+  const allowedStatuses = new Set<BusinessStatus>([
+    'SUBMITTED',
+    'FOR_COMPLIANCE',
+    'FOR_FINAL_REVIEW',
+    'APPROVED',
+    'REJECTED',
+    'ARCHIVED',
+  ]);
 
-        if (result.rows.length === 0) {
-            res.status(404).json({
-                message: 'Assessment record not found.'
-            });
-            return;
-        }
+  if (!allowedStatuses.has(status)) {
+    res.status(400).json({ message: 'Invalid Business Tax assessment status.' });
+    return;
+  }
 
-        await recordAudit(
-            req,
-            'AUD-BIZ-STATUS',
-            'admin@lgu.gov.ph',
-            'admin',
-            'Business Tax Module',
-            'ASSESSMENT_STATUS_UPDATED',
-            'INFO',
-            null,
-            `Updated business assessment ${id} to status ${status}`
-        );
+  try {
+    const currentResult = await pool.query(
+      `SELECT * FROM business_assessments WHERE id = $1 LIMIT 1`,
+      [id]
+    );
 
-        res.status(200).json({
-            message: 'Status updated successfully',
-            record: result.rows[0]
-        });
-
-    } catch (err) {
-        console.error('Error updating assessment status:', err);
-
-        res.status(500).json({
-            message: 'Failed to update status.'
-        });
+    if (currentResult.rows.length === 0) {
+      res.status(404).json({ message: 'Business Tax assessment record not found.' });
+      return;
     }
+
+    const current = currentResult.rows[0];
+    const currentFees = parseJsonObject(current.computed_fees);
+    const currentChecklist = parseJsonObject(current.document_checklist);
+    const nextFees = Object.keys(suppliedFees).length > 0 ? suppliedFees : currentFees;
+    const nextChecklist = Object.keys(suppliedChecklist).length > 0 ? suppliedChecklist : currentChecklist;
+    const total = Number(nextFees.total || 0);
+
+    if (status === 'APPROVED') {
+      const missingKeys = buildRequiredDocumentKeys(current).filter((key) => nextChecklist[key] !== true);
+      if (missingKeys.length > 0) {
+        res.status(409).json({
+          message: 'Approval is blocked until every applicable required document has been verified.',
+          missingDocuments: missingKeys.map((key) => ({ key, label: DOCUMENT_LABELS[key] || key })),
+          documentChecklist: nextChecklist,
+        });
+        return;
+      }
+
+      if (!Number.isFinite(total) || total <= 0) {
+        res.status(409).json({ message: 'Enter the final assessed amount before approving the Business Tax assessment.' });
+        return;
+      }
+    }
+
+    let taxBillNumber = current.tax_bill_number || null;
+    let orderOfPaymentNumber = current.order_of_payment_number || null;
+    const applicationYear = Number(current.tax_year || new Date().getFullYear());
+
+    if (status === 'APPROVED') {
+      if (!taxBillNumber) taxBillNumber = await generateUniqueTaxBillNumber(applicationYear);
+      if (!orderOfPaymentNumber) orderOfPaymentNumber = generateReference('OP', taxBillNumber);
+    }
+
+    const reviewedAt = ['FOR_FINAL_REVIEW', 'FOR_COMPLIANCE', 'REJECTED', 'APPROVED'].includes(status)
+      ? new Date()
+      : current.reviewed_at;
+    const reviewedBy = ['FOR_FINAL_REVIEW', 'FOR_COMPLIANCE', 'REJECTED', 'APPROVED'].includes(status)
+      ? String((req as AuthenticatedRequest).user?.email || 'treasury-staff')
+      : current.reviewed_by;
+
+    const complianceRemarks = status === 'FOR_COMPLIANCE' ? remarks || 'Additional documents or clarification are required.' : null;
+    const approvedAt = status === 'APPROVED' ? new Date() : current.approved_at;
+    const approvedBy = status === 'APPROVED'
+      ? String((req as AuthenticatedRequest).user?.email || 'treasury-staff')
+      : current.approved_by;
+    const paymentAmount = status === 'APPROVED' ? total : Number(current.payment_amount || currentFees.total || 0);
+    const dueDate = status === 'APPROVED' && String(current.assessment_period || 'ANNUAL_RENEWAL') === 'ANNUAL_RENEWAL'
+      ? `${applicationYear}-01-20`
+      : current.due_date;
+
+    const result = await pool.query(
+      `UPDATE business_assessments
+       SET status = $1,
+           remarks = $2,
+           compliance_remarks = $3,
+           computed_fees = $4::jsonb,
+           document_checklist = $5::jsonb,
+           payment_amount = $6,
+           tax_bill_number = $7,
+           order_of_payment_number = $8,
+           due_date = $9,
+           reviewed_by = $10,
+           reviewed_at = $11,
+           approved_by = $12,
+           approved_at = $13,
+           updated_at = NOW()
+       WHERE id = $14
+       RETURNING *`,
+      [
+        status,
+        status === 'FOR_COMPLIANCE' ? null : remarks || null,
+        complianceRemarks,
+        JSON.stringify(nextFees),
+        JSON.stringify(nextChecklist),
+        paymentAmount,
+        taxBillNumber,
+        orderOfPaymentNumber,
+        dueDate,
+        reviewedBy,
+        reviewedAt,
+        approvedBy,
+        approvedAt,
+        id,
+      ]
+    );
+
+    await recordAudit(
+      req,
+      'AUD-BIZ-STATUS',
+      String((req as AuthenticatedRequest).user?.email || 'treasury-staff'),
+      String((req as AuthenticatedRequest).user?.role || 'treasury-staff'),
+      'Business Tax Module',
+      'BUSINESS_TAX_ASSESSMENT_STATUS_UPDATED',
+      status === 'FOR_COMPLIANCE' || status === 'REJECTED' ? 'WARNING' : 'INFO',
+      JSON.stringify({ status: current.status, computedFees: currentFees, documentChecklist: currentChecklist }),
+      JSON.stringify({ status, computedFees: nextFees, documentChecklist: nextChecklist, taxBillNumber, orderOfPaymentNumber })
+    );
+
+    res.status(200).json({
+      message: `Business Tax assessment updated to ${status}.`,
+      record: formatAssessment(result.rows[0]),
+    });
+  } catch (err: any) {
+    console.error('Error updating Business Tax assessment:', err);
+    res.status(500).json({ message: err.message || 'Failed to update Business Tax assessment status.' });
+  }
 }
 
 export async function deleteBusinessAssessment(req: Request, res: Response): Promise<void> {
-    const { id } = req.params;
+  const { id } = req.params;
+  try {
+    const result = await pool.query(
+      `DELETE FROM business_assessments WHERE id = $1 RETURNING *`,
+      [id]
+    );
 
-    try {
-        const result = await pool.query(
-            `DELETE FROM business_assessments
-             WHERE id = $1
-             RETURNING *`,
-            [id]
-        );
-
-        if (result.rows.length === 0) {
-            res.status(404).json({
-                message: 'Assessment record not found.'
-            });
-            return;
-        }
-
-        await recordAudit(
-            req,
-            'AUD-BIZ-DELETE',
-            'admin@lgu.gov.ph',
-            'admin',
-            'Business Tax Module',
-            'ASSESSMENT_RECORD_DELETED',
-            'WARNING',
-            null,
-            `Deleted business tax assessment record with ID ${id}`
-        );
-
-        res.status(200).json({
-            message: 'Assessment record deleted successfully.'
-        });
-
-    } catch (err) {
-        console.error('Error deleting assessment record:', err);
-
-        res.status(500).json({
-            message: 'Failed to delete record from server.'
-        });
+    if (result.rows.length === 0) {
+      res.status(404).json({ message: 'Assessment record not found.' });
+      return;
     }
+
+    await recordAudit(
+      req,
+      'AUD-BIZ-DELETE',
+      String((req as AuthenticatedRequest).user?.email || 'admin@lgu.gov.ph'),
+      String((req as AuthenticatedRequest).user?.role || 'admin'),
+      'Business Tax Module',
+      'BUSINESS_TAX_ASSESSMENT_DELETED',
+      'WARNING',
+      JSON.stringify(result.rows[0]),
+      null
+    );
+
+    res.status(200).json({ message: 'Assessment record deleted successfully.' });
+  } catch (err) {
+    console.error('Error deleting assessment record:', err);
+    res.status(500).json({ message: 'Failed to delete record from server.' });
+  }
 }
 
 export async function verifyTaxBill(req: Request, res: Response): Promise<void> {
-    const {
-        permitNo,
-        taxBillNo,
-        tin
-    } = req.body;
+  const taxBillNo = String(req.body?.taxBillNo || '').trim();
+  const tin = String(req.body?.tin || '').trim();
 
-    const suppliedTaxBillNumber = String(taxBillNo || '').trim();
-    const suppliedTin = String(tin || '').trim();
+  if (!taxBillNo || !tin) {
+    res.status(400).json({ message: 'Tax Bill Number and TIN are required.' });
+    return;
+  }
 
-    if (!suppliedTaxBillNumber || !suppliedTin) {
-        res.status(400).json({
-            message: 'Tax Bill Number and TIN are required.'
-        });
-        return;
+  try {
+    const result = await pool.query(
+      `SELECT * FROM business_assessments WHERE tax_bill_number = $1 AND tin = $2 LIMIT 1`,
+      [taxBillNo, tin]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ message: 'Tax Bill Number not found or does not match the supplied TIN.' });
+      return;
     }
 
-    try {
-        const query = `
-            SELECT *
-            FROM business_assessments
-            WHERE tax_bill_number = $1
-              AND tin = $2
-            LIMIT 1
-        `;
+    const record = result.rows[0];
+    const paymentStatus = String(record.payment_status || 'UNPAID').toUpperCase();
 
-        const result = await pool.query(
-            query,
-            [
-                suppliedTaxBillNumber,
-                suppliedTin
-            ]
-        );
-
-        if (result.rows.length === 0) {
-            res.status(404).json({
-                message: 'Tax Bill Number not found or does not match the supplied TIN.'
-            });
-            return;
-        }
-
-        const record = result.rows[0];
-
-        const isPaid = String(record.remarks || '')
-            .toLowerCase()
-            .startsWith('paid via');
-
-        if (isPaid) {
-            res.status(409).json({
-                message: 'This Tax Bill has already been paid. Please use the O.R. Number Verification instead.',
-                status: 'PAID',
-                record: {
-                    businessName: record.business_name,
-                    taxBillNo: record.tax_bill_number,
-                    tin: record.tin
-                }
-            });
-            return;
-        }
-
-        let verificationStatus = 'PENDING EVALUATION';
-
-        if (String(record.status || '').toUpperCase() === 'APPROVED') {
-            verificationStatus = 'VALID & ASSESSED';
-        }
-
-        res.status(200).json({
-            status: verificationStatus,
-
-            record: {
-                businessName: record.business_name,
-
-                taxBillNo: record.tax_bill_number,
-
-                trackingNumber: record.tracking_number,
-
-                tin: record.tin,
-
-                grossSales: record.gross_sales,
-
-                computedFees: record.computed_fees,
-
-                assessmentStatus: record.status,
-
-                paymentStatus: 'UNPAID'
-            }
-        });
-
-    } catch (err: any) {
-        console.error('Error verifying tax bill:', err);
-
-        res.status(500).json({
-            message: err.message || 'Server error during tax bill verification.'
-        });
+    if (paymentStatus === 'PAID') {
+      res.status(409).json({
+        message: 'This Tax Bill has already been paid. Please use the O.R. Number Verification instead.',
+        status: 'PAID',
+        record: {
+          businessName: record.business_name,
+          taxBillNo: record.tax_bill_number,
+          tin: record.tin,
+          trackingNumber: record.tracking_number,
+          officialReceiptNumber: record.official_receipt_number || null,
+        },
+      });
+      return;
     }
+
+    const computedFees = parseJsonObject(record.computed_fees);
+    res.status(200).json({
+      status: String(record.status || '').toUpperCase() === 'APPROVED' ? 'VALID & ASSESSED' : 'PENDING EVALUATION',
+      record: {
+        businessName: record.business_name,
+        taxBillNo: record.tax_bill_number,
+        trackingNumber: record.tracking_number,
+        tin: record.tin,
+        grossSales: Number(record.gross_sales || 0),
+        computedFees,
+        assessmentStatus: record.status,
+        paymentStatus: 'UNPAID',
+      },
+    });
+  } catch (err: any) {
+    console.error('Error verifying tax bill:', err);
+    res.status(500).json({ message: err.message || 'Server error during tax bill verification.' });
+  }
 }
 
 export async function verifyOrNumber(req: Request, res: Response): Promise<void> {
-    const {
-        permitNo,
-        orNo,
-        tin
-    } = req.body;
+  const permitNo = String(req.body?.permitNo || '').trim();
+  const orNo = String(req.body?.orNo || '').trim();
+  const tin = String(req.body?.tin || '').trim();
 
-    if (!permitNo || !orNo || !tin) {
-        res.status(400).json({
-            message: 'Permit/Tracking number, OR number, and TIN are required.'
-        });
-        return;
+  if (!permitNo || !orNo || !tin) {
+    res.status(400).json({ message: 'Mayor’s Permit/Tracking number, OR number, and TIN are required.' });
+    return;
+  }
+
+  try {
+    const result = await pool.query(
+      `SELECT * FROM business_assessments
+       WHERE (tracking_number = $1 OR mayors_permit_number = $1 OR id::text = $1)
+         AND tin = $2
+       LIMIT 1`,
+      [permitNo, tin]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ message: 'Official Receipt record not found or mismatched TIN/permit details.' });
+      return;
     }
 
-    try {
-        const query = `
-            SELECT *
-            FROM business_assessments
-            WHERE (tracking_number = $1 OR id::text = $1)
-              AND tin = $2
-            LIMIT 1
-        `;
-
-        const result = await pool.query(
-            query,
-            [
-                permitNo,
-                tin
-            ]
-        );
-
-        if (result.rows.length === 0) {
-            res.status(404).json({
-                message: 'Official Receipt (O.R.) record not found or mismatched TIN/Permit details.'
-            });
-            return;
-        }
-
-        const record = result.rows[0];
-
-        const isPaid = String(record.remarks || '')
-            .toLowerCase()
-            .startsWith('paid via');
-
-        if (!isPaid) {
-            res.status(409).json({
-                message: 'This business tax assessment has not been paid yet. Please use the Tax Bill Number Verification instead.',
-                status: 'UNPAID',
-                taxBillNumber: record.tax_bill_number || null
-            });
-            return;
-        }
-
-        let fees: any = {
-            total: '12,500.00'
-        };
-
-        try {
-            if (typeof record.computed_fees === 'string') {
-                fees = JSON.parse(record.computed_fees);
-            } else if (
-                record.computed_fees &&
-                typeof record.computed_fees === 'object'
-            ) {
-                fees = record.computed_fees;
-            }
-        } catch (parseErr) {
-            console.warn(
-                'Could not parse computed_fees JSON, using default values.'
-            );
-        }
-
-        const formattedAmount =
-            fees?.total !== undefined
-                ? String(fees.total)
-                : '12,500.00';
-
-        res.status(200).json({
-            amount: formattedAmount,
-
-            message: 'Official Receipt verified successfully in treasury records.',
-
-            orNumber:
-                record.official_receipt_number ||
-                record.officialReceiptNumber ||
-                (() => {
-                    const remarks = String(record.remarks || '');
-                    const match = remarks.match(/(?:OR|O\.R\.)\s*:\s*([^\s]+)/i);
-                    return match ? match[1] : orNo;
-                })(),
-
-            businessName:
-                record.business_name || 'Verified Business',
-
-            paymentStatus: 'PAID'
-        });
-
-    } catch (err: any) {
-        console.error('Error verifying O.R. number:', err);
-
-        res.status(500).json({
-            message:
-                err.message ||
-                'Server error during O.R. verification.'
-        });
+    const record = result.rows[0];
+    if (String(record.payment_status || 'UNPAID').toUpperCase() !== 'PAID') {
+      res.status(409).json({
+        message: 'This Business Tax assessment has not been paid yet. Please use Tax Bill Number Verification instead.',
+        status: 'UNPAID',
+        taxBillNumber: record.tax_bill_number || null,
+      });
+      return;
     }
+
+    const computedFees = parseJsonObject(record.computed_fees);
+    res.status(200).json({
+      amount: String(Number(record.paid_amount || record.payment_amount || computedFees.total || 0).toFixed(2)),
+      message: 'Official Receipt verified successfully in treasury records.',
+      orNumber: record.official_receipt_number || orNo,
+      businessName: record.business_name || 'Verified Business',
+      paymentStatus: 'PAID',
+      paymentReference: record.payment_reference || null,
+      paymentDate: record.payment_date || null,
+    });
+  } catch (err: any) {
+    console.error('Error verifying O.R. number:', err);
+    res.status(500).json({ message: err.message || 'Server error during O.R. verification.' });
+  }
 }
 
 export async function createAppointment(req: Request, res: Response): Promise<void> {
-    const {
+  const {
+    department,
+    appointmentType,
+    businessName,
+    tin,
+    address,
+    description,
+    fullName,
+    email,
+    phone,
+    date,
+    timeSlot,
+    remarks,
+  } = req.body;
+
+  if (!department || !appointmentType || !fullName || !email || !date) {
+    res.status(400).json({ message: 'Department, appointment type, full name, email, and date are required.' });
+    return;
+  }
+
+  if (!/^\d{11}$/.test(String(phone || '').trim())) {
+    res.status(400).json({ message: 'A valid 11-digit Philippine mobile number is required.' });
+    return;
+  }
+
+  if (!/^\S+@\S+\.\S+$/.test(String(email).trim())) {
+    res.status(400).json({ message: 'Invalid email address format.' });
+    return;
+  }
+
+  const id = randomUUID();
+  try {
+    const result = await pool.query(
+      `INSERT INTO appointments (
+        id, department, appointment_type, business_name, tin, address,
+        description, full_name, email, phone, appointment_date, time_slot,
+        remarks, status
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'PENDING') RETURNING *`,
+      [
+        id,
         department,
         appointmentType,
-        businessName,
-        tin,
-        address,
-        description,
+        businessName || '',
+        tin || '',
+        address || '',
+        description || '',
         fullName,
         email,
         phone,
         date,
-        timeSlot,
-        remarks
-    } = req.body;
+        timeSlot || '09:00 AM - 10:00 AM',
+        remarks || null,
+      ]
+    );
 
-    if (!department || !appointmentType || !fullName || !email || !date) {
-        res.status(400).json({
-            message: 'Department, appointment type, full name, email, and date are required.'
-        });
-        return;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-    if (!emailRegex.test(email)) {
-        res.status(400).json({
-            message: 'Invalid email address format.'
-        });
-        return;
-    }
-
-    const id = randomUUID();
-
-    try {
-        const result = await pool.query(
-            `INSERT INTO appointments 
-            (
-                id,
-                department,
-                appointment_type,
-                business_name,
-                tin,
-                address,
-                description,
-                full_name,
-                email,
-                phone,
-                appointment_date,
-                time_slot,
-                remarks,
-                status
-            )
-            VALUES
-            (
-                $1,
-                $2,
-                $3,
-                $4,
-                $5,
-                $6,
-                $7,
-                $8,
-                $9,
-                $10,
-                $11,
-                $12,
-                $13,
-                'PENDING'
-            )
-            RETURNING *`,
-            [
-                id,
-                department,
-                appointmentType,
-                businessName || '',
-                tin || '',
-                address,
-                description,
-                fullName,
-                email,
-                phone,
-                date,
-                timeSlot || '09:00 AM - 10:00 AM',
-                remarks
-            ]
-        );
-
-        await recordAudit(
-            req,
-            'AUD-APT-SUBMIT',
-            email || 'citizen@gov.ph',
-            'Citizen',
-            'Appointments Module',
-            'APPOINTMENT_REQUESTED',
-            'INFO',
-            null,
-            `Scheduled appointment for ${fullName} under ${department} on ${date}`
-        );
-
-        res.status(201).json({
-            message: 'Appointment submitted successfully',
-            record: result.rows[0]
-        });
-
-    } catch (err) {
-        console.error('Error saving appointment:', err);
-
-        res.status(500).json({
-            message: 'Failed to submit appointment.'
-        });
-    }
+    await recordAudit(req, 'AUD-APT-SUBMIT', email, 'Citizen', 'Appointments Module', 'APPOINTMENT_REQUESTED', 'INFO', null, `Scheduled appointment for ${fullName} under ${department} on ${date}`);
+    res.status(201).json({ message: 'Appointment submitted successfully', record: result.rows[0] });
+  } catch (err) {
+    console.error('Error saving appointment:', err);
+    res.status(500).json({ message: 'Failed to submit appointment.' });
+  }
 }
 
 export async function getAppointments(req: Request, res: Response): Promise<void> {
-    const { email } = req.query;
+  const email = String(req.query?.email || '').trim().toLowerCase();
+  const staff = isStaff(req);
+  const authEmail = String((req as AuthenticatedRequest).user?.email || '').trim().toLowerCase();
 
-    try {
-        let result;
-
-        if (
-            email &&
-            typeof email === 'string' &&
-            email.trim() !== ''
-        ) {
-            result = await pool.query(
-                'SELECT * FROM appointments WHERE email ILIKE $1 ORDER BY created_at DESC',
-                [email.trim()]
-            );
-        } else {
-            result = await pool.query(
-                'SELECT * FROM appointments ORDER BY created_at DESC'
-            );
-        }
-
-        const formatted = result.rows.map(row => ({
-            id: row.id,
-            department: row.department,
-            appointmentType: row.appointment_type,
-            businessName: row.business_name,
-            tin: row.tin,
-            address: row.address,
-            description: row.description,
-            fullName: row.full_name,
-            email: row.email,
-            phone: row.phone,
-            date: row.appointment_date,
-            timeSlot: row.time_slot,
-            remarks: row.remarks,
-            status: row.status,
-            createdAt: row.created_at
-        }));
-
-        res.json({
-            appointments: formatted
-        });
-
-    } catch (err) {
-        console.error('Error fetching appointments:', err);
-
-        res.status(500).json({
-            message: 'Failed to load appointments.'
-        });
+  try {
+    let result;
+    if (staff && email) {
+      result = await pool.query('SELECT * FROM appointments WHERE LOWER(email) = $1 ORDER BY created_at DESC', [email]);
+    } else if (!staff) {
+      if (!authEmail) {
+        res.status(401).json({ message: 'Authentication required.' });
+        return;
+      }
+      result = await pool.query('SELECT * FROM appointments WHERE LOWER(email) = $1 ORDER BY created_at DESC', [authEmail]);
+    } else {
+      result = await pool.query('SELECT * FROM appointments ORDER BY created_at DESC');
     }
+
+    res.json({
+      appointments: result.rows.map((row: any) => ({
+        id: row.id,
+        department: row.department,
+        appointmentType: row.appointment_type,
+        businessName: row.business_name,
+        tin: row.tin,
+        address: row.address,
+        description: row.description,
+        fullName: row.full_name,
+        email: row.email,
+        phone: row.phone,
+        date: row.appointment_date,
+        timeSlot: row.time_slot,
+        remarks: row.remarks,
+        status: row.status,
+        createdAt: row.created_at,
+      })),
+    });
+  } catch (err) {
+    console.error('Error fetching appointments:', err);
+    res.status(500).json({ message: 'Failed to load appointments.' });
+  }
 }
 
 export async function updateAppointmentStatus(req: Request, res: Response): Promise<void> {
-    const { id } = req.params;
-    const { status } = req.body;
-
-    try {
-        const result = await pool.query(
-            `UPDATE appointments
-             SET status = $1
-             WHERE id = $2
-             RETURNING *`,
-            [
-                status,
-                id
-            ]
-        );
-
-        if (result.rows.length === 0) {
-            res.status(404).json({
-                message: 'Appointment not found.'
-            });
-            return;
-        }
-
-        res.status(200).json({
-            message: 'Appointment status updated.',
-            record: result.rows[0]
-        });
-
-    } catch (err) {
-        console.error('Error updating appointment status:', err);
-
-        res.status(500).json({
-            message: 'Failed to update status.'
-        });
+  const { id } = req.params;
+  const status = String(req.body?.status || '').toUpperCase();
+  if (!['PENDING', 'APPROVED', 'CANCELLED', 'ARCHIVED'].includes(status)) {
+    res.status(400).json({ message: 'Invalid appointment status.' });
+    return;
+  }
+  try {
+    const result = await pool.query(`UPDATE appointments SET status = $1 WHERE id = $2 RETURNING *`, [status, id]);
+    if (result.rows.length === 0) {
+      res.status(404).json({ message: 'Appointment not found.' });
+      return;
     }
+    res.status(200).json({ message: 'Appointment status updated.', record: result.rows[0] });
+  } catch (err) {
+    console.error('Error updating appointment status:', err);
+    res.status(500).json({ message: 'Failed to update appointment status.' });
+  }
 }
 
 export async function deleteAppointment(req: Request, res: Response): Promise<void> {
-    const { id } = req.params;
-
-    try {
-        const result = await pool.query(
-            `DELETE FROM appointments
-             WHERE id = $1
-             RETURNING *`,
-            [id]
-        );
-
-        if (result.rows.length === 0) {
-            res.status(404).json({
-                message: 'Appointment record not found.'
-            });
-            return;
-        }
-
-        await recordAudit(
-            req,
-            'AUD-APT-DELETE',
-            'admin@lgu.gov.ph',
-            'admin',
-            'Appointments Module',
-            'APPOINTMENT_DELETED',
-            'WARNING',
-            null,
-            `Deleted appointment record with ID ${id}`
-        );
-
-        res.status(200).json({
-            message: 'Appointment record successfully deleted.'
-        });
-
-    } catch (err) {
-        console.error('Error deleting appointment record:', err);
-
-        res.status(500).json({
-            message: 'Failed to delete appointment from server.'
-        });
+  const { id } = req.params;
+  try {
+    const result = await pool.query(`DELETE FROM appointments WHERE id = $1 RETURNING *`, [id]);
+    if (result.rows.length === 0) {
+      res.status(404).json({ message: 'Appointment record not found.' });
+      return;
     }
+    await recordAudit(req, 'AUD-APT-DELETE', 'admin@lgu.gov.ph', 'admin', 'Appointments Module', 'APPOINTMENT_DELETED', 'WARNING', JSON.stringify(result.rows[0]), null);
+    res.status(200).json({ message: 'Appointment record successfully deleted.' });
+  } catch (err) {
+    console.error('Error deleting appointment record:', err);
+    res.status(500).json({ message: 'Failed to delete appointment from server.' });
+  }
 }

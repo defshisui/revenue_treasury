@@ -103,6 +103,112 @@ async function sendPaymentReceiptOnce(params: {
   }
 }
 
+
+function makeOfficialReceiptNumber(): string {
+  return `OR-PM-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
+}
+
+async function finalizeBusinessTaxPayment(params: {
+  trackingNumber: string;
+  amount: number;
+  paymentMethod: string;
+  paymentReference: string;
+  paymongoPaymentId?: string | null;
+  paymongoSessionId?: string | null;
+}): Promise<{ ok: boolean; status: number; error?: string; record?: any; alreadyRecorded?: boolean }> {
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    const result = await client.query(
+      `SELECT *
+       FROM business_assessments
+       WHERE tracking_number = $1 OR id::text = $1
+       LIMIT 1
+       FOR UPDATE`,
+      [params.trackingNumber]
+    );
+
+    if (result.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return { ok: false, status: 404, error: 'Business Tax assessment record not found.' };
+    }
+
+    const record = result.rows[0];
+    const paymentStatus = String(record.payment_status || 'UNPAID').toUpperCase();
+    let assessedAmount = Number(record.payment_amount || 0);
+    if ((!Number.isFinite(assessedAmount) || assessedAmount <= 0) && record.computed_fees) {
+      try {
+        const legacyFees = typeof record.computed_fees === 'object' ? record.computed_fees : JSON.parse(String(record.computed_fees));
+        assessedAmount = Number(legacyFees?.total || 0);
+      } catch {
+        assessedAmount = 0;
+      }
+    }
+
+    if (paymentStatus === 'PAID') {
+      await client.query('COMMIT');
+      return { ok: true, status: 200, alreadyRecorded: true, record };
+    }
+
+    if (String(record.status || '').toUpperCase() !== 'APPROVED') {
+      await client.query('ROLLBACK');
+      return { ok: false, status: 409, error: 'This Business Tax assessment is not approved for payment yet.' };
+    }
+
+    if (!Number.isFinite(assessedAmount) || assessedAmount <= 0) {
+      await client.query('ROLLBACK');
+      return { ok: false, status: 409, error: 'The approved Business Tax assessment has no valid amount due.' };
+    }
+
+    if (!Number.isFinite(params.amount) || Math.abs(params.amount - assessedAmount) > 0.01) {
+      await client.query('ROLLBACK');
+      return {
+        ok: false,
+        status: 409,
+        error: `Payment amount does not match the approved Business Tax amount due (₱${assessedAmount.toFixed(2)}).`,
+      };
+    }
+
+    const officialReceiptNumber = String(record.official_receipt_number || makeOfficialReceiptNumber());
+
+    const updated = await client.query(
+      `UPDATE business_assessments
+       SET payment_status = 'PAID',
+           paid_amount = $1,
+           payment_method = $2,
+           payment_reference = $3,
+           payment_date = NOW(),
+           official_receipt_number = $4,
+           paymongo_payment_id = $5,
+           paymongo_session_id = $6,
+           remarks = COALESCE(NULLIF($7, ''), remarks),
+           updated_at = NOW()
+       WHERE id = $8
+       RETURNING *`,
+      [
+        params.amount,
+        params.paymentMethod,
+        params.paymentReference,
+        officialReceiptNumber,
+        params.paymongoPaymentId || null,
+        params.paymongoSessionId || null,
+        `Payment verified via ${params.paymentMethod}. O.R.: ${officialReceiptNumber}`,
+        record.id,
+      ]
+    );
+
+    await client.query('COMMIT');
+    return { ok: true, status: 200, alreadyRecorded: false, record: updated.rows[0] };
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => undefined);
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 export async function getPayMongoStatus(_req: Request, res: Response): Promise<void> {
   try {
     const connection = await PayMongoService.testConnection();
@@ -154,6 +260,58 @@ export async function createCheckoutSession(req: Request, res: Response): Promis
 
   let numericAmount = Number(amount);
 
+  if (type === 'BUSINESS_TAX') {
+    if (!businessTrackingNumber) {
+      res.status(400).json({ error: 'businessTrackingNumber is required for Business Tax payments.' });
+      return;
+    }
+
+    const businessResult = await pool.query(
+      `SELECT tracking_number, business_name, business_owner, email, status, payment_status, payment_amount, computed_fees
+       FROM business_assessments
+       WHERE tracking_number = $1 OR id::text = $1
+       LIMIT 1`,
+      [businessTrackingNumber]
+    );
+
+    if (businessResult.rows.length === 0) {
+      res.status(404).json({ error: 'Business Tax assessment not found.' });
+      return;
+    }
+
+    const business = businessResult.rows[0];
+    let approvedAmount = Number(business.payment_amount || 0);
+    if ((!Number.isFinite(approvedAmount) || approvedAmount <= 0) && business.computed_fees) {
+      try {
+        const legacyFees = typeof business.computed_fees === 'object' ? business.computed_fees : JSON.parse(String(business.computed_fees));
+        approvedAmount = Number(legacyFees?.total || 0);
+      } catch {
+        approvedAmount = 0;
+      }
+    }
+
+    if (String(business.status || '').toUpperCase() !== 'APPROVED') {
+      res.status(409).json({ error: 'This Business Tax assessment is not approved for payment yet.' });
+      return;
+    }
+
+    if (String(business.payment_status || '').toUpperCase() === 'PAID') {
+      res.status(409).json({ error: 'This Business Tax assessment has already been paid.' });
+      return;
+    }
+
+    if (!Number.isFinite(approvedAmount) || approvedAmount <= 0) {
+      res.status(409).json({ error: 'The approved Business Tax assessment has no valid amount due.' });
+      return;
+    }
+
+    if (Math.abs(numericAmount - approvedAmount) > 0.01) {
+      res.status(409).json({ error: `Payment amount does not match the approved amount due (₱${approvedAmount.toFixed(2)}).` });
+      return;
+    }
+
+    numericAmount = approvedAmount;
+  }
 
   if (type === 'RPT_SERVICE') {
     if (!rptApplicationId) {
@@ -614,26 +772,67 @@ export async function verifySession(req: Request, res: Response): Promise<void> 
       });
       return;
     } else if (type === 'BUSINESS_TAX' && metadata.businessTrackingNumber) {
-      await pool.query(
-        `UPDATE business_assessments
-         SET status = 'APPROVED',
-             remarks = $1
-         WHERE tracking_number = $2 OR id::text = $2`,
-        [`Paid via PayMongo (${formattedPaymentMethod}) - OR: ${officialReceiptNumber}`, metadata.businessTrackingNumber]
+      const finalized = await finalizeBusinessTaxPayment({
+        trackingNumber: String(metadata.businessTrackingNumber),
+        amount: Number(session.amount),
+        paymentMethod: `PayMongo (${formattedPaymentMethod})`,
+        paymentReference,
+        paymongoSessionId: sessionId,
+      });
+
+      if (!finalized.ok) {
+        res.status(finalized.status).json({ success: false, paid: false, error: finalized.error });
+        return;
+      }
+
+      const businessRecord = finalized.record;
+      const businessOfficialReceiptNumber = String(
+        businessRecord?.official_receipt_number ||
+        officialReceiptNumber
+      );
+      const businessPaymentReference = String(
+        businessRecord?.payment_reference ||
+        paymentReference
       );
 
       await sendPaymentReceiptOnce({
         paymentKey: `checkout:${sessionId}`,
-        toEmail: metadata.customerEmail,
-        customerName: metadata.customerName,
+        toEmail: metadata.customerEmail || businessRecord?.email,
+        customerName: metadata.customerName || businessRecord?.business_owner,
         service: 'Business Tax and Regulatory Fee',
         amount: Number(session.amount),
-        paymentMethod: `PayMongo (${formattedPaymentMethod})`,
-        paymentReference,
-        officialReceiptNumber,
-        paymentDate: new Date(),
+        paymentMethod: businessRecord?.payment_method || `PayMongo (${formattedPaymentMethod})`,
+        paymentReference: businessPaymentReference,
+        officialReceiptNumber: businessOfficialReceiptNumber,
+        paymentDate: businessRecord?.payment_date || new Date(),
         accountReference: metadata.businessTrackingNumber,
       });
+
+      await recordAudit(
+        req,
+        'AUD-PAYMONGO-BUSINESS',
+        metadata.customerEmail || businessRecord?.email || 'citizen@gov.ph',
+        'Citizen',
+        'Business Tax Module',
+        'BUSINESS_TAX_PAYMENT_VERIFIED',
+        'INFO',
+        null,
+        `Business Tax payment confirmed. Tracking #${metadata.businessTrackingNumber}. Reference ${businessPaymentReference}. Amount ${Number(session.amount).toFixed(2)}. O.R. ${businessOfficialReceiptNumber}.`
+      );
+
+      res.status(200).json({
+        success: true,
+        paid: true,
+        alreadyRecorded: Boolean(finalized.alreadyRecorded),
+        officialReceiptNumber: businessOfficialReceiptNumber,
+        paymentReference: businessPaymentReference,
+        amount: Number(session.amount),
+        paymentMethod: businessRecord?.payment_method || `PayMongo (${formattedPaymentMethod})`,
+        paymentDate: businessRecord?.payment_date || new Date().toISOString(),
+        businessTrackingNumber: metadata.businessTrackingNumber,
+        record: businessRecord,
+      });
+      return;
     }
 
     await recordAudit(
@@ -1279,43 +1478,52 @@ export async function handlePayMongoWebhook(
 
 
     if (metadata.businessTrackingNumber) {
-      await pool.query(
-        `
-        UPDATE business_assessments
-        SET
-          status = 'APPROVED',
-          remarks = $1
-        WHERE tracking_number = $2
-           OR id::text = $2
-        `,
-        [
-          `Paid via ${formattedPaymentMethod} - OR: ${officialReceiptNumber}`,
-          metadata.businessTrackingNumber,
-        ]
-      );
+      const finalized = await finalizeBusinessTaxPayment({
+        trackingNumber: String(metadata.businessTrackingNumber),
+        amount: amountPhp,
+        paymentMethod: formattedPaymentMethod,
+        paymentReference,
+        paymongoPaymentId: paymentId || null,
+        paymongoSessionId: paymentIntentId || null,
+      });
+
+      if (!finalized.ok) {
+        res.status(finalized.status).json({
+          received: true,
+          success: false,
+          error: finalized.error,
+          paymentId,
+          paymentIntentId,
+        });
+        return;
+      }
+
+      const businessRecord = finalized.record;
+      const businessOfficialReceiptNumber = String(businessRecord?.official_receipt_number || officialReceiptNumber);
+      const businessPaymentReference = String(businessRecord?.payment_reference || paymentReference);
 
       await recordAudit(
         req,
         'AUD-PAYMONGO-WEBHOOK',
-        metadata.customerEmail || 'citizen@gov.ph',
+        metadata.customerEmail || businessRecord?.email || 'citizen@gov.ph',
         'Citizen',
-        'ePayment Gateway',
-        'PAYMENT_WEBHOOK_SUCCESS',
+        'Business Tax Module',
+        'BUSINESS_TAX_PAYMENT_WEBHOOK_CONFIRMED',
         'INFO',
         null,
-        `Business tax payment confirmed via ${formattedPaymentMethod}. Tracking #${metadata.businessTrackingNumber}. Reference ${paymentReference}. Amount ${amountPhp.toFixed(2)}. O.R. ${officialReceiptNumber}.`
+        `Business tax payment confirmed via ${formattedPaymentMethod}. Tracking #${metadata.businessTrackingNumber}. Reference ${businessPaymentReference}. Amount ${amountPhp.toFixed(2)}. O.R. ${businessOfficialReceiptNumber}.`
       );
 
       await sendPaymentReceiptOnce({
         paymentKey: `paymongo:${paymentId || paymentIntentId}`,
-        toEmail: metadata.customerEmail,
-        customerName: metadata.customerName,
+        toEmail: metadata.customerEmail || businessRecord?.email,
+        customerName: metadata.customerName || businessRecord?.business_owner,
         service: 'Business Tax and Regulatory Fee',
         amount: amountPhp,
-        paymentMethod: formattedPaymentMethod,
-        paymentReference,
-        officialReceiptNumber,
-        paymentDate: new Date(),
+        paymentMethod: businessRecord?.payment_method || formattedPaymentMethod,
+        paymentReference: businessPaymentReference,
+        officialReceiptNumber: businessOfficialReceiptNumber,
+        paymentDate: businessRecord?.payment_date || new Date(),
         accountReference: metadata.businessTrackingNumber,
       });
 
@@ -1325,11 +1533,11 @@ export async function handlePayMongoWebhook(
         paymentId,
         paymentIntentId,
         amount: amountPhp,
-        paymentMethod: formattedPaymentMethod,
-        paymentReference,
-        officialReceiptNumber,
-        businessTrackingNumber:
-          metadata.businessTrackingNumber,
+        paymentMethod: businessRecord?.payment_method || formattedPaymentMethod,
+        paymentReference: businessPaymentReference,
+        officialReceiptNumber: businessOfficialReceiptNumber,
+        businessTrackingNumber: metadata.businessTrackingNumber,
+        alreadyRecorded: Boolean(finalized.alreadyRecorded),
       });
 
       return;
@@ -1447,65 +1655,80 @@ export async function getQrPaymentStatus(
       metadata.type === 'BUSINESS_TAX' &&
       metadata.businessTrackingNumber
     ) {
-      console.log(
-        `QR payment succeeded for business tax ${metadata.businessTrackingNumber}`
-      );
+      const qrAmount = Number(attributes.amount || 0) / 100;
+      const qrPaymentReference =
+        metadata.referenceNumber ||
+        attributes.external_reference_number ||
+        `REF-${paymentIntentId.slice(-8)}`;
 
-      const officialReceiptNumber =
-        `OR-PM-${new Date().getFullYear()}-${Math.floor(
-          100000 + Math.random() * 900000
-        )}`;
+      const finalized = await finalizeBusinessTaxPayment({
+        trackingNumber: String(metadata.businessTrackingNumber),
+        amount: qrAmount,
+        paymentMethod: 'PayMongo (QR Ph)',
+        paymentReference: qrPaymentReference,
+        paymongoPaymentId: String(paymentIntentId),
+      });
 
-      const businessResult = await pool.query(
-        `
-        UPDATE business_assessments
-        SET
-          status = 'APPROVED',
-          remarks = $1
-        WHERE tracking_number = $2
-           OR id::text = $2
-        RETURNING *
-        `,
-        [
-          `Paid via PayMongo (QR Ph) - OR: ${officialReceiptNumber}`,
-          metadata.businessTrackingNumber,
-        ]
-      );
-
-      if (businessResult.rows.length > 0) {
-        console.log(
-          ` Business Tax ${metadata.businessTrackingNumber} marked as PAID.`
-        );
-      } else {
-        console.warn(
-          ` Business Tax record not found: ${metadata.businessTrackingNumber}`
-        );
+      if (!finalized.ok) {
+        res.status(finalized.status).json({
+          success: false,
+          paid: false,
+          error: finalized.error,
+          paymentIntentId,
+          status,
+          metadata,
+        });
+        return;
       }
+
+      const businessRecord = finalized.record;
+      const qrOfficialReceiptNumber = String(
+        businessRecord?.official_receipt_number ||
+        makeOfficialReceiptNumber()
+      );
+      const qrSavedReference = String(
+        businessRecord?.payment_reference ||
+        qrPaymentReference
+      );
 
       await recordAudit(
         req,
         'AUD-PAYMONGO-QR',
-        metadata.customerEmail || 'citizen@gov.ph',
+        metadata.customerEmail || businessRecord?.email || 'citizen@gov.ph',
         'Citizen',
-        'ePayment Gateway',
-        'PAYMENT_QR_SUCCESS',
+        'Business Tax Module',
+        'BUSINESS_TAX_QR_PAYMENT_CONFIRMED',
         'INFO',
         null,
-        `Business tax payment confirmed via PayMongo QR Ph. Tracking #${metadata.businessTrackingNumber}. Amount ${(Number(attributes.amount || 0) / 100).toFixed(2)}. O.R. ${officialReceiptNumber}.`
+        `Business Tax payment confirmed via PayMongo QR Ph. Tracking #${metadata.businessTrackingNumber}. Amount ${qrAmount.toFixed(2)}. Reference ${qrSavedReference}. O.R. ${qrOfficialReceiptNumber}.`
       );
 
       await sendPaymentReceiptOnce({
         paymentKey: `paymongo:${paymentIntentId}`,
-        toEmail: metadata.customerEmail || businessResult.rows[0]?.email,
-        customerName: metadata.customerName,
+        toEmail: metadata.customerEmail || businessRecord?.email,
+        customerName: metadata.customerName || businessRecord?.business_owner,
         service: 'Business Tax and Regulatory Fee',
-        amount: Number(attributes.amount || 0) / 100,
-        paymentMethod: 'PayMongo (QR Ph)',
-        paymentReference: metadata.referenceNumber || attributes.external_reference_number || `REF-${paymentIntentId.slice(-8)}`,
-        officialReceiptNumber,
-        paymentDate: new Date(),
+        amount: qrAmount,
+        paymentMethod: businessRecord?.payment_method || 'PayMongo (QR Ph)',
+        paymentReference: qrSavedReference,
+        officialReceiptNumber: qrOfficialReceiptNumber,
+        paymentDate: businessRecord?.payment_date || new Date(),
         accountReference: metadata.businessTrackingNumber,
       });
+
+      res.status(200).json({
+        success: true,
+        paid: true,
+        paymentIntentId,
+        status,
+        amount: qrAmount,
+        metadata,
+        officialReceiptNumber: qrOfficialReceiptNumber,
+        paymentReference: qrSavedReference,
+        businessTrackingNumber: metadata.businessTrackingNumber,
+        alreadyRecorded: Boolean(finalized.alreadyRecorded),
+      });
+      return;
     }
 
 
@@ -1792,6 +2015,59 @@ export async function createQrPaymentIntent(
             ? 'RPT'
             : 'MARKET_STALL');
 
+
+    if (paymentType === 'BUSINESS_TAX') {
+      if (!businessTrackingNumber) {
+        res.status(400).json({ success: false, error: 'businessTrackingNumber is required for Business Tax payments.' });
+        return;
+      }
+
+      const businessResult = await pool.query(
+        `SELECT tracking_number, business_name, business_owner, email, status, payment_status, payment_amount, computed_fees
+         FROM business_assessments
+         WHERE tracking_number = $1 OR id::text = $1
+         LIMIT 1`,
+        [businessTrackingNumber]
+      );
+
+      if (businessResult.rows.length === 0) {
+        res.status(404).json({ success: false, error: 'Business Tax assessment not found.' });
+        return;
+      }
+
+      const business = businessResult.rows[0];
+      let approvedAmount = Number(business.payment_amount || 0);
+    if ((!Number.isFinite(approvedAmount) || approvedAmount <= 0) && business.computed_fees) {
+      try {
+        const legacyFees = typeof business.computed_fees === 'object' ? business.computed_fees : JSON.parse(String(business.computed_fees));
+        approvedAmount = Number(legacyFees?.total || 0);
+      } catch {
+        approvedAmount = 0;
+      }
+    }
+
+      if (String(business.status || '').toUpperCase() !== 'APPROVED') {
+        res.status(409).json({ success: false, error: 'This Business Tax assessment is not approved for payment yet.' });
+        return;
+      }
+
+      if (String(business.payment_status || '').toUpperCase() === 'PAID') {
+        res.status(409).json({ success: false, error: 'This Business Tax assessment has already been paid.' });
+        return;
+      }
+
+      if (!Number.isFinite(approvedAmount) || approvedAmount <= 0) {
+        res.status(409).json({ success: false, error: 'The approved Business Tax assessment has no valid amount due.' });
+        return;
+      }
+
+      if (Number.isFinite(numericAmount) && Math.abs(numericAmount - approvedAmount) > 0.01) {
+        res.status(409).json({ success: false, error: `Payment amount does not match the approved amount due (₱${approvedAmount.toFixed(2)}).` });
+        return;
+      }
+
+      numericAmount = approvedAmount;
+    }
 
     if (paymentType === 'RPT_SERVICE') {
       if (!rptApplicationId) {

@@ -1,1345 +1,214 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { API_BASE_URL } from '../config/api';
 
-export interface BusinessTaxAssessmentAdminViewProps {
-  isCollapsed?: boolean;
-}
+export interface BusinessTaxAssessmentAdminViewProps { isCollapsed?: boolean; }
 
-interface AttachmentFile {
-  name: string;
-  url: string;
-  type?: string;
-}
+type AssessmentStatus = 'PENDING' | 'SUBMITTED' | 'FOR_COMPLIANCE' | 'FOR_FINAL_REVIEW' | 'APPROVED' | 'REJECTED' | 'ARCHIVED';
+type DocumentRequirementKey =
+  | 'sales_declaration' | 'mayors_permit' | 'latest_tax_bill' | 'latest_official_receipt'
+  | 'bir_tax_return' | 'previous_itr' | 'audited_financial_statements' | 'notarized_gross_sales'
+  | 'branch_permits_and_ors' | 'branch_sales_breakdown' | 'line_of_business_sales_breakdown'
+  | 'cedula' | 'summary_list_of_sales' | 'incentive_exemption';
 
+interface AttachmentFile { name: string; url: string; type?: string; mimeType?: string; }
+interface FeeBreakdown { lbt?: number; mayorsPermit?: number; sanitaryFee?: number; garbageFee?: number; fireSafetyFee?: number; otherFees?: number; total?: number; }
+interface MissingDocument { key: string; label: string; }
 interface AssessmentRecord {
-  id: string;
-  trackingNumber: string;
-  businessName: string;
-  businessOwner: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'ARCHIVED';
-  paymentStatus?: 'PAID' | 'UNPAID';
-  applicationDate: string;
-  psicCode?: string;
-  grossSales?: number;
-  tin?: string;
-  businessType?: 'Manufacturer' | 'Wholesaler' | 'Retailer' | 'Exporter' | 'Service';
-  attachments?: AttachmentFile[];
-  remarks?: string;
+  id: string; trackingNumber: string; taxBillNumber?: string | null; orderOfPaymentNumber?: string | null;
+  businessName: string; businessOwner: string; businessAddress?: string; barangay?: string;
+  businessType?: string; lineOfBusiness?: string; businessAreaSqm?: number;
+  registrationType?: string; registrationNumber?: string; mayorPermitNumber?: string;
+  birRegistered?: boolean; hasOtherBranches?: boolean; hasMultipleLines?: boolean;
+  taxYear?: number; assessmentPeriod?: string; quarter?: string; dueDate?: string | null;
+  status: AssessmentStatus; applicationDate: string; psicCode?: string; grossSales?: number; tin?: string; email?: string;
+  attachments?: AttachmentFile[]; documentChecklist?: Record<string, boolean>; missingDocuments?: MissingDocument[];
+  remarks?: string; complianceRemarks?: string; reviewedBy?: string; reviewedAt?: string | null; approvedBy?: string; approvedAt?: string | null;
+  paymentStatus?: 'PAID' | 'UNPAID'; paymentAmount?: number; paidAmount?: number; paymentMethod?: string; paymentReference?: string; paymentDate?: string | null; officialReceiptNumber?: string;
+  computedFees?: FeeBreakdown;
+}
+interface AppointmentRecord { id: string; department: string; appointmentType: string; businessName?: string; tin?: string; address?: string; description?: string; fullName: string; email: string; phone: string; date: string; timeSlot?: string; remarks?: string; status: string; createdAt: string; }
 
+const BASE_DOCS: Array<{ key: DocumentRequirementKey; label: string }> = [
+  { key: 'sales_declaration', label: 'Gross Receipts / Sales Declaration Form' },
+  { key: 'mayors_permit', label: 'Latest Mayor’s / Business Permit' },
+  { key: 'latest_tax_bill', label: 'Latest Business Tax Bill' },
+  { key: 'latest_official_receipt', label: 'Latest Business Tax Official Receipt' },
+];
+const LABELS: Record<string, string> = {
+  sales_declaration: 'Gross Receipts / Sales Declaration Form', mayors_permit: 'Latest Mayor’s / Business Permit', latest_tax_bill: 'Latest Business Tax Bill', latest_official_receipt: 'Latest Business Tax Official Receipt',
+  bir_tax_return: 'Preceding Year VAT Return / Percentage Tax Return / ITR', previous_itr: 'Previous-Preceding Year Income Tax Return', audited_financial_statements: 'Previous-Preceding Year Audited Financial Statements',
+  notarized_gross_sales: 'Notarized Certification of Gross Sales', branch_permits_and_ors: 'Other Branch Mayor’s Permits and Official Receipts', branch_sales_breakdown: 'Certified Breakdown of Sales for Other Branches',
+  line_of_business_sales_breakdown: 'Certified Breakdown of Sales by Line of Business', cedula: 'Current-Year Community Tax Certificate / Cedula', summary_list_of_sales: 'Previous-Year Summary List of Sales Received by BIR', incentive_exemption: 'Certificate of Incentives / Exemption',
+};
 
-  officialReceiptNumber?: string;
-  official_receipt_number?: string;
-  orNumber?: string;
-  or_number?: string;
-  paymentReference?: string;
-  payment_reference?: string;
+function money(value: number | undefined): string { return `₱${Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`; }
+function statusClass(status: string): string {
+  switch (status) { case 'APPROVED': return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300'; case 'REJECTED': return 'bg-rose-100 text-rose-800 dark:bg-rose-950/70 dark:text-rose-300'; case 'FOR_COMPLIANCE': return 'bg-orange-100 text-orange-800 dark:bg-orange-950/70 dark:text-orange-300'; case 'FOR_FINAL_REVIEW': return 'bg-blue-100 text-blue-800 dark:bg-blue-950/70 dark:text-blue-300'; case 'ARCHIVED': return 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300'; default: return 'bg-amber-100 text-amber-800 dark:bg-amber-950/70 dark:text-amber-300'; }
 }
 
-interface AppointmentRecord {
-  id: string;
-  department: string;
-  appointmentType: string;
-  businessName?: string;
-  tin?: string;
-  address?: string;
-  description?: string;
-  fullName: string;
-  email: string;
-  phone: string;
-  date: string;
-  timeSlot?: string;
-  remarks?: string;
-  status: string;
-  createdAt: string;
+function currentUser() {
+  const raw = localStorage.getItem('currentUser') || localStorage.getItem('user') || sessionStorage.getItem('currentUser') || sessionStorage.getItem('user');
+  if (!raw) return null;
+  try { const parsed = JSON.parse(raw); const target = parsed.user && typeof parsed.user === 'object' ? parsed.user : parsed; return { fullname: String(target.fullname || target.name || target.fullName || target.firstName || target.email || ''), email: String(target.email || ''), token: String(parsed.token || target.token || '') }; } catch { return null; }
 }
 
-export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdminViewProps> = ({ isCollapsed = false }) => {
-  const [adminUser, setAdminUser] = useState<{ fullname: string; email: string; initials: string; firstName: string; token: string } | null>(null);
-
+export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdminViewProps> = ({ isCollapsed: _isCollapsed = false }) => {
+  const [admin, setAdmin] = useState<{ fullname: string; email: string; token: string } | null>(null);
   const [activeTab, setActiveTab] = useState<'assessments' | 'appointments'>('assessments');
-
-  const [assessmentTab, setAssessmentTab] = useState<'Active' | 'Archived'>('Active');
-  const [appointmentTab, setAppointmentTab] = useState<'Active' | 'Archived'>('Active');
-
+  const [archiveView, setArchiveView] = useState(false);
   const [assessments, setAssessments] = useState<AssessmentRecord[]>([]);
   const [appointments, setAppointments] = useState<AppointmentRecord[]>([]);
-
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
-
-  const [statusFilter, setStatusFilter] = useState<string>('ALL');
-  const [searchType, setSearchType] = useState<string>('Tracking/MP No.');
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [totalPages, setTotalPages] = useState<number>(1);
-  const pageSize = 10;
-
+  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [searchType, setSearchType] = useState('Tracking/MP No.');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [selectedAssessment, setSelectedAssessment] = useState<AssessmentRecord | null>(null);
-  const [selectedAppointmentPreview, setSelectedAppointmentPreview] = useState<AppointmentRecord | null>(null);
-
-  const [actionRemarks, setActionRemarks] = useState<string>('');
-  const [submittingAction, setSubmittingAction] = useState<boolean>(false);
-
+  const [selectedAppointment, setSelectedAppointment] = useState<AppointmentRecord | null>(null);
+  const [actionRemarks, setActionRemarks] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const [previewFile, setPreviewFile] = useState<AttachmentFile | null>(null);
+  const [showOrderModal, setShowOrderModal] = useState(false);
+  const [checklist, setChecklist] = useState<Record<string, boolean>>({});
+  const [fees, setFees] = useState<Required<FeeBreakdown>>({ lbt: 0, mayorsPermit: 0, sanitaryFee: 0, garbageFee: 0, fireSafetyFee: 0, otherFees: 0, total: 0 });
 
-  const [checklist, setChecklist] = useState({
-    itrChecked: false,
-    clearanceVerified: false,
-    financialStatementValid: false
-  });
+  useEffect(() => { setAdmin(currentUser()); }, []);
 
-  const [showOrderOfPaymentModal, setShowOrderOfPaymentModal] = useState<boolean>(false);
-  const [computedFees, setComputedFees] = useState({
-    lbt: 0,
-    mayorsPermit: 0,
-    sanitaryFee: 0,
-    garbageFee: 0,
-    fireSafetyFee: 0,
-    total: 0
-  });
+  useEffect(() => { if (!admin) return; if (activeTab === 'assessments') void fetchAssessments(); else void fetchAppointments(); }, [admin, activeTab, archiveView, statusFilter, page]);
 
   useEffect(() => {
-    const checkAdminSession = () => {
-      const rawData = localStorage.getItem('currentUser') ||
-        localStorage.getItem('user') ||
-        sessionStorage.getItem('currentUser') ||
-        sessionStorage.getItem('user');
-
-      if (!rawData) return null;
-
-      try {
-        const parsed = JSON.parse(rawData);
-        const target = parsed.user && typeof parsed.user === 'object' ? parsed.user : parsed;
-
-        const fullName = target.fullname || target.name || target.fullName || target.firstName || target.email;
-        if (!fullName) return null;
-
-        const email = target.email || "";
-        const token = parsed.token || target.token || "";
-        const nameParts = String(fullName).trim().split(" ");
-        const firstName = nameParts[0];
-        const initials = nameParts.length > 1
-          ? (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase()
-          : nameParts[0].slice(0, 2).toUpperCase();
-
-        return { fullname: String(fullName), email, firstName, initials, token };
-      } catch (e) {
-        console.error("Failed to parse admin session", e);
-        return null;
-      }
-    };
-
-    setAdminUser(checkAdminSession());
-  }, []);
-
-  useEffect(() => {
-    fetchAdminAssessmentsData();
-    if (activeTab === 'appointments') {
-      fetchAppointments();
-    }
-  }, [statusFilter, currentPage, activeTab]);
-
-  useEffect(() => {
-    if (selectedAssessment) {
-      const gross = selectedAssessment.grossSales || 0;
-      const bType = selectedAssessment.businessType || 'Retailer';
-      let lbtRate = 0.01;
-      if (bType === 'Manufacturer') lbtRate = 0.005;
-      else if (bType === 'Wholesaler') lbtRate = 0.012;
-      else if (bType === 'Exporter') lbtRate = 0.003;
-      else if (bType === 'Service') lbtRate = 0.015;
-
-      const lbt = gross * lbtRate;
-      const mayorsPermit = Math.max(0.05, gross * 0.001);
-      const sanitaryFee = 0.1;
-      const garbageFee = 0.05;
-      const fireSafetyFee = mayorsPermit * 0.15;
-      const total = lbt + mayorsPermit + sanitaryFee + garbageFee + fireSafetyFee;
-
-      setComputedFees({
-        lbt: Number(lbt.toFixed(2)),
-        mayorsPermit: Number(mayorsPermit.toFixed(2)),
-        sanitaryFee,
-        garbageFee,
-        fireSafetyFee: Number(fireSafetyFee.toFixed(2)),
-        total: Number(total.toFixed(2))
-      });
-
-      setChecklist({
-        itrChecked: false,
-        clearanceVerified: false,
-        financialStatementValid: false
-      });
-    }
-  }, [selectedAssessment]);
-
-  const fetchAdminAssessments = async () => {
-    setLoading(true);
-    setFetchError(null);
-    try {
-      const queryParams = new URLSearchParams();
-      if (statusFilter !== 'ALL') queryParams.append('status', statusFilter);
-      queryParams.append('page', currentPage.toString());
-      queryParams.append('limit', pageSize.toString());
-      if (searchQuery) queryParams.append('search', searchQuery);
-      queryParams.append('searchType', searchType);
-
-      const headers: HeadersInit = { 'Content-Type': 'application/json' };
-      if (adminUser?.token) headers['Authorization'] = `Bearer ${adminUser.token}`;
-
-      const response = await fetch(`${API_BASE_URL}/admin/business-assessments?${queryParams.toString()}`, { headers });
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch records: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      setAssessments(Array.isArray(data) ? data : (data.assessments || []));
-      setTotalPages(data.totalPages || 1);
-    } catch (err: any) {
-      console.error("Error fetching admin assessments:", err);
-      setFetchError(err.message || "Failed to communicate with municipal server.");
-      setAssessments([]);
-      setTotalPages(1);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchAdminAssessmentsData = async () => {
-    try {
-      const headers: HeadersInit = { 'Content-Type': 'application/json' };
-      if (adminUser?.token) headers['Authorization'] = `Bearer ${adminUser.token}`;
-      const response = await fetch(`${API_BASE_URL}/admin/business-assessments?limit=100`, { headers });
-      if (response.ok) {
-        const data = await response.json();
-        setAssessments(Array.isArray(data) ? data : (data.assessments || []));
-      }
-    } catch (e) {
-      console.error("Background fetch assessments error", e);
-    }
-  };
-
-  const fetchAppointments = async () => {
-    setLoading(true);
-    try {
-      const headers: HeadersInit = { 'Content-Type': 'application/json' };
-      if (adminUser?.token) headers['Authorization'] = `Bearer ${adminUser.token}`;
-
-      const res = await fetch(`${API_BASE_URL}/admin/appointments`, { headers });
-      if (!res.ok) throw new Error("Failed to fetch appointments");
-      const data = await res.json();
-      setAppointments(Array.isArray(data) ? data : (data.appointments || []));
-    } catch (e) {
-      setAppointments([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAppointmentStatusUpdate = async (id: string, newStatus: string) => {
-    try {
-      const headers: HeadersInit = { 'Content-Type': 'application/json' };
-      if (adminUser?.token) headers['Authorization'] = `Bearer ${adminUser.token}`;
-
-      const res = await fetch(`${API_BASE_URL}/admin/appointments/${id}/status`, {
-        method: 'PATCH',
-        headers,
-        body: JSON.stringify({ status: newStatus })
-      });
-
-      if (!res.ok) throw new Error("Failed to update status");
-
-      if (newStatus !== 'ARCHIVED' && newStatus !== 'PENDING') {
-        alert(`Appointment marked as ${newStatus}.`);
-      }
-
-      fetchAppointments();
-      if (selectedAppointmentPreview) {
-        setSelectedAppointmentPreview(prev => prev ? { ...prev, status: newStatus } : null);
-      }
-    } catch (err: any) {
-      alert("Error updating appointment status.");
-    }
-  };
-
-  const handleArchiveAppointment = (id: string) => {
-    if (window.confirm("Are you sure you want to move this appointment to the Archiver?")) {
-      handleAppointmentStatusUpdate(id, 'ARCHIVED');
-      setAppointments(prev => prev.map(a => a.id === id ? { ...a, status: 'ARCHIVED' } : a));
-    }
-  };
-
-  const handleRestoreAppointment = (id: string) => {
-    if (window.confirm("Are you sure you want to restore this appointment?")) {
-      handleAppointmentStatusUpdate(id, 'PENDING');
-      setAppointments(prev => prev.map(a => a.id === id ? { ...a, status: 'PENDING' } : a));
-    }
-  };
-
-  const handleDeleteAppointment = async (id: string) => {
-    if (!window.confirm("WARNING: Are you sure you want to permanently delete this appointment record?")) {
-      return;
-    }
-
-    try {
-      const headers: HeadersInit = { 'Content-Type': 'application/json' };
-      if (adminUser?.token) headers['Authorization'] = `Bearer ${adminUser.token}`;
-
-      const res = await fetch(`${API_BASE_URL}/admin/appointments/${id}`, {
-        method: 'DELETE',
-        headers
-      });
-
-      if (!res.ok) throw new Error("Failed to delete appointment record.");
-
-      alert("Appointment deleted successfully.");
-      setSelectedAppointmentPreview(null);
-      fetchAppointments();
-    } catch (err: any) {
-      alert(`Error deleting appointment: ${err.message || "Server error"}`);
-    }
-  };
-
-  const handleStatusUpdate = async (newStatus: 'APPROVED' | 'REJECTED' | 'ARCHIVED' | 'PENDING') => {
     if (!selectedAssessment) return;
-    if (newStatus === 'APPROVED' && (!checklist.itrChecked || !checklist.clearanceVerified || !checklist.financialStatementValid)) {
-      alert("Please complete the document verification checklist before approving this assessment.");
-      return;
-    }
+    const stored = selectedAssessment.documentChecklist || {};
+    setChecklist(stored);
+    const existing = selectedAssessment.computedFees || {};
+    setFees({ lbt: Number(existing.lbt || 0), mayorsPermit: Number(existing.mayorsPermit || 0), sanitaryFee: Number(existing.sanitaryFee || 0), garbageFee: Number(existing.garbageFee || 0), fireSafetyFee: Number(existing.fireSafetyFee || 0), otherFees: Number(existing.otherFees || 0), total: Number(existing.total || 0) });
+    setActionRemarks(selectedAssessment.remarks || '');
+    setShowOrderModal(false);
+  }, [selectedAssessment?.id]);
 
-    setSubmittingAction(true);
+  useEffect(() => {
+    const total = Number(fees.lbt || 0) + Number(fees.mayorsPermit || 0) + Number(fees.sanitaryFee || 0) + Number(fees.garbageFee || 0) + Number(fees.fireSafetyFee || 0) + Number(fees.otherFees || 0);
+    setFees((prev) => (Math.abs(prev.total - total) > 0.005 ? { ...prev, total: Number(total.toFixed(2)) } : prev));
+  }, [fees.lbt, fees.mayorsPermit, fees.sanitaryFee, fees.garbageFee, fees.fireSafetyFee, fees.otherFees]);
+
+  const filteredStatuses = useMemo(() => archiveView ? ['ARCHIVED'] : ['SUBMITTED', 'FOR_COMPLIANCE', 'FOR_FINAL_REVIEW', 'APPROVED', 'REJECTED'], []);
+
+  async function fetchAssessments() {
+    if (!admin) return;
+    setLoading(true); setFetchError(null);
     try {
-      const headers: HeadersInit = { 'Content-Type': 'application/json' };
-      if (adminUser?.token) headers['Authorization'] = `Bearer ${adminUser.token}`;
+      const qs = new URLSearchParams();
+      const effectiveStatus = archiveView ? 'ARCHIVED' : (statusFilter === 'ALL' ? '' : statusFilter);
+      if (effectiveStatus) qs.set('status', effectiveStatus);
+      qs.set('page', String(page)); qs.set('limit', '10');
+      if (searchQuery.trim()) qs.set('search', searchQuery.trim());
+      qs.set('searchType', searchType);
+      const response = await fetch(`${API_BASE_URL}/admin/business-assessments?${qs.toString()}`, { headers: { Authorization: `Bearer ${admin.token}` } });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || `Failed to fetch assessments (${response.status}).`);
+      setAssessments(Array.isArray(data) ? data : (data.assessments || [])); setTotalPages(Number(data.totalPages || 1));
+    } catch (error: any) { setFetchError(error.message || 'Failed to load assessment queue.'); setAssessments([]); } finally { setLoading(false); }
+  }
 
-      const res = await fetch(`${API_BASE_URL}/admin/business-assessments/${selectedAssessment.id}/status`, {
-        method: 'PATCH',
-        headers,
-        body: JSON.stringify({ status: newStatus, remarks: actionRemarks, computedFees })
-      });
+  async function fetchAppointments() {
+    if (!admin) return;
+    setLoading(true);
+    try { const response = await fetch(`${API_BASE_URL}/admin/appointments`, { headers: { Authorization: `Bearer ${admin.token}` } }); const data = await response.json().catch(() => []); setAppointments(Array.isArray(data) ? data : (data.appointments || [])); } catch (error) { console.error(error); setAppointments([]); } finally { setLoading(false); }
+  }
 
-      if (!res.ok) throw new Error("Failed to update assessment status.");
-
-      if (newStatus === 'APPROVED' || newStatus === 'REJECTED') {
-        alert(`Assessment successfully marked as ${newStatus}.`);
-      }
-      setSelectedAssessment(null);
-      setActionRemarks('');
-      fetchAdminAssessments();
-    } catch (err: any) {
-      alert(`Error updating status: ${err.message || "Server error"}`);
-    } finally {
-      setSubmittingAction(false);
-    }
+  const requiredKeysFor = (record: AssessmentRecord): string[] => {
+    const keys = BASE_DOCS.map((item) => item.key as string);
+    if (record.birRegistered) keys.push('bir_tax_return', 'previous_itr', 'audited_financial_statements'); else keys.push('notarized_gross_sales');
+    if (record.hasOtherBranches) keys.push('branch_permits_and_ors', 'branch_sales_breakdown');
+    if (record.hasMultipleLines) keys.push('line_of_business_sales_breakdown');
+    return keys;
   };
 
-  const handleArchiveAssessment = async (id: string, trackingNo: string) => {
-    if (!window.confirm(`Are you sure you want to move assessment ${trackingNo} to the Archiver?`)) return;
+  const allRequiredDocumentsVerified = (record: AssessmentRecord) => requiredKeysFor(record).every((key) => checklist[key] === true);
+
+  const updateStatus = async (newStatus: AssessmentStatus) => {
+    if (!selectedAssessment || !admin) return;
+    if (newStatus === 'APPROVED') {
+      if (!allRequiredDocumentsVerified(selectedAssessment)) { alert('Approval is blocked until every applicable required document is verified.'); return; }
+      if (fees.total <= 0) { alert('Enter the final approved amount before approval.'); return; }
+    }
+    setSubmitting(true);
     try {
-      const headers: HeadersInit = { 'Content-Type': 'application/json' };
-      if (adminUser?.token) headers['Authorization'] = `Bearer ${adminUser.token}`;
-      const res = await fetch(`${API_BASE_URL}/admin/business-assessments/${id}/status`, {
-        method: 'PATCH',
-        headers,
-        body: JSON.stringify({ status: 'ARCHIVED', remarks: 'Moved to archiver' })
-      });
-      if (!res.ok) throw new Error("Failed to archive");
-      setAssessments(prev => prev.map(a => a.id === id ? { ...a, status: 'ARCHIVED' } : a));
-    } catch (e) {
-
-      setAssessments(prev => prev.map(a => a.id === id ? { ...a, status: 'ARCHIVED' } : a));
-    }
+      const payload = { status: newStatus, remarks: actionRemarks, computedFees: fees, documentChecklist: checklist };
+      const response = await fetch(`${API_BASE_URL}/admin/business-assessments/${selectedAssessment.id}/status`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${admin.token}` }, body: JSON.stringify(payload) });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || 'Failed to update assessment status.');
+      if (newStatus === 'APPROVED') setSelectedAssessment(data.record);
+      else setSelectedAssessment(null);
+      if (newStatus === 'APPROVED') { alert('Assessment approved. Tax Bill and Order of Payment have been issued.'); setShowOrderModal(true); }
+      else if (newStatus === 'FOR_COMPLIANCE') alert('Assessment returned to citizen for additional documents/clarification.');
+      else if (newStatus === 'FOR_FINAL_REVIEW') alert('Assessment moved to final review.');
+      else if (newStatus === 'REJECTED') alert('Assessment rejected.');
+      void fetchAssessments();
+    } catch (error: any) { alert(error.message || 'Failed to update assessment.'); } finally { setSubmitting(false); }
   };
 
-  const handleRestoreAssessment = async (id: string, trackingNo: string) => {
-    if (!window.confirm(`Are you sure you want to restore assessment ${trackingNo}?`)) return;
+  async function archiveOrRestore(record: AssessmentRecord) {
+    if (!admin) return;
+    const target = record.status === 'ARCHIVED' ? 'SUBMITTED' : 'ARCHIVED';
+    if (!window.confirm(target === 'ARCHIVED' ? `Archive ${record.trackingNumber}?` : `Restore ${record.trackingNumber}?`)) return;
     try {
-      const headers: HeadersInit = { 'Content-Type': 'application/json' };
-      if (adminUser?.token) headers['Authorization'] = `Bearer ${adminUser.token}`;
-      const res = await fetch(`${API_BASE_URL}/admin/business-assessments/${id}/status`, {
-        method: 'PATCH',
-        headers,
-        body: JSON.stringify({ status: 'PENDING', remarks: 'Restored from archiver' })
-      });
-      if (!res.ok) throw new Error("Failed to restore");
-      setAssessments(prev => prev.map(a => a.id === id ? { ...a, status: 'PENDING' } : a));
-    } catch (e) {
-      setAssessments(prev => prev.map(a => a.id === id ? { ...a, status: 'PENDING' } : a));
-    }
+      const response = await fetch(`${API_BASE_URL}/admin/business-assessments/${record.id}/status`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${admin.token}` }, body: JSON.stringify({ status: target, remarks: target === 'ARCHIVED' ? 'Moved to archiver' : 'Restored from archiver', documentChecklist: record.documentChecklist || {}, computedFees: record.computedFees || {} }) });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || 'Archive action failed.');
+      void fetchAssessments();
+    } catch (error: any) { alert(error.message || 'Archive action failed.'); }
+  }
+
+  async function deleteAssessment(record: AssessmentRecord) {
+    if (!admin || !window.confirm(`Permanently delete ${record.trackingNumber}?`)) return;
+    const response = await fetch(`${API_BASE_URL}/admin/business-assessments/${record.id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${admin.token}` } });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) return alert(data.message || 'Failed to delete record.');
+    setSelectedAssessment(null); void fetchAssessments();
+  }
+
+  const setFee = (key: keyof Required<FeeBreakdown>, value: string) => setFees((prev) => ({ ...prev, [key]: Number(value) || 0 }));
+
+  const renderDocChecklist = () => {
+    if (!selectedAssessment) return null;
+    const required = requiredKeysFor(selectedAssessment);
+    return <div className="space-y-2">{required.map((key) => <label key={key} className="flex items-start gap-3 p-3 rounded-xl border bg-slate-50 dark:bg-slate-950 cursor-pointer"><input type="checkbox" checked={Boolean(checklist[key])} onChange={(e) => setChecklist((prev) => ({ ...prev, [key]: e.target.checked }))} className="mt-1" /><span><span className="font-semibold">{LABELS[key] || key}</span><span className="block text-[9px] text-slate-400 mt-0.5">{(selectedAssessment.attachments || []).filter((a) => a.type === key).map((a) => a.name).join(', ') || 'No uploaded document mapped to this requirement.'}</span></span></label>)}</div>;
   };
 
-  const handleDeleteAssessment = async (id: string, trackingNo: string) => {
-    if (!window.confirm(`WARNING: Are you sure you want to permanently delete assessment record ${trackingNo}?`)) {
-      return;
-    }
-
-    try {
-      const headers: HeadersInit = { 'Content-Type': 'application/json' };
-      if (adminUser?.token) headers['Authorization'] = `Bearer ${adminUser.token}`;
-
-      const res = await fetch(`${API_BASE_URL}/admin/business-assessments/${id}`, {
-        method: 'DELETE',
-        headers
-      });
-
-      if (!res.ok) throw new Error("Failed to delete record from server.");
-
-      alert("Assessment record deleted successfully.");
-      if (selectedAssessment?.id === id) {
-        setSelectedAssessment(null);
-      }
-      fetchAdminAssessments();
-    } catch (err: any) {
-      alert(`Error deleting record: ${err.message || "Server error"}`);
-    }
-  };
-
-  const filteredAssessments = assessments.filter((item) => {
-    const isArchived = item.status === 'ARCHIVED';
-    if (assessmentTab === 'Active' && isArchived) return false;
-    if (assessmentTab === 'Archived' && !isArchived) return false;
-    return true;
-  });
-
-  const filteredAppointments = appointments.filter((apt) => {
-    const isArchived = apt.status === 'ARCHIVED';
-    if (appointmentTab === 'Active' && isArchived) return false;
-    if (appointmentTab === 'Archived' && !isArchived) return false;
-    return true;
-  });
-
-  const getOfficialReceiptNumber = (assessment: AssessmentRecord): string => {
-    const directOr =
-      assessment.officialReceiptNumber ||
-      assessment.official_receipt_number ||
-      assessment.orNumber ||
-      assessment.or_number;
-
-    if (directOr) return String(directOr);
-
-
-    const remarks = String(assessment.remarks || '');
-    const orMatch = remarks.match(/(?:O\.R\.|OR|Official\s+Receipt)\s*(?:Number|No\.?|#)?\s*[:\-]?\s*([A-Z0-9]+(?:-[A-Z0-9]+)+)/i);
-
-    return orMatch?.[1] ? String(orMatch[1]) : '';
-  };
-
-  const handleExportCSV = async () => {
-    try {
-      const headers: HeadersInit = { 'Content-Type': 'application/json' };
-      if (adminUser?.token) headers['Authorization'] = `Bearer ${adminUser.token}`;
-
-      // Build the exact same filters currently used by the assessment list.
-      const baseParams = new URLSearchParams();
-      if (statusFilter !== 'ALL') baseParams.append('status', statusFilter);
-      if (searchQuery.trim()) baseParams.append('search', searchQuery.trim());
-      baseParams.append('searchType', searchType);
-      baseParams.append('limit', '100');
-      baseParams.append('includeAttachments', 'false');
-
-      // The screen is paginated, so fetch every matching page for the CSV.
-      // This prevents exporting only the records visible on the current page.
-      const allRecords: AssessmentRecord[] = [];
-      let page = 1;
-      let totalPagesFromServer = 1;
-
-      do {
-        const pageParams = new URLSearchParams(baseParams);
-        pageParams.set('page', String(page));
-
-        const response = await fetch(
-          `${API_BASE_URL}/admin/business-assessments?${pageParams.toString()}`,
-          { headers }
-        );
-
-        if (!response.ok) {
-          throw new Error(`Failed to fetch export data: ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        const pageRecords: AssessmentRecord[] = Array.isArray(data)
-          ? data
-          : (data.assessments || []);
-
-        allRecords.push(...pageRecords);
-
-        totalPagesFromServer = Math.max(
-          1,
-          Number(data.totalPages || 1)
-        );
-
-        page += 1;
-      } while (page <= totalPagesFromServer);
-
-      // Match the same Active/Archived tab shown on screen.
-      const exportList = allRecords.filter((item) => {
-        const isArchived = item.status === 'ARCHIVED';
-        return assessmentTab === 'Active' ? !isArchived : isArchived;
-      });
-
-      if (exportList.length === 0) {
-        alert("No data available to export for the current filters.");
-        return;
-      }
-
-      const escapeCSV = (value: unknown) => {
-        const text = value === null || value === undefined ? '' : String(value);
-        return `"${text.replace(/"/g, '""')}"`;
-      };
-
-      const headersRow = [
-        "Tracking Number",
-        "Business Name",
-        "Business Owner",
-        "TIN",
-        "Gross Sales",
-        "Status",
-        "Payment Status",
-        "Date Filed"
-      ];
-
-      const rows = exportList.map(item => [
-        escapeCSV(item.trackingNumber),
-        escapeCSV(item.businessName),
-        escapeCSV(item.businessOwner),
-        escapeCSV(item.tin || 'N/A'),
-        escapeCSV(
-          Number(item.grossSales || 0).toLocaleString(undefined, {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-          })
-        ),
-        escapeCSV(item.status),
-        escapeCSV(item.paymentStatus || 'UNPAID'),
-        escapeCSV(item.applicationDate)
-      ]);
-
-      const csvContent = [headersRow.map(escapeCSV).join(","), ...rows.map(row => row.join(","))].join("\n");
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-
-      link.href = url;
-      link.download = `LGU_Business_Assessments_${new Date().toISOString().slice(0, 10)}.csv`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } catch (err: any) {
-      console.error("Error exporting business assessments:", err);
-      alert(err?.message || "Failed to export business assessment records.");
-    }
-  };
-
-  return (
-    <div
-      style={{
-        marginLeft: isCollapsed ? "80px" : "256px",
-        width: isCollapsed ? "calc(100% - 80px)" : "calc(100% - 256px)",
-      }}
-      className="min-h-screen bg-slate-50/50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 p-6 pt-24 transition-all duration-300 box-border flex flex-col justify-between"
-    >
-      <div className="space-y-6">
-
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-white dark:bg-slate-900/60 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs backdrop-blur-md">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-[11px] font-semibold tracking-wider text-blue-600 dark:text-blue-400 uppercase">
-                Municipal Treasurer & BPLPO Portal
-              </span>
-            </div>
-            <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-              Business Tax & Regulatory Fee Payment
-            </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              Verify digital sales declarations, compute statutory local business taxes, and issue official orders of payment.
-            </p>
-          </div>
-        </div>
-
-
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setActiveTab('assessments')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeTab === 'assessments'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:bg-slate-50'
-                }`}
-            >
-              Tax Assessments & Filings
-            </button>
-            <button
-              onClick={() => setActiveTab('appointments')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeTab === 'appointments'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:bg-slate-50'
-                }`}
-            >
-              Scheduled Appointments
-            </button>
-
-          </div>
-
-          {activeTab === 'assessments' && (
-            <button
-              onClick={handleExportCSV}
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-xs transition-all shadow-xs cursor-pointer flex items-center gap-2"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg> Export BLGF / CSV Report
-            </button>
-          )}
-        </div>
-
-
-        {activeTab === 'assessments' ? (
-          <section className="bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-xs space-y-5">
-            <div className="flex justify-between items-center">
-              <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
-                {assessmentTab === 'Active' ? 'Assessment Submissions Control Panel' : 'Archived Assessments Vault'}
-              </h3>
-            </div>
-
-
-            <div className="flex space-x-1 bg-slate-200/50 dark:bg-slate-800/50 p-1.5 rounded-xl w-fit">
-              <button
-                onClick={() => setAssessmentTab("Active")}
-                className={`px-5 py-2.5 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-2 ${assessmentTab === "Active"
-                  ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
-                  : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
-                  }`}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                Active Submissions
-              </button>
-              <button
-                onClick={() => setAssessmentTab("Archived")}
-                className={`px-5 py-2.5 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-2 ${assessmentTab === "Archived"
-                  ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
-                  : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
-                  }`}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>
-                Archiver
-              </button>
-            </div>
-
-
-            <div className="p-5 bg-slate-50/50 dark:bg-slate-950/50 rounded-2xl border border-slate-200/80 dark:border-slate-800 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
-              <div className="flex flex-col gap-1.5 text-xs">
-                <label className="font-semibold text-slate-700 dark:text-slate-300">Filter by Status</label>
-                <select
-                  value={statusFilter}
-                  onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-                  className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white outline-none cursor-pointer focus:border-blue-500 transition-all"
-                >
-                  <option value="ALL">ALL APPLICATIONS</option>
-                  <option value="PENDING">Pending Review</option>
-                  <option value="APPROVED">Approved</option>
-                  <option value="REJECTED">Rejected</option>
-                  {assessmentTab === 'Archived' && <option value="ARCHIVED">Archived</option>}
-                </select>
-              </div>
-
-              <div className="flex flex-col gap-1.5 text-xs">
-                <label className="font-semibold text-slate-700 dark:text-slate-300">Search Parameter</label>
-                <select
-                  value={searchType}
-                  onChange={(e) => { setSearchType(e.target.value); setCurrentPage(1); }}
-                  className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white outline-none cursor-pointer focus:border-blue-500 transition-all"
-                >
-                  <option value="Tracking/MP No.">Tracking/MP No.</option>
-                  <option value="Business Name">Business Name</option>
-                  <option value="Business Owner">Business Owner</option>
-                </select>
-              </div>
-
-              <div className="flex flex-col gap-1.5 text-xs sm:col-span-2 lg:col-span-1">
-                <label className="font-semibold text-slate-700 dark:text-slate-300">Search Query</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search submissions..."
-                    className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white outline-none focus:border-blue-500 transition-all"
-                  />
-                  <button
-                    onClick={() => { setCurrentPage(1); fetchAdminAssessments(); }}
-                    className="px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl transition-all cursor-pointer shadow-xs shrink-0 flex items-center gap-1.5"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg> Search
-                  </button>
-                </div>
-              </div>
-            </div>
-
-
-            <div className="overflow-x-auto rounded-xl border border-slate-200/80 dark:border-slate-800">
-              <table className="w-full text-left text-xs whitespace-nowrap border-collapse">
-                <thead className="bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-200 dark:border-slate-800">
-                  <tr>
-                    <th className="p-4">TRACKING / PERMIT NO.</th>
-                    <th className="p-4">BUSINESS NAME</th>
-                    <th className="p-4">OWNER</th>
-                    <th className="p-4">TIN NUMBER</th>
-                    <th className="p-4">GROSS SALES (PHP)</th>
-                    <th className="p-4 text-center">STATUS</th>
-                    <th className="p-4 text-center">PAYMENT STATUS</th>
-                    <th className="p-4">DATE FILED</th>
-                    <th className="p-4 text-center">ACTIONS</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-slate-700 dark:text-slate-300">
-                  {loading ? (
-                    <tr>
-                      <td colSpan={9} className="text-center py-16 text-slate-400 italic">
-                        Loading assessment declarations...
-                      </td>
-                    </tr>
-                  ) : fetchError ? (
-                    <tr>
-                      <td colSpan={9} className="text-center py-16 text-rose-500 font-medium">
-                        Error: {fetchError}
-                      </td>
-                    </tr>
-                  ) : filteredAssessments.length === 0 ? (
-                    <tr>
-                      <td colSpan={9} className="text-center py-16 text-slate-400 italic">
-                        {assessmentTab === 'Active' ? 'No active business tax assessment records found.' : 'No archived records found.'}
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredAssessments.map((item) => (
-                      <tr key={item.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
-                        <td className="p-4 font-mono font-bold text-blue-600 dark:text-blue-400">{item.trackingNumber}</td>
-                        <td className="p-4 font-semibold text-slate-900 dark:text-slate-100">{item.businessName}</td>
-                        <td className="p-4 font-medium text-slate-700 dark:text-slate-300">{item.businessOwner}</td>
-                        <td className="p-4 font-mono text-slate-700 dark:text-slate-300">{item.tin || 'N/A'}</td>
-                        <td className="p-4 font-mono font-bold text-slate-900 dark:text-white">₱{item.grossSales ? item.grossSales.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '0.00'}</td>
-                        <td className="p-4 text-center">
-                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold border ${item.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-800' :
-                            item.status === 'REJECTED' ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/50 dark:text-rose-400 dark:border-rose-800' :
-                              item.status === 'ARCHIVED' ? 'bg-slate-200 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700' :
-                                'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-800'
-                            }`}>
-                            {item.status}
-                          </span>
-                        </td>
-                        <td className="p-4 text-center">
-                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold border ${item.paymentStatus === 'PAID'
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-800'
-                            : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-800'
-                            }`}>
-                            {item.paymentStatus === 'PAID' ? 'PAID' : 'UNPAID'}
-                          </span>
-                        </td>
-                        <td className="p-4 text-slate-500">{new Date(item.applicationDate).toLocaleDateString()}</td>
-                        <td className="p-4 text-center space-x-2 flex items-center justify-center">
-                          {assessmentTab === 'Active' ? (
-                            <>
-                              <button
-                                onClick={() => setSelectedAssessment(item)}
-                                className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-3.5 py-1.5 rounded-xl transition-all cursor-pointer shadow-xs inline-flex items-center gap-1"
-                              >
-                                Review
-                              </button>
-                              <button
-                                onClick={() => handleArchiveAssessment(item.id, item.trackingNumber)}
-                                className="bg-slate-100 hover:bg-slate-200 hover:text-slate-800 text-slate-500 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200 font-medium px-2.5 py-1.5 rounded-xl transition-all cursor-pointer border border-slate-200"
-                              >
-                                Archive
-                              </button>
-                            </>
-                          ) : (
-                            <>
-                              <button
-                                onClick={() => handleRestoreAssessment(item.id, item.trackingNumber)}
-                                className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 font-medium px-3.5 py-1.5 rounded-xl transition-all cursor-pointer border border-emerald-200 dark:border-emerald-900"
-                              >
-                                Restore
-                              </button>
-                              <button
-                                onClick={() => handleDeleteAssessment(item.id, item.trackingNumber)}
-                                className="bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 font-medium px-3.5 py-1.5 rounded-xl transition-all cursor-pointer border border-rose-200 dark:border-rose-900"
-                              >
-                                Delete (Final)
-                              </button>
-                            </>
-                          )}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-
-            <div className="flex justify-between items-center text-xs text-slate-500 dark:text-slate-400 pt-2">
-              <span className="font-medium">Page {currentPage} of {totalPages}</span>
-              <div className="flex gap-2">
-                <button
-                  disabled={currentPage <= 1 || loading}
-                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                  className="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl disabled:opacity-40 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-all font-semibold flex items-center gap-1"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg> Previous
-                </button>
-                <button
-                  disabled={currentPage >= totalPages || loading}
-                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                  className="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl disabled:opacity-40 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-all font-semibold flex items-center gap-1"
-                >
-                  Next <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
-                </button>
-              </div>
-            </div>
-          </section>
-        ) : (
-          <section className="bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-xs space-y-5">
-            <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-              {appointmentTab === 'Active' ? 'Citizen Appointments Management Schedule' : 'Archived Appointments'}
-            </h3>
-
-
-            <div className="flex space-x-1 bg-slate-200/50 dark:bg-slate-800/50 p-1.5 rounded-xl w-fit">
-              <button
-                onClick={() => setAppointmentTab("Active")}
-                className={`px-5 py-2.5 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-2 ${appointmentTab === "Active"
-                  ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
-                  : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
-                  }`}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                Active Schedule
-              </button>
-              <button
-                onClick={() => setAppointmentTab("Archived")}
-                className={`px-5 py-2.5 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-2 ${appointmentTab === "Archived"
-                  ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
-                  : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
-                  }`}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>
-                Archiver
-              </button>
-            </div>
-
-            <div className="overflow-x-auto rounded-xl border border-slate-200/80 dark:border-slate-800">
-              <table className="w-full text-left text-xs whitespace-nowrap border-collapse">
-                <thead className="bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-200 dark:border-slate-800">
-                  <tr>
-                    <th className="p-4">APPLICANT &amp; BUSINESS</th>
-                    <th className="p-4">DEPARTMENT</th>
-                    <th className="p-4">APPOINTMENT TYPE</th>
-                    <th className="p-4">SCHEDULE &amp; SLOT</th>
-                    <th className="p-4">CONTACT INFO</th>
-                    <th className="p-4 text-center">STATUS</th>
-                    <th className="p-4 text-center">ACTIONS</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-slate-700 dark:text-slate-300">
-                  {filteredAppointments.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="text-center py-16 text-slate-400 italic">
-                        {appointmentTab === 'Active' ? 'No scheduled citizen appointments found.' : 'No archived appointments found.'}
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredAppointments.map(apt => (
-                      <tr key={apt.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                        <td className="p-4">
-                          <div className="font-bold text-slate-900 dark:text-white">{apt.fullName}</div>
-                          <div className="text-[11px] text-slate-500">{apt.businessName ? `Biz: ${apt.businessName}` : 'No business specified'} {apt.tin ? `(TIN: ${apt.tin})` : ''}</div>
-                        </td>
-                        <td className="p-4">{apt.department}</td>
-                        <td className="p-4 font-semibold text-blue-600">{apt.appointmentType}</td>
-                        <td className="p-4 font-mono">
-                          <div>{apt.date}</div>
-                          <div className="text-[10px] text-slate-400">{apt.timeSlot || 'All Day'}</div>
-                        </td>
-                        <td className="p-4 text-slate-500">{apt.phone} / {apt.email}</td>
-                        <td className="p-4 text-center">
-                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold border ${apt.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400' :
-                            apt.status === 'CANCELLED' ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/50 dark:text-rose-400' :
-                              apt.status === 'ARCHIVED' ? 'bg-slate-200 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-400' :
-                                'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-400'
-                            }`}>
-                            {apt.status}
-                          </span>
-                        </td>
-                        <td className="p-4 text-center space-x-2">
-                          {appointmentTab === 'Active' ? (
-                            <>
-                              <button
-                                onClick={() => setSelectedAppointmentPreview(apt)}
-                                className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-3 py-1 rounded-xl transition-all cursor-pointer shadow-xs"
-                              >
-                                Preview
-                              </button>
-                              <button
-                                onClick={() => handleAppointmentStatusUpdate(apt.id, 'APPROVED')}
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-3 py-1 rounded-xl transition-all cursor-pointer shadow-xs"
-                              >
-                                Approve
-                              </button>
-                              <button
-                                onClick={() => handleAppointmentStatusUpdate(apt.id, 'CANCELLED')}
-                                className="bg-amber-600 hover:bg-amber-700 text-white font-medium px-3 py-1 rounded-xl transition-all cursor-pointer shadow-xs"
-                              >
-                                Cancel
-                              </button>
-                              <button
-                                onClick={() => handleArchiveAppointment(apt.id)}
-                                className="bg-slate-100 hover:bg-slate-200 hover:text-slate-800 text-slate-500 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200 font-medium px-3 py-1 rounded-xl transition-all cursor-pointer shadow-xs border border-slate-200"
-                              >
-                                Archive
-                              </button>
-                            </>
-                          ) : (
-                            <>
-                              <button
-                                onClick={() => handleRestoreAppointment(apt.id)}
-                                className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 font-medium px-3.5 py-1.5 rounded-xl transition-all cursor-pointer border border-emerald-200 dark:border-emerald-900"
-                              >
-                                Restore
-                              </button>
-                              <button
-                                onClick={() => handleDeleteAppointment(apt.id)}
-                                className="bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 font-medium px-3.5 py-1.5 rounded-xl transition-all cursor-pointer border border-rose-200 dark:border-rose-900"
-                              >
-                                Delete (Final)
-                              </button>
-                            </>
-                          )}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        )}
-      </div>
-
-
-      {selectedAppointmentPreview && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-8 shadow-2xl border border-slate-200 dark:border-slate-800 my-8">
-            <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-4 mb-5">
-              <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                  Appointment Ticket Details
-                </h3>
-                <p className="text-xs font-mono text-blue-600 dark:text-blue-400 mt-0.5">Reference ID: {selectedAppointmentPreview.id}</p>
-              </div>
-              <button type="button" onClick={() => setSelectedAppointmentPreview(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer font-bold text-lg">✕</button>
-            </div>
-
-            <div className="space-y-4 text-xs max-h-[65vh] overflow-y-auto pr-1">
-              <div className="grid grid-cols-2 gap-3 bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-200 dark:border-slate-800">
-                <div>
-                  <span className="block text-[10px] text-slate-400 uppercase font-bold">Applicant Name</span>
-                  <span className="font-semibold text-slate-800 dark:text-slate-200">{selectedAppointmentPreview.fullName}</span>
-                </div>
-                <div>
-                  <span className="block text-[10px] text-slate-400 uppercase font-bold">Department</span>
-                  <span className="font-semibold text-slate-800 dark:text-slate-200">{selectedAppointmentPreview.department}</span>
-                </div>
-                <div>
-                  <span className="block text-[10px] text-slate-400 uppercase font-bold">Business Name</span>
-                  <span className="font-semibold text-slate-800 dark:text-slate-200">{selectedAppointmentPreview.businessName || 'N/A'}</span>
-                </div>
-                <div>
-                  <span className="block text-[10px] text-slate-400 uppercase font-bold">TIN</span>
-                  <span className="font-mono text-slate-700 dark:text-slate-300">{selectedAppointmentPreview.tin || 'N/A'}</span>
-                </div>
-              </div>
-
-              <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2.5">
-                <div>
-                  <span className="block text-[10px] text-slate-400 uppercase font-bold">Appointment Purpose / Type</span>
-                  <span className="font-bold text-blue-600 dark:text-blue-400 text-sm">{selectedAppointmentPreview.appointmentType}</span>
-                </div>
-                <div className="grid grid-cols-2 gap-2 pt-1">
-                  <div>
-                    <span className="block text-[10px] text-slate-400 uppercase font-bold">Scheduled Date</span>
-                    <span className="font-mono font-medium text-slate-800 dark:text-slate-200">{selectedAppointmentPreview.date}</span>
-                  </div>
-                  <div>
-                    <span className="block text-[10px] text-slate-400 uppercase font-bold">Time Slot</span>
-                    <span className="font-mono font-medium text-slate-800 dark:text-slate-200">{selectedAppointmentPreview.timeSlot || 'All Day'}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2">
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <span className="block text-[10px] text-slate-400 uppercase font-bold">Contact Email</span>
-                    <span className="text-slate-700 dark:text-slate-300">{selectedAppointmentPreview.email}</span>
-                  </div>
-                  <div>
-                    <span className="block text-[10px] text-slate-400 uppercase font-bold">Phone Number</span>
-                    <span className="font-mono text-slate-700 dark:text-slate-300">{selectedAppointmentPreview.phone}</span>
-                  </div>
-                </div>
-                <div>
-                  <span className="block text-[10px] text-slate-400 uppercase font-bold">Office Address</span>
-                  <span className="text-slate-700 dark:text-slate-300">{selectedAppointmentPreview.address || 'N/A'}</span>
-                </div>
-              </div>
-
-              <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-1">
-                <span className="block text-[10px] text-slate-400 uppercase font-bold">Description / Concern Details</span>
-                <p className="text-slate-700 dark:text-slate-300 italic">{selectedAppointmentPreview.description || 'No detailed notes provided.'}</p>
-              </div>
-
-              <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-1">
-                <span className="block text-[10px] text-slate-400 uppercase font-bold">Current Ticket Status</span>
-                <span className={`inline-block px-2.5 py-1 rounded font-bold text-xs mt-1 ${selectedAppointmentPreview.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-800' :
-                  selectedAppointmentPreview.status === 'CANCELLED' ? 'bg-rose-100 text-rose-800' :
-                    'bg-amber-100 text-amber-800'
-                  }`}>
-                  {selectedAppointmentPreview.status}
-                </span>
-              </div>
-            </div>
-
-            <div className="flex justify-between items-center pt-5 border-t border-slate-200 dark:border-slate-800 mt-6">
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleAppointmentStatusUpdate(selectedAppointmentPreview.id, 'APPROVED')}
-                  className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs cursor-pointer shadow-xs"
-                >
-                  Approve
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleAppointmentStatusUpdate(selectedAppointmentPreview.id, 'CANCELLED')}
-                  className="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs cursor-pointer shadow-xs"
-                >
-                  Cancel
-                </button>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedAppointmentPreview(null)}
-                className="px-4 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 font-bold rounded-xl text-xs cursor-pointer"
-              >
-                Close Preview
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-
-      {selectedAssessment && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-2xl w-full p-8 shadow-2xl border border-slate-200 dark:border-slate-800 my-8">
-            <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-4 mb-6">
-              <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                  Comprehensive Assessment & Tax Computation
-                </h3>
-                <p className="text-xs font-mono text-blue-600 dark:text-blue-400 mt-0.5">Tracking No: {selectedAssessment.trackingNumber}</p>
-              </div>
-              <button type="button" onClick={() => setSelectedAssessment(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"><svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg></button>
-            </div>
-
-            <div className="space-y-5 text-xs max-h-[70vh] overflow-y-auto pr-1">
-
-              <div className="grid grid-cols-2 gap-3.5 bg-slate-50/50 dark:bg-slate-950/50 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800">
-                <div>
-                  <span className="block text-[10px] text-slate-400 uppercase font-bold mb-0.5">Business Name</span>
-                  <span className="font-semibold text-slate-800 dark:text-slate-200">{selectedAssessment.businessName}</span>
-                </div>
-                <div>
-                  <span className="block text-[10px] text-slate-400 uppercase font-bold mb-0.5">Owner / Applicant</span>
-                  <span className="font-semibold text-slate-800 dark:text-slate-200">{selectedAssessment.businessOwner}</span>
-                </div>
-                <div>
-                  <span className="block text-[10px] text-slate-400 uppercase font-bold mb-0.5">Classification</span>
-                  <span className="font-semibold text-blue-600">{selectedAssessment.businessType || 'Retailer'}</span>
-                </div>
-                <div>
-                  <span className="block text-[10px] text-slate-400 uppercase font-bold mb-0.5">Declared Gross Sales</span>
-                  <span className="font-semibold text-emerald-600">₱{selectedAssessment.grossSales ? selectedAssessment.grossSales.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '0.00'}</span>
-                </div>
-              </div>
-
-
-              <div className="p-4 rounded-2xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/50 space-y-2">
-                <h4 className="font-bold text-blue-900 dark:text-blue-300 uppercase tracking-wide text-[11px] mb-2 flex items-center gap-1.5">
-                  Computed Local Government Statutory Fees (RA 7160)
-                </h4>
-                <div className="flex justify-between py-1 border-b border-blue-100 dark:border-blue-900/30">
-                  <span className="text-slate-600 dark:text-slate-400">Local Business Tax (LBT)</span>
-                  <span className="font-mono font-bold text-slate-800 dark:text-slate-200">₱{computedFees.lbt.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-blue-100 dark:border-blue-900/30">
-                  <span className="text-slate-600 dark:text-slate-400">Mayor's Permit Fee</span>
-                  <span className="font-mono font-bold text-slate-800 dark:text-slate-200">₱{computedFees.mayorsPermit.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-blue-100 dark:border-blue-900/30">
-                  <span className="text-slate-600 dark:text-slate-400">Sanitary Inspection Fee</span>
-                  <span className="font-mono font-bold text-slate-800 dark:text-slate-200">₱{computedFees.sanitaryFee.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-blue-100 dark:border-blue-900/30">
-                  <span className="text-slate-600 dark:text-slate-400">Garbage Fee</span>
-                  <span className="font-mono font-bold text-slate-800 dark:text-slate-200">₱{computedFees.garbageFee.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-blue-100 dark:border-blue-900/30">
-                  <span className="text-slate-600 dark:text-slate-400">Fire Safety Inspection Fee (10% BFP share)</span>
-                  <span className="font-mono font-bold text-slate-800 dark:text-slate-200">₱{computedFees.fireSafetyFee.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between pt-2 text-sm font-extrabold text-blue-700 dark:text-blue-400">
-                  <span>Total Payable Assessment</span>
-                  <span className="font-mono">₱{computedFees.total.toLocaleString()}</span>
-                </div>
-              </div>
-
-
-              <div className="p-4 rounded-2xl bg-slate-50/70 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <span className="block text-[10px] text-slate-400 uppercase font-bold mb-1">
-                      Official Receipt (O.R.) Number
-                    </span>
-                    <span className={`font-mono font-extrabold text-sm ${selectedAssessment.paymentStatus === 'PAID'
-                      ? 'text-emerald-600 dark:text-emerald-400'
-                      : 'text-slate-500 dark:text-slate-400'
-                      }`}>
-                      {getOfficialReceiptNumber(selectedAssessment) || 'Not yet issued'}
-                    </span>
-                  </div>
-
-                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold border ${selectedAssessment.paymentStatus === 'PAID'
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800'
-                    : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800'
-                    }`}>
-                    {selectedAssessment.paymentStatus === 'PAID' ? 'PAID' : 'UNPAID'}
-                  </span>
-                </div>
-
-                {selectedAssessment.paymentStatus === 'PAID' && !getOfficialReceiptNumber(selectedAssessment) && (
-                  <p className="mt-2 text-[10px] text-amber-600 dark:text-amber-400">
-                    Payment is marked as paid, but the O.R. number was not returned by the server.
-                  </p>
-                )}
-              </div>
-
-
-              <div className="space-y-3">
-                <h4 className="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide text-[11px]">
-                  Attached Requirements & Verification Checklist
-                </h4>
-
-                <div className="bg-slate-50 dark:bg-slate-950 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
-                  <div className="font-semibold text-slate-700 dark:text-slate-300 mb-1">Uploaded Files:</div>
-                  {selectedAssessment.attachments && selectedAssessment.attachments.length > 0 ? (
-                    selectedAssessment.attachments.map((file, idx) => (
-                      <div key={idx} className="flex justify-between items-center bg-white dark:bg-slate-900 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800">
-                        <span className="font-medium text-slate-800 dark:text-slate-200 truncate max-w-[280px] flex items-center gap-1.5">
-                          <svg className="w-3.5 h-3.5 text-blue-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg> {file.name}
-                        </span>
-                        <div className="flex items-center gap-3">
-                          <button
-                            type="button"
-                            onClick={() => setPreviewFile(file)}
-                            className="text-blue-600 font-bold hover:underline flex items-center gap-1 cursor-pointer"
-                          >
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg> Preview
-                          </button>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-slate-400 italic">No digital attachments uploaded.</p>
-                  )}
-                </div>
-
-
-                <div className="space-y-2 pt-1">
-                  <label className="flex items-center gap-2.5 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={checklist.itrChecked}
-                      onChange={(e) => setChecklist({ ...checklist, itrChecked: e.target.checked })}
-                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-4 w-4"
-                    />
-                    <span className="font-medium text-slate-700 dark:text-slate-300">I have verified the Income Tax Return (ITR) or Financial Statements.</span>
-                  </label>
-                  <label className="flex items-center gap-2.5 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={checklist.clearanceVerified}
-                      onChange={(e) => setChecklist({ ...checklist, clearanceVerified: e.target.checked })}
-                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-4 w-4"
-                    />
-                    <span className="font-medium text-slate-700 dark:text-slate-300">Barangay Clearance and Zoning permits are authentic and valid.</span>
-                  </label>
-                  <label className="flex items-center gap-2.5 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={checklist.financialStatementValid}
-                      onChange={(e) => setChecklist({ ...checklist, financialStatementValid: e.target.checked })}
-                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-4 w-4"
-                    />
-                    <span className="font-medium text-slate-700 dark:text-slate-300">Declared gross sales match the submitted financial records.</span>
-                  </label>
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Official Remarks / Assessment Notes</label>
-                <textarea
-                  rows={2}
-                  value={actionRemarks}
-                  onChange={(e) => setActionRemarks(e.target.value)}
-                  placeholder="Enter evaluation notes or reason for approval/rejection..."
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-slate-800 dark:text-slate-100 resize-none outline-none focus:border-blue-500 transition-all"
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-between items-center pt-4 border-t border-slate-200 dark:border-slate-800 mt-6">
-              <button
-                type="button"
-                onClick={() => setShowOrderOfPaymentModal(true)}
-                className="px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl text-xs shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg> Generate Order of Payment (OP)
-              </button>
-
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  disabled={submittingAction}
-                  onClick={() => handleStatusUpdate('REJECTED')}
-                  className="px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl text-xs shadow-xs cursor-pointer disabled:opacity-50 transition-all"
-                >
-                  Reject
-                </button>
-                <button
-                  type="button"
-                  disabled={submittingAction}
-                  onClick={() => handleStatusUpdate('APPROVED')}
-                  className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-xs shadow-xs cursor-pointer disabled:opacity-50 transition-all"
-                >
-                  Approve Assessment
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-
-      {previewFile && (
-        <div className="fixed inset-0 z-60 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-3xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
-            <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
-                <h4 className="font-bold text-slate-900 dark:text-white text-sm truncate max-w-[320px]">{previewFile.name}</h4>
-              </div>
-              <button type="button" onClick={() => setPreviewFile(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer font-bold text-lg">✕</button>
-            </div>
-
-            <div className="h-[60vh] bg-slate-100 dark:bg-slate-950 rounded-2xl flex items-center justify-center border border-slate-200 dark:border-slate-800 overflow-hidden relative">
-              {previewFile.url.startsWith('data:image/') || previewFile.url.match(/\.(jpeg|jpg|gif|png)$/i) ? (
-                <img src={previewFile.url} alt="Document Preview" className="max-h-full max-w-full object-contain" />
-              ) : (
-                <iframe src={previewFile.url} title="Document Preview" className="w-full h-full border-0" />
-              )}
-            </div>
-
-            <div className="flex justify-end pt-2">
-              <button
-                type="button"
-                onClick={() => setPreviewFile(null)}
-                className="px-5 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 font-bold rounded-xl text-xs cursor-pointer"
-              >
-                Close Preview
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-
-      {showOrderOfPaymentModal && selectedAssessment && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white text-slate-900 rounded-3xl max-w-lg w-full p-8 shadow-2xl space-y-6">
-            <div className="text-center border-b border-slate-200 pb-4">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Republic of the Philippines</p>
-              <h3 className="text-base font-extrabold uppercase">Office of the Municipal Treasurer</h3>
-              <h4 className="text-sm font-bold text-blue-600">OFFICIAL ORDER OF PAYMENT (OP)</h4>
-            </div>
-
-            <div className="space-y-3 text-xs">
-              <div className="grid grid-cols-2 gap-2 bg-slate-50 p-3 rounded-xl border border-slate-200">
-                <div><span className="text-slate-500 font-semibold">Tracking No:</span> <span className="font-mono font-bold">{selectedAssessment.trackingNumber}</span></div>
-                <div><span className="text-slate-500 font-semibold">Date:</span> <span>{new Date().toLocaleDateString()}</span></div>
-                <div className="col-span-2"><span className="text-slate-500 font-semibold">Business Name:</span> <span className="font-bold">{selectedAssessment.businessName}</span></div>
-                <div className="col-span-2"><span className="text-slate-500 font-semibold">Owner:</span> <span>{selectedAssessment.businessOwner}</span></div>
-              </div>
-
-              <div className="border border-slate-200 rounded-xl overflow-hidden">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-100 font-bold border-b border-slate-200">
-                    <tr>
-                      <th className="p-2.5">Fee Description</th>
-                      <th className="p-2.5 text-right">Amount (PHP)</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    <tr><td className="p-2.5">Local Business Tax (LBT)</td><td className="p-2.5 text-right font-mono">₱{computedFees.lbt.toLocaleString()}</td></tr>
-                    <tr><td className="p-2.5">Mayor's Permit Fee</td><td className="p-2.5 text-right font-mono">₱{computedFees.mayorsPermit.toLocaleString()}</td></tr>
-                    <tr><td className="p-2.5">Sanitary Inspection Fee</td><td className="p-2.5 text-right font-mono">₱{computedFees.sanitaryFee.toLocaleString()}</td></tr>
-                    <tr><td className="p-2.5">Garbage Fee</td><td className="p-2.5 text-right font-mono">₱{computedFees.garbageFee.toLocaleString()}</td></tr>
-                    <tr><td className="p-2.5">Fire Safety Inspection Fee</td><td className="p-2.5 text-right font-mono">₱{computedFees.fireSafetyFee.toLocaleString()}</td></tr>
-                    <tr className="bg-slate-50 font-extrabold"><td className="p-2.5">TOTAL DUE</td><td className="p-2.5 text-right font-mono text-blue-600">₱{computedFees.total.toLocaleString()}</td></tr>
-                  </tbody>
-                </table>
-              </div>
-              <div className="text-center pt-2">
-                <p className="text-[10px] text-slate-500">Please present this Order of Payment at the Municipal Treasury Cashier Window or scan QR via LandBank Link.Biz / GCash portal.</p>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
-              <button
-                onClick={() => setShowOrderOfPaymentModal(false)}
-                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 font-bold rounded-xl text-xs cursor-pointer"
-              >
-                Close Preview
-              </button>
-              <button
-                onClick={() => window.print()}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs cursor-pointer shadow-sm flex items-center gap-1.5"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg> Print / Download PDF
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-
-      <footer className="w-full text-slate-400 text-xs py-6 border-t border-slate-200 dark:border-slate-800 mt-12 text-center">
-        <p>© 2026 Local Government Treasury Unit. All rights reserved. Production-Ready LGU Module.</p>
-      </footer>
-    </div>
-  );
+  return <div className="w-full space-y-4">
+    <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3"><div><h2 className="text-xl font-extrabold text-slate-900 dark:text-white">Business Tax Assessment Management</h2><p className="text-[11px] text-slate-500">Initial assessment → compliance → final review → approval → Tax Bill → payment → O.R.</p></div><div className="flex gap-2"><button type="button" onClick={() => setActiveTab('assessments')} className={`px-3 py-2 rounded-lg text-xs font-bold ${activeTab === 'assessments' ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-slate-800'}`}>Assessments</button><button type="button" onClick={() => setActiveTab('appointments')} className={`px-3 py-2 rounded-lg text-xs font-bold ${activeTab === 'appointments' ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-slate-800'}`}>Appointments</button></div></div>
+
+    {activeTab === 'assessments' && <>
+      <div className="flex flex-wrap items-center gap-2"><button type="button" onClick={() => { setArchiveView(false); setStatusFilter('ALL'); setPage(1); }} className={`px-3 py-2 rounded-lg text-xs font-bold ${!archiveView ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-slate-800'}`}>Active Queue</button><button type="button" onClick={() => { setArchiveView(true); setPage(1); }} className={`px-3 py-2 rounded-lg text-xs font-bold ${archiveView ? 'bg-slate-700 text-white' : 'bg-slate-100 dark:bg-slate-800'}`}>Archiver</button><select disabled={archiveView} value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }} className="px-3 py-2 rounded-lg border text-xs"><option value="ALL">All Active Statuses</option>{filteredStatuses.filter((x) => x !== 'ARCHIVED').map((x) => <option key={x}>{x}</option>)}</select><select value={searchType} onChange={(e) => setSearchType(e.target.value)} className="px-3 py-2 rounded-lg border text-xs"><option>Tracking/MP No.</option><option>Business Name</option><option>Business Owner</option><option>Mayor's Permit No.</option><option>Tax Bill Number</option></select><input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && void fetchAssessments()} placeholder="Search assessment queue..." className="flex-1 min-w-[220px] px-3 py-2 rounded-lg border text-xs" /><button type="button" onClick={() => { setPage(1); void fetchAssessments(); }} className="px-4 py-2 rounded-lg bg-blue-600 text-white text-xs font-bold">Search</button></div>
+      {fetchError && <div className="p-3 rounded-xl bg-rose-50 text-rose-700 border border-rose-200 text-xs">{fetchError}</div>}
+      <div className="overflow-x-auto bg-white dark:bg-slate-900 border rounded-2xl"><table className="w-full min-w-[1100px] text-xs"><thead className="bg-slate-50 dark:bg-slate-950 text-[10px] uppercase text-slate-500"><tr><th className="p-3 text-left">Tracking</th><th className="p-3 text-left">Business / Owner</th><th className="p-3 text-left">Permit</th><th className="p-3 text-left">Gross Sales</th><th className="p-3 text-left">Status</th><th className="p-3 text-left">Payment</th><th className="p-3 text-right">Action</th></tr></thead><tbody className="divide-y">{loading ? <tr><td colSpan={7} className="p-12 text-center text-slate-400">Loading...</td></tr> : assessments.length ? assessments.map((record) => <tr key={record.id} className="hover:bg-slate-50 dark:hover:bg-slate-950/50"><td className="p-3 font-mono font-bold text-blue-600">{record.trackingNumber}</td><td className="p-3"><div className="font-bold">{record.businessName}</div><div className="text-[10px] text-slate-400">{record.businessOwner}</div></td><td className="p-3 font-mono">{record.mayorPermitNumber || '—'}</td><td className="p-3 font-mono">{money(record.grossSales)}</td><td className="p-3"><span className={`px-2 py-1 rounded-full text-[9px] font-bold ${statusClass(record.status)}`}>{record.status}</span></td><td className="p-3"><span className={`px-2 py-1 rounded-full text-[9px] font-bold ${record.paymentStatus === 'PAID' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>{record.paymentStatus || 'UNPAID'}</span></td><td className="p-3 text-right"><button type="button" onClick={() => setSelectedAssessment(record)} className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 font-bold mr-1">Review</button><button type="button" onClick={() => void archiveOrRestore(record)} className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 font-bold">{record.status === 'ARCHIVED' ? 'Restore' : 'Archive'}</button></td></tr>) : <tr><td colSpan={7} className="p-12 text-center text-slate-400">No records found.</td></tr>}</tbody></table></div>
+      <div className="flex justify-between items-center text-xs text-slate-500"><span>Page {page} of {totalPages}</span><div className="flex gap-2"><button type="button" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))} className="px-3 py-1.5 border rounded-lg disabled:opacity-40">Previous</button><button type="button" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))} className="px-3 py-1.5 border rounded-lg disabled:opacity-40">Next</button></div></div>
+    </>}
+
+    {activeTab === 'appointments' && <div className="overflow-x-auto bg-white dark:bg-slate-900 border rounded-2xl"><table className="w-full min-w-[850px] text-xs"><thead className="bg-slate-50 dark:bg-slate-950"><tr><th className="p-3 text-left">Purpose</th><th className="p-3 text-left">Business</th><th className="p-3 text-left">Date</th><th className="p-3 text-left">Status</th><th className="p-3 text-right">Action</th></tr></thead><tbody className="divide-y">{appointments.map((a) => <tr key={a.id}><td className="p-3">{a.appointmentType}</td><td className="p-3">{a.businessName || a.fullName}</td><td className="p-3">{a.date} {a.timeSlot || ''}</td><td className="p-3"><span className="px-2 py-1 rounded-full bg-slate-100 font-bold">{a.status}</span></td><td className="p-3 text-right"><button type="button" onClick={() => setSelectedAppointment(a)} className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 font-bold">View</button></td></tr>)}</tbody></table></div>}
+
+    {selectedAppointment && <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"><div className="bg-white dark:bg-slate-900 rounded-2xl p-5 w-full max-w-lg"><div className="flex justify-between mb-4"><h3 className="font-bold">Appointment Details</h3><button onClick={() => setSelectedAppointment(null)} className="font-bold">×</button></div><div className="space-y-2 text-xs"><div><b>Purpose:</b> {selectedAppointment.appointmentType}</div><div><b>Business:</b> {selectedAppointment.businessName || '—'}</div><div><b>Applicant:</b> {selectedAppointment.fullName}</div><div><b>Date:</b> {selectedAppointment.date}</div><div><b>Time:</b> {selectedAppointment.timeSlot || 'All Day'}</div><div><b>Description:</b> {selectedAppointment.description || '—'}</div><div><b>Status:</b> {selectedAppointment.status}</div></div><button type="button" onClick={() => setSelectedAppointment(null)} className="mt-5 w-full px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold">Close</button></div></div>}
+
+    {selectedAssessment && <div className="fixed inset-0 z-50 bg-slate-950/75 flex items-center justify-center p-2 sm:p-4 overflow-y-auto"><div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-5xl max-h-[95vh] overflow-y-auto shadow-2xl border"><div className="sticky top-0 z-10 flex justify-between items-center px-5 py-4 border-b bg-slate-50 dark:bg-slate-950"><div><h3 className="font-bold text-sm uppercase">Comprehensive Business Tax Assessment Review</h3><p className="font-mono text-[10px] text-blue-600">{selectedAssessment.trackingNumber}</p></div><button onClick={() => setSelectedAssessment(null)} className="text-xl font-bold">×</button></div><div className="p-5 space-y-5 text-xs">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3"><div className="box"><span>Business</span><b>{selectedAssessment.businessName}</b></div><div className="box"><span>Owner</span><b>{selectedAssessment.businessOwner}</b></div><div className="box"><span>Mayor’s Permit</span><b>{selectedAssessment.mayorPermitNumber || '—'}</b></div><div className="box"><span>Status</span><span className={`self-start px-2 py-1 rounded-full text-[9px] font-bold ${statusClass(selectedAssessment.status)}`}>{selectedAssessment.status}</span></div></div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3"><div className="box"><span>Gross Sales</span><b>{money(selectedAssessment.grossSales)}</b></div><div className="box"><span>Business Type</span><b>{selectedAssessment.businessType || '—'}</b></div><div className="box"><span>Line of Business</span><b>{selectedAssessment.lineOfBusiness || '—'}</b></div><div className="box"><span>Area</span><b>{Number(selectedAssessment.businessAreaSqm || 0).toLocaleString()} sqm</b></div></div>
+      <div className="box"><span>Address</span><b>{selectedAssessment.businessAddress || '—'}, {selectedAssessment.barangay || '—'}</b><span>Registration: {selectedAssessment.registrationType || '—'} {selectedAssessment.registrationNumber || ''} • TIN: {selectedAssessment.tin || '—'}</span><span>BIR Registered: {selectedAssessment.birRegistered ? 'Yes' : 'No'} • Other Branches: {selectedAssessment.hasOtherBranches ? 'Yes' : 'No'} • Multiple Lines: {selectedAssessment.hasMultipleLines ? 'Yes' : 'No'}</span></div>
+      <div><div className="font-bold mb-2">Document Verification Checklist</div>{renderDocChecklist()}</div>
+      <div><div className="font-bold mb-2">Uploaded Documents</div><div className="space-y-2">{(selectedAssessment.attachments || []).map((file, index) => <div key={`${file.name}-${index}`} className="flex justify-between items-center p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border"><div><div className="font-semibold">{file.name}</div><div className="text-[9px] text-slate-400">{LABELS[file.type || ''] || file.type || 'supporting_document'}</div></div><button type="button" onClick={() => setPreviewFile(file)} className="text-blue-600 font-bold">Preview</button></div>)}</div></div>
+      <div><div className="flex items-center justify-between mb-2"><div className="font-bold">Final Assessed Amount</div><div className="text-[10px] text-slate-500">Use the applicable current QC schedule / Revenue Code. Do not use an arbitrary percentage.</div></div><div className="grid grid-cols-2 md:grid-cols-3 gap-3">{([['lbt','Local Business Tax'],['mayorsPermit','Mayor’s Permit Fee'],['sanitaryFee','Sanitary Inspection Fee'],['garbageFee','Garbage Fee'],['fireSafetyFee','Fire Safety / BFP Fee'],['otherFees','Other Regulatory Fees']] as Array<[keyof Required<FeeBreakdown>, string]>).map(([key, label]) => <label key={key} className="p-3 rounded-xl border"><span className="block text-[10px] font-bold text-slate-500 mb-1">{label}</span><input type="number" min="0" step="0.01" value={fees[key]} onChange={(e) => setFee(key, e.target.value)} className="w-full p-2 rounded-lg border bg-transparent" /></label>)}</div><div className="mt-3 p-4 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 flex justify-between font-extrabold"><span>Total Assessment</span><span>{money(fees.total)}</span></div></div>
+      <div><label className="block font-bold mb-2">Treasurer’s Office Remarks</label><textarea value={actionRemarks} onChange={(e) => setActionRemarks(e.target.value)} rows={4} className="w-full p-3 rounded-xl border bg-transparent" placeholder="Explain returned documents, assessment findings, approval notes, etc." /></div>
+      <div className="box"><span>Current Payment</span><b>{selectedAssessment.paymentStatus || 'UNPAID'} • {money(selectedAssessment.paidAmount || selectedAssessment.paymentAmount || selectedAssessment.computedFees?.total)}</b>{selectedAssessment.officialReceiptNumber && <span>O.R.: {selectedAssessment.officialReceiptNumber}</span>}</div>
+    </div><div className="sticky bottom-0 flex flex-wrap items-center justify-between gap-2 px-5 py-4 border-t bg-slate-50 dark:bg-slate-950"><div className="flex gap-2"><button type="button" disabled={submitting} onClick={() => void updateStatus('FOR_COMPLIANCE')} className="px-3 py-2 rounded-xl bg-orange-600 text-white text-xs font-bold">Return for Compliance</button><button type="button" disabled={submitting} onClick={() => void updateStatus('FOR_FINAL_REVIEW')} className="px-3 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold">Submit to Final Review</button><button type="button" disabled={submitting} onClick={() => void updateStatus('REJECTED')} className="px-3 py-2 rounded-xl bg-rose-600 text-white text-xs font-bold">Reject</button></div><div className="flex gap-2"><button type="button" onClick={() => void deleteAssessment(selectedAssessment)} className="px-3 py-2 rounded-xl bg-rose-50 text-rose-700 text-xs font-bold">Delete</button><button type="button" onClick={() => void archiveOrRestore(selectedAssessment)} className="px-3 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 text-xs font-bold">{selectedAssessment.status === 'ARCHIVED' ? 'Restore' : 'Archive'}</button><button type="button" disabled={submitting} onClick={() => void updateStatus('APPROVED')} className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold">Approve & Issue Tax Bill</button></div></div></div></div>}
+
+    {showOrderModal && selectedAssessment && selectedAssessment.status === 'APPROVED' && <div className="fixed inset-0 z-[60] bg-slate-950/70 flex items-center justify-center p-4"><div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-lg p-6 border shadow-2xl"><h3 className="font-bold text-sm uppercase">Approved Business Tax Bill / Order of Payment</h3><div className="mt-4 space-y-2 text-xs"><div className="flex justify-between"><span>Tracking Number</span><b className="font-mono">{selectedAssessment.trackingNumber}</b></div><div className="flex justify-between"><span>Tax Bill Number</span><b className="font-mono text-blue-600">{selectedAssessment.taxBillNumber || '—'}</b></div><div className="flex justify-between"><span>Order of Payment</span><b className="font-mono">{selectedAssessment.orderOfPaymentNumber || '—'}</b></div><div className="flex justify-between"><span>Amount Due</span><b>{money(selectedAssessment.paymentAmount || selectedAssessment.computedFees?.total)}</b></div><div className="flex justify-between"><span>Due Date</span><b>{selectedAssessment.dueDate ? new Date(selectedAssessment.dueDate).toLocaleDateString() : '—'}</b></div></div><div className="mt-5 flex gap-2"><button type="button" onClick={() => setShowOrderModal(false)} className="flex-1 px-4 py-2 rounded-xl border text-xs font-bold">Close</button><button type="button" onClick={() => window.print()} className="flex-1 px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold">Print</button></div></div></div>}
+
+    {previewFile && <div className="fixed inset-0 z-[70] bg-black/90 flex items-center justify-center p-4" onClick={() => setPreviewFile(null)}><div className="w-full max-w-5xl h-[90vh]" onClick={(e) => e.stopPropagation()}><div className="flex justify-end mb-2"><button type="button" onClick={() => setPreviewFile(null)} className="text-white text-2xl font-bold">×</button></div>{previewFile.mimeType === 'application/pdf' || previewFile.url.startsWith('data:application/pdf') ? <iframe src={previewFile.url} title="Document Preview" className="w-full h-[calc(100%-40px)] bg-white rounded-xl" /> : <div className="w-full h-[calc(100%-40px)] flex items-center justify-center"><img src={previewFile.url} alt="Document Preview" className="max-w-full max-h-full object-contain rounded-xl" /></div>}</div></div>}
+
+    <style>{`.box{display:flex;flex-direction:column;gap:.25rem;padding:1rem;border:1px solid rgb(226 232 240);border-radius:1rem;background:rgb(248 250 252)}.dark .box{border-color:rgb(51 65 85);background:rgba(2,6,23,.35)}.box>span:first-child{font-size:9px;font-weight:700;text-transform:uppercase;color:rgb(148 163 184)}.box>b{font-weight:700}`}</style>
+  </div>;
 };
 
 export default BusinessTaxAssessmentAdminView;

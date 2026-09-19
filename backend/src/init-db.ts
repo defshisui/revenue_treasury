@@ -270,6 +270,65 @@ export async function initializeDatabase(): Promise<void> {
           application_date TIMESTAMP DEFAULT NOW(),
           created_at TIMESTAMP DEFAULT NOW()
       );
+
+      -- BUSINESS TAX WORKFLOW / DOCUMENT / PAYMENT FIELDS
+      ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS business_address TEXT;
+      ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS barangay VARCHAR(100);
+      ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS business_type VARCHAR(100);
+      ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS line_of_business VARCHAR(255);
+      ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS business_area_sqm NUMERIC(12,2) DEFAULT 0;
+      ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS registration_type VARCHAR(50);
+      ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS registration_number VARCHAR(100);
+      ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS mayors_permit_number VARCHAR(100);
+      ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS bir_registered BOOLEAN DEFAULT TRUE;
+      ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS has_other_branches BOOLEAN DEFAULT FALSE;
+      ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS has_multiple_lines BOOLEAN DEFAULT FALSE;
+      ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS tax_year INT DEFAULT EXTRACT(YEAR FROM CURRENT_DATE)::INT;
+      ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS assessment_period VARCHAR(40) DEFAULT 'ANNUAL_RENEWAL';
+      ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS quarter VARCHAR(30) DEFAULT 'ANNUAL';
+      ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS due_date DATE;
+      ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS order_of_payment_number VARCHAR(120);
+      ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS document_checklist JSONB DEFAULT '{}'::jsonb;
+      ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS computed_fees JSONB DEFAULT '{}'::jsonb;
+      ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS compliance_remarks TEXT;
+      ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS reviewed_by VARCHAR(255);
+      ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMP;
+      ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS approved_by VARCHAR(255);
+      ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS approved_at TIMESTAMP;
+      ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS payment_status VARCHAR(50) DEFAULT 'UNPAID';
+      ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS payment_amount NUMERIC(15,2) DEFAULT 0;
+      ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS paid_amount NUMERIC(15,2) DEFAULT 0;
+      ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS payment_method VARCHAR(120);
+      ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS payment_reference VARCHAR(150);
+      ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS payment_date TIMESTAMP;
+      ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS official_receipt_number VARCHAR(120);
+      ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS paymongo_payment_id VARCHAR(255);
+      ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS paymongo_session_id VARCHAR(255);
+      ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();
+
+      UPDATE business_assessments
+      SET payment_status = CASE
+        WHEN LOWER(COALESCE(remarks, '')) LIKE 'paid via%' THEN 'PAID'
+        ELSE COALESCE(NULLIF(payment_status, ''), 'UNPAID')
+      END,
+      payment_amount = CASE
+        WHEN COALESCE(payment_amount, 0) <= 0 THEN
+          CASE
+            WHEN COALESCE(computed_fees->>'total', '') ~ '^-?[0-9]+(\\.[0-9]+)?$' THEN (computed_fees->>'total')::numeric
+            ELSE payment_amount
+          END
+        ELSE payment_amount
+      END,
+      paid_amount = CASE
+        WHEN LOWER(COALESCE(remarks, '')) LIKE 'paid via%' THEN COALESCE(NULLIF(paid_amount, 0),
+          CASE
+            WHEN COALESCE(computed_fees->>'total', '') ~ '^-?[0-9]+(\\.[0-9]+)?$' THEN (computed_fees->>'total')::numeric
+            ELSE 0
+          END
+        )
+        ELSE paid_amount
+      END
+      WHERE LOWER(COALESCE(remarks, '')) LIKE 'paid via%';
     `);
 
 
@@ -602,6 +661,9 @@ export async function initializeDatabase(): Promise<void> {
       CREATE INDEX IF NOT EXISTS idx_business_assessments_email ON business_assessments(email);
       CREATE INDEX IF NOT EXISTS idx_business_assessments_status ON business_assessments(status);
       CREATE INDEX IF NOT EXISTS idx_business_assessments_app_date ON business_assessments(application_date DESC);
+      CREATE INDEX IF NOT EXISTS idx_business_assessments_mayor_permit ON business_assessments(mayors_permit_number);
+      CREATE INDEX IF NOT EXISTS idx_business_assessments_payment_status ON business_assessments(payment_status);
+      CREATE INDEX IF NOT EXISTS idx_business_assessments_tax_year ON business_assessments(tax_year);
 
       -- Users & OTP
       CREATE INDEX IF NOT EXISTS idx_users_email_lower ON users(LOWER(email));

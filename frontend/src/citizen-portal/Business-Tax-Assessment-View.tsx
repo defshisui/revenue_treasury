@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { API_BASE_URL } from '../config/api';
 import CitizenLayout from './CitizenLayout';
@@ -7,37 +7,101 @@ import {
   createQrPhPaymentMethod,
   attachQrPhPaymentMethod,
 } from '../services/paymongoService';
+
 export interface BusinessTaxAssessmentViewProps {
   isCollapsed?: boolean;
 }
+
 type ActiveScreen = 'assessment-list' | 'appointments-list' | 'verification';
+type AssessmentStatus = 'PENDING' | 'SUBMITTED' | 'FOR_COMPLIANCE' | 'FOR_FINAL_REVIEW' | 'APPROVED' | 'REJECTED' | 'ARCHIVED';
+type DocumentRequirementKey =
+  | 'sales_declaration'
+  | 'mayors_permit'
+  | 'latest_tax_bill'
+  | 'latest_official_receipt'
+  | 'bir_tax_return'
+  | 'previous_itr'
+  | 'audited_financial_statements'
+  | 'notarized_gross_sales'
+  | 'branch_permits_and_ors'
+  | 'branch_sales_breakdown'
+  | 'line_of_business_sales_breakdown'
+  | 'cedula'
+  | 'summary_list_of_sales'
+  | 'incentive_exemption';
+
 interface AttachmentFile {
   name: string;
   url: string;
+  type?: string;
+  mimeType?: string;
+  size?: number;
+  uploadedAt?: string;
 }
+
+interface FeeBreakdown {
+  lbt?: number;
+  mayorsPermit?: number;
+  sanitaryFee?: number;
+  garbageFee?: number;
+  fireSafetyFee?: number;
+  otherFees?: number;
+  total?: number;
+}
+
+interface MissingDocument {
+  key: DocumentRequirementKey | string;
+  label: string;
+}
+
 interface AssessmentRecord {
   id: string;
   trackingNumber: string;
-  taxBillNumber?: string;
+  taxBillNumber?: string | null;
+  orderOfPaymentNumber?: string | null;
   businessName: string;
   businessOwner: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
-  paymentStatus: 'PAID' | 'UNPAID';
+  businessAddress?: string;
+  barangay?: string;
+  businessType?: string;
+  lineOfBusiness?: string;
+  businessAreaSqm?: number;
+  registrationType?: string;
+  registrationNumber?: string;
+  mayorPermitNumber?: string;
+  birRegistered?: boolean;
+  hasOtherBranches?: boolean;
+  hasMultipleLines?: boolean;
+  taxYear?: number;
+  assessmentPeriod?: string;
+  quarter?: string;
+  dueDate?: string | null;
+  status: AssessmentStatus;
   applicationDate: string;
   psicCode?: string;
   grossSales?: number;
   tin?: string;
+  email?: string;
   attachments?: AttachmentFile[];
+  documentChecklist?: Record<string, boolean>;
+  missingDocuments?: MissingDocument[];
   remarks?: string;
-  computedFees?: {
-    lbt?: number;
-    mayorsPermit?: number;
-    sanitaryFee?: number;
-    garbageFee?: number;
-    fireSafetyFee?: number;
-    total?: number;
-  };
+  complianceRemarks?: string;
+  reviewedBy?: string;
+  reviewedAt?: string | null;
+  approvedBy?: string;
+  approvedAt?: string | null;
+  paymentStatus: 'PAID' | 'UNPAID';
+  paymentAmount?: number;
+  paidAmount?: number;
+  paymentMethod?: string;
+  paymentReference?: string;
+  paymentDate?: string | null;
+  officialReceiptNumber?: string;
+  paymongoPaymentId?: string;
+  computedFees?: FeeBreakdown;
 }
+
 interface AppointmentRecord {
   id: string;
   department: string;
@@ -52,119 +116,165 @@ interface AppointmentRecord {
   date: string;
   timeSlot?: string;
   remarks?: string;
-  status: 'PENDING' | 'APPROVED' | 'CANCELLED';
+  status: string;
   createdAt: string;
 }
+
+const REQUIRED_BASE: Array<{ key: DocumentRequirementKey; label: string; help: string; multiple?: boolean }> = [
+  { key: 'sales_declaration', label: 'Gross Receipts / Sales Declaration Form', help: 'Completed and signed Sales Declaration form.' },
+  { key: 'mayors_permit', label: 'Latest Mayor’s / Business Permit', help: 'Current/latest permit issued to the business.' },
+  { key: 'latest_tax_bill', label: 'Latest Business Tax Bill', help: 'Previous/latest Business Tax bill used for renewal assessment.' },
+  { key: 'latest_official_receipt', label: 'Latest Business Tax Official Receipt', help: 'Latest OR for the Business Tax payment.' },
+];
+
+const BIR_DOCS: Array<{ key: DocumentRequirementKey; label: string; help: string; multiple?: boolean }> = [
+  { key: 'bir_tax_return', label: 'Preceding Year VAT Return / Percentage Tax Return / ITR', help: 'Upload the applicable preceding-year BIR return.' },
+  { key: 'previous_itr', label: 'Previous-Preceding Year Income Tax Return', help: 'Upload the previous-preceding year ITR.' },
+  { key: 'audited_financial_statements', label: 'Previous-Preceding Year Audited Financial Statements', help: 'Upload the applicable audited financial statements.' },
+];
+
+const OPTIONAL_DOCS: Array<{ key: DocumentRequirementKey; label: string; help: string; multiple?: boolean }> = [
+  { key: 'cedula', label: 'Current-Year Community Tax Certificate / Cedula', help: 'Upload when available.' },
+  { key: 'summary_list_of_sales', label: 'Previous-Year Summary List of Sales Received by BIR', help: 'Upload when applicable to the business.' },
+  { key: 'incentive_exemption', label: 'Certificate of Incentives / Exemption', help: 'Upload when applicable.' },
+];
+
+
+function money(value: number | undefined): string {
+  return `₱${Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function statusClass(status: string): string {
+  switch (status) {
+    case 'APPROVED': return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300';
+    case 'REJECTED': return 'bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300';
+    case 'FOR_COMPLIANCE': return 'bg-orange-100 text-orange-800 dark:bg-orange-950/80 dark:text-orange-300';
+    case 'FOR_FINAL_REVIEW': return 'bg-blue-100 text-blue-800 dark:bg-blue-950/80 dark:text-blue-300';
+    case 'ARCHIVED': return 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
+    default: return 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300';
+  }
+}
+
 export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps> = ({ isCollapsed: _isCollapsed = false }) => {
   const location = useLocation();
   const [currentScreen, setCurrentScreen] = useState<ActiveScreen>('assessment-list');
   const [verificationType, setVerificationType] = useState<'tax-bill' | 'or-number'>('tax-bill');
   const [isModalOpen, setIsModalOpen] = useState<false | 'appointment' | 'sales-declaration'>(false);
+  const [selectedAssessmentView, setSelectedAssessmentView] = useState<AssessmentRecord | null>(null);
+  const [complianceFiles, setComplianceFiles] = useState<Partial<Record<DocumentRequirementKey, File[]>>>({});
+  const [isComplianceSubmitting, setIsComplianceSubmitting] = useState(false);
+  const [user, setUser] = useState<{ fullname: string; email: string; initials: string; firstName: string; token: string } | null>(null);
+  const [assessments, setAssessments] = useState<AssessmentRecord[]>([]);
+  const [userAppointments, setUserAppointments] = useState<AppointmentRecord[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [verifying, setVerifying] = useState(false);
+  const [verificationResult, setVerificationResult] = useState<any>(null);
+  const [verificationError, setVerificationError] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [searchType, setSearchType] = useState('Tracking/MP No.');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const pageSize = 10;
+
+  const [isPaymentStep, setIsPaymentStep] = useState(false);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [qrCodeUrl, setQrCodeUrl] = useState('');
+  const [qrReferenceNumber, setQrReferenceNumber] = useState('');
+  const [qrPaymentIntentId, setQrPaymentIntentId] = useState('');
+  const [qrError, setQrError] = useState('');
+  const [paymentAssessment, setPaymentAssessment] = useState<AssessmentRecord | null>(null);
+  const [qrSecondsRemaining, setQrSecondsRemaining] = useState(300);
+  const [qrPaymentPaid, setQrPaymentPaid] = useState(false);
+  const [paymentConfirmedAt, setPaymentConfirmedAt] = useState<Date | null>(null);
+  const [paymentReceiptNumber, setPaymentReceiptNumber] = useState('');
+  const [paymentReference, setPaymentReference] = useState('');
+  const [paymentAmount, setPaymentAmount] = useState(0);
+  const [isPaymentSuccess, setIsPaymentSuccess] = useState(false);
+
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewMime, setPreviewMime] = useState('');
+
+  const [taxBillForm, setTaxBillForm] = useState({ taxBillNo: '', tin: '' });
+  const [orForm, setOrForm] = useState({ permitNo: '', orNo: '', tin: '' });
+  const [salesForm, setSalesForm] = useState({
+    businessName: '',
+    businessOwner: '',
+    businessAddress: '',
+    barangay: '',
+    businessType: 'Retailer',
+    lineOfBusiness: '',
+    businessAreaSqm: '',
+    registrationType: 'DTI',
+    registrationNumber: '',
+    mayorsPermitNumber: '',
+    birRegistered: 'yes',
+    hasOtherBranches: 'no',
+    hasMultipleLines: 'no',
+    grossSales: '',
+    year: String(new Date().getFullYear()),
+    assessmentPeriod: 'ANNUAL_RENEWAL',
+    quarter: 'ANNUAL',
+    psicCode: '',
+    tin: '',
+  });
+  const [salesFiles, setSalesFiles] = useState<Partial<Record<DocumentRequirementKey, File[]>>>({});
+
+  const [captchaNum1, setCaptchaNum1] = useState(0);
+  const [captchaNum2, setCaptchaNum2] = useState(0);
+  const [captchaInput, setCaptchaInput] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [aptForm, setAptForm] = useState({
+    department: 'City Treasurer\'s Office',
+    appointmentType: '',
+    businessName: '',
+    tin: '',
+    address: '',
+    description: '',
+    fullName: '',
+    email: '',
+    phone: '',
+    date: '',
+    timeSlot: '09:00 AM - 10:00 AM',
+    remarks: '',
+  });
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const tab = params.get('tab');
-    if (tab === 'appointments' || tab === 'appointment') {
-      setCurrentScreen('appointments-list');
-    } else if (tab === 'verify' || tab === 'verification') {
-      setCurrentScreen('verification');
-    } else if (tab === 'sales-declaration') {
-      setIsModalOpen('sales-declaration');
-      setCurrentScreen('assessment-list');
-    } else {
-      setCurrentScreen('assessment-list');
-    }
+    if (tab === 'appointments' || tab === 'appointment') setCurrentScreen('appointments-list');
+    else if (tab === 'verify' || tab === 'verification') setCurrentScreen('verification');
+    else if (tab === 'sales-declaration') { setIsModalOpen('sales-declaration'); setCurrentScreen('assessment-list'); }
+    else setCurrentScreen('assessment-list');
   }, [location.search]);
-  const [selectedAssessmentView, setSelectedAssessmentView] = useState<AssessmentRecord | null>(null);
-  const [user, setUser] = useState<{ fullname: string; email: string; initials: string; firstName: string; token: string } | null>(null);
-  const [assessments, setAssessments] = useState<AssessmentRecord[]>([]);
-  const [userAppointments, setUserAppointments] = useState<AppointmentRecord[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [fetchError, setFetchError] = useState<string | null>(null);
-  const [verifying, setVerifying] = useState<boolean>(false);
-  const [verificationResult, setVerificationResult] = useState<any>(null);
-  const [verificationError, setVerificationError] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<string>('ALL');
-  const [searchType, setSearchType] = useState<string>('Tracking/MP No.');
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [totalPages, setTotalPages] = useState<number>(1);
-  const pageSize = 10;
-  const [isPaymentStep, setIsPaymentStep] = useState<boolean>(false);
-  const [isProcessingPayment, setIsProcessingPayment] = useState<boolean>(false);
-  const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
-  const [qrReferenceNumber, setQrReferenceNumber] = useState<string>("");
-  const [qrPaymentIntentId, setQrPaymentIntentId] = useState<string>('');
-  const [qrError, setQrError] = useState<string>('');
-  const [paymentAssessment, setPaymentAssessment] = useState<AssessmentRecord | null>(null);
-  const [qrSecondsRemaining, setQrSecondsRemaining] = useState<number>(300);
-  const [qrPaymentPaid, setQrPaymentPaid] = useState<boolean>(false);
-  const [paymentConfirmedAt, setPaymentConfirmedAt] = useState<Date | null>(null);
 
-  const [isPaymentSuccess, setIsPaymentSuccess] = useState<boolean>(false);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [previewMime, setPreviewMime] = useState<string>('');
-  const handlePayMongoBusinessTaxQrPayment = async (record: AssessmentRecord) => {
-    setIsProcessingPayment(true);
-    setQrCodeUrl('');
-    setQrReferenceNumber('');
-    setQrPaymentIntentId('');
-    setQrError('');
-    setQrPaymentPaid(false);
-    setPaymentConfirmedAt(null);
-    setQrSecondsRemaining(300);
-    const computedAmount = Number(record.computedFees?.total || 0);
-    if (!Number.isFinite(computedAmount) || computedAmount <= 0) {
-      setIsProcessingPayment(false);
-      setQrError(
-        'Your assessment has not been approved for payment yet. Please wait for the Treasurer\'s Office to complete the assessment.'
-      );
-      return;
-    }
+  useEffect(() => {
+    const rawData = localStorage.getItem('currentUser') || localStorage.getItem('user') || sessionStorage.getItem('currentUser') || sessionStorage.getItem('user');
+    if (!rawData) return;
     try {
-      const paymentIntent = await createPayMongoQrPaymentIntent({
-        amount: computedAmount,
-        type: 'BUSINESS_TAX',
-        businessTrackingNumber: record.trackingNumber,
-        customerName: record.businessOwner || user?.fullname || 'Business Taxpayer',
-        customerEmail: user?.email || 'taxpayer@gov.ph',
-        description: `Business Tax Assessment Payment (${record.trackingNumber})`,
-      });
-      setQrPaymentIntentId(paymentIntent.paymentIntentId);
-      setQrReferenceNumber(paymentIntent.referenceNumber);
-      const paymentMethodId = await createQrPhPaymentMethod(
-        paymentIntent.publicKey,
-        300
-      );
-      const attachedPayment = await attachQrPhPaymentMethod(
-        paymentIntent.paymentIntentId,
-        paymentMethodId,
-        paymentIntent.clientKey,
-        paymentIntent.publicKey
-      );
-      const imageUrl =
-        attachedPayment?.attributes?.next_action?.code?.image_url ||
-        attachedPayment?.next_action?.code?.image_url ||
-        attachedPayment?.attributes?.next_action?.qr_code?.image_url ||
-        attachedPayment?.qr_code?.image_url ||
-        '';
-      if (!imageUrl) {
-        console.error('PayMongo QR response:', attachedPayment);
-        throw new Error(
-          'PayMongo did not return the QRPh code image. Please try again.'
-        );
-      }
-      setQrCodeUrl(imageUrl);
-    } catch (err: any) {
-      console.error('PayMongo Business Tax QRPh payment error:', err);
-      setQrError(
-        err?.message ||
-        'Unable to generate the PayMongo QRPh code. Please try again.'
-      );
-    } finally {
-      setIsProcessingPayment(false);
+      const parsed = JSON.parse(rawData);
+      const target = parsed.user && typeof parsed.user === 'object' ? parsed.user : parsed;
+      const fullname = String(target.fullname || target.name || target.fullName || target.firstName || target.email || '');
+      const email = String(target.email || '');
+      const token = String(parsed.token || target.token || '');
+      const parts = fullname.trim().split(/\s+/).filter(Boolean);
+      const initials = parts.length > 1 ? `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase() : (parts[0] || 'U').slice(0, 2).toUpperCase();
+      const activeUser = { fullname, email, token, firstName: parts[0] || fullname, initials };
+      setUser(activeUser);
+      setSalesForm((prev) => ({ ...prev, businessOwner: fullname }));
+      setAptForm((prev) => ({ ...prev, fullName: fullname, email }));
+    } catch (error) {
+      console.error('Failed to parse citizen session:', error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    if (currentScreen === 'assessment-list') void fetchAssessments();
+    if (currentScreen === 'appointments-list') void fetchUserAppointments();
+  }, [currentScreen, user, statusFilter, currentPage]);
+
   useEffect(() => {
     if (!isPaymentStep || !qrCodeUrl || qrPaymentPaid) return;
     const timer = window.setInterval(() => {
@@ -185,73 +295,280 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
 
   useEffect(() => {
     if (!isPaymentStep || !qrPaymentIntentId || qrPaymentPaid) return;
-
     let cancelled = false;
-    let pollTimer: number | undefined;
-
     const checkPaymentStatus = async () => {
       if (cancelled || qrStatusCheckInProgressRef.current) return;
-
       qrStatusCheckInProgressRef.current = true;
-
       try {
-        const response = await fetch(
-          `${API_BASE_URL}/api/payments/qr-status/${encodeURIComponent(qrPaymentIntentId)}`
-        );
+        const response = await fetch(`${API_BASE_URL}/api/payments/qr-status/${encodeURIComponent(qrPaymentIntentId)}`);
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || cancelled || !data.paid) return;
 
-        if (!response.ok) return;
-
-        const data = await response.json();
-
-        if (cancelled || !data.paid) return;
-
-        // Mark the payment as confirmed immediately so the QR disappears
-        // and the existing Payment Successful modal can be displayed
-        // without waiting for the assessment list to refresh.
         setQrPaymentPaid(true);
-        setPaymentConfirmedAt(new Date());
+        setPaymentConfirmedAt(data.paymentDate ? new Date(data.paymentDate) : new Date());
+        setPaymentReceiptNumber(String(data.officialReceiptNumber || ''));
+        setPaymentReference(String(data.paymentReference || qrReferenceNumber || ''));
+        setPaymentAmount(Number(data.amount || paymentAssessment?.paymentAmount || 0));
         setQrSecondsRemaining(0);
         setQrCodeUrl('');
         setQrError('');
         setQrPaymentIntentId('');
         setIsPaymentStep(false);
         setIsPaymentSuccess(true);
-
-        // Refresh the Business Tax records in the background.
-        // This must not delay the Payment Successful screen.
         void fetchAssessments();
       } catch (error) {
-        if (!cancelled) {
-          console.error('QR payment status check failed:', error);
-        }
+        if (!cancelled) console.error('QR payment status check failed:', error);
       } finally {
         qrStatusCheckInProgressRef.current = false;
       }
     };
-
-    // Check immediately instead of waiting for the first 3-second interval.
     void checkPaymentStatus();
-
-    // Continue checking once per second while the taxpayer is waiting.
-    pollTimer = window.setInterval(() => {
-      void checkPaymentStatus();
-    }, 1000);
-
+    const timer = window.setInterval(() => void checkPaymentStatus(), 1000);
     return () => {
       cancelled = true;
-      if (pollTimer !== undefined) {
-        window.clearInterval(pollTimer);
-      }
+      window.clearInterval(timer);
       qrStatusCheckInProgressRef.current = false;
     };
   }, [isPaymentStep, qrPaymentIntentId, qrPaymentPaid]);
 
+  async function fetchAssessments() {
+    if (!user) return;
+    setLoading(true);
+    setFetchError(null);
+    try {
+      const queryParams = new URLSearchParams();
+      if (statusFilter !== 'ALL') queryParams.append('status', statusFilter);
+      queryParams.append('page', String(currentPage));
+      queryParams.append('limit', String(pageSize));
+      if (searchQuery.trim()) queryParams.append('search', searchQuery.trim());
+      queryParams.append('searchType', searchType);
+      const response = await fetch(`${API_BASE_URL}/business-assessments?${queryParams.toString()}`, {
+        headers: { Authorization: `Bearer ${user.token}` },
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || `Failed to load assessments (${response.status}).`);
+      setAssessments(Array.isArray(data) ? data : (data.assessments || []));
+      setTotalPages(Number(data.totalPages || 1));
+    } catch (error: any) {
+      setFetchError(error.message || 'Failed to load your Business Tax records.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function fetchUserAppointments() {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/appointments?email=${encodeURIComponent(user.email)}`, {
+        headers: { Authorization: `Bearer ${user.token}` },
+      });
+      const data = await response.json().catch(() => ([]));
+      if (!response.ok) throw new Error(data.message || 'Failed to load appointments.');
+      setUserAppointments(Array.isArray(data) ? data : (data.appointments || []));
+    } catch (error) {
+      console.error(error);
+      setUserAppointments([]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const applicableDocumentDefinitions = (): Array<{ key: DocumentRequirementKey; label: string; help: string; multiple?: boolean; required: boolean }> => {
+    const docs: Array<{ key: DocumentRequirementKey; label: string; help: string; multiple?: boolean; required: boolean }> = REQUIRED_BASE.map((item) => ({ ...item, required: true }));
+    if (salesForm.birRegistered === 'yes') docs.push(...BIR_DOCS.map((item) => ({ ...item, required: true })));
+    else docs.push({ key: 'notarized_gross_sales', label: 'Notarized Certification of Gross Sales', help: 'Required for a business that is not BIR-registered.', required: true });
+    if (salesForm.hasOtherBranches === 'yes') {
+      docs.push({ key: 'branch_permits_and_ors', label: 'Other Branch Mayor’s Permits and Official Receipts', help: 'Include all applicable branches inside or outside QC.', multiple: true, required: true });
+      docs.push({ key: 'branch_sales_breakdown', label: 'Certified Breakdown of Sales for Other Branches', help: 'Certified breakdown showing branch sales and total.', required: true });
+    }
+    if (salesForm.hasMultipleLines === 'yes') docs.push({ key: 'line_of_business_sales_breakdown', label: 'Certified Breakdown of Sales by Line of Business', help: 'Certified breakdown per line of business, including grand total.', multiple: true, required: true });
+    return [...docs, ...OPTIONAL_DOCS.map((item) => ({ ...item, required: false }))];
+  };
+
+  const formatFileAccept = '.pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png';
+
+  const validateSalesSubmission = (): string | null => {
+    if (!salesForm.businessName.trim() || !salesForm.businessOwner.trim() || !salesForm.businessAddress.trim() || !salesForm.barangay.trim()) return 'Business name, owner, address, and barangay are required.';
+    if (!salesForm.lineOfBusiness.trim() || !salesForm.mayorsPermitNumber.trim() || !salesForm.tin.trim()) return 'Line of business, Mayor’s Permit number, and TIN are required.';
+    const gross = Number(salesForm.grossSales);
+    const area = Number(salesForm.businessAreaSqm);
+    if (!Number.isFinite(gross) || gross < 0) return 'Enter a valid non-negative gross sales/receipts amount.';
+    if (!Number.isFinite(area) || area < 0) return 'Enter a valid non-negative business area.';
+    for (const definition of applicableDocumentDefinitions().filter((item) => item.required)) {
+      if (!(salesFiles[definition.key] || []).length) return `Please upload: ${definition.label}.`;
+    }
+    return null;
+  };
+
+  const handleSalesDeclarationSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const validationError = validateSalesSubmission();
+    if (validationError) {
+      alert(validationError);
+      return;
+    }
+    if (!user) {
+      alert('Please log in before submitting a Business Tax assessment.');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const formData = new FormData();
+      formData.append('businessName', salesForm.businessName.trim());
+      formData.append('businessOwner', salesForm.businessOwner.trim());
+      formData.append('businessAddress', salesForm.businessAddress.trim());
+      formData.append('barangay', salesForm.barangay.trim());
+      formData.append('businessType', salesForm.businessType);
+      formData.append('lineOfBusiness', salesForm.lineOfBusiness.trim());
+      formData.append('businessAreaSqm', salesForm.businessAreaSqm);
+      formData.append('registrationType', salesForm.registrationType);
+      formData.append('registrationNumber', salesForm.registrationNumber.trim());
+      formData.append('mayorsPermitNumber', salesForm.mayorsPermitNumber.trim());
+      formData.append('birRegistered', salesForm.birRegistered === 'yes' ? 'true' : 'false');
+      formData.append('hasOtherBranches', salesForm.hasOtherBranches === 'yes' ? 'true' : 'false');
+      formData.append('hasMultipleLines', salesForm.hasMultipleLines === 'yes' ? 'true' : 'false');
+      formData.append('grossSales', salesForm.grossSales);
+      formData.append('year', salesForm.year);
+      formData.append('assessmentPeriod', salesForm.assessmentPeriod);
+      formData.append('quarter', salesForm.quarter);
+      formData.append('psicCode', salesForm.psicCode.trim());
+      formData.append('tin', salesForm.tin.trim());
+      formData.append('email', user.email);
+
+      const documentTypes: string[] = [];
+      for (const definition of applicableDocumentDefinitions()) {
+        for (const file of salesFiles[definition.key] || []) {
+          documentTypes.push(definition.key);
+          formData.append('documents', file, file.name);
+        }
+      }
+      formData.append('documentTypes', JSON.stringify(documentTypes));
+
+      const response = await fetch(`${API_BASE_URL}/business-assessments/sales-declaration`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${user.token}` },
+        body: formData,
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || 'Failed to submit Business Tax assessment.');
+      alert(`Business Tax assessment submitted successfully.\nTracking Number: ${data.trackingNumber}`);
+      setIsModalOpen(false);
+      setSalesFiles({});
+      setSalesForm((prev) => ({ ...prev, businessName: '', businessAddress: '', barangay: '', lineOfBusiness: '', businessAreaSqm: '', registrationNumber: '', mayorsPermitNumber: '', grossSales: '', psicCode: '', tin: '' }));
+      void fetchAssessments();
+    } catch (error: any) {
+      alert(error.message || 'An error occurred while submitting the assessment.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const openModal = (type: 'appointment' | 'sales-declaration') => {
+    if (type === 'appointment') {
+      setCaptchaNum1(Math.floor(Math.random() * 10) + 1);
+      setCaptchaNum2(Math.floor(Math.random() * 10) + 1);
+      setCaptchaInput('');
+    }
+    setIsModalOpen(type);
+  };
+
+  const handleAppointmentSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!user) return;
+    if (!/^\d{11}$/.test(aptForm.phone.trim())) return alert('Please enter a valid 11-digit Philippine mobile number.');
+    if (Number.parseInt(captchaInput, 10) !== captchaNum1 + captchaNum2) return alert('Incorrect CAPTCHA answer.');
+    setSubmitting(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/appointments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user.token}` },
+        body: JSON.stringify(aptForm),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || 'Failed to submit appointment.');
+      alert('Appointment submitted successfully.');
+      setIsModalOpen(false);
+      void fetchUserAppointments();
+    } catch (error: any) {
+      alert(error.message || 'Failed to submit appointment.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleTaxBillVerification = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setVerifying(true);
+    setVerificationResult(null);
+    setVerificationError(null);
+    try {
+      const response = verificationType === 'tax-bill'
+        ? await fetch(`${API_BASE_URL}/verify/tax-bill`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ taxBillNo: taxBillForm.taxBillNo.trim(), tin: taxBillForm.tin.trim() }) })
+        : await fetch(`${API_BASE_URL}/verify/or-number`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(orForm) });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || 'Verification failed.');
+      setVerificationResult(data);
+    } catch (error: any) {
+      setVerificationError(error.message || 'Verification failed.');
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const handlePayMongoBusinessTaxQrPayment = async (record: AssessmentRecord) => {
+    if (record.status !== 'APPROVED' || record.paymentStatus === 'PAID') {
+      setQrError('This assessment is not available for payment.');
+      return;
+    }
+    const amount = Number(record.paymentAmount || record.computedFees?.total || 0);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setQrError('The Treasurer’s Office has not yet recorded a valid approved amount for this assessment.');
+      return;
+    }
+    setIsProcessingPayment(true);
+    setQrCodeUrl('');
+    setQrReferenceNumber('');
+    setQrPaymentIntentId('');
+    setQrError('');
+    setQrPaymentPaid(false);
+    setPaymentConfirmedAt(null);
+    setPaymentReceiptNumber('');
+    setPaymentReference('');
+    setPaymentAmount(amount);
+    setQrSecondsRemaining(300);
+    try {
+      const paymentIntent = await createPayMongoQrPaymentIntent({
+        amount,
+        type: 'BUSINESS_TAX',
+        businessTrackingNumber: record.trackingNumber,
+        customerName: record.businessOwner || user?.fullname || 'Business Taxpayer',
+        customerEmail: user?.email || '',
+        description: `Business Tax Assessment Payment (${record.trackingNumber})`,
+      });
+      setQrPaymentIntentId(paymentIntent.paymentIntentId);
+      setQrReferenceNumber(paymentIntent.referenceNumber);
+      const paymentMethodId = await createQrPhPaymentMethod(paymentIntent.publicKey, 300);
+      const attachedPayment = await attachQrPhPaymentMethod(paymentIntent.paymentIntentId, paymentMethodId, paymentIntent.clientKey, paymentIntent.publicKey);
+      const imageUrl = attachedPayment?.attributes?.next_action?.code?.image_url || attachedPayment?.next_action?.code?.image_url || attachedPayment?.attributes?.next_action?.qr_code?.image_url || attachedPayment?.qr_code?.image_url || '';
+      if (!imageUrl) throw new Error('PayMongo did not return a QRPh code image. Please try again.');
+      setQrCodeUrl(imageUrl);
+    } catch (error: any) {
+      console.error(error);
+      setQrError(error?.message || 'Unable to generate the QRPh payment code.');
+    } finally {
+      setIsProcessingPayment(false);
+    }
+  };
+
   const openBusinessTaxPayment = (record: AssessmentRecord) => {
     setPaymentAssessment(record);
     setSelectedAssessmentView(null);
+    setIsPaymentSuccess(false);
     setIsPaymentStep(true);
     void handlePayMongoBusinessTaxQrPayment(record);
   };
+
   const closeBusinessTaxPayment = () => {
     if (isProcessingPayment) return;
     setIsPaymentStep(false);
@@ -264,1229 +581,228 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
     setPaymentConfirmedAt(null);
     setQrPaymentPaid(false);
   };
-  const [taxBillForm, setTaxBillForm] = useState({ taxBillNo: '', tin: '' });
-  const [orForm, setOrForm] = useState({ permitNo: '', orNo: '', tin: '' });
-  const [salesForm, setSalesForm] = useState({
-    businessName: '',
-    grossSales: '',
-    year: '2026',
-    psicCode: '47110',
-    tin: '',
-    file: null as File | null
-  });
-  const [captchaNum1, setCaptchaNum1] = useState(0);
-  const [captchaNum2, setCaptchaNum2] = useState(0);
-  const [captchaInput, setCaptchaInput] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [aptForm, setAptForm] = useState({
-    department: 'City Treasurer\'s Office',
-    appointmentType: '',
-    businessName: '',
-    tin: '',
-    address: '',
-    description: '',
-    fullName: user?.fullname || '',
-    email: user?.email || '',
-    phone: '',
-    date: '',
-    timeSlot: '09:00 AM - 10:00 AM',
-    remarks: '',
-  });
-  useEffect(() => {
-    const checkUserSession = () => {
-      const rawData = localStorage.getItem('currentUser') ||
-        localStorage.getItem('user') ||
-        sessionStorage.getItem('currentUser') ||
-        sessionStorage.getItem('user');
-      if (!rawData) return null;
-      try {
-        const parsed = JSON.parse(rawData);
-        const target = parsed.user && typeof parsed.user === 'object' ? parsed.user : parsed;
-        const fullName = target.fullname || target.name || target.fullName || target.firstName || target.email;
-        if (!fullName) return null;
-        const email = target.email || "";
-        const token = parsed.token || target.token || "";
-        const nameParts = String(fullName).trim().split(" ");
-        const firstName = nameParts[0];
-        const initials = nameParts.length > 1
-          ? (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase()
-          : nameParts[0].slice(0, 2).toUpperCase();
-        return { fullname: String(fullName), email, firstName, initials, token };
-      } catch (e) {
-        console.error("Failed to parse user session", e);
-        return null;
-      }
-    };
-    const activeUser = checkUserSession();
-    setUser(activeUser);
-    if (activeUser) {
-      setAptForm(prev => ({
-        ...prev,
-        fullName: activeUser.fullname,
-        email: activeUser.email
-      }));
-    }
-  }, []);
-  useEffect(() => {
-    if (currentScreen === 'assessment-list' && user) {
-      fetchAssessments();
-    } else if (currentScreen === 'appointments-list' && user) {
-      fetchUserAppointments();
-    }
-  }, [currentScreen, user, statusFilter, currentPage]);
-  const fetchAssessments = async () => {
-    setLoading(true);
-    setFetchError(null);
-    try {
-      const queryParams = new URLSearchParams();
-      if (statusFilter !== 'ALL') queryParams.append('status', statusFilter);
-      if (user?.email) queryParams.append('email', user.email);
-      queryParams.append('page', currentPage.toString());
-      queryParams.append('limit', pageSize.toString());
-      if (searchQuery) queryParams.append('search', searchQuery);
-      queryParams.append('searchType', searchType);
-      const headers: HeadersInit = { 'Content-Type': 'application/json' };
-      if (user?.token) headers['Authorization'] = `Bearer ${user.token}`;
-      const response = await fetch(`${API_BASE_URL}/business-assessments?${queryParams.toString()}`, { headers });
-      if (!response.ok) {
-        throw new Error(`Failed to fetch assessments: ${response.statusText}`);
-      }
-      const data = await response.json();
-      setAssessments(Array.isArray(data) ? data : (data.assessments || []));
-      setTotalPages(data.totalPages || 1);
-    } catch (err: any) {
-      console.error("Error fetching assessments:", err);
-      setFetchError(err.message || "Failed to load records from server.");
-    } finally {
-      setLoading(false);
-    }
-  };
-  const fetchUserAppointments = async () => {
-    setLoading(true);
-    try {
-      const headers: HeadersInit = { 'Content-Type': 'application/json' };
-      if (user?.token) headers['Authorization'] = `Bearer ${user.token}`;
-      const res = await fetch(`${API_BASE_URL}/appointments?email=${encodeURIComponent(user?.email || '')}`, { headers });
-      if (!res.ok) throw new Error("Failed to fetch appointments.");
-      const data = await res.json();
-      setUserAppointments(Array.isArray(data) ? data : (data.appointments || []));
-    } catch (err: any) {
-      console.error("Error fetching appointments:", err);
-      setUserAppointments([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-  const handleAppointmentSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const cleanPhone = aptForm.phone.trim();
-    if (!/^\d{11}$/.test(cleanPhone)) {
-      alert("Please enter a valid 11-digit phone number (e.g., 09123456789).");
-      return;
-    }
-    if (parseInt(captchaInput.trim(), 10) !== captchaNum1 + captchaNum2) {
-      alert("Incorrect CAPTCHA answer. Please solve the math problem correctly.");
-      return;
-    }
-    setSubmitting(true);
-    try {
-      const headers: HeadersInit = { 'Content-Type': 'application/json' };
-      if (user?.token) headers['Authorization'] = `Bearer ${user.token}`;
-      const res = await fetch(`${API_BASE_URL}/appointments`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(aptForm)
+
+  const submitComplianceDocuments = async () => {
+    if (!selectedAssessmentView || !user) return;
+    const files: File[] = [];
+    const documentTypes: string[] = [];
+    Object.entries(complianceFiles).forEach(([key, values]) => {
+      (values || []).forEach((file) => {
+        files.push(file);
+        documentTypes.push(key);
       });
-      if (!res.ok) throw new Error("Failed to submit appointment request.");
-      alert("Appointment submitted successfully. You can track its status under 'My Appointments'.");
-      setIsModalOpen(false);
-    } catch (err: any) {
-      alert(err.message || "An error occurred.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-  const handleTaxBillVerification = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setVerifying(true);
-    setVerificationResult(null);
-    setVerificationError(null);
+    });
+    if (!files.length) return alert('Please upload at least one requested document.');
+    setIsComplianceSubmitting(true);
     try {
-      const headers: HeadersInit = { 'Content-Type': 'application/json' };
-      if (user?.token) headers['Authorization'] = `Bearer ${user.token}`;
-      const res = verificationType === 'tax-bill'
-        ? await fetch(`${API_BASE_URL}/verify/tax-bill`, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({
-            taxBillNo: taxBillForm.taxBillNo.trim(),
-            tin: taxBillForm.tin.trim(),
-          })
-        })
-        : await fetch(`${API_BASE_URL}/verify/or-number`, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify(orForm)
-        });
-      const textResponse = await res.text();
-      let data;
-      try {
-        data = JSON.parse(textResponse);
-      } catch (parseErr) {
-        throw new Error(`Server returned invalid response (Status ${res.status}). Please check backend connection.`);
-      }
-      if (!res.ok) {
-        throw new Error(data.message || `No matching record found for the provided details (Status ${res.status}).`);
-      }
-      setVerificationResult(data);
-    } catch (err: any) {
-      setVerificationError(err.message || 'Verification failed. Please verify the entered details and try again.');
-    } finally {
-      setVerifying(false);
-    }
-  };
-  const handleSalesDeclarationSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const formData = new FormData();
-    formData.append('businessName', salesForm.businessName);
-    formData.append('grossSales', salesForm.grossSales);
-    formData.append('year', salesForm.year);
-    formData.append('psicCode', salesForm.psicCode);
-    formData.append('tin', salesForm.tin);
-    if (salesForm.file) formData.append('financialStatement', salesForm.file);
-    if (user?.email) formData.append('email', user.email);
-    setSubmitting(true);
-    try {
-      const headers: HeadersInit = {};
-      if (user?.token) headers['Authorization'] = `Bearer ${user.token}`;
-      const res = await fetch(`${API_BASE_URL}/business-assessments/sales-declaration`, {
+      const formData = new FormData();
+      files.forEach((file) => formData.append('documents', file, file.name));
+      formData.append('documentTypes', JSON.stringify(documentTypes));
+      const response = await fetch(`${API_BASE_URL}/business-assessments/${selectedAssessmentView.id}/compliance-documents`, {
         method: 'POST',
-        headers,
-        body: formData
+        headers: { Authorization: `Bearer ${user.token}` },
+        body: formData,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to submit sales declaration.");
-      alert("Sales declaration submitted successfully.");
-      setIsModalOpen(false);
-      fetchAssessments();
-    } catch (err: any) {
-      alert(err.message);
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || 'Failed to submit compliance documents.');
+      setSelectedAssessmentView(data.record);
+      setComplianceFiles({});
+      alert('Additional documents submitted successfully. Your assessment has returned to the review queue.');
+      void fetchAssessments();
+    } catch (error: any) {
+      alert(error.message || 'Failed to submit additional documents.');
     } finally {
-      setSubmitting(false);
+      setIsComplianceSubmitting(false);
     }
   };
-  const openModal = (type: 'appointment' | 'sales-declaration') => {
-    if (type === 'appointment') {
-      setCaptchaNum1(Math.floor(Math.random() * 10) + 1);
-      setCaptchaNum2(Math.floor(Math.random() * 10) + 1);
-      setCaptchaInput('');
-    }
-    setIsModalOpen(type);
-  };
-  const closeModal = () => {
-    setIsModalOpen(false);
-  };
+
+  const renderDocumentUploader = (definition: { key: DocumentRequirementKey; label: string; help: string; multiple?: boolean; required: boolean }, values: Partial<Record<DocumentRequirementKey, File[]>>, setter: React.Dispatch<React.SetStateAction<Partial<Record<DocumentRequirementKey, File[]>>>>) => (
+    <div key={definition.key} className={`rounded-xl border p-3 ${definition.required ? 'border-slate-200 dark:border-slate-700' : 'border-dashed border-slate-300 dark:border-slate-700'}`}>
+      <div className="flex justify-between gap-3">
+        <div className="min-w-0">
+          <div className="font-bold text-slate-800 dark:text-slate-200">{definition.label} {definition.required && <span className="text-rose-500">*</span>}</div>
+          <div className="text-[10px] leading-4 text-slate-500 dark:text-slate-400 mt-0.5">{definition.help}</div>
+        </div>
+        <span className={`shrink-0 text-[9px] font-bold rounded-full px-2 py-1 ${definition.required ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}>{definition.required ? 'REQUIRED' : 'OPTIONAL'}</span>
+      </div>
+      <input
+        type="file"
+        required={definition.required && !(values[definition.key] || []).length}
+        multiple={Boolean(definition.multiple)}
+        accept={formatFileAccept}
+        onChange={(event) => setter((prev) => ({ ...prev, [definition.key]: event.target.files ? Array.from(event.target.files) : [] }))}
+        className="mt-2 w-full text-[10px] p-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200"
+      />
+      {(values[definition.key] || []).length > 0 && <div className="mt-2 text-[10px] text-emerald-700 dark:text-emerald-300">{(values[definition.key] || []).map((file) => file.name).join(', ')}</div>}
+    </div>
+  );
+
   return (
     <CitizenLayout activeTitle="Business Tax Assessment" activeNav="btax">
-      <div className="flex flex-col justify-between w-full">
-        <div>
-
-          <div className="-mx-4 sm:-mx-6 lg:-mx-8 -mt-4 sm:-mt-6 lg:-mt-8 relative bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 h-36 sm:h-48 overflow-hidden flex items-center justify-center border-b-4 border-blue-600">
-            <div className="absolute inset-0 opacity-30 bg-[radial-gradient(#3b82f6_1px,transparent_1px)] [background-size:16px_16px]"></div>
-
-            <div className="relative z-10 text-center px-4">
-              <h1 className="text-xl sm:text-3xl font-extrabold text-white tracking-wide">
-                {currentScreen === 'appointments-list'
-                  ? 'MY APPOINTMENTS TRACKER'
-                  : currentScreen === 'verification'
-                    ? 'TAX BILL & O.R. NUMBER VERIFICATION'
-                    : 'BUSINESS TAX PAYMENT'}
-              </h1>
-
-              <p className="text-xs sm:text-sm text-slate-200 mt-1 max-w-xl mx-auto">
-                {currentScreen === 'appointments-list'
-                  ? "Monitor the review, approval, or cancellation status of your scheduled municipal appointments in real time."
-                  : currentScreen === 'verification'
-                    ? "Authenticate official business tax bills and official receipts directly against municipal records."
-                    : "Manage your online sales declarations and monitor permit assessment status."}
-              </p>
-            </div>
-          </div>
-
-          <div className="max-w-6xl mx-auto px-4 py-6">
-            {currentScreen === 'verification' ? (
-              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 sm:p-8 space-y-6 max-w-2xl mx-auto">
-                <div className="border-b border-slate-200 dark:border-slate-800 pb-4">
-                  <h2 className="text-base font-extrabold text-slate-900 dark:text-slate-100 uppercase tracking-wider">
-                    Tax Bill &amp; Official Receipt Verification
-                  </h2>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                    Authenticate your business tax assessment bill or official payment receipt against official municipal records.
-                  </p>
-                </div>
-
-                <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
-                  <button
-                    type="button"
-                    onClick={() => { setVerificationType('tax-bill'); setVerificationResult(null); setVerificationError(null); }}
-                    className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${verificationType === 'tax-bill'
-                      ? 'bg-white dark:bg-slate-900 text-blue-900 dark:text-blue-400 shadow-sm'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                      }`}
-                  >
-                    Verify Tax Bill Number
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setVerificationType('or-number'); setVerificationResult(null); setVerificationError(null); }}
-                    className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${verificationType === 'or-number'
-                      ? 'bg-white dark:bg-slate-900 text-blue-900 dark:text-blue-400 shadow-sm'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                      }`}
-                  >
-                    Verify Official Receipt (O.R.)
-                  </button>
-                </div>
-
-                <form onSubmit={handleTaxBillVerification} className="space-y-4">
-                  {verificationType === 'tax-bill' ? (
-                    <>
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                          Tax Identification Number (TIN)
-                        </label>
-                        <input
-                          required
-                          type="text"
-                          value={taxBillForm.tin}
-                          onChange={(e) => setTaxBillForm({ ...taxBillForm, tin: e.target.value })}
-                          placeholder="000-000-000-000"
-                          className="w-full p-3 border border-slate-300 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 text-xs font-mono"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                          Tax Bill Number
-                        </label>
-                        <input
-                          required
-                          type="text"
-                          value={taxBillForm.taxBillNo}
-                          onChange={(e) => setTaxBillForm({ ...taxBillForm, taxBillNo: e.target.value })}
-                          placeholder="Enter Tax Bill No. (e.g. TB-2026-XXXX)"
-                          className="w-full p-3 border border-slate-300 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 text-xs font-mono"
-                        />
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                          Tax Identification Number (TIN)
-                        </label>
-                        <input
-                          required
-                          type="text"
-                          value={orForm.tin}
-                          onChange={(e) => setOrForm({ ...orForm, tin: e.target.value })}
-                          placeholder="000-000-000-000"
-                          className="w-full p-3 border border-slate-300 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 text-xs font-mono"
-                        />
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                            Mayor's Permit Number
-                          </label>
-                          <input
-                            required
-                            type="text"
-                            value={orForm.permitNo}
-                            onChange={(e) => setOrForm({ ...orForm, permitNo: e.target.value })}
-                            placeholder="Enter Mayor's Permit No."
-                            className="w-full p-3 border border-slate-300 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 text-xs"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                            Official Receipt (O.R.) Number
-                          </label>
-                          <input
-                            required
-                            type="text"
-                            value={orForm.orNo}
-                            onChange={(e) => setOrForm({ ...orForm, orNo: e.target.value })}
-                            placeholder="Enter O.R. No."
-                            className="w-full p-3 border border-slate-300 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 text-xs font-mono"
-                          />
-                        </div>
-                      </div>
-                    </>
-                  )}
-
-                  {verificationError && (
-                    <div className="p-4 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 rounded-xl text-red-800 dark:text-red-300 text-xs space-y-1">
-                      <div className="flex items-center gap-2 font-bold">
-                        <svg className="w-4 h-4 text-red-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                        </svg>
-                        Verification Notice
-                      </div>
-                      <p className="leading-relaxed pl-6">{verificationError}</p>
-                    </div>
-                  )}
-
-                  {verificationResult && (
-                    <div className="p-4 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-xl text-emerald-800 dark:text-emerald-300 text-xs space-y-1 font-mono">
-                      <p className="font-bold">Record Verified Successfully</p>
-                      {verificationResult.status && <p>Status: {verificationResult.status}</p>}
-                      {verificationResult.amount && <p>Paid Amount: ₱{verificationResult.amount}</p>}
-                      {verificationResult.message && <p>{verificationResult.message}</p>}
-                    </div>
-                  )}
-
-                  <div className="pt-2 flex justify-end">
-                    <button
-                      type="submit"
-                      disabled={verifying}
-                      className="px-6 py-2.5 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer disabled:opacity-50"
-                    >
-                      {verifying ? 'Verifying...' : 'Verify Record'}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            ) : currentScreen === 'appointments-list' ? (
-              <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-5 space-y-4">
-                <div className="flex flex-wrap items-center justify-end gap-2">
-                  <button onClick={() => openModal('appointment')} className="px-4 py-2 bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold rounded-md shadow-xs cursor-pointer">
-                    + Request New Appointment
-                  </button>
-                </div>
-                <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-lg mt-4">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-blue-900 text-white font-semibold">
-                      <tr>
-                        <th className="p-3">DEPARTMENT</th>
-                        <th className="p-3">APPOINTMENT TYPE</th>
-                        <th className="p-3">BUSINESS NAME</th>
-                        <th className="p-3">SCHEDULE DATE &amp; TIME</th>
-                        <th className="p-3 text-center">STATUS</th>
-                        <th className="p-3">REMARKS / NOTES</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {loading ? (
-                        <tr><td colSpan={6} className="p-8 text-center text-slate-500 dark:text-slate-400">Loading appointments...</td></tr>
-                      ) : userAppointments.length === 0 ? (
-                        <tr><td colSpan={6} className="p-8 text-center text-slate-400">No appointments found. Click "Request New Appointment" to schedule one.</td></tr>
-                      ) : (
-                        userAppointments.map(apt => (
-                          <tr key={apt.id} className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 text-slate-800 dark:text-slate-200">
-                            <td className="p-3 font-medium text-slate-900 dark:text-white">{apt.department}</td>
-                            <td className="p-3 text-blue-600 dark:text-blue-400 font-semibold">{apt.appointmentType}</td>
-                            <td className="p-3">{apt.businessName || 'N/A'}</td>
-                            <td className="p-3 font-mono">{apt.date} ({apt.timeSlot || 'All Day'})</td>
-                            <td className="p-3 text-center">
-                              <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold ${apt.status === 'APPROVED' ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300' :
-                                apt.status === 'CANCELLED' ? 'bg-rose-100 dark:bg-rose-950/80 text-rose-800 dark:text-rose-300' :
-                                  'bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300'
-                                }`}>
-                                {apt.status}
-                              </span>
-                            </td>
-                            <td className="p-3 italic text-slate-500 dark:text-slate-400">{apt.remarks || 'Under review by municipal staff.'}</td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            ) : (
-              <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-5 space-y-4">
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 w-full sm:w-auto">
-                    <button onClick={() => openModal('sales-declaration')} className="px-4 py-2 bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold rounded-md shadow-xs cursor-pointer">
-                      SUBMIT ONLINE SALES DECLARATION
-                    </button>
-                  </div>
-                </div>
-                <div className="flex flex-col md:flex-row justify-between items-center gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
-                  <div className="w-full md:w-64">
-                    <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">Application Status</label>
-                    <select
-                      value={statusFilter}
-                      onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-                      className="w-full p-2 text-xs border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-200"
-                    >
-                      <option value="ALL">ALL</option>
-                      <option value="PENDING">Pending</option>
-                      <option value="APPROVED">Approved</option>
-                      <option value="REJECTED">Rejected</option>
-                    </select>
-                  </div>
-                  <div className="flex items-center gap-2 w-full md:w-auto justify-end">
-                    <div className="w-full sm:w-48">
-                      <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">Search By:</label>
-                      <select
-                        value={searchType}
-                        onChange={(e) => setSearchType(e.target.value)}
-                        className="w-full p-2 text-xs border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-200"
-                      >
-                        <option value="Tracking/MP No.">Tracking/MP No.</option>
-                        <option value="Business Name">Business Name</option>
-                      </select>
-                    </div>
-                    <div className="w-full sm:w-64 pt-5">
-                      <div className="flex gap-1">
-                        <input
-                          type="text"
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
-                          placeholder="Search..."
-                          className="w-full p-2 text-xs border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white"
-                        />
-                        <button onClick={() => { setCurrentPage(1); fetchAssessments(); }} className="px-3 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded cursor-pointer">
-                          Search
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-lg">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-blue-900 text-white font-semibold">
-                      <tr>
-                        <th className="p-3">TRACKING/MAYOR'S PERMIT NUMBER ↕</th>
-                        <th className="p-3">BUSINESS NAME</th>
-                        <th className="p-3">BUSINESS OWNER</th>
-                        <th className="p-3">APPLICATION STATUS</th>
-                        <th className="p-3">PAYMENT STATUS</th>
-                        <th className="p-3">APPLICATION DATE</th>
-                        <th className="p-3">ACTION</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {loading ? (
-                        <tr>
-                          <td colSpan={7} className="p-8 text-center text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900">
-                            Loading records from server...
-                          </td>
-                        </tr>
-                      ) : fetchError ? (
-                        <tr>
-                          <td colSpan={7} className="p-8 text-center text-rose-500 bg-slate-50 dark:bg-slate-900">
-                            Error: {fetchError}
-                          </td>
-                        </tr>
-                      ) : assessments.length === 0 ? (
-                        <tr>
-                          <td colSpan={7} className="p-8 text-center text-slate-400 bg-slate-50 dark:bg-slate-900">
-                            No data available in table
-                          </td>
-                        </tr>
-                      ) : (
-                        assessments.map((item) => (
-                          <tr key={item.id} className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 text-slate-800 dark:text-slate-200">
-                            <td className="p-3 font-medium text-blue-600 dark:text-blue-400">{item.trackingNumber}</td>
-                            <td className="p-3 font-medium text-slate-900 dark:text-white">{item.businessName}</td>
-                            <td className="p-3">{item.businessOwner}</td>
-                            <td className="p-3">
-                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${item.status === 'APPROVED' ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300' :
-                                item.status === 'REJECTED' ? 'bg-rose-100 dark:bg-rose-950/80 text-rose-800 dark:text-rose-300' :
-                                  'bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300'
-                                }`}>
-                                {item.status}
-                              </span>
-                            </td>
-                            <td className="p-3">
-                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${item.paymentStatus === 'PAID'
-                                ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300'
-                                : 'bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300'
-                                }`}>
-                                {item.paymentStatus}
-                              </span>
-                            </td>
-                            <td className="p-3 text-slate-600 dark:text-slate-300">{new Date(item.applicationDate).toLocaleDateString()}</td>
-                            <td className="p-3">
-                              <button
-                                onClick={() => setSelectedAssessmentView(item)}
-                                className="text-blue-600 dark:text-blue-400 hover:underline font-semibold cursor-pointer"
-                              >
-                                View
-                              </button>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-                <div className="flex justify-between items-center text-xs text-slate-500 dark:text-slate-400 pt-2">
-                  <span>Page {currentPage} of {totalPages}</span>
-                  <div className="flex gap-1">
-                    <button
-                      disabled={currentPage <= 1 || loading}
-                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                      className="px-3 py-1 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded disabled:opacity-40 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700"
-                    >
-                      Previous
-                    </button>
-                    <button
-                      disabled={currentPage >= totalPages || loading}
-                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                      className="px-3 py-1 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded disabled:opacity-40 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700"
-                    >
-                      Next
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
+      <div className="w-full">
+        <div className="-mx-4 sm:-mx-6 lg:-mx-8 -mt-4 sm:-mt-6 lg:-mt-8 relative bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 min-h-36 sm:min-h-48 overflow-hidden flex items-center justify-center border-b-4 border-blue-600">
+          <div className="absolute inset-0 opacity-30 bg-[radial-gradient(#3b82f6_1px,transparent_1px)] [background-size:16px_16px]" />
+          <div className="relative z-10 text-center px-4">
+            <h1 className="text-xl sm:text-3xl font-extrabold text-white tracking-wide">{currentScreen === 'appointments-list' ? 'MY APPOINTMENTS TRACKER' : currentScreen === 'verification' ? 'TAX BILL & O.R. NUMBER VERIFICATION' : 'BUSINESS TAX PAYMENT'}</h1>
+            <p className="mt-2 text-[11px] sm:text-xs text-blue-100">Assessment, review, payment, official receipt and treasury recording</p>
           </div>
         </div>
+
+        <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 dark:border-slate-800 py-3 mt-2">
+          {[
+            ['assessment-list', 'My Assessments'],
+            ['appointments-list', 'My Appointments'],
+            ['verification', 'Verify Tax Bill / O.R.'],
+          ].map(([key, label]) => (
+            <button key={key} type="button" onClick={() => setCurrentScreen(key as ActiveScreen)} className={`px-3 py-2 rounded-lg text-[11px] font-bold ${currentScreen === key ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}`}>{label}</button>
+          ))}
+          {currentScreen === 'assessment-list' && <button type="button" onClick={() => openModal('sales-declaration')} className="ml-auto px-3 py-2 rounded-lg text-[11px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white">+ New Business Tax Assessment</button>}
+          {currentScreen !== 'verification' && <button type="button" onClick={() => openModal('appointment')} className="px-3 py-2 rounded-lg text-[11px] font-bold bg-indigo-600 hover:bg-indigo-700 text-white">Book CTO Appointment</button>}
+        </div>
+
+        {currentScreen === 'assessment-list' && (
+          <div className="mt-5 space-y-4">
+            <div className="grid grid-cols-1 lg:grid-cols-[160px_170px_1fr_auto] gap-2">
+              <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }} className="p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs"><option value="ALL">All Statuses</option><option value="SUBMITTED">Submitted</option><option value="FOR_COMPLIANCE">For Compliance</option><option value="FOR_FINAL_REVIEW">For Final Review</option><option value="APPROVED">Approved</option><option value="REJECTED">Rejected</option></select>
+              <select value={searchType} onChange={(e) => setSearchType(e.target.value)} className="p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs"><option>Tracking/MP No.</option><option>Business Name</option><option>Mayor's Permit No.</option><option>Tax Bill Number</option></select>
+              <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { setCurrentPage(1); void fetchAssessments(); } }} placeholder="Search your assessment records..." className="p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs" />
+              <button type="button" onClick={() => { setCurrentPage(1); void fetchAssessments(); }} className="px-4 py-2.5 rounded-xl bg-blue-600 text-white text-xs font-bold">Search</button>
+            </div>
+
+            {fetchError && <div className="p-3 rounded-xl bg-rose-50 text-rose-700 border border-rose-200 text-xs">{fetchError}</div>}
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-x-auto shadow-sm">
+              <table className="w-full text-xs min-w-[880px]">
+                <thead className="bg-slate-50 dark:bg-slate-950 text-slate-500 uppercase text-[10px]"><tr><th className="px-4 py-3 text-left">Tracking No.</th><th className="px-4 py-3 text-left">Business</th><th className="px-4 py-3 text-left">Mayor's Permit</th><th className="px-4 py-3 text-left">Status</th><th className="px-4 py-3 text-left">Payment</th><th className="px-4 py-3 text-left">Filed</th><th className="px-4 py-3 text-right">Action</th></tr></thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {loading ? <tr><td colSpan={7} className="px-4 py-12 text-center text-slate-400">Loading Business Tax assessments...</td></tr> : assessments.length === 0 ? <tr><td colSpan={7} className="px-4 py-12 text-center text-slate-400">No Business Tax assessment records found.</td></tr> : assessments.map((record) => (
+                    <tr key={record.id} className="hover:bg-slate-50 dark:hover:bg-slate-950/50">
+                      <td className="px-4 py-3 font-mono font-bold text-blue-700 dark:text-blue-400">{record.trackingNumber}</td>
+                      <td className="px-4 py-3"><div className="font-bold text-slate-800 dark:text-slate-200">{record.businessName}</div><div className="text-[10px] text-slate-400">{record.lineOfBusiness || 'No line of business'}</div></td>
+                      <td className="px-4 py-3 font-mono text-slate-600 dark:text-slate-300">{record.mayorPermitNumber || '—'}</td>
+                      <td className="px-4 py-3"><span className={`inline-block px-2 py-1 rounded-full text-[9px] font-bold ${statusClass(record.status)}`}>{record.status}</span></td>
+                      <td className="px-4 py-3"><span className={`inline-block px-2 py-1 rounded-full text-[9px] font-bold ${record.paymentStatus === 'PAID' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'}`}>{record.paymentStatus}</span></td>
+                      <td className="px-4 py-3 text-slate-500">{new Date(record.applicationDate).toLocaleDateString()}</td>
+                      <td className="px-4 py-3 text-right"><button type="button" onClick={() => { setSelectedAssessmentView(record); setComplianceFiles({}); }} className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 font-bold">View Details</button></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="flex items-center justify-between text-xs text-slate-500"><span>Page {currentPage} of {totalPages}</span><div className="flex gap-2"><button type="button" disabled={currentPage <= 1} onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} className="px-3 py-1.5 rounded-lg border disabled:opacity-40">Previous</button><button type="button" disabled={currentPage >= totalPages} onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} className="px-3 py-1.5 rounded-lg border disabled:opacity-40">Next</button></div></div>
+          </div>
+        )}
+
+        {currentScreen === 'appointments-list' && (
+          <div className="mt-5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-x-auto">
+            <table className="w-full min-w-[760px] text-xs"><thead className="bg-slate-50 dark:bg-slate-950"><tr><th className="px-4 py-3 text-left">Purpose</th><th className="px-4 py-3 text-left">Date</th><th className="px-4 py-3 text-left">Time</th><th className="px-4 py-3 text-left">Status</th></tr></thead><tbody className="divide-y divide-slate-100 dark:divide-slate-800">{userAppointments.length ? userAppointments.map((appointment) => <tr key={appointment.id}><td className="px-4 py-3 font-semibold">{appointment.appointmentType}</td><td className="px-4 py-3">{appointment.date}</td><td className="px-4 py-3">{appointment.timeSlot || 'All Day'}</td><td className="px-4 py-3"><span className="px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-800 font-bold">{appointment.status}</span></td></tr>) : <tr><td colSpan={4} className="px-4 py-12 text-center text-slate-400">No appointment records found.</td></tr>}</tbody></table>
+          </div>
+        )}
+
+        {currentScreen === 'verification' && (
+          <form onSubmit={handleTaxBillVerification} className="mt-5 max-w-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 space-y-4">
+            <div className="flex gap-2"><button type="button" onClick={() => setVerificationType('tax-bill')} className={`px-3 py-2 rounded-lg text-xs font-bold ${verificationType === 'tax-bill' ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-slate-800'}`}>Tax Bill Verification</button><button type="button" onClick={() => setVerificationType('or-number')} className={`px-3 py-2 rounded-lg text-xs font-bold ${verificationType === 'or-number' ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-slate-800'}`}>O.R. Verification</button></div>
+            {verificationType === 'tax-bill' ? <><input value={taxBillForm.taxBillNo} onChange={(e) => setTaxBillForm({ ...taxBillForm, taxBillNo: e.target.value })} placeholder="Tax Bill Number" required className="w-full p-3 border rounded-xl text-xs bg-transparent" /><input value={taxBillForm.tin} onChange={(e) => setTaxBillForm({ ...taxBillForm, tin: e.target.value })} placeholder="TIN" required className="w-full p-3 border rounded-xl text-xs bg-transparent" /></> : <><input value={orForm.permitNo} onChange={(e) => setOrForm({ ...orForm, permitNo: e.target.value })} placeholder="Mayor's Permit No. / Tracking No." required className="w-full p-3 border rounded-xl text-xs bg-transparent" /><input value={orForm.orNo} onChange={(e) => setOrForm({ ...orForm, orNo: e.target.value })} placeholder="Official Receipt Number" required className="w-full p-3 border rounded-xl text-xs bg-transparent" /><input value={orForm.tin} onChange={(e) => setOrForm({ ...orForm, tin: e.target.value })} placeholder="TIN" required className="w-full p-3 border rounded-xl text-xs bg-transparent" /></>}
+            <button disabled={verifying} type="submit" className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold">{verifying ? 'Verifying...' : 'Verify Record'}</button>
+            {verificationError && <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs">{verificationError}</div>}
+            {verificationResult && <pre className="p-4 bg-slate-50 dark:bg-slate-950 rounded-xl text-[10px] whitespace-pre-wrap break-words">{JSON.stringify(verificationResult, null, 2)}</pre>}
+          </form>
+        )}
       </div>
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
-          {isModalOpen === 'appointment' && (
-            <form onSubmit={handleAppointmentSubmit} className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-xl max-h-[94vh] overflow-y-auto">
-              <div className="flex justify-between items-center px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800">
-                <h3 className="font-bold text-sm text-slate-800 dark:text-white">Schedule Municipal Appointment</h3>
-                <button type="button" onClick={closeModal} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-bold text-lg cursor-pointer">✕</button>
-              </div>
-              <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto text-xs">
-                <div>
-                  <label className="block text-[11px] font-semibold text-red-600 dark:text-red-400 mb-1">* Department</label>
-                  <select
-                    value={aptForm.department}
-                    onChange={(e) => setAptForm({ ...aptForm, department: e.target.value })}
-                    className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-200"
-                  >
-                    <option>City Treasurer's Office</option>
-                    <option>Business Permits and Licensing Department (BPLD)</option>
-                    <option>Zoning and Urban Planning Office</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-red-600 dark:text-red-400 mb-1">* Appointment Type / Purpose</label>
-                  <select
-                    required
-                    value={aptForm.appointmentType}
-                    onChange={(e) => setAptForm({ ...aptForm, appointmentType: e.target.value })}
-                    className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-200"
-                  >
-                    <option value="">Select appointment purpose...</option>
-                    <option value="Business Tax Assessment Review">Business Tax Assessment Review</option>
-                    <option value="Payment Verification & Clearance">Payment Verification & Clearance Issuance</option>
-                    <option value="New Mayor's Permit Application Filing">New Mayor's Permit Application Filing</option>
-                    <option value="Renewal Consultation">Renewal Consultation & Discrepancy Resolution</option>
-                  </select>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Registered Business Name</label>
-                    <input
-                      type="text"
-                      value={aptForm.businessName}
-                      onChange={(e) => setAptForm({ ...aptForm, businessName: e.target.value })}
-                      placeholder="Enter business name"
-                      className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Tax Identification Number (TIN)</label>
-                    <input
-                      type="text"
-                      value={aptForm.tin}
-                      onChange={(e) => setAptForm({ ...aptForm, tin: e.target.value })}
-                      placeholder="000-000-000-000"
-                      className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Business / Office Address</label>
-                  <input
-                    type="text"
-                    value={aptForm.address}
-                    onChange={(e) => setAptForm({ ...aptForm, address: e.target.value })}
-                    className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white"
-                    placeholder="Street, Barangay, City"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Detailed Concern / Description</label>
-                  <input
-                    type="text"
-                    value={aptForm.description}
-                    onChange={(e) => setAptForm({ ...aptForm, description: e.target.value })}
-                    className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white"
-                    placeholder="Provide details regarding your assessment inquiry"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-red-600 dark:text-red-400 mb-1">* Full Name</label>
-                  <input
-                    required
-                    type="text"
-                    value={aptForm.fullName}
-                    onChange={(e) => setAptForm({ ...aptForm, fullName: e.target.value })}
-                    placeholder="Enter full name"
-                    className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-red-600 dark:text-red-400 mb-1">* Email Address</label>
-                  <input
-                    required
-                    type="email"
-                    value={aptForm.email}
-                    onChange={(e) => setAptForm({ ...aptForm, email: e.target.value })}
-                    placeholder="Enter email address"
-                    className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-red-600 dark:text-red-400 mb-1">* Phone Number (Exact 11 Digits)</label>
-                  <input
-                    required
-                    type="text"
-                    maxLength={11}
-                    value={aptForm.phone}
-                    onChange={(e) => setAptForm({ ...aptForm, phone: e.target.value.replace(/\D/g, '').slice(0, 11) })}
-                    placeholder="09123456789"
-                    className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white font-mono"
-                  />
-                  <span className="text-[10px] text-slate-400 mt-0.5 block">Must be exactly 11 digits (e.g. 09XXXXXXXXX). Current count: {aptForm.phone.length}/11</span>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-red-600 dark:text-red-400 mb-1">* Preferred Date</label>
-                    <input
-                      required
-                      type="date"
-                      value={aptForm.date}
-                      onChange={(e) => setAptForm({ ...aptForm, date: e.target.value })}
-                      className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-red-600 dark:text-red-400 mb-1">* Time Slot</label>
-                    <select
-                      value={aptForm.timeSlot}
-                      onChange={(e) => setAptForm({ ...aptForm, timeSlot: e.target.value })}
-                      className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-200"
-                    >
-                      <option value="08:00 AM - 09:00 AM">08:00 AM - 09:00 AM</option>
-                      <option value="09:00 AM - 10:00 AM">09:00 AM - 10:00 AM</option>
-                      <option value="10:00 AM - 11:00 AM">10:00 AM - 11:00 AM</option>
-                      <option value="01:00 PM - 02:00 PM">01:00 PM - 02:00 PM</option>
-                      <option value="02:00 PM - 03:00 PM">02:00 PM - 03:00 PM</option>
-                      <option value="03:00 PM - 04:00 PM">03:00 PM - 04:00 PM</option>
-                    </select>
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">Additional Remarks (Optional)</label>
-                  <textarea
-                    rows={2}
-                    value={aptForm.remarks}
-                    onChange={(e) => setAptForm({ ...aptForm, remarks: e.target.value })}
-                    className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white resize-none"
-                    placeholder="Any special instructions or accessibility requests..."
-                  />
-                </div>
-                <div className="p-3 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 text-xs font-semibold">
-                    <span className="bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 px-2.5 py-1 rounded font-mono">
-                      {captchaNum1} + {captchaNum2} = ?
-                    </span>
-                    <span className="text-slate-600 dark:text-slate-300">Security Verification</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      required
-                      type="number"
-                      value={captchaInput}
-                      onChange={(e) => setCaptchaInput(e.target.value)}
-                      placeholder="Answer"
-                      className="w-20 p-1.5 text-xs text-center border border-slate-300 dark:border-slate-700 rounded bg-white dark:bg-slate-900 text-slate-800 dark:text-white font-mono"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setCaptchaNum1(Math.floor(Math.random() * 10) + 1);
-                        setCaptchaNum2(Math.floor(Math.random() * 10) + 1);
-                        setCaptchaInput('');
-                      }}
-                      className="text-[10px] text-blue-600 dark:text-blue-400 hover:underline font-bold cursor-pointer"
-                    >
-                      Refresh
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <div className="flex justify-end gap-2 px-6 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800">
-                <button type="button" onClick={closeModal} className="px-4 py-2 border border-slate-300 dark:border-slate-700 rounded font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer">Cancel</button>
-                <button type="submit" disabled={submitting} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded shadow-xs cursor-pointer">
-                  {submitting ? 'Submitting...' : 'SUBMIT APPOINTMENT'}
-                </button>
-              </div>
-            </form>
-          )}
 
-          {isModalOpen === 'sales-declaration' && (
-            <form onSubmit={handleSalesDeclarationSubmit} className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-lg overflow-hidden">
-              <div className="flex justify-between items-center px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800">
-                <h3 className="font-bold text-sm text-slate-800 dark:text-white">SUBMIT ONLINE SALES DECLARATION</h3>
-                <button type="button" onClick={closeModal} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-bold text-lg cursor-pointer">✕</button>
-              </div>
-              <div className="p-6 space-y-4 text-xs max-h-[75vh] overflow-y-auto">
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">Business Name</label>
-                  <input
-                    required
-                    type="text"
-                    value={salesForm.businessName}
-                    onChange={(e) => setSalesForm({ ...salesForm, businessName: e.target.value })}
-                    placeholder="Enter registered business name"
-                    className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">Tax Identification Number (TIN)</label>
-                  <input
-                    required
-                    type="text"
-                    value={salesForm.tin}
-                    onChange={(e) => setSalesForm({ ...salesForm, tin: e.target.value })}
-                    placeholder="000-000-000-000"
-                    className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">PSIC Code (Line of Business)</label>
-                  <select
-                    value={salesForm.psicCode}
-                    onChange={(e) => setSalesForm({ ...salesForm, psicCode: e.target.value })}
-                    className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-200"
-                  >
-                    <option value="47110">47110 - Retail Sale in Non-Specialized Stores (Supermarkets/Sari-Sari)</option>
-                    <option value="56101">56101 - Restaurants and Mobile Food Service Activities</option>
-                    <option value="62010">62010 - Computer Programming, Consultancy and Related Activities</option>
-                    <option value="45200">45200 - Maintenance and Repair of Motor Vehicles</option>
-                    <option value="10710">10710 - Manufacture of Bakery Products</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">Gross Sales / Receipts (PHP)</label>
-                  <input
-                    required
-                    type="number"
-                    step="0.01"
-                    value={salesForm.grossSales}
-                    onChange={(e) => setSalesForm({ ...salesForm, grossSales: e.target.value })}
-                    placeholder="0.00"
-                    className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">Tax Year</label>
-                  <input
-                    required
-                    type="text"
-                    value={salesForm.year}
-                    onChange={(e) => setSalesForm({ ...salesForm, year: e.target.value })}
-                    className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">Financial Statement / ITR (PDF/Image)</label>
-                  <input
-                    required
-                    type="file"
-                    accept=".pdf,image/*"
-                    onChange={(e) => setSalesForm({ ...salesForm, file: e.target.files ? e.target.files[0] : null })}
-                    className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs"
-                  />
-                </div>
-              </div>
-              <div className="flex justify-end gap-2 px-6 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800">
-                <button type="button" onClick={closeModal} className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded shadow-xs cursor-pointer">Cancel</button>
-                <button type="submit" disabled={submitting} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded shadow-xs cursor-pointer">
-                  {submitting ? 'Submitting...' : 'Submit Declaration'}
-                </button>
-              </div>
-            </form>
-          )}
+      {isModalOpen === 'sales-declaration' && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+          <form onSubmit={handleSalesDeclarationSubmit} className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] overflow-y-auto border border-slate-200 dark:border-slate-800">
+            <div className="sticky top-0 z-10 flex items-center justify-between px-5 py-4 border-b bg-slate-50 dark:bg-slate-950"><div><h3 className="font-bold text-sm">NEW BUSINESS TAX ASSESSMENT</h3><p className="text-[10px] text-slate-500 mt-1">Submit the Sales Declaration and applicable supporting documents for Treasurer assessment.</p></div><button type="button" onClick={() => setIsModalOpen(false)} className="text-xl font-bold">×</button></div>
+            <div className="p-5 grid grid-cols-1 lg:grid-cols-2 gap-4 text-xs">
+              <div className="lg:col-span-2 p-3 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900"><p className="font-bold text-blue-900 dark:text-blue-200">Important</p><p className="mt-1 text-[10px] text-blue-800 dark:text-blue-300">Submitting this application creates a tracking number only. The Tax Bill and payment amount are issued after assessment, final review and Treasurer approval.</p></div>
+              <div><label className="label">Business Name *</label><input required value={salesForm.businessName} onChange={(e) => setSalesForm({ ...salesForm, businessName: e.target.value })} className="field" /></div>
+              <div><label className="label">Business Owner / Applicant *</label><input required value={salesForm.businessOwner} onChange={(e) => setSalesForm({ ...salesForm, businessOwner: e.target.value })} className="field" /></div>
+              <div><label className="label">Business Address *</label><input required value={salesForm.businessAddress} onChange={(e) => setSalesForm({ ...salesForm, businessAddress: e.target.value })} className="field" /></div>
+              <div><label className="label">Barangay *</label><input required value={salesForm.barangay} onChange={(e) => setSalesForm({ ...salesForm, barangay: e.target.value })} className="field" /></div>
+              <div><label className="label">Business Type *</label><select value={salesForm.businessType} onChange={(e) => setSalesForm({ ...salesForm, businessType: e.target.value })} className="field"><option>Manufacturer</option><option>Wholesaler</option><option>Retailer</option><option>Exporter</option><option>Service</option><option>Other</option></select></div>
+              <div><label className="label">Line / Nature of Business *</label><input required value={salesForm.lineOfBusiness} onChange={(e) => setSalesForm({ ...salesForm, lineOfBusiness: e.target.value })} className="field" placeholder="e.g. Retail sale of food products" /></div>
+              <div><label className="label">Business Area (sqm) *</label><input required type="number" min="0" step="0.01" value={salesForm.businessAreaSqm} onChange={(e) => setSalesForm({ ...salesForm, businessAreaSqm: e.target.value })} className="field" /></div>
+              <div><label className="label">Registration Type *</label><select value={salesForm.registrationType} onChange={(e) => setSalesForm({ ...salesForm, registrationType: e.target.value })} className="field"><option>DTI</option><option>SEC</option><option>CDA</option><option>Other</option></select></div>
+              <div><label className="label">Registration Number</label><input value={salesForm.registrationNumber} onChange={(e) => setSalesForm({ ...salesForm, registrationNumber: e.target.value })} className="field" placeholder="DTI / SEC / CDA number" /></div>
+              <div><label className="label">Mayor’s Permit Number *</label><input required value={salesForm.mayorsPermitNumber} onChange={(e) => setSalesForm({ ...salesForm, mayorsPermitNumber: e.target.value })} className="field" /></div>
+              <div><label className="label">TIN *</label><input required value={salesForm.tin} onChange={(e) => setSalesForm({ ...salesForm, tin: e.target.value })} className="field" /></div>
+              <div><label className="label">BIR Registered? *</label><select value={salesForm.birRegistered} onChange={(e) => setSalesForm({ ...salesForm, birRegistered: e.target.value })} className="field"><option value="yes">Yes — BIR Registered</option><option value="no">No — Not BIR Registered</option></select></div>
+              <div><label className="label">Other Branches? *</label><select value={salesForm.hasOtherBranches} onChange={(e) => setSalesForm({ ...salesForm, hasOtherBranches: e.target.value })} className="field"><option value="no">No</option><option value="yes">Yes</option></select></div>
+              <div><label className="label">Multiple Lines of Business? *</label><select value={salesForm.hasMultipleLines} onChange={(e) => setSalesForm({ ...salesForm, hasMultipleLines: e.target.value })} className="field"><option value="no">No</option><option value="yes">Yes</option></select></div>
+              <div><label className="label">Gross Sales / Receipts (PHP) *</label><input required type="number" min="0" step="0.01" value={salesForm.grossSales} onChange={(e) => setSalesForm({ ...salesForm, grossSales: e.target.value })} className="field" /></div>
+              <div><label className="label">Tax Year *</label><input required type="number" min="2000" max="2100" value={salesForm.year} onChange={(e) => setSalesForm({ ...salesForm, year: e.target.value })} className="field" /></div>
+              <div><label className="label">Assessment Period *</label><select value={salesForm.assessmentPeriod} onChange={(e) => setSalesForm({ ...salesForm, assessmentPeriod: e.target.value, quarter: e.target.value === 'ANNUAL_RENEWAL' ? 'ANNUAL' : salesForm.quarter })} className="field"><option value="ANNUAL_RENEWAL">Annual Renewal</option></select></div>
+              <div><label className="label">PSIC Code (optional)</label><input value={salesForm.psicCode} onChange={(e) => setSalesForm({ ...salesForm, psicCode: e.target.value })} className="field" placeholder="e.g. 47110" /></div>
+              <div className="lg:col-span-2"><div className="mb-2 font-bold text-slate-800 dark:text-slate-200">Document Checklist</div><div className="space-y-2">{applicableDocumentDefinitions().map((definition) => renderDocumentUploader(definition, salesFiles, setSalesFiles))}</div></div>
+            </div>
+            <div className="sticky bottom-0 flex justify-end gap-2 px-5 py-4 border-t bg-slate-50 dark:bg-slate-950"><button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 rounded-xl border text-xs font-bold">Cancel</button><button disabled={submitting} type="submit" className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold">{submitting ? 'Submitting...' : 'Submit for Assessment'}</button></div>
+          </form>
         </div>
       )}
+
+      {isModalOpen === 'appointment' && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <form onSubmit={handleAppointmentSubmit} className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-xl overflow-hidden">
+            <div className="flex justify-between px-5 py-4 border-b bg-slate-50 dark:bg-slate-950"><h3 className="font-bold text-sm">BOOK CTO APPOINTMENT</h3><button type="button" onClick={() => setIsModalOpen(false)} className="font-bold text-xl">×</button></div>
+            <div className="p-5 space-y-3 text-xs"><input required placeholder="Appointment Type" value={aptForm.appointmentType} onChange={(e) => setAptForm({ ...aptForm, appointmentType: e.target.value })} className="field" /><input required placeholder="Business Name" value={aptForm.businessName} onChange={(e) => setAptForm({ ...aptForm, businessName: e.target.value })} className="field" /><input placeholder="TIN" value={aptForm.tin} onChange={(e) => setAptForm({ ...aptForm, tin: e.target.value })} className="field" /><input required placeholder="Address" value={aptForm.address} onChange={(e) => setAptForm({ ...aptForm, address: e.target.value })} className="field" /><textarea required placeholder="Description / Concern" value={aptForm.description} onChange={(e) => setAptForm({ ...aptForm, description: e.target.value })} className="field" rows={3} /><input required type="tel" placeholder="09123456789" value={aptForm.phone} onChange={(e) => setAptForm({ ...aptForm, phone: e.target.value })} className="field" /><input required type="date" value={aptForm.date} onChange={(e) => setAptForm({ ...aptForm, date: e.target.value })} className="field" /><select value={aptForm.timeSlot} onChange={(e) => setAptForm({ ...aptForm, timeSlot: e.target.value })} className="field"><option>08:00 AM - 09:00 AM</option><option>09:00 AM - 10:00 AM</option><option>10:00 AM - 11:00 AM</option><option>01:00 PM - 02:00 PM</option><option>02:00 PM - 03:00 PM</option><option>03:00 PM - 04:00 PM</option></select><div className="flex items-center justify-between rounded-xl border p-3"><span className="font-mono font-bold">{captchaNum1} + {captchaNum2} = ?</span><input required value={captchaInput} onChange={(e) => setCaptchaInput(e.target.value)} className="w-24 p-2 border rounded-lg text-center" /><button type="button" onClick={() => { setCaptchaNum1(Math.floor(Math.random() * 10) + 1); setCaptchaNum2(Math.floor(Math.random() * 10) + 1); setCaptchaInput(''); }} className="text-blue-600 font-bold">Refresh</button></div></div>
+            <div className="flex justify-end gap-2 px-5 py-4 border-t bg-slate-50 dark:bg-slate-950"><button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 rounded-xl border text-xs font-bold">Cancel</button><button disabled={submitting} type="submit" className="px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold">{submitting ? 'Submitting...' : 'Submit Appointment'}</button></div>
+          </form>
+        </div>
+      )}
+
       {selectedAssessmentView && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl max-w-lg w-full max-h-[94vh] overflow-y-auto p-4 sm:p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
-            <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-3">
-              <div>
-                <h3 className="font-bold text-slate-900 dark:text-white text-sm uppercase tracking-wide">
-                  Assessment Filing Details
-                </h3>
-                <p className="text-xs font-mono text-blue-600 dark:text-blue-400">{selectedAssessmentView.trackingNumber}</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedAssessmentView(null)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer font-bold text-lg"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="space-y-3 text-xs max-h-[60vh] overflow-y-auto pr-1">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 dark:bg-slate-800/60 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700">
-                <div>
-                  <span className="block text-[10px] text-slate-400 uppercase font-bold">Business Name</span>
-                  <span className="font-semibold text-slate-800 dark:text-white">{selectedAssessmentView.businessName}</span>
-                </div>
-                <div>
-                  <span className="block text-[10px] text-slate-400 uppercase font-bold">Owner</span>
-                  <span className="font-semibold text-slate-800 dark:text-white">{selectedAssessmentView.businessOwner}</span>
-                </div>
-                <div>
-                  <span className="block text-[10px] text-slate-400 uppercase font-bold">TIN</span>
-                  <span className="font-mono font-medium text-slate-700 dark:text-slate-300">{selectedAssessmentView.tin || 'N/A'}</span>
-                </div>
-                <div>
-                  <span className="block text-[10px] text-slate-400 uppercase font-bold">Status</span>
-                  <span className={`inline-block px-2 py-0.5 rounded font-bold text-[10px] mt-0.5 ${selectedAssessmentView.status === 'APPROVED' ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300' :
-                    selectedAssessmentView.status === 'REJECTED' ? 'bg-rose-100 dark:bg-rose-950/80 text-rose-800 dark:text-rose-300' :
-                      'bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300'
-                    }`}>
-                    {selectedAssessmentView.status}
-                  </span>
-                </div>
-              </div>
-              <div className="bg-slate-50 dark:bg-slate-800/60 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-2">
-                <div className="font-semibold text-slate-700 dark:text-slate-300">Application Date:</div>
-                <div className="text-slate-600 dark:text-slate-300">{new Date(selectedAssessmentView.applicationDate).toLocaleDateString()}</div>
-                <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
-                  <div className="font-semibold text-slate-700 dark:text-slate-300">Tax Bill Number:</div>
-                  <div className="text-blue-700 dark:text-blue-400 font-mono font-bold">
-                    {selectedAssessmentView.taxBillNumber || 'Not yet issued'}
-                  </div>
-                </div>
-              </div>
-              <div className="bg-slate-50 dark:bg-slate-800/60 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-2">
-                <div className="font-semibold text-slate-700 dark:text-slate-300">Submitted Financial Documents:</div>
-                {selectedAssessmentView.attachments && selectedAssessmentView.attachments.length > 0 ? (
-                  selectedAssessmentView.attachments.map((file, idx) => (
-                    <div key={idx} className="flex justify-between items-center bg-white dark:bg-slate-800 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700">
-                      <span className="font-medium text-slate-800 dark:text-slate-200 truncate max-w-[220px] flex items-center gap-1.5">
-                        <svg className="w-3.5 h-3.5 text-blue-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
-                        {file.name}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => { setPreviewUrl(file.url); setPreviewMime(file.url.startsWith('data:application/pdf') ? 'application/pdf' : 'image'); }}
-                        className="text-blue-600 dark:text-blue-400 font-bold hover:underline flex items-center gap-1 cursor-pointer"
-                      >
-                        Preview Document
-                      </button>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-slate-400 italic">No files attached.</p>
-                )}
-              </div>
-              <div className="bg-slate-50 dark:bg-slate-800/60 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-2">
-                <div className="font-semibold text-slate-700 dark:text-slate-300">Treasurer's Office Remarks:</div>
-                <div className="text-slate-600 dark:text-slate-300 italic">
-                  {selectedAssessmentView.remarks || 'No remarks provided yet. Your declaration is currently under review.'}
-                </div>
-              </div>
-              <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-800/60 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700">
-                <span className="font-semibold text-slate-700 dark:text-slate-300">Payment Status:</span>
-                <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${selectedAssessmentView.paymentStatus === 'PAID'
-                  ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300'
-                  : 'bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300'
-                  }`}>
-                  {selectedAssessmentView.paymentStatus}
-                </span>
-              </div>
-            </div>
-            <div className="flex justify-between items-center pt-2 border-t border-slate-200 dark:border-slate-800 gap-2">
-              {selectedAssessmentView.status === 'APPROVED' &&
-                selectedAssessmentView.paymentStatus !== 'PAID' && (
-                  <button
-                    type="button"
-                    disabled={isProcessingPayment}
-                    onClick={() => openBusinessTaxPayment(selectedAssessmentView)}
-                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs cursor-pointer shadow-xs flex items-center gap-1.5 disabled:opacity-50"
-                  >
-                    {isProcessingPayment ? "Generating QR..." : "Proceed to Digital Payment →"}
-                  </button>
-                )}
-              {selectedAssessmentView.paymentStatus === 'PAID' && (
-                <span className="px-3 py-2 bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-bold rounded-xl text-xs">
-                  Payment PAID
-                </span>
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-4xl max-h-[94vh] overflow-y-auto shadow-2xl border border-slate-200 dark:border-slate-800">
+            <div className="sticky top-0 z-10 flex justify-between items-center px-5 py-4 bg-slate-50 dark:bg-slate-950 border-b"><div><h3 className="font-bold text-sm uppercase">Business Tax Assessment Details</h3><p className="font-mono text-[10px] text-blue-600 mt-1">{selectedAssessmentView.trackingNumber}</p></div><button type="button" onClick={() => setSelectedAssessmentView(null)} className="text-xl font-bold">×</button></div>
+            <div className="p-5 space-y-4 text-xs">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/50"><div><span className="labelText">Business</span><div className="font-bold">{selectedAssessmentView.businessName}</div></div><div><span className="labelText">Owner</span><div className="font-bold">{selectedAssessmentView.businessOwner}</div></div><div><span className="labelText">Mayor’s Permit</span><div className="font-mono">{selectedAssessmentView.mayorPermitNumber || '—'}</div></div><div><span className="labelText">Status</span><span className={`inline-block px-2 py-1 rounded-full text-[9px] font-bold ${statusClass(selectedAssessmentView.status)}`}>{selectedAssessmentView.status}</span></div></div>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3"><div><span className="labelText">Gross Sales / Receipts</span><div className="font-bold">{money(selectedAssessmentView.grossSales)}</div></div><div><span className="labelText">Tax Bill</span><div className="font-mono font-bold text-blue-700 dark:text-blue-400">{selectedAssessmentView.taxBillNumber || 'Not yet issued'}</div></div><div><span className="labelText">Order of Payment</span><div className="font-mono">{selectedAssessmentView.orderOfPaymentNumber || 'Not yet issued'}</div></div><div><span className="labelText">Due Date</span><div>{selectedAssessmentView.dueDate ? new Date(selectedAssessmentView.dueDate).toLocaleDateString() : '—'}</div></div></div>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-3"><div className="card"><span className="labelText">Address</span><div>{selectedAssessmentView.businessAddress || '—'}</div><div>{selectedAssessmentView.barangay || '—'}</div></div><div className="card"><span className="labelText">Business Classification</span><div>{selectedAssessmentView.businessType || '—'}</div><div>{selectedAssessmentView.lineOfBusiness || '—'}</div><div>{Number(selectedAssessmentView.businessAreaSqm || 0).toLocaleString()} sqm</div></div><div className="card"><span className="labelText">Registration</span><div>{selectedAssessmentView.registrationType || '—'} {selectedAssessmentView.registrationNumber || ''}</div><div>BIR Registered: {selectedAssessmentView.birRegistered ? 'Yes' : 'No'}</div><div>Branches: {selectedAssessmentView.hasOtherBranches ? 'Yes' : 'No'}</div><div>Multiple Lines: {selectedAssessmentView.hasMultipleLines ? 'Yes' : 'No'}</div></div></div>
+              <div className="card"><div className="font-bold mb-2">Submitted Documents</div>{(selectedAssessmentView.attachments || []).length ? <div className="space-y-2">{(selectedAssessmentView.attachments || []).map((file, index) => <div key={`${file.name}-${index}`} className="flex items-center justify-between gap-3 p-2 rounded-lg bg-white dark:bg-slate-900 border"><div className="min-w-0"><div className="font-semibold truncate">{file.name}</div><div className="text-[9px] text-slate-400">{file.type || 'supporting_document'}</div></div><button type="button" onClick={() => { setPreviewUrl(file.url); setPreviewMime(file.mimeType || (file.url.startsWith('data:application/pdf') ? 'application/pdf' : 'image')); }} className="text-blue-600 font-bold">Preview</button></div>)}</div> : <div className="text-slate-400 italic">No documents uploaded.</div>}</div>
+              {selectedAssessmentView.status === 'FOR_COMPLIANCE' && (
+                <div className="card border-orange-300 dark:border-orange-900/70"><div className="font-bold text-orange-800 dark:text-orange-300">Additional documents requested</div><div className="mt-2 space-y-2">{(selectedAssessmentView.missingDocuments || []).map((item) => <div key={item.key} className="rounded-xl bg-orange-50 dark:bg-orange-950/30 p-3"><div className="font-semibold">{item.label}</div><input type="file" multiple={item.key === 'branch_permits_and_ors' || item.key === 'line_of_business_sales_breakdown'} accept={formatFileAccept} onChange={(e) => setComplianceFiles((prev) => ({ ...prev, [item.key as DocumentRequirementKey]: e.target.files ? Array.from(e.target.files) : [] }))} className="mt-2 w-full text-[10px]" />{(complianceFiles[item.key as DocumentRequirementKey] || []).length > 0 && <div className="mt-1 text-[10px] text-emerald-700">Files selected.</div>}</div>)}</div><button type="button" disabled={isComplianceSubmitting} onClick={() => void submitComplianceDocuments()} className="mt-3 px-4 py-2 rounded-xl bg-orange-600 text-white font-bold">{isComplianceSubmitting ? 'Submitting...' : 'Submit Additional Documents'}</button></div>
               )}
-              <button
-                type="button"
-                onClick={() => setSelectedAssessmentView(null)}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs cursor-pointer shadow-xs ml-auto"
-              >
-                Close
-              </button>
+              <div className="card"><div className="font-bold mb-2">Assessment / Treasury Status</div><div className="grid grid-cols-2 lg:grid-cols-4 gap-3"><div><span className="labelText">Payment Status</span><span className={`inline-block px-2 py-1 rounded-full text-[9px] font-bold ${selectedAssessmentView.paymentStatus === 'PAID' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>{selectedAssessmentView.paymentStatus}</span></div><div><span className="labelText">Amount Due</span><div className="font-bold">{money(selectedAssessmentView.paymentAmount || selectedAssessmentView.computedFees?.total)}</div></div><div><span className="labelText">O.R. Number</span><div className="font-mono font-bold">{selectedAssessmentView.officialReceiptNumber || '—'}</div></div><div><span className="labelText">Payment Reference</span><div className="font-mono break-all">{selectedAssessmentView.paymentReference || '—'}</div></div></div></div>
+              {(selectedAssessmentView.computedFees && Number(selectedAssessmentView.computedFees.total || 0) > 0) && <div className="card"><div className="font-bold mb-2">Approved Fee Breakdown</div>{['lbt','mayorsPermit','sanitaryFee','garbageFee','fireSafetyFee','otherFees'].map((key) => <div key={key} className="flex justify-between py-1 border-b last:border-b-0"><span>{({ lbt: 'Local Business Tax', mayorsPermit: 'Mayor’s Permit Fee', sanitaryFee: 'Sanitary Inspection Fee', garbageFee: 'Garbage Fee', fireSafetyFee: 'Fire Safety / BFP Fee', otherFees: 'Other Regulatory Fees' } as Record<string, string>)[key]}</span><span className="font-mono">{money((selectedAssessmentView.computedFees as any)?.[key])}</span></div>)}<div className="flex justify-between pt-2 font-bold"><span>Total</span><span>{money(selectedAssessmentView.computedFees.total)}</span></div></div>}
+              <div className="card"><span className="labelText">Treasurer’s Office Remarks</span><div className="italic mt-1">{selectedAssessmentView.remarks || 'No remarks yet.'}</div>{selectedAssessmentView.complianceRemarks && <div className="mt-2 text-orange-700 dark:text-orange-300">Compliance: {selectedAssessmentView.complianceRemarks}</div>}</div>
             </div>
+            <div className="sticky bottom-0 flex justify-end gap-2 px-5 py-4 border-t bg-slate-50 dark:bg-slate-950">{selectedAssessmentView.status === 'APPROVED' && selectedAssessmentView.paymentStatus !== 'PAID' && <button type="button" disabled={isProcessingPayment} onClick={() => openBusinessTaxPayment(selectedAssessmentView)} className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold">{isProcessingPayment ? 'Generating QR...' : 'Proceed to Digital Payment →'}</button>}{selectedAssessmentView.paymentStatus === 'PAID' && <span className="px-3 py-2 rounded-xl bg-emerald-100 text-emerald-800 text-xs font-bold">Payment Verified</span>}<button type="button" onClick={() => setSelectedAssessmentView(null)} className="px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold">Close</button></div>
           </div>
         </div>
       )}
-      {previewUrl && (
-        <div
-          className="fixed inset-0 z-[70] bg-black/90 backdrop-blur-sm flex flex-col items-center justify-center p-2 sm:p-4"
-          onClick={() => setPreviewUrl(null)}
-        >
-          <div
-            className="relative w-full max-w-4xl max-h-[92vh] flex flex-col items-center"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex justify-between items-center w-full mb-2 px-1">
-              <span className="text-white text-xs font-semibold opacity-75">Document Preview</span>
-              <button
-                type="button"
-                onClick={() => setPreviewUrl(null)}
-                className="text-white bg-slate-700 hover:bg-slate-600 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold cursor-pointer transition-colors"
-              >
-                ✕
-              </button>
-            </div>
-            {previewMime === 'application/pdf' ? (
-              <iframe
-                src={previewUrl}
-                className="w-full rounded-xl border border-slate-600"
-                style={{ height: '80vh' }}
-                title="Document Preview"
-              />
-            ) : (
-              <img
-                src={previewUrl}
-                alt="Document Preview"
-                className="max-w-full max-h-[80vh] object-contain rounded-xl border border-slate-600 shadow-2xl"
-              />
-            )}
-            <p className="text-slate-400 text-[11px] mt-2">Click anywhere outside to close</p>
-          </div>
-        </div>
-      )}
+
       {isPaymentStep && paymentAssessment && (
-        <div className="fixed inset-0 z-[60] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto overscroll-contain">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl w-full max-w-5xl max-h-[96vh] shadow-2xl border border-slate-200 dark:border-slate-800 overflow-y-auto my-auto">
-            <>
-              <div className="grid grid-cols-1 lg:grid-cols-2 min-w-0">
-
-                <div className="p-4 sm:p-6 lg:p-8 lg:border-r border-slate-200 dark:border-slate-800 min-w-0">
-                  <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white leading-tight">
-                    Business Tax Payment
-                  </h2>
-
-                  <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1 break-all">
-                    ({paymentAssessment.trackingNumber})
-                  </p>
-
-                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-3">
-                    Business Tax Assessment ({paymentAssessment.businessName})
-                  </p>
-
-                  <p className="text-sm text-slate-600 dark:text-slate-300 mt-4">
-                    Billed to{" "}
-                    <span className="font-bold text-slate-900 dark:text-white">
-                      {user?.fullname || "Business Taxpayer"}
-                    </span>
-                    {user?.email && (
-                      <>
-                        ,{" "}
-                        <span className="text-slate-600 dark:text-slate-400">{user.email}</span>
-                      </>
-                    )}
-                  </p>
-
-                  <div className="mt-6 rounded-2xl border border-blue-200 dark:border-blue-900/60 bg-blue-50/60 dark:bg-blue-950/40 p-5">
-                    <p className="text-xs font-black uppercase tracking-wide text-blue-900 dark:text-blue-300 mb-3">
-                      Computed Local Government Statutory Fees (RA 7160)
-                    </p>
-
-                    <div className="space-y-0 text-sm">
-                      <div className="flex justify-between items-center gap-4 py-2 border-b border-blue-200 dark:border-blue-900/60">
-                        <span className="text-slate-600 dark:text-slate-400">Local Business Tax (LBT)</span>
-                        <span className="font-bold text-slate-900 dark:text-white whitespace-nowrap">
-                          ₱{Number(paymentAssessment.computedFees?.lbt || 0).toLocaleString("en-PH", {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}
-                        </span>
-                      </div>
-
-                      <div className="flex justify-between items-center gap-4 py-2 border-b border-blue-200 dark:border-blue-900/60">
-                        <span className="text-slate-600 dark:text-slate-400">Mayor's Permit Fee</span>
-                        <span className="font-bold text-slate-900 dark:text-white whitespace-nowrap">
-                          ₱{Number(paymentAssessment.computedFees?.mayorsPermit || 0).toLocaleString("en-PH", {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}
-                        </span>
-                      </div>
-
-                      <div className="flex justify-between items-center gap-4 py-2 border-b border-blue-200 dark:border-blue-900/60">
-                        <span className="text-slate-600 dark:text-slate-400">Sanitary Inspection Fee</span>
-                        <span className="font-bold text-slate-900 dark:text-white whitespace-nowrap">
-                          ₱{Number(paymentAssessment.computedFees?.sanitaryFee || 0).toLocaleString("en-PH", {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}
-                        </span>
-                      </div>
-
-                      <div className="flex justify-between items-center gap-4 py-2 border-b border-blue-200 dark:border-blue-900/60">
-                        <span className="text-slate-600 dark:text-slate-400">Garbage Fee</span>
-                        <span className="font-bold text-slate-900 dark:text-white whitespace-nowrap">
-                          ₱{Number(paymentAssessment.computedFees?.garbageFee || 0).toLocaleString("en-PH", {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}
-                        </span>
-                      </div>
-
-                      <div className="flex justify-between items-center gap-4 py-2">
-                        <span className="text-slate-600 dark:text-slate-400">Fire Safety Inspection Fee (10% BFP share)</span>
-                        <span className="font-bold text-slate-900 dark:text-white whitespace-nowrap ml-3">
-                          ₱{Number(paymentAssessment.computedFees?.fireSafetyFee || 0).toLocaleString("en-PH", {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex justify-between items-center gap-4 mt-3 pt-3 border-t border-blue-300 dark:border-blue-800">
-                      <span className="font-black text-blue-800 dark:text-blue-300">Total Payable Assessment</span>
-                      <span className="font-black text-lg text-blue-700 dark:text-blue-400 whitespace-nowrap">
-                        ₱{Number(paymentAssessment.computedFees?.total || 0).toLocaleString("en-PH", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="mt-6 pt-5 border-t border-slate-200 dark:border-slate-800">
-                    <p className="text-4xl sm:text-5xl font-black text-emerald-600 dark:text-emerald-400">
-                      ₱{Number(paymentAssessment.computedFees?.total || 0).toLocaleString("en-PH", {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </p>
-
-                    <div className="flex justify-between items-center mt-8 text-sm">
-                      <span className="text-slate-600 dark:text-slate-400">Subtotal</span>
-                      <span className="font-bold text-slate-900 dark:text-white">
-                        ₱{Number(paymentAssessment.computedFees?.total || 0).toLocaleString("en-PH", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                      </span>
-                    </div>
-
-                    <div className="flex justify-between items-center mt-4 text-sm">
-                      <span className="text-slate-600 dark:text-slate-400">Payment Fees</span>
-                      <span className="font-semibold text-slate-900 dark:text-white">Free</span>
-                    </div>
-
-                    <div className="flex justify-between items-center mt-5 pt-5 border-t border-slate-200 dark:border-slate-800">
-                      <span className="font-black text-slate-900 dark:text-white">Total Due</span>
-                      <span className="font-black text-lg text-slate-900 dark:text-white">
-                        ₱{Number(paymentAssessment.computedFees?.total || 0).toLocaleString("en-PH", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-4 sm:p-6 lg:p-8 bg-slate-50/60 dark:bg-slate-950/40 flex flex-col items-center min-w-0">
-                  <div className="w-full text-center">
-                    <p className="text-base sm:text-lg font-black text-slate-900 dark:text-white">Scan QR Ph code to pay</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">Use your supported banking or e-wallet app.</p>
-                  </div>
-
-                  {isProcessingPayment && !qrCodeUrl && (
-                    <div className="w-full max-w-sm mt-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 sm:p-10 flex flex-col items-center text-center shadow-sm">
-                      <div className="h-10 w-10 border-4 border-blue-200 border-t-blue-700 rounded-full animate-spin mb-4" />
-                      <p className="text-sm font-bold text-slate-800 dark:text-slate-200">Generating QR Ph code...</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Please wait while PayMongo prepares your secure payment.</p>
-                    </div>
-                  )}
-
-                  {!isProcessingPayment && qrError && !qrCodeUrl && (
-                    <div className="w-full max-w-sm mt-5 rounded-2xl border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/60 p-4 sm:p-5 text-center">
-                      <p className="text-xs font-bold text-rose-700 dark:text-rose-300">{qrError}</p>
-                      <button type="button" onClick={() => void handlePayMongoBusinessTaxQrPayment(paymentAssessment)} className="mt-4 px-5 py-2.5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold cursor-pointer">Generate QR Again</button>
-                    </div>
-                  )}
-
-                  {qrCodeUrl && !qrPaymentPaid && (
-                    <div className="w-full flex flex-col items-center mt-5">
-                      <div className="w-full max-w-sm rounded-xl border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/50 px-3 sm:px-4 py-3 text-center mb-4">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-blue-700 dark:text-blue-300">QR Code Refreshes In</p>
-                        <p className="text-xl sm:text-2xl font-black tabular-nums text-blue-700 dark:text-blue-300">{Math.floor(qrSecondsRemaining / 60)}:{String(qrSecondsRemaining % 60).padStart(2, "0")}</p>
-                        {qrReferenceNumber && <p className="text-[10px] font-mono text-slate-500 dark:text-slate-400 mt-1">Ref: {qrReferenceNumber}</p>}
-                      </div>
-                      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 sm:p-4 shadow-md max-w-full">
-                        <img src={qrCodeUrl} alt="PayMongo Dynamic QR Ph payment code" className="w-[min(72vw,18rem)] h-[min(72vw,18rem)] max-w-full object-contain" />
-                      </div>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 text-center mt-3 max-w-sm px-2">Scan the QR code with your preferred supported payment app. Your payment will be confirmed automatically through PayMongo.</p>
-                      <div className="mt-4 flex items-center gap-2 text-xs font-bold text-blue-700 dark:text-blue-400">
-                        <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" /> Waiting for payment...
-                      </div>
-                    </div>
-                  )}
-                </div>              </div>
-
-              <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-5 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex justify-end sticky bottom-0">
-                <button
-                  type="button"
-                  onClick={closeBusinessTaxPayment}
-                  disabled={isProcessingPayment}
-                  className="px-6 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed text-slate-700 dark:text-slate-300 font-bold text-sm transition-colors cursor-pointer"
-                >
-                  Close
-                </button>
-              </div>
-            </>
+        <div className="fixed inset-0 z-[60] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-md p-5 border border-slate-200 dark:border-slate-800 shadow-2xl text-center">
+            <div className="flex justify-between items-center mb-4"><div><h3 className="font-bold text-sm">BUSINESS TAX DIGITAL PAYMENT</h3><p className="text-[10px] text-slate-500">{paymentAssessment.trackingNumber}</p></div><button type="button" onClick={closeBusinessTaxPayment} className="font-bold text-xl">×</button></div>
+            <div className="rounded-2xl bg-slate-50 dark:bg-slate-950 p-3 mb-4"><div className="text-[10px] text-slate-500">Approved Amount Due</div><div className="text-2xl font-extrabold mt-1">{money(paymentAssessment.paymentAmount || paymentAssessment.computedFees?.total)}</div></div>
+            {qrError && <div className="p-3 mb-3 rounded-xl bg-rose-50 text-rose-700 text-xs border border-rose-200">{qrError}</div>}
+            {isProcessingPayment ? <div className="py-12 text-xs text-slate-500">Generating your QRPh payment code...</div> : qrCodeUrl ? <><img src={qrCodeUrl} alt="QRPh payment code" className="w-64 h-64 mx-auto object-contain border rounded-2xl p-3 bg-white" /><div className="mt-3 font-mono text-xs font-bold">Reference: {qrReferenceNumber || '—'}</div><div className="mt-2 text-xs text-slate-500">QR expires in {Math.floor(qrSecondsRemaining / 60)}:{String(qrSecondsRemaining % 60).padStart(2, '0')}</div><div className="mt-2 text-[10px] text-slate-500">Keep this window open while waiting. Your payment status is verified from the server before the receipt is issued.</div></> : <div className="py-12 text-xs text-slate-500">Preparing payment...</div>}
           </div>
         </div>
       )}
 
-      {isPaymentSuccess && paymentAssessment && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-slate-950/75 backdrop-blur-md overflow-y-auto overscroll-contain">
-          <div className="relative w-full max-w-lg max-h-[94vh] overflow-y-auto rounded-2xl sm:rounded-[28px] bg-white dark:bg-slate-900 p-5 sm:p-8 shadow-2xl text-center border border-slate-200 dark:border-slate-800">
-            <div className="mx-auto mb-4 sm:mb-5 h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-emerald-100 dark:bg-emerald-950 flex items-center justify-center">
-              <svg viewBox="0 0 52 52" className="h-10 w-10 sm:h-12 sm:w-12 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M14 27l8 8 17-19" /></svg>
-            </div>
-            <p className="inline-flex items-center rounded-full bg-emerald-50 dark:bg-emerald-950/80 px-3 py-1 text-xs font-bold text-emerald-700 dark:text-emerald-300">PAYMENT CONFIRMED</p>
-            <h2 className="mt-3 sm:mt-4 text-xl sm:text-2xl font-black text-slate-900 dark:text-white">Payment Successful!</h2>
-            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Your Business Tax payment has been confirmed.</p>
-            <div className="mt-5 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 p-4 sm:p-5 text-left space-y-3 text-sm overflow-x-auto text-slate-800 dark:text-slate-200">
-              <div className="flex justify-between gap-4"><span className="text-slate-500 dark:text-slate-400">Service</span><span className="font-bold text-right text-slate-900 dark:text-white">Business Tax Assessment</span></div>
-              <div className="flex justify-between gap-4"><span className="text-slate-500 dark:text-slate-400">Amount Paid</span><span className="font-black text-slate-900 dark:text-white">₱{Number(paymentAssessment.computedFees?.total || 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
-              <div className="flex justify-between gap-4"><span className="text-slate-500 dark:text-slate-400">Reference</span><span className="font-mono font-bold text-right break-all text-slate-900 dark:text-white">{qrReferenceNumber || paymentAssessment.trackingNumber || "Confirmed"}</span></div>
-              {paymentConfirmedAt && <div className="flex justify-between gap-4"><span className="text-slate-500 dark:text-slate-400">Date</span><span className="font-bold text-right text-slate-900 dark:text-white">{paymentConfirmedAt.toLocaleString("en-PH")}</span></div>}
-            </div>
-            <button type="button" onClick={() => { setIsPaymentSuccess(false); setPaymentAssessment(null); setQrPaymentPaid(false); setPaymentConfirmedAt(null); setQrReferenceNumber(""); setCurrentScreen('assessment-list'); setCurrentPage(1); }} className="mt-6 w-full rounded-xl bg-[#1D3F99] hover:bg-[#17357F] text-white py-3 font-extrabold text-sm cursor-pointer">Done</button>
+      {isPaymentSuccess && (
+        <div className="fixed inset-0 z-[70] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-md p-6 shadow-2xl text-center border border-emerald-200 dark:border-emerald-900">
+            <div className="mx-auto w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 flex items-center justify-center text-3xl font-bold">✓</div>
+            <h3 className="mt-4 text-xl font-extrabold text-slate-900 dark:text-white">Payment Successful</h3>
+            <p className="mt-1 text-xs text-slate-500">Your Business Tax payment has been verified and recorded in Treasury.</p>
+            <div className="mt-5 text-left space-y-2 rounded-2xl bg-slate-50 dark:bg-slate-950 p-4 text-xs"><div className="flex justify-between"><span>Amount Paid</span><span className="font-bold">{money(paymentAmount)}</span></div><div className="flex justify-between gap-4"><span>Reference</span><span className="font-mono font-bold text-right break-all">{paymentReference || qrReferenceNumber || '—'}</span></div><div className="flex justify-between gap-4"><span>O.R. Number</span><span className="font-mono font-bold text-right">{paymentReceiptNumber || '—'}</span></div><div className="flex justify-between"><span>Date</span><span>{(paymentConfirmedAt || new Date()).toLocaleString()}</span></div></div>
+            <button type="button" onClick={() => { setIsPaymentSuccess(false); setPaymentAssessment(null); void fetchAssessments(); }} className="mt-5 w-full px-4 py-3 rounded-xl bg-blue-600 text-white text-xs font-bold">Done</button>
           </div>
         </div>
       )}
 
+      {previewUrl && (
+        <div className="fixed inset-0 z-[80] bg-black/90 flex items-center justify-center p-4" onClick={() => setPreviewUrl(null)}>
+          <div className="w-full max-w-5xl h-[90vh]" onClick={(e) => e.stopPropagation()}><div className="flex justify-end mb-2"><button type="button" onClick={() => setPreviewUrl(null)} className="text-white font-bold text-2xl">×</button></div>{previewMime === 'application/pdf' ? <iframe src={previewUrl} title="Document Preview" className="w-full h-[calc(100%-40px)] bg-white rounded-xl" /> : <div className="w-full h-[calc(100%-40px)] flex items-center justify-center"><img src={previewUrl} alt="Document Preview" className="max-w-full max-h-full object-contain rounded-xl" /></div>}</div>
+        </div>
+      )}
+
+      <style>{`.field{width:100%;padding:.65rem .75rem;border:1px solid rgb(203 213 225);border-radius:.75rem;background:transparent}.dark .field{border-color:rgb(71 85 105)}.label{display:block;font-size:10px;font-weight:700;margin-bottom:.35rem;color:rgb(71 85 105)}.labelText{display:block;font-size:9px;font-weight:700;text-transform:uppercase;color:rgb(148 163 184);margin-bottom:.2rem}.card{padding:1rem;border-radius:1rem;background:rgb(248 250 252);border:1px solid rgb(226 232 240)}.dark .card{background:rgba(2,6,23,.35);border-color:rgb(51 65 85)}`}</style>
     </CitizenLayout>
   );
 };
+
 export default BusinessTaxAssessmentView;
