@@ -3,7 +3,24 @@ import { API_BASE_URL } from '../config/api';
 
 export interface BusinessTaxAssessmentAdminViewProps { isCollapsed?: boolean; }
 
-type AssessmentStatus = 'PENDING' | 'SUBMITTED' | 'FOR_COMPLIANCE' | 'FOR_FINAL_REVIEW' | 'FOR_FINAL_APPROVAL' | 'APPROVED' | 'REJECTED' | 'ARCHIVED';
+type AssessmentStatus =
+  | 'PENDING'
+  | 'SUBMITTED'
+  | 'FOR_INITIAL_ASSESSMENT'
+  | 'FOR_FINAL_REVIEW'
+  | 'RETURNED_FOR_COMPLIANCE'
+  | 'RESUBMITTED'
+  | 'FOR_FINAL_APPROVAL'
+  | 'TAX_BILL_ISSUED'
+  | 'FOR_OWNER_PAYMENT'
+  | 'PAID'
+  | 'FOR_PAYMENT_VALIDATION'
+  | 'OR_ISSUED'
+  | 'ARCHIVED'
+  // Legacy / back-compat
+  | 'FOR_COMPLIANCE'
+  | 'APPROVED'
+  | 'REJECTED';
 type DocumentRequirementKey =
   | 'sales_declaration' | 'mayors_permit' | 'latest_tax_bill' | 'latest_official_receipt'
   | 'bir_tax_return' | 'previous_itr' | 'audited_financial_statements' | 'notarized_gross_sales'
@@ -43,7 +60,24 @@ const LABELS: Record<string, string> = {
 
 function money(value: number | undefined): string { return `₱${Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`; }
 function statusClass(status: string): string {
-  switch (status) { case 'APPROVED': return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300'; case 'REJECTED': return 'bg-rose-100 text-rose-800 dark:bg-rose-950/70 dark:text-rose-300'; case 'FOR_COMPLIANCE': return 'bg-orange-100 text-orange-800 dark:bg-orange-950/70 dark:text-orange-300'; case 'FOR_FINAL_REVIEW': return 'bg-blue-100 text-blue-800 dark:bg-blue-950/70 dark:text-blue-300'; case 'FOR_FINAL_APPROVAL': return 'bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-950/70 dark:text-fuchsia-300'; case 'ARCHIVED': return 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300'; default: return 'bg-amber-100 text-amber-800 dark:bg-amber-950/70 dark:text-amber-300'; }
+  switch (status) {
+    case 'SUBMITTED':                return 'bg-amber-100 text-amber-800 dark:bg-amber-950/70 dark:text-amber-300';
+    case 'FOR_INITIAL_ASSESSMENT':   return 'bg-sky-100 text-sky-800 dark:bg-sky-950/70 dark:text-sky-300';
+    case 'FOR_FINAL_REVIEW':         return 'bg-blue-100 text-blue-800 dark:bg-blue-950/70 dark:text-blue-300';
+    case 'RETURNED_FOR_COMPLIANCE':  return 'bg-orange-100 text-orange-800 dark:bg-orange-950/70 dark:text-orange-300';
+    case 'FOR_COMPLIANCE':           return 'bg-orange-100 text-orange-800 dark:bg-orange-950/70 dark:text-orange-300';
+    case 'RESUBMITTED':              return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-950/70 dark:text-yellow-300';
+    case 'FOR_FINAL_APPROVAL':       return 'bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-950/70 dark:text-fuchsia-300';
+    case 'TAX_BILL_ISSUED':          return 'bg-teal-100 text-teal-800 dark:bg-teal-950/70 dark:text-teal-300';
+    case 'APPROVED':                 return 'bg-teal-100 text-teal-800 dark:bg-teal-950/70 dark:text-teal-300';
+    case 'FOR_OWNER_PAYMENT':        return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950/70 dark:text-indigo-300';
+    case 'PAID':                     return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300';
+    case 'FOR_PAYMENT_VALIDATION':   return 'bg-cyan-100 text-cyan-800 dark:bg-cyan-950/70 dark:text-cyan-300';
+    case 'OR_ISSUED':                return 'bg-green-100 text-green-800 dark:bg-green-950/70 dark:text-green-300';
+    case 'REJECTED':                 return 'bg-rose-100 text-rose-800 dark:bg-rose-950/70 dark:text-rose-300';
+    case 'ARCHIVED':                 return 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
+    default:                         return 'bg-amber-100 text-amber-800 dark:bg-amber-950/70 dark:text-amber-300';
+  }
 }
 
 function currentUser() {

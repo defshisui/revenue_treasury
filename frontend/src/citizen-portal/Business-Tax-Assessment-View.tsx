@@ -13,7 +13,24 @@ export interface BusinessTaxAssessmentViewProps {
 }
 
 type ActiveScreen = 'assessment-list' | 'appointments-list' | 'verification';
-type AssessmentStatus = 'PENDING' | 'SUBMITTED' | 'FOR_COMPLIANCE' | 'FOR_FINAL_REVIEW' | 'FOR_FINAL_APPROVAL' | 'APPROVED' | 'REJECTED' | 'ARCHIVED';
+type AssessmentStatus =
+  | 'PENDING'
+  | 'SUBMITTED'
+  | 'FOR_INITIAL_ASSESSMENT'
+  | 'FOR_FINAL_REVIEW'
+  | 'RETURNED_FOR_COMPLIANCE'
+  | 'RESUBMITTED'
+  | 'FOR_FINAL_APPROVAL'
+  | 'TAX_BILL_ISSUED'
+  | 'FOR_OWNER_PAYMENT'
+  | 'PAID'
+  | 'FOR_PAYMENT_VALIDATION'
+  | 'OR_ISSUED'
+  | 'ARCHIVED'
+  // Legacy / back-compat
+  | 'FOR_COMPLIANCE'
+  | 'APPROVED'
+  | 'REJECTED';
 type DocumentRequirementKey =
   | 'sales_declaration'
   | 'mayors_permit'
@@ -146,13 +163,22 @@ function money(value: number | undefined): string {
 
 function statusClass(status: string): string {
   switch (status) {
-    case 'APPROVED': return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300';
-    case 'REJECTED': return 'bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300';
-    case 'FOR_COMPLIANCE': return 'bg-orange-100 text-orange-800 dark:bg-orange-950/80 dark:text-orange-300';
-    case 'FOR_FINAL_REVIEW': return 'bg-blue-100 text-blue-800 dark:bg-blue-950/80 dark:text-blue-300';
-    case 'FOR_FINAL_APPROVAL': return 'bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-950/80 dark:text-fuchsia-300';
-    case 'ARCHIVED': return 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
-    default: return 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300';
+    case 'SUBMITTED':                return 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300';
+    case 'FOR_INITIAL_ASSESSMENT':   return 'bg-sky-100 text-sky-800 dark:bg-sky-950/80 dark:text-sky-300';
+    case 'FOR_FINAL_REVIEW':         return 'bg-blue-100 text-blue-800 dark:bg-blue-950/80 dark:text-blue-300';
+    case 'RETURNED_FOR_COMPLIANCE':  return 'bg-orange-100 text-orange-800 dark:bg-orange-950/80 dark:text-orange-300';
+    case 'FOR_COMPLIANCE':           return 'bg-orange-100 text-orange-800 dark:bg-orange-950/80 dark:text-orange-300';
+    case 'RESUBMITTED':              return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-950/80 dark:text-yellow-300';
+    case 'FOR_FINAL_APPROVAL':       return 'bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-950/80 dark:text-fuchsia-300';
+    case 'TAX_BILL_ISSUED':          return 'bg-teal-100 text-teal-800 dark:bg-teal-950/80 dark:text-teal-300';
+    case 'APPROVED':                 return 'bg-teal-100 text-teal-800 dark:bg-teal-950/80 dark:text-teal-300';
+    case 'FOR_OWNER_PAYMENT':        return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950/80 dark:text-indigo-300';
+    case 'PAID':                     return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300';
+    case 'FOR_PAYMENT_VALIDATION':   return 'bg-cyan-100 text-cyan-800 dark:bg-cyan-950/80 dark:text-cyan-300';
+    case 'OR_ISSUED':                return 'bg-green-100 text-green-800 dark:bg-green-950/80 dark:text-green-300';
+    case 'REJECTED':                 return 'bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300';
+    case 'ARCHIVED':                 return 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
+    default:                         return 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300';
   }
 }
 
@@ -719,16 +745,16 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                 <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }} className="w-full sm:w-64 p-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
                   <option value="ALL">ALL</option>
                   <option value="SUBMITTED">SUBMITTED</option>
-                  <option value="FOR INITIAL ASSESSMENT">FOR INITIAL ASSESSMENT</option>
-                  <option value="FOR FINAL REVIEW">FOR FINAL REVIEW</option>
-                  <option value="RETURNED FOR COMPLIANCE">RETURNED FOR COMPLIANCE</option>
+                  <option value="FOR_INITIAL_ASSESSMENT">FOR INITIAL ASSESSMENT</option>
+                  <option value="FOR_FINAL_REVIEW">FOR FINAL REVIEW</option>
+                  <option value="RETURNED_FOR_COMPLIANCE">RETURNED FOR COMPLIANCE</option>
                   <option value="RESUBMITTED">RESUBMITTED</option>
-                  <option value="FOR FINAL APPROVAL">FOR FINAL APPROVAL</option>
-                  <option value="APPROVED">APPROVED</option>
-                  <option value="TAX BILL ISSUED">TAX BILL ISSUED</option>
-                  <option value="FOR PAYMENT">FOR PAYMENT</option>
+                  <option value="FOR_FINAL_APPROVAL">FOR FINAL APPROVAL</option>
+                  <option value="TAX_BILL_ISSUED">TAX BILL ISSUED</option>
+                  <option value="FOR_OWNER_PAYMENT">FOR OWNER PAYMENT</option>
                   <option value="PAID">PAID</option>
-                  <option value="OR ISSUED">OR ISSUED</option>
+                  <option value="FOR_PAYMENT_VALIDATION">FOR PAYMENT VALIDATION</option>
+                  <option value="OR_ISSUED">OR ISSUED</option>
                 </select>
               </div>
 
@@ -777,8 +803,22 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                       <td className="px-4 py-4 border-r border-slate-100 dark:border-slate-800 text-xs font-bold uppercase text-slate-700 dark:text-slate-300">{record.status.replace(/_/g, ' ')}</td>
                       <td className="px-4 py-4 border-r border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400">{new Date(record.applicationDate).toLocaleDateString()}</td>
                       <td className="px-4 py-4 text-center">
-                        <button type="button" onClick={() => { setSelectedAssessmentView(record); setComplianceFiles({}); }} className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-bold underline underline-offset-2">
-                          {record.status === 'FOR_COMPLIANCE' ? 'Respond' : (record.paymentStatus === 'PAID' ? 'View OR' : (record.status === 'APPROVED' ? 'Pay' : 'View'))}
+                        <button
+                          type="button"
+                          onClick={() => { setSelectedAssessmentView(record); setComplianceFiles({}); }}
+                          className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-bold underline underline-offset-2"
+                        >
+                          {(() => {
+                            const s = record.status;
+                            if (s === 'RETURNED_FOR_COMPLIANCE' || s === 'FOR_COMPLIANCE') return 'Respond';
+                            if (s === 'TAX_BILL_ISSUED' || s === 'APPROVED') return 'View Tax Bill';
+                            if (s === 'FOR_OWNER_PAYMENT') return 'Pay';
+                            if (s === 'PAID') return 'View Payment';
+                            if (s === 'FOR_PAYMENT_VALIDATION') return 'View Payment Status';
+                            if (s === 'OR_ISSUED') return 'View OR';
+                            if (s === 'ARCHIVED') return record.officialReceiptNumber ? 'View OR' : 'View Record';
+                            return 'View';
+                          })()}
                         </button>
                       </td>
                     </tr>
