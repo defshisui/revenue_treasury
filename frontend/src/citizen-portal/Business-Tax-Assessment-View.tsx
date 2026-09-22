@@ -261,8 +261,11 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
   const [appointmentSuccessDetails, setAppointmentSuccessDetails] = useState<any>(null);
   const [aptForm, setAptForm] = useState({
     department: 'City Treasurer\'s Office',
-    appointmentType: 'Business Tax Assessment',
+    appointmentType: '',
+    branch: '',
+    mayorsPermitNo: '',
     businessName: '',
+    businessAddress: '',
     tin: '',
     address: '',
     description: '',
@@ -270,9 +273,74 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
     email: '',
     phone: '',
     date: '',
-    timeSlot: '09:00 AM',
+    timeSlot: '',
     remarks: '',
   });
+
+  const [appointmentConfig, setAppointmentConfig] = useState<any>(null);
+  const [appointmentSlots, setAppointmentSlots] = useState<any[]>([]);
+  const [fetchingSlots, setFetchingSlots] = useState(false);
+
+  useEffect(() => {
+    async function fetchConfig() {
+      if (!user) return;
+      try {
+        const res = await fetch(`${API_BASE_URL}/appointments/config`, { headers: { Authorization: `Bearer ${user.token}` } });
+        if (res.ok) {
+          const data = await res.json();
+          setAppointmentConfig(data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch appointment config', err);
+      }
+    }
+    void fetchConfig();
+  }, [user]);
+
+  useEffect(() => {
+    async function fetchSlots() {
+      if (!user || !aptForm.date) {
+        setAppointmentSlots([]);
+        return;
+      }
+      setFetchingSlots(true);
+      try {
+        const res = await fetch(`${API_BASE_URL}/appointments/slots?date=${encodeURIComponent(aptForm.date)}`, { headers: { Authorization: `Bearer ${user.token}` } });
+        if (res.ok) {
+          const data = await res.json();
+          setAppointmentSlots(data.slots || []);
+        }
+      } catch (err) {
+        console.error('Failed to fetch appointment slots', err);
+      } finally {
+        setFetchingSlots(false);
+      }
+    }
+    void fetchSlots();
+  }, [user, aptForm.date]);
+
+  // Handle side-effects of appointmentType changing
+  useEffect(() => {
+    if (!appointmentConfig) return;
+    const typeDef = appointmentConfig.appointmentTypes.find((t: any) => t.id === aptForm.appointmentType);
+    if (!typeDef) return;
+
+    let autoAddress = '';
+    let autoDesc = '';
+    if (!typeDef.requiresBranch) {
+      autoAddress = "Taxes and Fees Division, Business Assessment Lounge, City Treasurer's Office";
+      autoDesc = "For business renewal and NOT intended for follow-up from previous transaction.";
+    } else {
+      const branchesList = typeDef.branchType === 'satellite' ? appointmentConfig.satelliteOffices : appointmentConfig.branches;
+      const selectedBranch = branchesList.find((b: any) => b.id === aptForm.branch);
+      if (selectedBranch) {
+        autoAddress = selectedBranch.address;
+        autoDesc = `For business assessment transaction at ${selectedBranch.id}.`;
+      }
+    }
+
+    setAptForm(prev => ({ ...prev, address: autoAddress, description: autoDesc }));
+  }, [aptForm.appointmentType, aptForm.branch, appointmentConfig]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -586,16 +654,28 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
   const handleAppointmentSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!user) return;
+    
+    // Check form validity manually just to be safe
+    if (!aptForm.appointmentType) {
+      alert('Please select an appointment type.');
+      return;
+    }
+    if (!aptForm.phone || !/^\d{11}$/.test(aptForm.phone.trim())) {
+      alert('Please enter a valid 11-digit Philippine mobile number.');
+      return;
+    }
+    if (!aptForm.date || !aptForm.timeSlot) {
+      alert('Please select a valid date and time slot.');
+      return;
+    }
+
     setSubmitting(true);
     try {
       const payload = {
         ...aptForm,
         department: "City Treasurer's Office",
-        appointmentType: "Business Tax Assessment",
-        fullName: user.fullname || 'Citizen',
-        email: user.email || 'citizen@example.com',
-        phone: '09000000000', // Auto-filled mock data since it was removed from UI
       };
+      
       const response = await fetch(`${API_BASE_URL}/appointments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user.token}` },
@@ -609,11 +689,14 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
         referenceNumber: data.record?.id || 'APT-12345',
         citizenName: payload.fullName,
         businessName: payload.businessName || 'N/A',
+        mayorsPermitNo: payload.mayorsPermitNo || 'N/A',
         transactionType: payload.appointmentType,
         office: payload.department,
+        branch: payload.branch || 'Main Office',
+        address: payload.address,
         date: payload.date,
         time: payload.timeSlot,
-        status: data.record?.status || 'SCHEDULED'
+        status: data.record?.status || 'PENDING'
       });
       
     } catch (error: any) {
@@ -1179,15 +1262,16 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
           {appointmentSuccessDetails ? (
             <div className="bg-white dark:bg-slate-900 w-full max-w-md overflow-hidden relative border-t-4 border-emerald-500 rounded-2xl shadow-2xl p-8 text-center">
               <div className="mx-auto w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 flex items-center justify-center text-3xl font-bold mb-4">✓</div>
-              <h2 className="text-xl font-extrabold text-slate-900 dark:text-white uppercase mb-2">APPOINTMENT CONFIRMED</h2>
-              <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">Your appointment has been successfully scheduled.</p>
+              <h2 className="text-xl font-extrabold text-slate-900 dark:text-white uppercase mb-2">APPOINTMENT SUBMITTED</h2>
+              <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">Your appointment request has been submitted and is pending approval.</p>
               
               <div className="bg-slate-50 dark:bg-slate-950 rounded-xl p-5 text-left space-y-3 text-xs mb-6">
                 <div className="flex justify-between border-b pb-2"><span className="text-slate-500">Reference Number</span><span className="font-mono font-bold text-blue-600">{appointmentSuccessDetails.referenceNumber}</span></div>
                 <div className="flex justify-between border-b pb-2"><span className="text-slate-500">Citizen</span><span className="font-semibold">{appointmentSuccessDetails.citizenName}</span></div>
                 <div className="flex justify-between border-b pb-2"><span className="text-slate-500">Business</span><span className="font-semibold">{appointmentSuccessDetails.businessName}</span></div>
-                <div className="flex justify-between border-b pb-2"><span className="text-slate-500">Transaction</span><span className="font-semibold">{appointmentSuccessDetails.transactionType}</span></div>
-                <div className="flex justify-between border-b pb-2"><span className="text-slate-500">Office</span><span className="font-semibold">{appointmentSuccessDetails.office}</span></div>
+                <div className="flex justify-between border-b pb-2"><span className="text-slate-500">Mayor's Permit No</span><span className="font-semibold">{appointmentSuccessDetails.mayorsPermitNo}</span></div>
+                <div className="flex justify-between border-b pb-2"><span className="text-slate-500">Transaction</span><span className="font-semibold text-right">{appointmentSuccessDetails.transactionType}</span></div>
+                <div className="flex justify-between border-b pb-2"><span className="text-slate-500">Branch/Office</span><span className="font-semibold text-right">{appointmentSuccessDetails.branch}</span></div>
                 <div className="flex justify-between border-b pb-2"><span className="text-slate-500">Date</span><span className="font-semibold">{appointmentSuccessDetails.date}</span></div>
                 <div className="flex justify-between border-b pb-2"><span className="text-slate-500">Time</span><span className="font-semibold">{appointmentSuccessDetails.time}</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">Status</span><span className="px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-bold">{appointmentSuccessDetails.status}</span></div>
@@ -1198,44 +1282,114 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
           ) : (
             <form onSubmit={handleAppointmentSubmit} className="bg-white dark:bg-slate-900 w-full max-w-2xl overflow-hidden relative" style={{ borderRadius: '4px' }}>
               <div className="flex justify-between items-center px-6 py-4 border-b bg-white dark:bg-slate-950">
-                <h3 className="font-bold text-sm mx-auto text-slate-800 dark:text-white">Request New Appointment</h3>
+                <h3 className="font-bold text-sm mx-auto text-slate-800 dark:text-white">BUSINESS TAX ASSESSMENT</h3>
                 <button type="button" onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600 text-xl font-bold absolute right-4 top-3">×</button>
               </div>
 
             <div className="p-6 space-y-4 text-xs max-h-[75vh] overflow-y-auto custom-scrollbar">
 
               <div>
-                <label className="block text-[11px] mb-1 font-semibold text-slate-700">Office</label>
+                <label className="block text-[11px] mb-1 font-semibold text-slate-700">Department</label>
                 <input readOnly disabled className="w-full p-2.5 border rounded text-slate-700 bg-slate-100 font-bold" value="City Treasurer's Office" />
               </div>
 
               <div>
-                <label className="block text-[11px] mb-1 font-semibold text-slate-700">Transaction Type</label>
-                <input readOnly disabled className="w-full p-2.5 border rounded text-slate-700 bg-slate-100 font-bold" value="Business Tax Assessment" />
-              </div>
-
-              <div>
-                <label className="block text-[11px] mb-1 font-semibold text-slate-700"><span className="text-rose-500">*</span> Appointment Date</label>
-                <input required type="date" className="w-full p-2.5 border rounded text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500" value={aptForm.date} onChange={(e) => setAptForm({ ...aptForm, date: e.target.value })} />
-              </div>
-
-              <div>
-                <label className="block text-[11px] mb-1 font-semibold text-slate-700"><span className="text-rose-500">*</span> Time Slot</label>
-                <select required className="w-full p-2.5 border rounded text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500" value={aptForm.timeSlot} onChange={(e) => setAptForm({ ...aptForm, timeSlot: e.target.value })}>
-                  <option value="09:00 AM">09:00 AM</option>
-                  <option value="10:00 AM">10:00 AM</option>
-                  <option value="11:00 AM">11:00 AM</option>
-                  <option value="01:00 PM">01:00 PM</option>
-                  <option value="02:00 PM">02:00 PM</option>
-                  <option value="03:00 PM">03:00 PM</option>
-                  <option value="04:00 PM">04:00 PM</option>
+                <label className="block text-[11px] mb-1 font-semibold text-slate-700"><span className="text-rose-500">*</span> Appointment Type</label>
+                <select required className="w-full p-2.5 border rounded text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500" value={aptForm.appointmentType} onChange={(e) => setAptForm({ ...aptForm, appointmentType: e.target.value, branch: '' })}>
+                  <option value="" disabled>Select Appointment Type</option>
+                  {(appointmentConfig?.appointmentTypes || []).map((type: any) => (
+                    <option key={type.id} value={type.id}>{type.label}</option>
+                  ))}
                 </select>
+              </div>
+
+              {(() => {
+                const typeDef = (appointmentConfig?.appointmentTypes || []).find((t: any) => t.id === aptForm.appointmentType);
+                if (!typeDef || !typeDef.requiresBranch) return null;
+                const branchesList = typeDef.branchType === 'satellite' ? appointmentConfig?.satelliteOffices : appointmentConfig?.branches;
+                return (
+                  <div>
+                    <label className="block text-[11px] mb-1 font-semibold text-slate-700"><span className="text-rose-500">*</span> Branch/Satellite Office</label>
+                    <select required className="w-full p-2.5 border rounded text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500" value={aptForm.branch} onChange={(e) => setAptForm({ ...aptForm, branch: e.target.value })}>
+                      <option value="" disabled>Select Branch</option>
+                      {(branchesList || []).map((branch: any) => (
+                        <option key={branch.id} value={branch.id}>{branch.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                );
+              })()}
+
+              <div>
+                <label className="block text-[11px] mb-1 font-semibold text-slate-700">Address of CTO Branch</label>
+                <input readOnly disabled className="w-full p-2.5 border rounded text-slate-700 bg-slate-100" value={aptForm.address} />
+              </div>
+
+              <div>
+                <label className="block text-[11px] mb-1 font-semibold text-slate-700">Description</label>
+                <input readOnly disabled className="w-full p-2.5 border rounded text-slate-700 bg-slate-100" value={aptForm.description} />
+              </div>
+
+              <div className="pt-4 border-t border-slate-100 mt-4"><h4 className="font-bold text-slate-800 mb-4">BUSINESS INFORMATION</h4></div>
+              
+              <div>
+                <label className="block text-[11px] mb-1 font-semibold text-slate-700">Mayor's Permit No.</label>
+                <input type="text" className="w-full p-2.5 border rounded text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500" value={aptForm.mayorsPermitNo} onChange={(e) => setAptForm({ ...aptForm, mayorsPermitNo: e.target.value })} />
+              </div>
+
+              <div>
+                <label className="block text-[11px] mb-1 font-semibold text-slate-700">Business Name</label>
+                <input type="text" className="w-full p-2.5 border rounded text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500" value={aptForm.businessName} onChange={(e) => setAptForm({ ...aptForm, businessName: e.target.value })} />
+              </div>
+
+              <div>
+                <label className="block text-[11px] mb-1 font-semibold text-slate-700">Business Address</label>
+                <input type="text" className="w-full p-2.5 border rounded text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500" value={aptForm.businessAddress} onChange={(e) => setAptForm({ ...aptForm, businessAddress: e.target.value })} />
+              </div>
+
+              <div className="pt-4 border-t border-slate-100 mt-4"><h4 className="font-bold text-slate-800 mb-4">SCHEDULE</h4></div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] mb-1 font-semibold text-slate-700"><span className="text-rose-500">*</span> Appointment Date</label>
+                  <input required type="date" min={new Date().toISOString().split('T')[0]} className="w-full p-2.5 border rounded text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500" value={aptForm.date} onChange={(e) => setAptForm({ ...aptForm, date: e.target.value, timeSlot: '' })} />
+                </div>
+                <div>
+                  <label className="block text-[11px] mb-1 font-semibold text-slate-700"><span className="text-rose-500">*</span> Time Slot</label>
+                  <select required disabled={!aptForm.date || fetchingSlots} className="w-full p-2.5 border rounded text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50" value={aptForm.timeSlot} onChange={(e) => setAptForm({ ...aptForm, timeSlot: e.target.value })}>
+                    <option value="" disabled>{fetchingSlots ? 'Loading slots...' : (aptForm.date ? 'Select Time Slot' : 'Select Date First')}</option>
+                    {appointmentSlots.map((slot: any) => (
+                      <option key={slot.time} value={slot.time} disabled={slot.available === 0}>
+                        {slot.time} ({slot.available}/{slot.total} available)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-slate-100 mt-4"><h4 className="font-bold text-slate-800 mb-4">CITIZEN INFORMATION</h4></div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] mb-1 font-semibold text-slate-700">TIN</label>
+                  <input type="text" className="w-full p-2.5 border rounded text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500" value={aptForm.tin} onChange={(e) => setAptForm({ ...aptForm, tin: e.target.value })} />
+                </div>
+                <div>
+                  <label className="block text-[11px] mb-1 font-semibold text-slate-700">Mobile No. (e.g. 09123456789)</label>
+                  <input required type="text" className="w-full p-2.5 border rounded text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500" value={aptForm.phone} onChange={(e) => setAptForm({ ...aptForm, phone: e.target.value })} />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-[11px] mb-1 font-semibold text-slate-700">Remarks / Specific Request</label>
+                <textarea className="w-full p-2.5 border rounded text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 min-h-[80px]" value={aptForm.remarks} onChange={(e) => setAptForm({ ...aptForm, remarks: e.target.value })}></textarea>
               </div>
 
             </div>
 
-            <div className="px-6 py-4 bg-white border-t border-slate-100 dark:bg-slate-950">
-              <button disabled={submitting} type="submit" className="px-5 py-2 rounded bg-[#00adef] text-white text-xs font-bold hover:bg-[#0099d8] transition-colors">{submitting ? 'Submitting...' : 'SUBMIT'}</button>
+            <div className="px-6 py-4 bg-white border-t border-slate-100 dark:bg-slate-950 flex justify-end gap-3">
+              <button disabled={submitting} type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2 rounded bg-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-300 transition-colors">CANCEL</button>
+              <button disabled={submitting || !aptForm.date || !aptForm.timeSlot || !aptForm.appointmentType} type="submit" className="px-5 py-2 rounded bg-[#00adef] text-white text-xs font-bold hover:bg-[#0099d8] transition-colors disabled:opacity-50">{submitting ? 'Submitting...' : 'SUBMIT APPOINTMENT REQUEST'}</button>
             </div>
           </form>
           )}

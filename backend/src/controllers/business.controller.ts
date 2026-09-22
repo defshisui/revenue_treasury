@@ -969,7 +969,10 @@ export async function createAppointment(req: Request, res: Response): Promise<vo
   const {
     department,
     appointmentType,
+    branch,
+    mayorsPermitNo,
     businessName,
+    businessAddress,
     tin,
     address,
     description,
@@ -981,8 +984,8 @@ export async function createAppointment(req: Request, res: Response): Promise<vo
     remarks,
   } = req.body;
 
-  if (!department || !appointmentType || !fullName || !email || !date) {
-    res.status(400).json({ message: 'Department, appointment type, full name, email, and date are required.' });
+  if (!department || !appointmentType || !fullName || !email || !date || !timeSlot) {
+    res.status(400).json({ message: 'Department, appointment type, full name, email, date, and time slot are required.' });
     return;
   }
 
@@ -998,27 +1001,46 @@ export async function createAppointment(req: Request, res: Response): Promise<vo
 
   const id = randomUUID();
   try {
+    // Validate slot availability
+    const slotCheck = await pool.query(
+      `SELECT COUNT(*) as count FROM appointments WHERE appointment_date = $1 AND time_slot = $2 AND status IN ('PENDING', 'APPROVED', 'SCHEDULED')`,
+      [date, timeSlot]
+    );
+    const booked = parseInt(slotCheck.rows[0].count, 10);
+    if (booked >= 10) {
+      res.status(400).json({ message: 'The selected time slot is fully booked.' });
+      return;
+    }
+
     const result = await pool.query(
       `INSERT INTO appointments (
-        id, department, appointment_type, business_name, tin, address,
+        id, department, appointment_type, branch, business_name, mayors_permit_no, tin, business_address, address,
         description, full_name, email, phone, appointment_date, time_slot,
         remarks, status
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'SCHEDULED') RETURNING *`,
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,'PENDING') RETURNING *`,
       [
         id,
         department,
         appointmentType,
+        branch || null,
         businessName || '',
+        mayorsPermitNo || null,
         tin || '',
+        businessAddress || '',
         address || '',
         description || '',
         fullName,
         email,
         phone,
         date,
-        timeSlot || '09:00 AM - 10:00 AM',
+        timeSlot,
         remarks || null,
       ]
+    );
+
+    await pool.query(
+      `INSERT INTO appointment_audit_logs (id, appointment_id, action, performed_by, previous_status, new_status) VALUES ($1, $2, $3, $4, $5, $6)`,
+      [randomUUID(), id, 'CREATED', fullName, null, 'PENDING']
     );
 
     await recordAudit(req, 'AUD-APT-SUBMIT', email, 'Citizen', 'Appointments Module', 'APPOINTMENT_REQUESTED', 'INFO', null, `Scheduled appointment for ${fullName} under ${department} on ${date}`);
@@ -1026,6 +1048,97 @@ export async function createAppointment(req: Request, res: Response): Promise<vo
   } catch (err) {
     console.error('Error saving appointment:', err);
     res.status(500).json({ message: 'Failed to submit appointment.' });
+  }
+}
+
+export async function getAppointmentConfig(req: Request, res: Response): Promise<void> {
+  const config = {
+    appointmentTypes: [
+      {
+        id: 'BUSINESS TAX ASSESSMENT (RENEWAL) - MAIN OFFICE',
+        label: 'BUSINESS TAX ASSESSMENT (RENEWAL) - MAIN OFFICE',
+        requiresBranch: false
+      },
+      {
+        id: 'BUSINESS TAX ASSESSMENT (SOLE PROPRIETORSHIP) - BRANCHES',
+        label: 'BUSINESS TAX ASSESSMENT (SOLE PROPRIETORSHIP) - BRANCHES',
+        requiresBranch: true,
+        branchType: 'branches'
+      },
+      {
+        id: 'BUSINESS TAX ASSESSMENT (SOLE PROPRIETORSHIP) - SATELLITE OFFICES',
+        label: 'BUSINESS TAX ASSESSMENT (SOLE PROPRIETORSHIP) - SATELLITE OFFICES',
+        requiresBranch: true,
+        branchType: 'satellite'
+      }
+    ],
+    branches: [
+      { id: 'Marilag Branch', label: 'Marilag Branch - 25 Calderon St., Brgy. Marilag, Project 4, Quezon City', address: '25 Calderon St., Brgy. Marilag, Project 4, Quezon City' },
+      { id: 'Galas Branch', label: 'Galas Branch - Uncle Hangkok St., Brgy. San Isidro, Galas, Quezon City', address: 'Uncle Hangkok St., Brgy. San Isidro, Galas, Quezon City' },
+      { id: 'La Loma Branch', label: 'La Loma Branch - Mayor St., near Police Station, Quezon City', address: 'Mayor St., near Police Station, Quezon City' },
+      { id: 'Novaliches Branch', label: 'Novaliches Branch - Jordan Plains Subd., NDC, Novaliches, Quezon City', address: 'Jordan Plains Subd., NDC, Novaliches, Quezon City' },
+      { id: 'Talipapa Branch', label: 'Talipapa Branch - Brgy. Hall Talipapa, Quirino Hi-way, Novaliches, Quezon City', address: 'Brgy. Hall Talipapa, Quirino Hi-way, Novaliches, Quezon City' }
+    ],
+    satelliteOffices: [
+      { id: 'Eastwood City Satellite Office', label: 'Eastwood City Satellite Office', address: 'Eastwood City Satellite Office' },
+      { id: 'Fairview Terraces Satellite Office', label: 'Fairview Terraces Satellite Office', address: 'Fairview Terraces Satellite Office' },
+      { id: 'Robinsons Magnolia Satellite Office', label: 'Robinsons Magnolia Satellite Office', address: 'Robinsons Magnolia Satellite Office' },
+      { id: 'SM North EDSA Satellite Office', label: 'SM North EDSA Satellite Office', address: 'SM North EDSA Satellite Office' }
+    ],
+    timeSlots: [
+      '09:00 AM',
+      '10:00 AM',
+      '11:00 AM',
+      '01:00 PM',
+      '02:00 PM',
+      '03:00 PM',
+      '04:00 PM'
+    ],
+    maxCapacityPerSlot: 10
+  };
+  res.json(config);
+}
+
+export async function getAppointmentSlots(req: Request, res: Response): Promise<void> {
+  const { date } = req.query;
+  if (!date) {
+    res.status(400).json({ message: 'Date is required.' });
+    return;
+  }
+
+  try {
+    const result = await pool.query(
+      `SELECT time_slot, COUNT(*) as booked_count 
+       FROM appointments 
+       WHERE appointment_date = $1 AND status IN ('PENDING', 'APPROVED', 'SCHEDULED')
+       GROUP BY time_slot`,
+      [date]
+    );
+
+    const bookedCounts: Record<string, number> = {};
+    result.rows.forEach(row => {
+      bookedCounts[row.time_slot] = parseInt(row.booked_count, 10);
+    });
+
+    const timeSlots = [
+      '09:00 AM', '10:00 AM', '11:00 AM', 
+      '01:00 PM', '02:00 PM', '03:00 PM', '04:00 PM'
+    ];
+    const maxCapacityPerSlot = 10;
+
+    const slots = timeSlots.map(slot => {
+      const booked = bookedCounts[slot] || 0;
+      return {
+        time: slot,
+        available: Math.max(0, maxCapacityPerSlot - booked),
+        total: maxCapacityPerSlot
+      };
+    });
+
+    res.json({ date, slots });
+  } catch (error) {
+    console.error('Error fetching appointment slots:', error);
+    res.status(500).json({ message: 'Internal server error fetching slots.' });
   }
 }
 
@@ -1076,16 +1189,57 @@ export async function getAppointments(req: Request, res: Response): Promise<void
 export async function updateAppointmentStatus(req: Request, res: Response): Promise<void> {
   const { id } = req.params;
   const status = String(req.body?.status || '').toUpperCase();
-  if (!['SCHEDULED', 'COMPLETED', 'CANCELLED', 'NO_SHOW'].includes(status)) {
+  const validStatuses = ['PENDING', 'APPROVED', 'CANCELLED', 'COMPLETED', 'NO_SHOW'];
+  
+  if (!validStatuses.includes(status)) {
     res.status(400).json({ message: 'Invalid appointment status.' });
     return;
   }
+
+  const authEmail = String((req as AuthenticatedRequest).user?.email || '').trim().toLowerCase();
+
   try {
-    const result = await pool.query(`UPDATE appointments SET status = $1 WHERE id = $2 RETURNING *`, [status, id]);
-    if (result.rows.length === 0) {
+    const currentResult = await pool.query(`SELECT status, appointment_date, time_slot FROM appointments WHERE id = $1`, [id]);
+    if (currentResult.rows.length === 0) {
       res.status(404).json({ message: 'Appointment not found.' });
       return;
     }
+    const currentStatus = currentResult.rows[0].status;
+
+    // Strict status machine enforcement
+    if (currentStatus === 'PENDING' && !['APPROVED', 'CANCELLED'].includes(status)) {
+      res.status(400).json({ message: 'PENDING appointments can only transition to APPROVED or CANCELLED.' });
+      return;
+    }
+    if (currentStatus === 'APPROVED' && !['COMPLETED', 'NO_SHOW', 'CANCELLED'].includes(status)) {
+      res.status(400).json({ message: 'APPROVED appointments can only transition to COMPLETED, NO_SHOW, or CANCELLED.' });
+      return;
+    }
+    if (['COMPLETED', 'NO_SHOW', 'CANCELLED'].includes(currentStatus)) {
+      res.status(400).json({ message: `Cannot modify appointment in ${currentStatus} status.` });
+      return;
+    }
+
+    // Check slot availability again if approving
+    if (currentStatus === 'PENDING' && status === 'APPROVED') {
+      const slotCheck = await pool.query(
+        `SELECT COUNT(*) as count FROM appointments WHERE appointment_date = $1 AND time_slot = $2 AND status IN ('APPROVED', 'SCHEDULED') AND id != $3`,
+        [currentResult.rows[0].appointment_date, currentResult.rows[0].time_slot, id]
+      );
+      const booked = parseInt(slotCheck.rows[0].count, 10);
+      if (booked >= 10) {
+        res.status(400).json({ message: 'The selected time slot is now fully booked.' });
+        return;
+      }
+    }
+
+    const result = await pool.query(`UPDATE appointments SET status = $1 WHERE id = $2 RETURNING *`, [status, id]);
+    
+    await pool.query(
+      `INSERT INTO appointment_audit_logs (id, appointment_id, action, performed_by, previous_status, new_status) VALUES ($1, $2, $3, $4, $5, $6)`,
+      [randomUUID(), id, 'UPDATED', authEmail || 'Admin', currentStatus, status]
+    );
+
     res.status(200).json({ message: 'Appointment status updated.', record: result.rows[0] });
   } catch (err) {
     console.error('Error updating appointment status:', err);

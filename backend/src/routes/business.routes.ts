@@ -10,6 +10,8 @@ import {
   verifyTaxBill,
   verifyOrNumber,
   createAppointment,
+  getAppointmentConfig,
+  getAppointmentSlots,
   getAppointments,
   updateAppointmentStatus,
   deleteAppointment,
@@ -86,6 +88,8 @@ router.post('/verify/mayor-permit', authenticateToken, verifyMayorPermit);
 router.post('/verify-record', authenticateToken, verifyTaxBillOR);
 
 router.post('/appointments', authenticateToken, createAppointment);
+router.get('/appointments/config', authenticateToken, getAppointmentConfig);
+router.get('/appointments/slots', authenticateToken, getAppointmentSlots);
 router.get('/appointments', authenticateToken, getAppointments);
 router.get('/admin/appointments', authenticateToken, staffOnly, getAppointments);
 router.patch('/admin/appointments/:id/status', authenticateToken, staffOnly, updateAppointmentStatus);

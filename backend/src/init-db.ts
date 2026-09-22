@@ -259,8 +259,11 @@ export async function initializeDatabase(): Promise<void> {
           id VARCHAR(100) PRIMARY KEY,
           department VARCHAR(255) NOT NULL,
           appointment_type VARCHAR(255) NOT NULL,
+          branch VARCHAR(255),
           business_name VARCHAR(255),
+          mayors_permit_no VARCHAR(100),
           tin VARCHAR(100),
+          business_address TEXT,
           address TEXT,
           description TEXT,
           full_name VARCHAR(255) NOT NULL,
@@ -269,9 +272,19 @@ export async function initializeDatabase(): Promise<void> {
           appointment_date DATE NOT NULL,
           time_slot VARCHAR(100),
           remarks TEXT,
-          status VARCHAR(50) DEFAULT 'SCHEDULED',
+          status VARCHAR(50) DEFAULT 'PENDING',
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS appointment_audit_logs (
+          id VARCHAR(100) PRIMARY KEY,
+          appointment_id VARCHAR(100) NOT NULL,
+          action VARCHAR(100) NOT NULL,
+          performed_by VARCHAR(255),
+          previous_status VARCHAR(50),
+          new_status VARCHAR(50),
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
       -- ==========================================================

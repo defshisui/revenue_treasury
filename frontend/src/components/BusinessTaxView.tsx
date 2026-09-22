@@ -43,7 +43,7 @@ interface AssessmentRecord {
   paymentStatus?: 'PAID' | 'UNPAID'; paymentAmount?: number; paidAmount?: number; paymentMethod?: string; paymentReference?: string; paymentDate?: string | null; officialReceiptNumber?: string;
   computedFees?: FeeBreakdown;
 }
-interface AppointmentRecord { id: string; department: string; appointmentType: string; businessName?: string; tin?: string; address?: string; description?: string; fullName: string; email: string; phone: string; date: string; timeSlot?: string; remarks?: string; status: string; createdAt: string; }
+interface AppointmentRecord { id: string; department: string; appointmentType: string; branch?: string; mayorsPermitNo?: string; businessName?: string; businessAddress?: string; tin?: string; address?: string; description?: string; fullName: string; email: string; phone: string; date: string; timeSlot?: string; remarks?: string; status: string; createdAt: string; }
 
 const BASE_DOCS: Array<{ key: DocumentRequirementKey; label: string }> = [
   { key: 'sales_declaration', label: 'Gross Receipts / Sales Declaration Form' },
@@ -407,7 +407,7 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
               <tr>
                 <th className="p-3 text-left">Date / Time</th>
                 <th className="p-3 text-left">Citizen Name</th>
-                <th className="p-3 text-left">Office</th>
+                <th className="p-3 text-left">Office / Branch</th>
                 <th className="p-3 text-left">Transaction Type</th>
                 <th className="p-3 text-left">Status</th>
                 <th className="p-3 text-right">Action</th>
@@ -421,10 +421,13 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
                     <div className="text-slate-500">{a.timeSlot}</div>
                   </td>
                   <td className="p-3 font-medium">{a.fullName}</td>
-                  <td className="p-3 text-slate-600">{a.department}</td>
+                  <td className="p-3 text-slate-600">
+                    <div>{a.department}</div>
+                    <div className="text-[10px] text-slate-500 font-bold">{a.branch || 'Main Office'}</div>
+                  </td>
                   <td className="p-3">{a.appointmentType}</td>
                   <td className="p-3">
-                    <span className={`px-2 py-1 rounded-full font-bold text-[9px] ${a.status === 'SCHEDULED' ? 'bg-blue-100 text-blue-800' : a.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-800' : a.status === 'CANCELLED' ? 'bg-rose-100 text-rose-800' : 'bg-slate-100 text-slate-800'}`}>{a.status}</span>
+                    <span className={`px-2 py-1 rounded-full font-bold text-[9px] ${a.status === 'PENDING' ? 'bg-amber-100 text-amber-800' : a.status === 'APPROVED' ? 'bg-blue-100 text-blue-800' : a.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-800' : a.status === 'CANCELLED' ? 'bg-rose-100 text-rose-800' : 'bg-slate-100 text-slate-800'}`}>{a.status}</span>
                   </td>
                   <td className="p-3 text-right">
                     <button type="button" onClick={() => setSelectedAppointment(a)} className="px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold transition-colors">View</button>
@@ -447,20 +450,29 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
           </div>
           
           <div className="space-y-4 text-sm bg-slate-50 dark:bg-slate-950 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
-            <div className="flex justify-between border-b pb-2"><span className="text-slate-500 font-semibold">Status</span><span className={`px-2 py-0.5 rounded font-bold text-[10px] ${selectedAppointment.status === 'SCHEDULED' ? 'bg-blue-100 text-blue-800' : selectedAppointment.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-800' : selectedAppointment.status === 'CANCELLED' ? 'bg-rose-100 text-rose-800' : 'bg-slate-200'}`}>{selectedAppointment.status}</span></div>
+            <div className="flex justify-between border-b pb-2"><span className="text-slate-500 font-semibold">Status</span><span className={`px-2 py-0.5 rounded font-bold text-[10px] ${selectedAppointment.status === 'PENDING' ? 'bg-amber-100 text-amber-800' : selectedAppointment.status === 'APPROVED' ? 'bg-blue-100 text-blue-800' : selectedAppointment.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-800' : selectedAppointment.status === 'CANCELLED' ? 'bg-rose-100 text-rose-800' : 'bg-slate-200'}`}>{selectedAppointment.status}</span></div>
             <div className="flex justify-between border-b pb-2"><span className="text-slate-500 font-semibold">Date & Time</span><span className="font-semibold text-right">{selectedAppointment.date} {selectedAppointment.timeSlot ? `at ${selectedAppointment.timeSlot}` : ''}</span></div>
             <div className="flex justify-between border-b pb-2"><span className="text-slate-500 font-semibold">Citizen Name</span><span className="font-semibold text-right">{selectedAppointment.fullName}</span></div>
             <div className="flex justify-between border-b pb-2"><span className="text-slate-500 font-semibold">Email / Phone</span><span className="text-right">{selectedAppointment.email}<br/><span className="text-xs text-slate-500">{selectedAppointment.phone}</span></span></div>
-            <div className="flex justify-between border-b pb-2"><span className="text-slate-500 font-semibold">Office</span><span className="text-right">{selectedAppointment.department}</span></div>
+            <div className="flex justify-between border-b pb-2"><span className="text-slate-500 font-semibold">Office / Branch</span><span className="text-right">{selectedAppointment.department}<br/><span className="text-xs text-slate-500 font-bold">{selectedAppointment.branch || 'Main Office'}</span></span></div>
             <div className="flex justify-between border-b pb-2"><span className="text-slate-500 font-semibold">Transaction Type</span><span className="text-right font-medium text-blue-700 dark:text-blue-400">{selectedAppointment.appointmentType}</span></div>
+            {selectedAppointment.mayorsPermitNo && <div className="flex justify-between border-b pb-2"><span className="text-slate-500 font-semibold">Mayor's Permit No</span><span className="text-right">{selectedAppointment.mayorsPermitNo}</span></div>}
             {selectedAppointment.businessName && <div className="flex justify-between border-b pb-2"><span className="text-slate-500 font-semibold">Business Name</span><span className="text-right">{selectedAppointment.businessName}</span></div>}
+            {selectedAppointment.businessAddress && <div className="flex justify-between border-b pb-2"><span className="text-slate-500 font-semibold">Business Address</span><span className="text-right text-xs max-w-[200px]">{selectedAppointment.businessAddress}</span></div>}
           </div>
 
           <div className="mt-6 flex flex-col gap-2">
-            {selectedAppointment.status === 'SCHEDULED' && (
+            {selectedAppointment.status === 'PENDING' && (
+              <div className="flex gap-2">
+                <button type="button" disabled={submitting} onClick={() => handleUpdateAppointmentStatus(selectedAppointment.id, 'APPROVED')} className="flex-1 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors">Approve Appointment</button>
+                <button type="button" disabled={submitting} onClick={() => handleUpdateAppointmentStatus(selectedAppointment.id, 'CANCELLED')} className="flex-1 py-3 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-700 text-xs font-bold transition-colors">Decline / Cancel</button>
+              </div>
+            )}
+            {selectedAppointment.status === 'APPROVED' && (
               <div className="flex gap-2">
                 <button type="button" disabled={submitting} onClick={() => handleUpdateAppointmentStatus(selectedAppointment.id, 'COMPLETED')} className="flex-1 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors">Mark Completed</button>
-                <button type="button" disabled={submitting} onClick={() => handleUpdateAppointmentStatus(selectedAppointment.id, 'CANCELLED')} className="flex-1 py-3 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-700 text-xs font-bold transition-colors">Cancel Appointment</button>
+                <button type="button" disabled={submitting} onClick={() => handleUpdateAppointmentStatus(selectedAppointment.id, 'NO_SHOW')} className="flex-1 py-3 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold transition-colors">Mark No-Show</button>
+                <button type="button" disabled={submitting} onClick={() => handleUpdateAppointmentStatus(selectedAppointment.id, 'CANCELLED')} className="flex-1 py-3 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-700 text-xs font-bold transition-colors">Cancel</button>
               </div>
             )}
             <button type="button" onClick={() => setSelectedAppointment(null)} className="w-full py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors">Close Window</button>
