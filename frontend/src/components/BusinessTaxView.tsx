@@ -158,6 +158,26 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
     try { const response = await fetch(`${API_BASE_URL}/admin/appointments`, { headers: { Authorization: `Bearer ${admin.token}` } }); const data = await response.json().catch(() => []); setAppointments(Array.isArray(data) ? data : (data.appointments || [])); } catch (error) { console.error(error); setAppointments([]); } finally { setLoading(false); }
   }
 
+  async function handleUpdateAppointmentStatus(id: string, newStatus: string) {
+    if (!admin) return;
+    setSubmitting(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/appointments/${id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${admin.token}` },
+        body: JSON.stringify({ status: newStatus })
+      });
+      if (!response.ok) throw new Error('Failed to update status');
+      
+      setSelectedAppointment(null);
+      void fetchAppointments();
+    } catch (err: any) {
+      alert(err.message || 'Failed to update appointment status.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   const requiredKeysFor = (record: AssessmentRecord): string[] => {
     const keys = BASE_DOCS.map((item) => item.key as string);
     if (record.birRegistered) keys.push('bir_tax_return', 'previous_itr', 'audited_financial_statements'); else keys.push('notarized_gross_sales');
@@ -379,9 +399,75 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
       <div className="flex justify-between items-center text-xs text-slate-500"><span>Page {page} of {totalPages}</span><div className="flex gap-2"><button type="button" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))} className="px-3 py-1.5 border rounded-lg disabled:opacity-40">Previous</button><button type="button" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))} className="px-3 py-1.5 border rounded-lg disabled:opacity-40">Next</button></div></div>
     </section>}
 
-    {activeTab === 'appointments' && <section className="bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-xs"><div className="overflow-x-auto border rounded-2xl"><table className="w-full min-w-[850px] text-xs"><thead className="bg-slate-50 dark:bg-slate-950"><tr><th className="p-3 text-left">Purpose</th><th className="p-3 text-left">Business</th><th className="p-3 text-left">Date</th><th className="p-3 text-left">Status</th><th className="p-3 text-right">Action</th></tr></thead><tbody className="divide-y">{appointments.map((a) => <tr key={a.id}><td className="p-3">{a.appointmentType}</td><td className="p-3">{a.businessName || a.fullName}</td><td className="p-3">{a.date} {a.timeSlot || ''}</td><td className="p-3"><span className="px-2 py-1 rounded-full bg-slate-100 font-bold">{a.status}</span></td><td className="p-3 text-right"><button type="button" onClick={() => setSelectedAppointment(a)} className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 font-bold">View</button></td></tr>)}</tbody></table></div></section>}
+    {activeTab === 'appointments' && (
+      <section className="bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-xs">
+        <div className="overflow-x-auto border rounded-2xl">
+          <table className="w-full min-w-[850px] text-xs">
+            <thead className="bg-slate-50 dark:bg-slate-950">
+              <tr>
+                <th className="p-3 text-left">Date / Time</th>
+                <th className="p-3 text-left">Citizen Name</th>
+                <th className="p-3 text-left">Office</th>
+                <th className="p-3 text-left">Transaction Type</th>
+                <th className="p-3 text-left">Status</th>
+                <th className="p-3 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {appointments.map((a) => (
+                <tr key={a.id}>
+                  <td className="p-3">
+                    <div className="font-semibold">{new Date(a.date).toLocaleDateString()}</div>
+                    <div className="text-slate-500">{a.timeSlot}</div>
+                  </td>
+                  <td className="p-3 font-medium">{a.fullName}</td>
+                  <td className="p-3 text-slate-600">{a.department}</td>
+                  <td className="p-3">{a.appointmentType}</td>
+                  <td className="p-3">
+                    <span className={`px-2 py-1 rounded-full font-bold text-[9px] ${a.status === 'SCHEDULED' ? 'bg-blue-100 text-blue-800' : a.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-800' : a.status === 'CANCELLED' ? 'bg-rose-100 text-rose-800' : 'bg-slate-100 text-slate-800'}`}>{a.status}</span>
+                  </td>
+                  <td className="p-3 text-right">
+                    <button type="button" onClick={() => setSelectedAppointment(a)} className="px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold transition-colors">View</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {appointments.length === 0 && <div className="p-8 text-center text-slate-500 text-sm italic">No appointments found.</div>}
+        </div>
+      </section>
+    )}
 
-    {selectedAppointment && <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"><div className="bg-white dark:bg-slate-900 rounded-2xl p-5 w-full max-w-lg"><div className="flex justify-between mb-4"><h3 className="font-bold">Appointment Details</h3><button onClick={() => setSelectedAppointment(null)} className="font-bold">×</button></div><div className="space-y-2 text-xs"><div><b>Purpose:</b> {selectedAppointment.appointmentType}</div><div><b>Business:</b> {selectedAppointment.businessName || '—'}</div><div><b>Applicant:</b> {selectedAppointment.fullName}</div><div><b>Date:</b> {selectedAppointment.date}</div><div><b>Time:</b> {selectedAppointment.timeSlot || 'All Day'}</div><div><b>Description:</b> {selectedAppointment.description || '—'}</div><div><b>Status:</b> {selectedAppointment.status}</div></div><button type="button" onClick={() => setSelectedAppointment(null)} className="mt-5 w-full px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold">Close</button></div></div>}
+    {selectedAppointment && (
+      <div className="fixed inset-0 z-[60] bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 w-full max-w-lg shadow-2xl border border-slate-200 dark:border-slate-800">
+          <div className="flex justify-between items-center mb-6 border-b pb-4">
+            <h3 className="font-bold text-lg">Appointment Details</h3>
+            <button onClick={() => setSelectedAppointment(null)} className="font-bold text-slate-400 hover:text-slate-600 text-xl">×</button>
+          </div>
+          
+          <div className="space-y-4 text-sm bg-slate-50 dark:bg-slate-950 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
+            <div className="flex justify-between border-b pb-2"><span className="text-slate-500 font-semibold">Status</span><span className={`px-2 py-0.5 rounded font-bold text-[10px] ${selectedAppointment.status === 'SCHEDULED' ? 'bg-blue-100 text-blue-800' : selectedAppointment.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-800' : selectedAppointment.status === 'CANCELLED' ? 'bg-rose-100 text-rose-800' : 'bg-slate-200'}`}>{selectedAppointment.status}</span></div>
+            <div className="flex justify-between border-b pb-2"><span className="text-slate-500 font-semibold">Date & Time</span><span className="font-semibold text-right">{selectedAppointment.date} {selectedAppointment.timeSlot ? `at ${selectedAppointment.timeSlot}` : ''}</span></div>
+            <div className="flex justify-between border-b pb-2"><span className="text-slate-500 font-semibold">Citizen Name</span><span className="font-semibold text-right">{selectedAppointment.fullName}</span></div>
+            <div className="flex justify-between border-b pb-2"><span className="text-slate-500 font-semibold">Email / Phone</span><span className="text-right">{selectedAppointment.email}<br/><span className="text-xs text-slate-500">{selectedAppointment.phone}</span></span></div>
+            <div className="flex justify-between border-b pb-2"><span className="text-slate-500 font-semibold">Office</span><span className="text-right">{selectedAppointment.department}</span></div>
+            <div className="flex justify-between border-b pb-2"><span className="text-slate-500 font-semibold">Transaction Type</span><span className="text-right font-medium text-blue-700 dark:text-blue-400">{selectedAppointment.appointmentType}</span></div>
+            {selectedAppointment.businessName && <div className="flex justify-between border-b pb-2"><span className="text-slate-500 font-semibold">Business Name</span><span className="text-right">{selectedAppointment.businessName}</span></div>}
+          </div>
+
+          <div className="mt-6 flex flex-col gap-2">
+            {selectedAppointment.status === 'SCHEDULED' && (
+              <div className="flex gap-2">
+                <button type="button" disabled={submitting} onClick={() => handleUpdateAppointmentStatus(selectedAppointment.id, 'COMPLETED')} className="flex-1 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors">Mark Completed</button>
+                <button type="button" disabled={submitting} onClick={() => handleUpdateAppointmentStatus(selectedAppointment.id, 'CANCELLED')} className="flex-1 py-3 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-700 text-xs font-bold transition-colors">Cancel Appointment</button>
+              </div>
+            )}
+            <button type="button" onClick={() => setSelectedAppointment(null)} className="w-full py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors">Close Window</button>
+          </div>
+        </div>
+      </div>
+    )}
 
     {selectedAssessment && (() => {
       const isArchived = selectedAssessment.recordStatus === 'ARCHIVED';

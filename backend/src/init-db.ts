@@ -253,6 +253,28 @@ export async function initializeDatabase(): Promise<void> {
       ON otp_verifications(created_at);
 
       -- ==========================================================
+      -- APPOINTMENTS
+      -- ==========================================================
+      CREATE TABLE IF NOT EXISTS appointments (
+          id VARCHAR(100) PRIMARY KEY,
+          department VARCHAR(255) NOT NULL,
+          appointment_type VARCHAR(255) NOT NULL,
+          business_name VARCHAR(255),
+          tin VARCHAR(100),
+          address TEXT,
+          description TEXT,
+          full_name VARCHAR(255) NOT NULL,
+          email VARCHAR(255) NOT NULL,
+          phone VARCHAR(100),
+          appointment_date DATE NOT NULL,
+          time_slot VARCHAR(100),
+          remarks TEXT,
+          status VARCHAR(50) DEFAULT 'SCHEDULED',
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      -- ==========================================================
       -- BUSINESS ASSESSMENTS
       -- ==========================================================
       CREATE TABLE IF NOT EXISTS business_assessments (

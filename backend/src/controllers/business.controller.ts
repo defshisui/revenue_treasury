@@ -1003,7 +1003,7 @@ export async function createAppointment(req: Request, res: Response): Promise<vo
         id, department, appointment_type, business_name, tin, address,
         description, full_name, email, phone, appointment_date, time_slot,
         remarks, status
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'PENDING') RETURNING *`,
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'SCHEDULED') RETURNING *`,
       [
         id,
         department,
@@ -1076,7 +1076,7 @@ export async function getAppointments(req: Request, res: Response): Promise<void
 export async function updateAppointmentStatus(req: Request, res: Response): Promise<void> {
   const { id } = req.params;
   const status = String(req.body?.status || '').toUpperCase();
-  if (!['PENDING', 'APPROVED', 'CANCELLED', 'ARCHIVED'].includes(status)) {
+  if (!['SCHEDULED', 'COMPLETED', 'CANCELLED', 'NO_SHOW'].includes(status)) {
     res.status(400).json({ message: 'Invalid appointment status.' });
     return;
   }
@@ -1172,6 +1172,35 @@ export async function linkInPersonApplication(req: Request, res: Response): Prom
   } catch (err: any) {
     console.error('Error linking application:', err);
     res.status(500).json({ message: err.message || 'Failed to link application.' });
+  }
+}
+
+export async function verifyTaxBillOR(req: Request, res: Response): Promise<void> {
+  const taxBillNo = String(req.body?.taxBillNo || '').trim();
+  const orNo = String(req.body?.orNo || '').trim();
+
+  if (!taxBillNo || !orNo) {
+    res.status(400).json({ message: 'Both Tax Bill Number and O.R. Number are required for verification.' });
+    return;
+  }
+
+  try {
+    const result = await pool.query(
+      `SELECT business_name, tax_bill_number, official_receipt_number, payment_amount, payment_date, payment_method, payment_status 
+       FROM business_assessments 
+       WHERE tax_bill_number = $1 AND official_receipt_number = $2 AND payment_status = 'PAID'
+       LIMIT 1`,
+      [taxBillNo, orNo]
+    );
+
+    if (result.rows.length > 0) {
+      res.status(200).json({ verified: true, record: result.rows[0] });
+    } else {
+      res.status(200).json({ verified: false });
+    }
+  } catch (err) {
+    console.error('Error verifying Tax Bill & OR:', err);
+    res.status(500).json({ message: 'Internal server error during verification.' });
   }
 }
 
