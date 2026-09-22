@@ -6,12 +6,20 @@ import type { AuthenticatedRequest } from '../middleware/auth.js';
 
 type BusinessStatus =
   | 'SUBMITTED'
-  | 'FOR_COMPLIANCE'
+  | 'FOR_INITIAL_ASSESSMENT'
   | 'FOR_FINAL_REVIEW'
+  | 'RETURNED_FOR_COMPLIANCE'
+  | 'RESUBMITTED'
   | 'FOR_FINAL_APPROVAL'
-  | 'APPROVED'
+  | 'TAX_BILL_ISSUED'
+  | 'FOR_OWNER_PAYMENT'
+  | 'FOR_PAYMENT_VALIDATION'
+  | 'OR_ISSUED'
   | 'REJECTED'
-  | 'ARCHIVED';
+  | 'ARCHIVED'
+  // Legacy / back-compat
+  | 'FOR_COMPLIANCE'
+  | 'APPROVED';
 
 type DocumentRequirementKey =
   | 'sales_declaration'
@@ -205,6 +213,7 @@ function formatAssessment(row: any) {
     quarter: row.quarter || 'ANNUAL',
     dueDate: row.due_date || null,
     status: row.status,
+    recordStatus: row.record_status || 'ACTIVE',
     applicationDate: row.application_date,
     psicCode: row.psic_code || '',
     grossSales: Number(row.gross_sales || 0),
@@ -215,6 +224,8 @@ function formatAssessment(row: any) {
     missingDocuments: getMissingDocuments(row),
     remarks: row.remarks || '',
     complianceRemarks: row.compliance_remarks || '',
+    initialAssessedBy: row.initial_assessed_by || '',
+    initialAssessedAt: row.initial_assessed_at || null,
     reviewedBy: row.reviewed_by || '',
     reviewedAt: row.reviewed_at || null,
     finalReviewedBy: row.final_reviewed_by || '',
@@ -234,7 +245,7 @@ function formatAssessment(row: any) {
 }
 
 export async function getBusinessAssessments(req: Request, res: Response): Promise<void> {
-  const { status, email, search, searchType, page = '1', limit = '10' } = req.query;
+  const { status, recordStatus, email, search, searchType, page = '1', limit = '10' } = req.query;
   const staff = isStaff(req);
   const authEmail = String((req as AuthenticatedRequest).user?.email || '').trim().toLowerCase();
 
@@ -258,6 +269,14 @@ export async function getBusinessAssessments(req: Request, res: Response): Promi
     if (status && status !== 'ALL') {
       query += ` AND status = $${paramIndex++}`;
       params.push(String(status));
+    }
+
+    if (recordStatus && recordStatus !== 'ALL') {
+      query += ` AND record_status = $${paramIndex++}`;
+      params.push(String(recordStatus));
+    } else if (!recordStatus) {
+      query += ` AND record_status = $${paramIndex++}`;
+      params.push('ACTIVE');
     }
 
     if (search) {
@@ -300,6 +319,14 @@ export async function getBusinessAssessments(req: Request, res: Response): Promi
     if (status && status !== 'ALL') {
       countClauses.push(`status = $${countIndex++}`);
       countParams.push(String(status));
+    }
+
+    if (recordStatus && recordStatus !== 'ALL') {
+      countClauses.push(`record_status = $${countIndex++}`);
+      countParams.push(String(recordStatus));
+    } else if (!recordStatus) {
+      countClauses.push(`record_status = $${countIndex++}`);
+      countParams.push('ACTIVE');
     }
 
     if (search) {
@@ -515,8 +542,9 @@ export async function uploadBusinessComplianceDocuments(req: Request, res: Respo
       return;
     }
 
-    if (String(record.status || '').toUpperCase() !== 'FOR_COMPLIANCE') {
-      res.status(409).json({ message: 'Additional compliance documents can only be submitted for returned assessments.' });
+    const currentStatus = String(record.status || '').toUpperCase();
+    if (currentStatus !== 'RETURNED_FOR_COMPLIANCE' && currentStatus !== 'FOR_COMPLIANCE') {
+      res.status(409).json({ message: 'Additional compliance documents can only be submitted for assessments returned for compliance.' });
       return;
     }
 
@@ -527,7 +555,7 @@ export async function uploadBusinessComplianceDocuments(req: Request, res: Respo
     const result = await pool.query(
       `UPDATE business_assessments
        SET attachments = $1::jsonb,
-           status = 'SUBMITTED',
+           status = 'RESUBMITTED',
            compliance_remarks = NULL,
            remarks = NULL,
            reviewed_at = NULL,
@@ -563,23 +591,41 @@ export async function uploadBusinessComplianceDocuments(req: Request, res: Respo
 
 export async function updateAssessmentStatus(req: Request, res: Response): Promise<void> {
   const { id } = req.params;
-  const status = String(req.body?.status || '').toUpperCase() as BusinessStatus;
+  const status = req.body?.status ? String(req.body.status).toUpperCase() as BusinessStatus : undefined;
+  const recordStatus = req.body?.recordStatus ? String(req.body.recordStatus).toUpperCase() : undefined;
   const remarks = String(req.body?.remarks || '').trim();
   const suppliedFees = parseJsonObject(req.body?.computedFees);
   const suppliedChecklist = parseJsonObject(req.body?.documentChecklist);
 
+  // Canonical Business Tax assessment statuses.
+  // ARCHIVED is NOT an application status — use recordStatus to archive records.
+  // FOR_COMPLIANCE and APPROVED are legacy aliases kept for reading old data only.
   const allowedStatuses = new Set<BusinessStatus>([
     'SUBMITTED',
-    'FOR_COMPLIANCE',
+    'FOR_INITIAL_ASSESSMENT',
     'FOR_FINAL_REVIEW',
+    'RETURNED_FOR_COMPLIANCE',
+    'RESUBMITTED',
     'FOR_FINAL_APPROVAL',
-    'APPROVED',
+    'TAX_BILL_ISSUED',
+    'FOR_OWNER_PAYMENT',
+    'FOR_PAYMENT_VALIDATION',
+    'OR_ISSUED',
     'REJECTED',
-    'ARCHIVED',
   ]);
 
-  if (!allowedStatuses.has(status)) {
+  if (status && !allowedStatuses.has(status)) {
     res.status(400).json({ message: 'Invalid Business Tax assessment status.' });
+    return;
+  }
+
+  if (recordStatus && recordStatus !== 'ACTIVE' && recordStatus !== 'ARCHIVED') {
+    res.status(400).json({ message: 'Invalid record status.' });
+    return;
+  }
+
+  if (!status && !recordStatus) {
+    res.status(400).json({ message: 'No status or recordStatus provided.' });
     return;
   }
 
@@ -595,13 +641,16 @@ export async function updateAssessmentStatus(req: Request, res: Response): Promi
     }
 
     const current = currentResult.rows[0];
+    const nextStatus = status || current.status;
+    const nextRecordStatus = recordStatus || current.record_status || 'ACTIVE';
+
     const currentFees = parseJsonObject(current.computed_fees);
     const currentChecklist = parseJsonObject(current.document_checklist);
     const nextFees = Object.keys(suppliedFees).length > 0 ? suppliedFees : currentFees;
     const nextChecklist = Object.keys(suppliedChecklist).length > 0 ? suppliedChecklist : currentChecklist;
     const total = Number(nextFees.total || 0);
 
-    if (status === 'APPROVED') {
+    if (nextStatus === 'APPROVED' || nextStatus === 'TAX_BILL_ISSUED') {
       const missingKeys = buildRequiredDocumentKeys(current).filter((key) => nextChecklist[key] !== true);
       if (missingKeys.length > 0) {
         res.status(409).json({
@@ -622,50 +671,68 @@ export async function updateAssessmentStatus(req: Request, res: Response): Promi
     let orderOfPaymentNumber = current.order_of_payment_number || null;
     const applicationYear = Number(current.tax_year || new Date().getFullYear());
 
-    if (status === 'APPROVED') {
+    // Tax Bill and Order of Payment are generated only when the Treasurer
+    // issues the Tax Bill (TAX_BILL_ISSUED). Legacy APPROVED records are also
+    // handled here so existing data is not broken.
+    if (nextStatus === 'TAX_BILL_ISSUED' || nextStatus === 'APPROVED') {
       if (!taxBillNumber) taxBillNumber = await generateUniqueTaxBillNumber(applicationYear);
       if (!orderOfPaymentNumber) orderOfPaymentNumber = generateReference('OP', taxBillNumber);
     }
 
     const authEmail = String((req as AuthenticatedRequest).user?.email || 'treasury-staff');
 
-    const reviewedAt = status === 'FOR_FINAL_REVIEW' ? new Date() : current.reviewed_at;
-    const reviewedBy = status === 'FOR_FINAL_REVIEW' ? authEmail : current.reviewed_by;
+    // Initial assessment officer: recorded when staff moves to FOR_INITIAL_ASSESSMENT.
+    const initialAssessedAt = nextStatus === 'FOR_INITIAL_ASSESSMENT' && current.status !== nextStatus ? new Date() : current.initial_assessed_at;
+    const initialAssessedBy = nextStatus === 'FOR_INITIAL_ASSESSMENT' && current.status !== nextStatus ? authEmail : current.initial_assessed_by;
 
-    const finalReviewedAt = status === 'FOR_FINAL_APPROVAL' ? new Date() : current.final_reviewed_at;
-    const finalReviewedBy = status === 'FOR_FINAL_APPROVAL' ? authEmail : current.final_reviewed_by;
+    // Final review officer: recorded when staff moves to FOR_FINAL_REVIEW.
+    const reviewedAt = nextStatus === 'FOR_FINAL_REVIEW' && current.status !== nextStatus ? new Date() : current.reviewed_at;
+    const reviewedBy = nextStatus === 'FOR_FINAL_REVIEW' && current.status !== nextStatus ? authEmail : current.reviewed_by;
 
-    const complianceRemarks = status === 'FOR_COMPLIANCE' ? remarks || 'Additional documents or clarification are required.' : null;
-    const approvedAt = status === 'APPROVED' ? new Date() : current.approved_at;
-    const approvedBy = status === 'APPROVED' ? authEmail : current.approved_by;
-    const paymentAmount = status === 'APPROVED' ? total : Number(current.payment_amount || currentFees.total || 0);
-    const dueDate = status === 'APPROVED' && String(current.assessment_period || 'ANNUAL_RENEWAL') === 'ANNUAL_RENEWAL'
+    // Final review approval (operations officer → treasurer): recorded on FOR_FINAL_APPROVAL.
+    const finalReviewedAt = nextStatus === 'FOR_FINAL_APPROVAL' && current.status !== nextStatus ? new Date() : current.final_reviewed_at;
+    const finalReviewedBy = nextStatus === 'FOR_FINAL_APPROVAL' && current.status !== nextStatus ? authEmail : current.final_reviewed_by;
+
+    // Compliance remarks are set ONLY when returning for compliance.
+    const complianceRemarks = nextStatus === 'RETURNED_FOR_COMPLIANCE' ? remarks || 'Additional documents or clarification are required.' : null;
+
+    // Treasurer approval: recorded on TAX_BILL_ISSUED (canonical) or legacy APPROVED.
+    const approvedAt = (nextStatus === 'TAX_BILL_ISSUED' || nextStatus === 'APPROVED') && current.status !== nextStatus ? new Date() : current.approved_at;
+    const approvedBy = (nextStatus === 'TAX_BILL_ISSUED' || nextStatus === 'APPROVED') && current.status !== nextStatus ? authEmail : current.approved_by;
+
+    // Payment amount and due date are set when the Tax Bill is issued.
+    const paymentAmount = (nextStatus === 'TAX_BILL_ISSUED' || nextStatus === 'APPROVED') ? total : Number(current.payment_amount || currentFees.total || 0);
+    const dueDate = (nextStatus === 'TAX_BILL_ISSUED' || nextStatus === 'APPROVED') && String(current.assessment_period || 'ANNUAL_RENEWAL') === 'ANNUAL_RENEWAL'
       ? `${applicationYear}-01-20`
       : current.due_date;
 
     const result = await pool.query(
       `UPDATE business_assessments
        SET status = $1,
-           remarks = $2,
-           compliance_remarks = $3,
-           computed_fees = $4::jsonb,
-           document_checklist = $5::jsonb,
-           payment_amount = $6,
-           tax_bill_number = $7,
-           order_of_payment_number = $8,
-           due_date = $9,
-           reviewed_by = $10,
-           reviewed_at = $11,
-           final_reviewed_by = $12,
-           final_reviewed_at = $13,
-           approved_by = $14,
-           approved_at = $15,
+           record_status = $2,
+           remarks = $3,
+           compliance_remarks = $4,
+           computed_fees = $5::jsonb,
+           document_checklist = $6::jsonb,
+           payment_amount = $7,
+           tax_bill_number = $8,
+           order_of_payment_number = $9,
+           due_date = $10,
+           initial_assessed_by = $11,
+           initial_assessed_at = $12,
+           reviewed_by = $13,
+           reviewed_at = $14,
+           final_reviewed_by = $15,
+           final_reviewed_at = $16,
+           approved_by = $17,
+           approved_at = $18,
            updated_at = NOW()
-       WHERE id = $16
+       WHERE id = $19
        RETURNING *`,
       [
-        status,
-        status === 'FOR_COMPLIANCE' ? null : remarks || null,
+        nextStatus,
+        nextRecordStatus,
+        nextStatus === 'RETURNED_FOR_COMPLIANCE' ? null : remarks || current.remarks || null,
         complianceRemarks,
         JSON.stringify(nextFees),
         JSON.stringify(nextChecklist),
@@ -673,6 +740,8 @@ export async function updateAssessmentStatus(req: Request, res: Response): Promi
         taxBillNumber,
         orderOfPaymentNumber,
         dueDate,
+        initialAssessedBy,
+        initialAssessedAt,
         reviewedBy,
         reviewedAt,
         finalReviewedBy,
@@ -690,13 +759,13 @@ export async function updateAssessmentStatus(req: Request, res: Response): Promi
       String((req as AuthenticatedRequest).user?.role || 'treasury-staff'),
       'Business Tax Module',
       'BUSINESS_TAX_ASSESSMENT_STATUS_UPDATED',
-      status === 'FOR_COMPLIANCE' || status === 'REJECTED' ? 'WARNING' : 'INFO',
-      JSON.stringify({ status: current.status, computedFees: currentFees, documentChecklist: currentChecklist }),
-      JSON.stringify({ status, computedFees: nextFees, documentChecklist: nextChecklist, taxBillNumber, orderOfPaymentNumber })
+      (nextStatus === 'FOR_COMPLIANCE' || nextStatus === 'RETURNED_FOR_COMPLIANCE' || nextStatus === 'REJECTED') ? 'WARNING' : 'INFO',
+      JSON.stringify({ status: current.status, record_status: current.record_status, computedFees: currentFees, documentChecklist: currentChecklist }),
+      JSON.stringify({ status: nextStatus, record_status: nextRecordStatus, computedFees: nextFees, documentChecklist: nextChecklist, taxBillNumber, orderOfPaymentNumber })
     );
 
     res.status(200).json({
-      message: `Business Tax assessment updated to ${status}.`,
+      message: `Business Tax assessment updated.`,
       record: formatAssessment(result.rows[0]),
     });
   } catch (err: any) {
@@ -776,8 +845,10 @@ export async function verifyTaxBill(req: Request, res: Response): Promise<void> 
     }
 
     const computedFees = parseJsonObject(record.computed_fees);
+    // Any status at or past TAX_BILL_ISSUED is valid and assessed for payment.
+    const assessedStatuses = new Set(['APPROVED', 'TAX_BILL_ISSUED', 'FOR_OWNER_PAYMENT', 'FOR_PAYMENT_VALIDATION', 'OR_ISSUED']);
     res.status(200).json({
-      status: String(record.status || '').toUpperCase() === 'APPROVED' ? 'VALID & ASSESSED' : 'PENDING EVALUATION',
+      status: assessedStatuses.has(String(record.status || '').toUpperCase()) ? 'VALID & ASSESSED' : 'PENDING EVALUATION',
       record: {
         businessName: record.business_name,
         taxBillNo: record.tax_bill_number,

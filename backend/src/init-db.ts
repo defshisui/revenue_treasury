@@ -173,9 +173,9 @@ export async function initializeDatabase(): Promise<void> {
           balance NUMERIC(12, 2) DEFAULT 0,
 
           status VARCHAR(50) DEFAULT 'Unpaid',
-          paymentStatus VARCHAR(50) DEFAULT 'Unpaid',
+          payment_status VARCHAR(50) DEFAULT 'Unpaid',
 
-          paymentMethod VARCHAR(50),
+          payment_method VARCHAR(50),
           officialReceiptNumber VARCHAR(100),
           paymentReference VARCHAR(100),
           paymentDate DATE,
@@ -262,6 +262,7 @@ export async function initializeDatabase(): Promise<void> {
           business_name VARCHAR(255) NOT NULL,
           business_owner VARCHAR(255),
           status VARCHAR(50) DEFAULT 'PENDING',
+          record_status VARCHAR(50) DEFAULT 'ACTIVE',
           psic_code VARCHAR(50),
           gross_sales NUMERIC(15, 2) DEFAULT 0,
           tin VARCHAR(50),
@@ -272,6 +273,7 @@ export async function initializeDatabase(): Promise<void> {
       );
 
       -- BUSINESS TAX WORKFLOW / DOCUMENT / PAYMENT FIELDS
+      ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS record_status VARCHAR(50) DEFAULT 'ACTIVE';
       ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS business_address TEXT;
       ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS barangay VARCHAR(100);
       ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS business_type VARCHAR(100);
@@ -307,6 +309,8 @@ export async function initializeDatabase(): Promise<void> {
       ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS paymongo_payment_id VARCHAR(255);
       ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS paymongo_session_id VARCHAR(255);
       ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();
+      ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS initial_assessed_by VARCHAR(255);
+      ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS initial_assessed_at TIMESTAMP;
 
       UPDATE business_assessments
       SET payment_status = CASE

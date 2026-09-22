@@ -434,11 +434,11 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
 
   const handleNextStep = (targetStep: number) => {
     if (currentStep === 1) {
-      if (!salesForm.mayorsPermitNumber.trim() || !salesForm.businessName.trim() || !salesForm.businessOwner.trim() || !salesForm.businessAddress.trim() || !salesForm.barangay.trim()) {
+      if (!salesForm.mayorsPermitNumber.trim() || !salesForm.businessName.trim()) {
         return alert('Please fill in all mandatory fields before proceeding.');
       }
     } else if (currentStep === 2) {
-      if (!salesForm.businessType || !salesForm.lineOfBusiness.trim() || !salesForm.businessAreaSqm || !salesForm.registrationType || !salesForm.tin.trim() || !salesForm.birRegistered || !salesForm.hasOtherBranches || !salesForm.hasMultipleLines) {
+      if (!salesForm.businessOwner.trim() || !salesForm.businessAddress.trim() || !salesForm.barangay.trim() || !salesForm.businessType || !salesForm.lineOfBusiness.trim() || !salesForm.businessAreaSqm || !salesForm.registrationType || !salesForm.tin.trim() || !salesForm.birRegistered || !salesForm.hasOtherBranches || !salesForm.hasMultipleLines) {
         return alert('Please fill in all mandatory fields before proceeding.');
       }
     } else if (currentStep === 3) {
@@ -581,7 +581,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
   };
 
   const handlePayMongoBusinessTaxQrPayment = async (record: AssessmentRecord) => {
-    if (record.status !== 'APPROVED' || record.paymentStatus === 'PAID') {
+    if (record.status !== 'FOR_OWNER_PAYMENT' || record.paymentStatus === 'PAID') {
       setQrError('This assessment is not available for payment.');
       return;
     }
@@ -752,7 +752,6 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                   <option value="FOR_FINAL_APPROVAL">FOR FINAL APPROVAL</option>
                   <option value="TAX_BILL_ISSUED">TAX BILL ISSUED</option>
                   <option value="FOR_OWNER_PAYMENT">FOR OWNER PAYMENT</option>
-                  <option value="PAID">PAID</option>
                   <option value="FOR_PAYMENT_VALIDATION">FOR PAYMENT VALIDATION</option>
                   <option value="OR_ISSUED">OR ISSUED</option>
                 </select>
@@ -810,10 +809,9 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                         >
                           {(() => {
                             const s = record.status;
-                            if (s === 'RETURNED_FOR_COMPLIANCE' || s === 'FOR_COMPLIANCE') return 'Respond';
-                            if (s === 'TAX_BILL_ISSUED' || s === 'APPROVED') return 'View Tax Bill';
+                            if (s === 'RETURNED_FOR_COMPLIANCE') return 'Respond';
+                            if (s === 'TAX_BILL_ISSUED') return 'View Tax Bill';
                             if (s === 'FOR_OWNER_PAYMENT') return 'Pay';
-                            if (s === 'PAID') return 'View Payment';
                             if (s === 'FOR_PAYMENT_VALIDATION') return 'View Payment Status';
                             if (s === 'OR_ISSUED') return 'View OR';
                             if (s === 'ARCHIVED') return record.officialReceiptNumber ? 'View OR' : 'View Record';
@@ -904,9 +902,6 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                         <div><label className="label">Mayor’s Permit Number *</label><input required value={salesForm.mayorsPermitNumber} onChange={(e) => setSalesForm({ ...salesForm, mayorsPermitNumber: e.target.value })} className="field" /></div>
                         <div><label className="label">Business Name *</label><input required value={salesForm.businessName} onChange={(e) => setSalesForm({ ...salesForm, businessName: e.target.value })} className="field" /></div>
-                        <div><label className="label">Business Owner / Applicant *</label><input required value={salesForm.businessOwner} onChange={(e) => setSalesForm({ ...salesForm, businessOwner: e.target.value })} className="field" /></div>
-                        <div className="lg:col-span-2"><label className="label">Business Address *</label><input required value={salesForm.businessAddress} onChange={(e) => setSalesForm({ ...salesForm, businessAddress: e.target.value })} className="field" /></div>
-                        <div><label className="label">Barangay *</label><input required value={salesForm.barangay} onChange={(e) => setSalesForm({ ...salesForm, barangay: e.target.value })} className="field" /></div>
                       </div>
                     </div>
                   )}
@@ -915,7 +910,10 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                     <div className="space-y-4">
                       <h4 className="font-bold text-sm border-b pb-2 mb-4">Business Profile & Registration</h4>
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <div><label className="label">Business Owner / Applicant *</label><input required value={salesForm.businessOwner} onChange={(e) => setSalesForm({ ...salesForm, businessOwner: e.target.value })} className="field" /></div>
                         <div><label className="label">Business Type *</label><select value={salesForm.businessType} onChange={(e) => setSalesForm({ ...salesForm, businessType: e.target.value })} className="field"><option>Manufacturer</option><option>Wholesaler</option><option>Retailer</option><option>Exporter</option><option>Service</option><option>Other</option></select></div>
+                        <div className="lg:col-span-2"><label className="label">Business Address *</label><input required value={salesForm.businessAddress} onChange={(e) => setSalesForm({ ...salesForm, businessAddress: e.target.value })} className="field" /></div>
+                        <div><label className="label">Barangay *</label><input required value={salesForm.barangay} onChange={(e) => setSalesForm({ ...salesForm, barangay: e.target.value })} className="field" /></div>
                         <div><label className="label">Line / Nature of Business *</label><input required value={salesForm.lineOfBusiness} onChange={(e) => setSalesForm({ ...salesForm, lineOfBusiness: e.target.value })} className="field" placeholder="e.g. Retail sale of food products" /></div>
                         <div><label className="label">Business Area (sqm) *</label><input required type="number" min="0" step="0.01" value={salesForm.businessAreaSqm} onChange={(e) => setSalesForm({ ...salesForm, businessAreaSqm: e.target.value })} className="field" /></div>
                         <div><label className="label">Registration Type *</label><select value={salesForm.registrationType} onChange={(e) => setSalesForm({ ...salesForm, registrationType: e.target.value })} className="field"><option>DTI</option><option>SEC</option><option>CDA</option><option>Other</option></select></div>
@@ -967,14 +965,14 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                         <div className="grid grid-cols-2 gap-2 text-[10px]">
                           <div><span className="text-slate-500">Mayor's Permit:</span> <span className="font-mono">{salesForm.mayorsPermitNumber}</span></div>
                           <div><span className="text-slate-500">Business Name:</span> {salesForm.businessName}</div>
-                          <div><span className="text-slate-500">Owner:</span> {salesForm.businessOwner}</div>
-                          <div className="col-span-2"><span className="text-slate-500">Address:</span> {salesForm.businessAddress}, {salesForm.barangay}</div>
                         </div>
                       </div>
 
                       <div className="rounded-xl border p-4 space-y-4 bg-slate-50 dark:bg-slate-950">
                         <div className="flex justify-between items-center border-b pb-2"><div className="font-bold">2. Business Profile & Registration</div><button type="button" onClick={() => setCurrentStep(2)} className="text-blue-600 font-bold hover:underline">Edit</button></div>
                         <div className="grid grid-cols-2 gap-2 text-[10px]">
+                          <div><span className="text-slate-500">Owner:</span> {salesForm.businessOwner}</div>
+                          <div className="col-span-2"><span className="text-slate-500">Address:</span> {salesForm.businessAddress}, {salesForm.barangay}</div>
                           <div><span className="text-slate-500">Type:</span> {salesForm.businessType}</div>
                           <div><span className="text-slate-500">Line:</span> {salesForm.lineOfBusiness}</div>
                           <div><span className="text-slate-500">Area:</span> {salesForm.businessAreaSqm} sqm</div>
@@ -1060,14 +1058,14 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3"><div><span className="labelText">Gross Sales / Receipts</span><div className="font-bold">{money(selectedAssessmentView.grossSales)}</div></div><div><span className="labelText">Tax Bill</span><div className="font-mono font-bold text-blue-700 dark:text-blue-400">{selectedAssessmentView.taxBillNumber || 'Not yet issued'}</div></div><div><span className="labelText">Order of Payment</span><div className="font-mono">{selectedAssessmentView.orderOfPaymentNumber || 'Not yet issued'}</div></div><div><span className="labelText">Due Date</span><div>{selectedAssessmentView.dueDate ? new Date(selectedAssessmentView.dueDate).toLocaleDateString() : '—'}</div></div></div>
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-3"><div className="card"><span className="labelText">Address</span><div>{selectedAssessmentView.businessAddress || '—'}</div><div>{selectedAssessmentView.barangay || '—'}</div></div><div className="card"><span className="labelText">Business Classification</span><div>{selectedAssessmentView.businessType || '—'}</div><div>{selectedAssessmentView.lineOfBusiness || '—'}</div><div>{Number(selectedAssessmentView.businessAreaSqm || 0).toLocaleString()} sqm</div></div><div className="card"><span className="labelText">Registration</span><div>{selectedAssessmentView.registrationType || '—'} {selectedAssessmentView.registrationNumber || ''}</div><div>BIR Registered: {selectedAssessmentView.birRegistered ? 'Yes' : 'No'}</div><div>Branches: {selectedAssessmentView.hasOtherBranches ? 'Yes' : 'No'}</div><div>Multiple Lines: {selectedAssessmentView.hasMultipleLines ? 'Yes' : 'No'}</div></div></div>
               <div className="card"><div className="font-bold mb-2">Submitted Documents</div>{(selectedAssessmentView.attachments || []).length ? <div className="space-y-2">{(selectedAssessmentView.attachments || []).map((file, index) => <div key={`${file.name}-${index}`} className="flex items-center justify-between gap-3 p-2 rounded-lg bg-white dark:bg-slate-900 border"><div className="min-w-0"><div className="font-semibold truncate">{file.name}</div><div className="text-[9px] text-slate-400">{file.type || 'supporting_document'}</div></div><button type="button" onClick={() => { setPreviewUrl(file.url); setPreviewMime(file.mimeType || (file.url.startsWith('data:application/pdf') ? 'application/pdf' : 'image')); }} className="text-blue-600 font-bold">Preview</button></div>)}</div> : <div className="text-slate-400 italic">No documents uploaded.</div>}</div>
-              {selectedAssessmentView.status === 'FOR_COMPLIANCE' && (
+              {selectedAssessmentView.status === 'RETURNED_FOR_COMPLIANCE' && (
                 <div className="card border-orange-300 dark:border-orange-900/70"><div className="font-bold text-orange-800 dark:text-orange-300">Additional documents requested</div><div className="mt-2 space-y-2">{(selectedAssessmentView.missingDocuments || []).map((item) => <div key={item.key} className="rounded-xl bg-orange-50 dark:bg-orange-950/30 p-3"><div className="font-semibold">{item.label}</div><input type="file" multiple={item.key === 'branch_permits_and_ors' || item.key === 'line_of_business_sales_breakdown'} accept={formatFileAccept} onChange={(e) => setComplianceFiles((prev) => ({ ...prev, [item.key as DocumentRequirementKey]: e.target.files ? Array.from(e.target.files) : [] }))} className="mt-2 w-full text-[10px]" />{(complianceFiles[item.key as DocumentRequirementKey] || []).length > 0 && <div className="mt-1 text-[10px] text-emerald-700">Files selected.</div>}</div>)}</div><button type="button" disabled={isComplianceSubmitting} onClick={() => void submitComplianceDocuments()} className="mt-3 px-4 py-2 rounded-xl bg-orange-600 text-white font-bold">{isComplianceSubmitting ? 'Submitting...' : 'Submit Additional Documents'}</button></div>
               )}
               <div className="card"><div className="font-bold mb-2">Assessment / Treasury Status</div><div className="grid grid-cols-2 lg:grid-cols-4 gap-3"><div><span className="labelText">Payment Status</span><span className={`inline-block px-2 py-1 rounded-full text-[9px] font-bold ${selectedAssessmentView.paymentStatus === 'PAID' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>{selectedAssessmentView.paymentStatus}</span></div><div><span className="labelText">Amount Due</span><div className="font-bold">{money(selectedAssessmentView.paymentAmount || selectedAssessmentView.computedFees?.total)}</div></div><div><span className="labelText">O.R. Number</span><div className="font-mono font-bold">{selectedAssessmentView.officialReceiptNumber || '—'}</div></div><div><span className="labelText">Payment Reference</span><div className="font-mono break-all">{selectedAssessmentView.paymentReference || '—'}</div></div></div></div>
               {(selectedAssessmentView.computedFees && Number(selectedAssessmentView.computedFees.total || 0) > 0) && <div className="card"><div className="font-bold mb-2">Approved Fee Breakdown</div>{['lbt','mayorsPermit','sanitaryFee','garbageFee','fireSafetyFee','otherFees'].map((key) => <div key={key} className="flex justify-between py-1 border-b last:border-b-0"><span>{({ lbt: 'Local Business Tax', mayorsPermit: 'Mayor’s Permit Fee', sanitaryFee: 'Sanitary Inspection Fee', garbageFee: 'Garbage Fee', fireSafetyFee: 'Fire Safety / BFP Fee', otherFees: 'Other Regulatory Fees' } as Record<string, string>)[key]}</span><span className="font-mono">{money((selectedAssessmentView.computedFees as any)?.[key])}</span></div>)}<div className="flex justify-between pt-2 font-bold"><span>Total</span><span>{money(selectedAssessmentView.computedFees.total)}</span></div></div>}
               <div className="card"><span className="labelText">Treasurer’s Office Remarks</span><div className="italic mt-1">{selectedAssessmentView.remarks || 'No remarks yet.'}</div>{selectedAssessmentView.complianceRemarks && <div className="mt-2 text-orange-700 dark:text-orange-300">Compliance: {selectedAssessmentView.complianceRemarks}</div>}</div>
             </div>
-            <div className="sticky bottom-0 flex justify-end gap-2 px-5 py-4 border-t bg-slate-50 dark:bg-slate-950">{selectedAssessmentView.status === 'APPROVED' && selectedAssessmentView.paymentStatus !== 'PAID' && <button type="button" disabled={isProcessingPayment} onClick={() => openBusinessTaxPayment(selectedAssessmentView)} className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold">{isProcessingPayment ? 'Generating QR...' : 'Proceed to Digital Payment →'}</button>}{selectedAssessmentView.paymentStatus === 'PAID' && <span className="px-3 py-2 rounded-xl bg-emerald-100 text-emerald-800 text-xs font-bold">Payment Verified</span>}<button type="button" onClick={() => setSelectedAssessmentView(null)} className="px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold">Close</button></div>
+            <div className="sticky bottom-0 flex justify-end gap-2 px-5 py-4 border-t bg-slate-50 dark:bg-slate-950">{selectedAssessmentView.status === 'FOR_OWNER_PAYMENT' && selectedAssessmentView.paymentStatus !== 'PAID' && <button type="button" disabled={isProcessingPayment} onClick={() => openBusinessTaxPayment(selectedAssessmentView)} className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold">{isProcessingPayment ? 'Generating QR...' : 'Proceed to Digital Payment →'}</button>}{selectedAssessmentView.paymentStatus === 'PAID' && <span className="px-3 py-2 rounded-xl bg-emerald-100 text-emerald-800 text-xs font-bold">Payment Verified</span>}<button type="button" onClick={() => setSelectedAssessmentView(null)} className="px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold">Close</button></div>
           </div>
         </div>
       )}

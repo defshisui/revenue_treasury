@@ -152,7 +152,7 @@ async function finalizeBusinessTaxPayment(params: {
       return { ok: true, status: 200, alreadyRecorded: true, record };
     }
 
-    if (String(record.status || '').toUpperCase() !== 'APPROVED') {
+    if (String(record.status || '').toUpperCase() !== 'APPROVED' && String(record.status || '').toUpperCase() !== 'FOR_OWNER_PAYMENT') {
       await client.query('ROLLBACK');
       return { ok: false, status: 409, error: 'This Business Tax assessment is not approved for payment yet.' };
     }
@@ -176,6 +176,7 @@ async function finalizeBusinessTaxPayment(params: {
     const updated = await client.query(
       `UPDATE business_assessments
        SET payment_status = 'PAID',
+           status = 'OR_ISSUED',
            paid_amount = $1,
            payment_method = $2,
            payment_reference = $3,
@@ -290,7 +291,9 @@ export async function createCheckoutSession(req: Request, res: Response): Promis
       }
     }
 
-    if (String(business.status || '').toUpperCase() !== 'APPROVED') {
+    // Accept FOR_OWNER_PAYMENT (canonical) or legacy APPROVED status.
+    const bizStatus = String(business.status || '').toUpperCase();
+    if (bizStatus !== 'APPROVED' && bizStatus !== 'FOR_OWNER_PAYMENT') {
       res.status(409).json({ error: 'This Business Tax assessment is not approved for payment yet.' });
       return;
     }
@@ -2046,7 +2049,8 @@ export async function createQrPaymentIntent(
       }
     }
 
-      if (String(business.status || '').toUpperCase() !== 'APPROVED') {
+      const bizStatus = String(business.status || '').toUpperCase();
+      if (bizStatus !== 'APPROVED' && bizStatus !== 'FOR_OWNER_PAYMENT') {
         res.status(409).json({ success: false, error: 'This Business Tax assessment is not approved for payment yet.' });
         return;
       }
