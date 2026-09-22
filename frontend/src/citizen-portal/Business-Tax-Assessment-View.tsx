@@ -770,7 +770,9 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
               ['assessment-list', 'My Assessments (Dashboard)'],
               ['appointments-list', 'My Appointments'],
               ['verification', 'Verify Tax Bill / O.R.'],
-            ].map(([key, label]) => (
+            ]
+              .filter(([key]) => key === currentScreen)
+              .map(([key, label]) => (
               <button key={key} type="button" onClick={() => setCurrentScreen(key as ActiveScreen)} className={`px-3 py-2 rounded-lg text-[11px] font-bold ${currentScreen === key ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}`}>{label}</button>
             ))}
             {currentScreen !== 'verification' && <button type="button" onClick={() => openModal('appointment')} className="ml-auto px-3 py-2 rounded-lg text-[11px] font-bold bg-indigo-600 hover:bg-indigo-700 text-white">Book CTO Appointment</button>}
