@@ -160,7 +160,8 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
   const location = useLocation();
   const [currentScreen, setCurrentScreen] = useState<ActiveScreen>('assessment-list');
   const [verificationType, setVerificationType] = useState<'tax-bill' | 'or-number'>('tax-bill');
-  const [isModalOpen, setIsModalOpen] = useState<false | 'appointment' | 'sales-declaration'>(false);
+  const [isModalOpen, setIsModalOpen] = useState<false | 'appointment' | 'sales-declaration' | 'link-application'>(false);
+  const [linkAppForm, setLinkAppForm] = useState({ trackingNumber: '' });
   const [selectedAssessmentView, setSelectedAssessmentView] = useState<AssessmentRecord | null>(null);
   const [complianceFiles, setComplianceFiles] = useState<Partial<Record<DocumentRequirementKey, File[]>>>({});
   const [isComplianceSubmitting, setIsComplianceSubmitting] = useState(false);
@@ -221,6 +222,9 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
     tin: '',
   });
   const [salesFiles, setSalesFiles] = useState<Partial<Record<DocumentRequirementKey, File[]>>>({});
+  const [currentStep, setCurrentStep] = useState(1);
+  const [certificationChecked, setCertificationChecked] = useState(false);
+  const [submissionSuccess, setSubmissionSuccess] = useState<{trackingNumber: string; date: string; name: string} | null>(null);
 
   const [captchaNum1, setCaptchaNum1] = useState(0);
   const [captchaNum2, setCaptchaNum2] = useState(0);
@@ -402,6 +406,29 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
     return null;
   };
 
+  const handleNextStep = (targetStep: number) => {
+    if (currentStep === 1) {
+      if (!salesForm.mayorsPermitNumber.trim() || !salesForm.businessName.trim() || !salesForm.businessOwner.trim() || !salesForm.businessAddress.trim() || !salesForm.barangay.trim()) {
+        return alert('Please fill in all mandatory fields before proceeding.');
+      }
+    } else if (currentStep === 2) {
+      if (!salesForm.businessType || !salesForm.lineOfBusiness.trim() || !salesForm.businessAreaSqm || !salesForm.registrationType || !salesForm.tin.trim() || !salesForm.birRegistered || !salesForm.hasOtherBranches || !salesForm.hasMultipleLines) {
+        return alert('Please fill in all mandatory fields before proceeding.');
+      }
+    } else if (currentStep === 3) {
+      if (!salesForm.grossSales || !salesForm.year || !salesForm.assessmentPeriod) {
+        return alert('Please fill in all mandatory sales fields before proceeding.');
+      }
+      const gross = Number(salesForm.grossSales);
+      if (!Number.isFinite(gross) || gross < 0) return alert('Enter a valid non-negative gross sales amount.');
+    } else if (currentStep === 4) {
+      for (const definition of applicableDocumentDefinitions().filter((item) => item.required)) {
+        if (!(salesFiles[definition.key] || []).length) return alert(`Please upload: ${definition.label}.`);
+      }
+    }
+    setCurrentStep(targetStep);
+  };
+
   const handleSalesDeclarationSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     const validationError = validateSalesSubmission();
@@ -453,10 +480,12 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.message || 'Failed to submit Business Tax assessment.');
-      alert(`Business Tax assessment submitted successfully.\nTracking Number: ${data.trackingNumber}`);
-      setIsModalOpen(false);
+      setSubmissionSuccess({
+        trackingNumber: data.trackingNumber,
+        date: new Date().toLocaleDateString(),
+        name: salesForm.businessName,
+      });
       setSalesFiles({});
-      setSalesForm((prev) => ({ ...prev, businessName: '', businessAddress: '', barangay: '', lineOfBusiness: '', businessAreaSqm: '', registrationNumber: '', mayorsPermitNumber: '', grossSales: '', psicCode: '', tin: '' }));
       void fetchAssessments();
     } catch (error: any) {
       alert(error.message || 'An error occurred while submitting the assessment.');
@@ -465,11 +494,19 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
     }
   };
 
-  const openModal = (type: 'appointment' | 'sales-declaration') => {
+  const openModal = (type: 'appointment' | 'sales-declaration' | 'link-application') => {
     if (type === 'appointment') {
       setCaptchaNum1(Math.floor(Math.random() * 10) + 1);
       setCaptchaNum2(Math.floor(Math.random() * 10) + 1);
       setCaptchaInput('');
+    }
+    if (type === 'sales-declaration') {
+      setCurrentStep(1);
+      setCertificationChecked(false);
+      setSubmissionSuccess(null);
+    }
+    if (type === 'link-application') {
+      setLinkAppForm({ trackingNumber: '' });
     }
     setIsModalOpen(type);
   };
@@ -649,47 +686,115 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 dark:border-slate-800 py-3 mt-2">
-          {[
-            ['assessment-list', 'My Assessments'],
-            ['appointments-list', 'My Appointments'],
-            ['verification', 'Verify Tax Bill / O.R.'],
-          ].map(([key, label]) => (
-            <button key={key} type="button" onClick={() => setCurrentScreen(key as ActiveScreen)} className={`px-3 py-2 rounded-lg text-[11px] font-bold ${currentScreen === key ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}`}>{label}</button>
-          ))}
-          {currentScreen === 'assessment-list' && <button type="button" onClick={() => openModal('sales-declaration')} className="ml-auto px-3 py-2 rounded-lg text-[11px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white">+ New Business Tax Assessment</button>}
-          {currentScreen !== 'verification' && <button type="button" onClick={() => openModal('appointment')} className="px-3 py-2 rounded-lg text-[11px] font-bold bg-indigo-600 hover:bg-indigo-700 text-white">Book CTO Appointment</button>}
-        </div>
+        {currentScreen !== 'assessment-list' && (
+          <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 dark:border-slate-800 py-3 mt-2">
+            {[
+              ['assessment-list', 'My Assessments (Dashboard)'],
+              ['appointments-list', 'My Appointments'],
+              ['verification', 'Verify Tax Bill / O.R.'],
+            ].map(([key, label]) => (
+              <button key={key} type="button" onClick={() => setCurrentScreen(key as ActiveScreen)} className={`px-3 py-2 rounded-lg text-[11px] font-bold ${currentScreen === key ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}`}>{label}</button>
+            ))}
+            {currentScreen !== 'verification' && <button type="button" onClick={() => openModal('appointment')} className="ml-auto px-3 py-2 rounded-lg text-[11px] font-bold bg-indigo-600 hover:bg-indigo-700 text-white">Book CTO Appointment</button>}
+          </div>
+        )}
 
         {currentScreen === 'assessment-list' && (
-          <div className="mt-5 space-y-4">
-            <div className="grid grid-cols-1 lg:grid-cols-[160px_170px_1fr_auto] gap-2">
-              <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }} className="p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs"><option value="ALL">All Statuses</option><option value="SUBMITTED">Submitted</option><option value="FOR_COMPLIANCE">For Compliance</option><option value="FOR_FINAL_REVIEW">For Final Review</option><option value="APPROVED">Approved</option><option value="REJECTED">Rejected</option></select>
-              <select value={searchType} onChange={(e) => setSearchType(e.target.value)} className="p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs"><option>Tracking/MP No.</option><option>Business Name</option><option>Mayor's Permit No.</option><option>Tax Bill Number</option></select>
-              <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { setCurrentPage(1); void fetchAssessments(); } }} placeholder="Search your assessment records..." className="p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs" />
-              <button type="button" onClick={() => { setCurrentPage(1); void fetchAssessments(); }} className="px-4 py-2.5 rounded-xl bg-blue-600 text-white text-xs font-bold">Search</button>
+          <div className="mt-6 space-y-8">
+            
+            {/* Primary Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-start border-b border-slate-200 dark:border-slate-800 pb-8">
+              <button type="button" onClick={() => openModal('sales-declaration')} className="px-6 py-4 rounded-full bg-blue-700 hover:bg-blue-800 text-white font-extrabold text-sm shadow-md transition-transform hover:scale-105 uppercase tracking-wide">
+                SUBMIT ONLINE SALES DECLARATION
+              </button>
+              <button type="button" onClick={() => openModal('link-application')} className="px-6 py-4 rounded-full bg-blue-700 hover:bg-blue-800 text-white font-extrabold text-sm shadow-md transition-transform hover:scale-105 uppercase tracking-wide">
+                LINK IN-PERSON APPLICATION TO MY ACCOUNT
+              </button>
+            </div>
+
+            {/* Filter and Search Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-end">
+              <div>
+                <label className="block text-slate-500 text-xs mb-1 font-semibold">Application Status</label>
+                <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }} className="w-full sm:w-64 p-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
+                  <option value="ALL">ALL</option>
+                  <option value="SUBMITTED">SUBMITTED</option>
+                  <option value="FOR INITIAL ASSESSMENT">FOR INITIAL ASSESSMENT</option>
+                  <option value="FOR FINAL REVIEW">FOR FINAL REVIEW</option>
+                  <option value="RETURNED FOR COMPLIANCE">RETURNED FOR COMPLIANCE</option>
+                  <option value="RESUBMITTED">RESUBMITTED</option>
+                  <option value="FOR FINAL APPROVAL">FOR FINAL APPROVAL</option>
+                  <option value="APPROVED">APPROVED</option>
+                  <option value="TAX BILL ISSUED">TAX BILL ISSUED</option>
+                  <option value="FOR PAYMENT">FOR PAYMENT</option>
+                  <option value="PAID">PAID</option>
+                  <option value="OR ISSUED">OR ISSUED</option>
+                </select>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 lg:justify-end">
+                <label className="block text-slate-500 text-xs font-semibold sm:mr-2">Search:</label>
+                <select value={searchType} onChange={(e) => setSearchType(e.target.value)} className="w-full sm:w-48 p-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
+                  <option>Tracking Number</option>
+                  <option>Mayor's Permit Number</option>
+                  <option>Business Name</option>
+                </select>
+                <div className="flex w-full sm:w-auto">
+                  <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { setCurrentPage(1); void fetchAssessments(); } }} className="w-full sm:w-48 p-2.5 rounded-l-lg border border-r-0 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm focus:outline-none focus:border-blue-500" />
+                  <button type="button" onClick={() => { setCurrentPage(1); void fetchAssessments(); }} className="px-4 py-2.5 rounded-r-lg bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-sm border border-l-0 border-slate-300 dark:border-slate-700">Search</button>
+                </div>
+              </div>
             </div>
 
             {fetchError && <div className="p-3 rounded-xl bg-rose-50 text-rose-700 border border-rose-200 text-xs">{fetchError}</div>}
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-x-auto shadow-sm">
-              <table className="w-full text-xs min-w-[880px]">
-                <thead className="bg-slate-50 dark:bg-slate-950 text-slate-500 uppercase text-[10px]"><tr><th className="px-4 py-3 text-left">Tracking No.</th><th className="px-4 py-3 text-left">Business</th><th className="px-4 py-3 text-left">Mayor's Permit</th><th className="px-4 py-3 text-left">Status</th><th className="px-4 py-3 text-left">Payment</th><th className="px-4 py-3 text-left">Filed</th><th className="px-4 py-3 text-right">Action</th></tr></thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {loading ? <tr><td colSpan={7} className="px-4 py-12 text-center text-slate-400">Loading Business Tax assessments...</td></tr> : assessments.length === 0 ? <tr><td colSpan={7} className="px-4 py-12 text-center text-slate-400">No Business Tax assessment records found.</td></tr> : assessments.map((record) => (
-                    <tr key={record.id} className="hover:bg-slate-50 dark:hover:bg-slate-950/50">
-                      <td className="px-4 py-3 font-mono font-bold text-blue-700 dark:text-blue-400">{record.trackingNumber}</td>
-                      <td className="px-4 py-3"><div className="font-bold text-slate-800 dark:text-slate-200">{record.businessName}</div><div className="text-[10px] text-slate-400">{record.lineOfBusiness || 'No line of business'}</div></td>
-                      <td className="px-4 py-3 font-mono text-slate-600 dark:text-slate-300">{record.mayorPermitNumber || '—'}</td>
-                      <td className="px-4 py-3"><span className={`inline-block px-2 py-1 rounded-full text-[9px] font-bold ${statusClass(record.status)}`}>{record.status}</span></td>
-                      <td className="px-4 py-3"><span className={`inline-block px-2 py-1 rounded-full text-[9px] font-bold ${record.paymentStatus === 'PAID' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'}`}>{record.paymentStatus}</span></td>
-                      <td className="px-4 py-3 text-slate-500">{new Date(record.applicationDate).toLocaleDateString()}</td>
-                      <td className="px-4 py-3 text-right"><button type="button" onClick={() => { setSelectedAssessmentView(record); setComplianceFiles({}); }} className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 font-bold">View Details</button></td>
+            
+            {/* Table Section */}
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-none overflow-x-auto">
+              <table className="w-full text-sm min-w-[1000px]">
+                <thead className="bg-blue-900 text-white uppercase text-[10px] font-bold tracking-wider">
+                  <tr>
+                    <th className="px-4 py-4 text-left border-r border-blue-800">TRACKING/MAYOR'S PERMIT NUMBER</th>
+                    <th className="px-4 py-4 text-left border-r border-blue-800">BUSINESS NAME</th>
+                    <th className="px-4 py-4 text-left border-r border-blue-800">BUSINESS OWNER</th>
+                    <th className="px-4 py-4 text-left border-r border-blue-800">APPLICATION STATUS</th>
+                    <th className="px-4 py-4 text-left border-r border-blue-800">APPLICATION DATE</th>
+                    <th className="px-4 py-4 text-center">ACTION</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                  {loading ? (
+                    <tr><td colSpan={6} className="px-4 py-16 text-center text-slate-500 bg-slate-100/50 dark:bg-slate-800/50">Loading records...</td></tr>
+                  ) : assessments.length === 0 ? (
+                    <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-500 bg-slate-100 dark:bg-slate-800/50 font-medium border-b border-slate-200 dark:border-slate-700">No data available in table</td></tr>
+                  ) : assessments.map((record) => (
+                    <tr key={record.id} className="hover:bg-blue-50 dark:hover:bg-blue-950/20">
+                      <td className="px-4 py-4 font-mono font-bold text-blue-700 dark:text-blue-400 border-r border-slate-100 dark:border-slate-800">
+                        <div>{record.trackingNumber}</div>
+                        {record.mayorPermitNumber && <div className="text-xs font-normal text-slate-500 mt-1">{record.mayorPermitNumber}</div>}
+                      </td>
+                      <td className="px-4 py-4 border-r border-slate-100 dark:border-slate-800"><div className="font-bold text-slate-800 dark:text-slate-200">{record.businessName}</div></td>
+                      <td className="px-4 py-4 border-r border-slate-100 dark:border-slate-800">{record.businessOwner || '—'}</td>
+                      <td className="px-4 py-4 border-r border-slate-100 dark:border-slate-800 text-xs font-bold uppercase text-slate-700 dark:text-slate-300">{record.status.replace(/_/g, ' ')}</td>
+                      <td className="px-4 py-4 border-r border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400">{new Date(record.applicationDate).toLocaleDateString()}</td>
+                      <td className="px-4 py-4 text-center">
+                        <button type="button" onClick={() => { setSelectedAssessmentView(record); setComplianceFiles({}); }} className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-bold underline underline-offset-2">
+                          {record.status === 'FOR_COMPLIANCE' ? 'Respond' : (record.paymentStatus === 'PAID' ? 'View OR' : (record.status === 'APPROVED' ? 'Pay' : 'View'))}
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            <div className="flex items-center justify-between text-xs text-slate-500"><span>Page {currentPage} of {totalPages}</span><div className="flex gap-2"><button type="button" disabled={currentPage <= 1} onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} className="px-3 py-1.5 rounded-lg border disabled:opacity-40">Previous</button><button type="button" disabled={currentPage >= totalPages} onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} className="px-3 py-1.5 rounded-lg border disabled:opacity-40">Next</button></div></div>
+
+            {/* Pagination Section */}
+            <div className="flex flex-col sm:flex-row items-center justify-between text-sm text-slate-600 dark:text-slate-400 pt-2">
+              <div className="order-2 sm:order-1 mt-4 sm:mt-0">Showing {assessments.length === 0 ? 0 : (currentPage - 1) * pageSize + 1} to {assessments.length === 0 ? 0 : Math.min(currentPage * pageSize, (currentPage - 1) * pageSize + assessments.length)} of {totalPages * pageSize || 0} entries</div>
+              <div className="flex border border-slate-300 dark:border-slate-700 rounded-md overflow-hidden order-1 sm:order-2 shadow-sm">
+                <button type="button" disabled={currentPage <= 1} onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} className="px-4 py-2 bg-white dark:bg-slate-900 border-r border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:bg-slate-100 dark:disabled:bg-slate-950 font-medium">Previous</button>
+                <button type="button" disabled={currentPage >= totalPages} onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} className="px-4 py-2 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:bg-slate-100 dark:disabled:bg-slate-950 font-medium">Next</button>
+              </div>
+            </div>
           </div>
         )}
 
@@ -712,32 +817,187 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
 
       {isModalOpen === 'sales-declaration' && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
-          <form onSubmit={handleSalesDeclarationSubmit} className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] overflow-y-auto border border-slate-200 dark:border-slate-800">
-            <div className="sticky top-0 z-10 flex items-center justify-between px-5 py-4 border-b bg-slate-50 dark:bg-slate-950"><div><h3 className="font-bold text-sm">NEW BUSINESS TAX ASSESSMENT</h3><p className="text-[10px] text-slate-500 mt-1">Submit the Sales Declaration and applicable supporting documents for Treasurer assessment.</p></div><button type="button" onClick={() => setIsModalOpen(false)} className="text-xl font-bold">×</button></div>
-            <div className="p-5 grid grid-cols-1 lg:grid-cols-2 gap-4 text-xs">
-              <div className="lg:col-span-2 p-3 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900"><p className="font-bold text-blue-900 dark:text-blue-200">Important</p><p className="mt-1 text-[10px] text-blue-800 dark:text-blue-300">Submitting this application creates a tracking number only. The Tax Bill and payment amount are issued after assessment, final review and Treasurer approval.</p></div>
-              <div><label className="label">Business Name *</label><input required value={salesForm.businessName} onChange={(e) => setSalesForm({ ...salesForm, businessName: e.target.value })} className="field" /></div>
-              <div><label className="label">Business Owner / Applicant *</label><input required value={salesForm.businessOwner} onChange={(e) => setSalesForm({ ...salesForm, businessOwner: e.target.value })} className="field" /></div>
-              <div><label className="label">Business Address *</label><input required value={salesForm.businessAddress} onChange={(e) => setSalesForm({ ...salesForm, businessAddress: e.target.value })} className="field" /></div>
-              <div><label className="label">Barangay *</label><input required value={salesForm.barangay} onChange={(e) => setSalesForm({ ...salesForm, barangay: e.target.value })} className="field" /></div>
-              <div><label className="label">Business Type *</label><select value={salesForm.businessType} onChange={(e) => setSalesForm({ ...salesForm, businessType: e.target.value })} className="field"><option>Manufacturer</option><option>Wholesaler</option><option>Retailer</option><option>Exporter</option><option>Service</option><option>Other</option></select></div>
-              <div><label className="label">Line / Nature of Business *</label><input required value={salesForm.lineOfBusiness} onChange={(e) => setSalesForm({ ...salesForm, lineOfBusiness: e.target.value })} className="field" placeholder="e.g. Retail sale of food products" /></div>
-              <div><label className="label">Business Area (sqm) *</label><input required type="number" min="0" step="0.01" value={salesForm.businessAreaSqm} onChange={(e) => setSalesForm({ ...salesForm, businessAreaSqm: e.target.value })} className="field" /></div>
-              <div><label className="label">Registration Type *</label><select value={salesForm.registrationType} onChange={(e) => setSalesForm({ ...salesForm, registrationType: e.target.value })} className="field"><option>DTI</option><option>SEC</option><option>CDA</option><option>Other</option></select></div>
-              <div><label className="label">Registration Number</label><input value={salesForm.registrationNumber} onChange={(e) => setSalesForm({ ...salesForm, registrationNumber: e.target.value })} className="field" placeholder="DTI / SEC / CDA number" /></div>
-              <div><label className="label">Mayor’s Permit Number *</label><input required value={salesForm.mayorsPermitNumber} onChange={(e) => setSalesForm({ ...salesForm, mayorsPermitNumber: e.target.value })} className="field" /></div>
-              <div><label className="label">TIN *</label><input required value={salesForm.tin} onChange={(e) => setSalesForm({ ...salesForm, tin: e.target.value })} className="field" /></div>
-              <div><label className="label">BIR Registered? *</label><select value={salesForm.birRegistered} onChange={(e) => setSalesForm({ ...salesForm, birRegistered: e.target.value })} className="field"><option value="yes">Yes — BIR Registered</option><option value="no">No — Not BIR Registered</option></select></div>
-              <div><label className="label">Other Branches? *</label><select value={salesForm.hasOtherBranches} onChange={(e) => setSalesForm({ ...salesForm, hasOtherBranches: e.target.value })} className="field"><option value="no">No</option><option value="yes">Yes</option></select></div>
-              <div><label className="label">Multiple Lines of Business? *</label><select value={salesForm.hasMultipleLines} onChange={(e) => setSalesForm({ ...salesForm, hasMultipleLines: e.target.value })} className="field"><option value="no">No</option><option value="yes">Yes</option></select></div>
-              <div><label className="label">Gross Sales / Receipts (PHP) *</label><input required type="number" min="0" step="0.01" value={salesForm.grossSales} onChange={(e) => setSalesForm({ ...salesForm, grossSales: e.target.value })} className="field" /></div>
-              <div><label className="label">Tax Year *</label><input required type="number" min="2000" max="2100" value={salesForm.year} onChange={(e) => setSalesForm({ ...salesForm, year: e.target.value })} className="field" /></div>
-              <div><label className="label">Assessment Period *</label><select value={salesForm.assessmentPeriod} onChange={(e) => setSalesForm({ ...salesForm, assessmentPeriod: e.target.value, quarter: e.target.value === 'ANNUAL_RENEWAL' ? 'ANNUAL' : salesForm.quarter })} className="field"><option value="ANNUAL_RENEWAL">Annual Renewal</option></select></div>
-              <div><label className="label">PSIC Code (optional)</label><input value={salesForm.psicCode} onChange={(e) => setSalesForm({ ...salesForm, psicCode: e.target.value })} className="field" placeholder="e.g. 47110" /></div>
-              <div className="lg:col-span-2"><div className="mb-2 font-bold text-slate-800 dark:text-slate-200">Document Checklist</div><div className="space-y-2">{applicableDocumentDefinitions().map((definition) => renderDocumentUploader(definition, salesFiles, setSalesFiles))}</div></div>
-            </div>
-            <div className="sticky bottom-0 flex justify-end gap-2 px-5 py-4 border-t bg-slate-50 dark:bg-slate-950"><button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 rounded-xl border text-xs font-bold">Cancel</button><button disabled={submitting} type="submit" className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold">{submitting ? 'Submitting...' : 'Submit for Assessment'}</button></div>
-          </form>
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] overflow-y-auto border border-slate-200 dark:border-slate-800">
+            {submissionSuccess ? (
+              <div className="p-8 text-center flex flex-col items-center">
+                <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 flex items-center justify-center text-3xl font-bold mb-4">✓</div>
+                <h2 className="text-2xl font-extrabold text-slate-900 dark:text-white uppercase mb-2">APPLICATION SUBMITTED</h2>
+                <div className="text-sm text-slate-600 dark:text-slate-400 mb-6 max-w-md">Your application has been submitted for Treasury assessment. You will receive a notification regarding the assessment status.</div>
+                
+                <div className="w-full max-w-sm rounded-2xl bg-slate-50 dark:bg-slate-950 p-5 text-left space-y-3 text-xs mb-8">
+                  <div className="flex justify-between border-b border-slate-200 dark:border-slate-800 pb-2"><span className="text-slate-500">Tracking Number</span><span className="font-mono font-bold text-blue-600">{submissionSuccess.trackingNumber}</span></div>
+                  <div className="flex justify-between border-b border-slate-200 dark:border-slate-800 pb-2"><span className="text-slate-500">Submission Date</span><span className="font-semibold">{submissionSuccess.date}</span></div>
+                  <div className="flex justify-between border-b border-slate-200 dark:border-slate-800 pb-2"><span className="text-slate-500">Business Name</span><span className="font-semibold text-right">{submissionSuccess.name}</span></div>
+                  <div className="flex justify-between"><span className="text-slate-500">Status</span><span className="px-2 py-1 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 font-bold text-[9px]">Submitted</span></div>
+                </div>
+
+                <div className="flex justify-center gap-3 w-full max-w-sm">
+                  <button type="button" onClick={() => { setIsModalOpen(false); setSalesForm((prev) => ({ ...prev, businessName: '', businessAddress: '', barangay: '', lineOfBusiness: '', businessAreaSqm: '', registrationNumber: '', mayorsPermitNumber: '', grossSales: '', psicCode: '', tin: '' })); }} className="flex-1 px-4 py-3 rounded-xl border font-bold text-sm">Close</button>
+                  <button type="button" onClick={() => { setIsModalOpen(false); setSalesForm((prev) => ({ ...prev, businessName: '', businessAddress: '', barangay: '', lineOfBusiness: '', businessAreaSqm: '', registrationNumber: '', mayorsPermitNumber: '', grossSales: '', psicCode: '', tin: '' })); setCurrentScreen('assessment-list'); }} className="flex-1 px-4 py-3 rounded-xl bg-blue-600 text-white font-bold text-sm hover:bg-blue-700">View Application Status</button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleSalesDeclarationSubmit} className="flex flex-col h-full">
+                <div className="sticky top-0 z-10 flex items-center justify-between px-5 py-4 border-b bg-slate-50 dark:bg-slate-950">
+                  <div>
+                    <h3 className="font-bold text-sm">2026 BUSINESS TAX ASSESSMENT</h3>
+                    <p className="text-[10px] text-slate-500 mt-1">Submit the Sales Declaration and applicable supporting documents for Treasurer assessment.</p>
+                  </div>
+                  <button type="button" onClick={() => setIsModalOpen(false)} className="text-xl font-bold">×</button>
+                </div>
+                
+                <div className="px-5 py-3 border-b bg-white dark:bg-slate-900 flex gap-2">
+                  {[1, 2, 3, 4, 5].map((step) => (
+                    <div key={step} className={`flex-1 h-2 rounded-full ${currentStep === step ? 'bg-blue-600' : currentStep > step ? 'bg-blue-200 dark:bg-blue-900' : 'bg-slate-200 dark:bg-slate-800'}`} />
+                  ))}
+                  <div className="text-[10px] font-bold text-slate-500 ml-2 whitespace-nowrap">Step {currentStep} of 5</div>
+                </div>
+
+                <div className="p-5 text-xs flex-1">
+                  {currentStep === 1 && (
+                    <div className="space-y-4">
+                      <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 mb-4">
+                        <p className="font-bold text-blue-900 dark:text-blue-200">Important</p>
+                        <p className="mt-1 text-[10px] text-blue-800 dark:text-blue-300">Submitting this application creates a tracking number only. The Tax Bill and payment amount are issued after assessment, final review and Treasurer approval.</p>
+                      </div>
+                      <h4 className="font-bold text-sm border-b pb-2 mb-4">Business Identification</h4>
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <div><label className="label">Mayor’s Permit Number *</label><input required value={salesForm.mayorsPermitNumber} onChange={(e) => setSalesForm({ ...salesForm, mayorsPermitNumber: e.target.value })} className="field" /></div>
+                        <div><label className="label">Business Name *</label><input required value={salesForm.businessName} onChange={(e) => setSalesForm({ ...salesForm, businessName: e.target.value })} className="field" /></div>
+                        <div><label className="label">Business Owner / Applicant *</label><input required value={salesForm.businessOwner} onChange={(e) => setSalesForm({ ...salesForm, businessOwner: e.target.value })} className="field" /></div>
+                        <div className="lg:col-span-2"><label className="label">Business Address *</label><input required value={salesForm.businessAddress} onChange={(e) => setSalesForm({ ...salesForm, businessAddress: e.target.value })} className="field" /></div>
+                        <div><label className="label">Barangay *</label><input required value={salesForm.barangay} onChange={(e) => setSalesForm({ ...salesForm, barangay: e.target.value })} className="field" /></div>
+                      </div>
+                    </div>
+                  )}
+
+                  {currentStep === 2 && (
+                    <div className="space-y-4">
+                      <h4 className="font-bold text-sm border-b pb-2 mb-4">Business Profile & Registration</h4>
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <div><label className="label">Business Type *</label><select value={salesForm.businessType} onChange={(e) => setSalesForm({ ...salesForm, businessType: e.target.value })} className="field"><option>Manufacturer</option><option>Wholesaler</option><option>Retailer</option><option>Exporter</option><option>Service</option><option>Other</option></select></div>
+                        <div><label className="label">Line / Nature of Business *</label><input required value={salesForm.lineOfBusiness} onChange={(e) => setSalesForm({ ...salesForm, lineOfBusiness: e.target.value })} className="field" placeholder="e.g. Retail sale of food products" /></div>
+                        <div><label className="label">Business Area (sqm) *</label><input required type="number" min="0" step="0.01" value={salesForm.businessAreaSqm} onChange={(e) => setSalesForm({ ...salesForm, businessAreaSqm: e.target.value })} className="field" /></div>
+                        <div><label className="label">Registration Type *</label><select value={salesForm.registrationType} onChange={(e) => setSalesForm({ ...salesForm, registrationType: e.target.value })} className="field"><option>DTI</option><option>SEC</option><option>CDA</option><option>Other</option></select></div>
+                        <div><label className="label">Registration Number</label><input value={salesForm.registrationNumber} onChange={(e) => setSalesForm({ ...salesForm, registrationNumber: e.target.value })} className="field" placeholder="DTI / SEC / CDA number" /></div>
+                        <div><label className="label">TIN *</label><input required value={salesForm.tin} onChange={(e) => setSalesForm({ ...salesForm, tin: e.target.value })} className="field" /></div>
+                        <div><label className="label">BIR Registered? *</label><select value={salesForm.birRegistered} onChange={(e) => setSalesForm({ ...salesForm, birRegistered: e.target.value })} className="field"><option value="yes">Yes — BIR Registered</option><option value="no">No — Not BIR Registered</option></select></div>
+                        <div><label className="label">Other Branches? *</label><select value={salesForm.hasOtherBranches} onChange={(e) => setSalesForm({ ...salesForm, hasOtherBranches: e.target.value })} className="field"><option value="no">No</option><option value="yes">Yes</option></select></div>
+                        <div><label className="label">Multiple Lines of Business? *</label><select value={salesForm.hasMultipleLines} onChange={(e) => setSalesForm({ ...salesForm, hasMultipleLines: e.target.value })} className="field"><option value="no">No</option><option value="yes">Yes</option></select></div>
+                      </div>
+                    </div>
+                  )}
+
+                  {currentStep === 3 && (
+                    <div className="space-y-6">
+                      <div>
+                        <h4 className="font-bold text-sm border-b pb-2 mb-4">A. Tax Year / Assessment Period</h4>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                          <div><label className="label">Tax Year *</label><input required type="number" min="2000" max="2100" value={salesForm.year} onChange={(e) => setSalesForm({ ...salesForm, year: e.target.value })} className="field" /></div>
+                          <div><label className="label">Assessment Period *</label><select value={salesForm.assessmentPeriod} onChange={(e) => setSalesForm({ ...salesForm, assessmentPeriod: e.target.value, quarter: e.target.value === 'ANNUAL_RENEWAL' ? 'ANNUAL' : salesForm.quarter })} className="field"><option value="ANNUAL_RENEWAL">Annual Renewal</option></select></div>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <h4 className="font-bold text-sm border-b pb-2 mb-4">B. Gross Sales / Receipts</h4>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                          <div><label className="label">Gross Sales / Receipts (PHP) *</label><input required type="number" min="0" step="0.01" value={salesForm.grossSales} onChange={(e) => setSalesForm({ ...salesForm, grossSales: e.target.value })} className="field font-bold text-blue-700" /></div>
+                          <div><label className="label">PSIC Code (optional)</label><input value={salesForm.psicCode} onChange={(e) => setSalesForm({ ...salesForm, psicCode: e.target.value })} className="field" placeholder="e.g. 47110" /></div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {currentStep === 4 && (
+                    <div className="space-y-4">
+                      <h4 className="font-bold text-sm border-b pb-2 mb-4">Supporting Documents</h4>
+                      <p className="text-slate-500 text-[10px] mb-4">Please upload the required documents below based on your business profile.</p>
+                      <div className="space-y-2">
+                        {applicableDocumentDefinitions().map((definition) => renderDocumentUploader(definition, salesFiles, setSalesFiles))}
+                      </div>
+                    </div>
+                  )}
+
+                  {currentStep === 5 && (
+                    <div className="space-y-6">
+                      <h4 className="font-bold text-sm border-b pb-2 mb-4">Review & Submit</h4>
+                      
+                      <div className="rounded-xl border p-4 space-y-4 bg-slate-50 dark:bg-slate-950">
+                        <div className="flex justify-between items-center border-b pb-2"><div className="font-bold">1. Business Identification</div><button type="button" onClick={() => setCurrentStep(1)} className="text-blue-600 font-bold hover:underline">Edit</button></div>
+                        <div className="grid grid-cols-2 gap-2 text-[10px]">
+                          <div><span className="text-slate-500">Mayor's Permit:</span> <span className="font-mono">{salesForm.mayorsPermitNumber}</span></div>
+                          <div><span className="text-slate-500">Business Name:</span> {salesForm.businessName}</div>
+                          <div><span className="text-slate-500">Owner:</span> {salesForm.businessOwner}</div>
+                          <div className="col-span-2"><span className="text-slate-500">Address:</span> {salesForm.businessAddress}, {salesForm.barangay}</div>
+                        </div>
+                      </div>
+
+                      <div className="rounded-xl border p-4 space-y-4 bg-slate-50 dark:bg-slate-950">
+                        <div className="flex justify-between items-center border-b pb-2"><div className="font-bold">2. Business Profile & Registration</div><button type="button" onClick={() => setCurrentStep(2)} className="text-blue-600 font-bold hover:underline">Edit</button></div>
+                        <div className="grid grid-cols-2 gap-2 text-[10px]">
+                          <div><span className="text-slate-500">Type:</span> {salesForm.businessType}</div>
+                          <div><span className="text-slate-500">Line:</span> {salesForm.lineOfBusiness}</div>
+                          <div><span className="text-slate-500">Area:</span> {salesForm.businessAreaSqm} sqm</div>
+                          <div><span className="text-slate-500">Registration:</span> {salesForm.registrationType} {salesForm.registrationNumber}</div>
+                          <div><span className="text-slate-500">TIN:</span> {salesForm.tin}</div>
+                          <div><span className="text-slate-500">BIR Registered:</span> {salesForm.birRegistered === 'yes' ? 'Yes' : 'No'}</div>
+                          <div><span className="text-slate-500">Other Branches:</span> {salesForm.hasOtherBranches === 'yes' ? 'Yes' : 'No'}</div>
+                          <div><span className="text-slate-500">Multiple Lines:</span> {salesForm.hasMultipleLines === 'yes' ? 'Yes' : 'No'}</div>
+                        </div>
+                      </div>
+
+                      <div className="rounded-xl border p-4 space-y-4 bg-slate-50 dark:bg-slate-950">
+                        <div className="flex justify-between items-center border-b pb-2"><div className="font-bold">3. Sales Declaration & Tax Information</div><button type="button" onClick={() => setCurrentStep(3)} className="text-blue-600 font-bold hover:underline">Edit</button></div>
+                        <div className="grid grid-cols-2 gap-2 text-[10px]">
+                          <div><span className="text-slate-500">Tax Year:</span> {salesForm.year}</div>
+                          <div><span className="text-slate-500">Period:</span> {salesForm.assessmentPeriod}</div>
+                          <div><span className="text-slate-500">PSIC:</span> {salesForm.psicCode || '—'}</div>
+                          <div><span className="text-slate-500">Gross Sales:</span> <span className="font-bold font-mono">PHP {Number(salesForm.grossSales).toLocaleString()}</span></div>
+                        </div>
+                      </div>
+
+                      <div className="rounded-xl border p-4 space-y-4 bg-slate-50 dark:bg-slate-950">
+                        <div className="flex justify-between items-center border-b pb-2"><div className="font-bold">4. Supporting Documents</div><button type="button" onClick={() => setCurrentStep(4)} className="text-blue-600 font-bold hover:underline">Edit</button></div>
+                        <div className="text-[10px]">
+                          {applicableDocumentDefinitions().filter(d => (salesFiles[d.key] || []).length > 0).map(d => (
+                            <div key={d.key} className="flex gap-2 items-center mb-1">
+                              <span className="text-emerald-600">✓</span>
+                              <span className="font-semibold">{d.label}</span>
+                              <span className="text-slate-500">({(salesFiles[d.key] || []).length} file(s))</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="mt-4 flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-900/30 rounded-xl border border-blue-200 dark:border-blue-800">
+                        <input type="checkbox" required id="certify" checked={certificationChecked} onChange={(e) => setCertificationChecked(e.target.checked)} className="mt-0.5 w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" />
+                        <label htmlFor="certify" className="text-[10px] text-slate-700 dark:text-slate-300 font-bold cursor-pointer select-none">
+                          I certify that the information and documents submitted are true and correct to the best of my knowledge and belief.
+                        </label>
+                      </div>
+
+                    </div>
+                  )}
+                </div>
+                
+                <div className="sticky bottom-0 flex justify-between gap-2 px-5 py-4 border-t bg-slate-50 dark:bg-slate-950 mt-auto">
+                  {currentStep === 1 ? (
+                    <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 rounded-xl border text-xs font-bold bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700">Cancel</button>
+                  ) : (
+                    <button type="button" onClick={() => setCurrentStep(prev => prev - 1)} className="px-5 py-2.5 rounded-xl border text-xs font-bold bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700">Back</button>
+                  )}
+                  
+                  {currentStep < 5 ? (
+                    <button type="button" onClick={() => handleNextStep(currentStep + 1)} className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors shadow-sm">Next Step</button>
+                  ) : (
+                    <button disabled={submitting || !certificationChecked} type="submit" className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                      {submitting ? 'Submitting...' : 'Submit for Assessment'}
+                    </button>
+                  )}
+                </div>
+              </form>
+            )}
+          </div>
         </div>
       )}
 
@@ -798,6 +1058,30 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
       {previewUrl && (
         <div className="fixed inset-0 z-[80] bg-black/90 flex items-center justify-center p-4" onClick={() => setPreviewUrl(null)}>
           <div className="w-full max-w-5xl h-[90vh]" onClick={(e) => e.stopPropagation()}><div className="flex justify-end mb-2"><button type="button" onClick={() => setPreviewUrl(null)} className="text-white font-bold text-2xl">×</button></div>{previewMime === 'application/pdf' ? <iframe src={previewUrl} title="Document Preview" className="w-full h-[calc(100%-40px)] bg-white rounded-xl" /> : <div className="w-full h-[calc(100%-40px)] flex items-center justify-center"><img src={previewUrl} alt="Document Preview" className="max-w-full max-h-full object-contain rounded-xl" /></div>}</div>
+        </div>
+      )}
+
+      {isModalOpen === 'link-application' && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <form onSubmit={(e) => { e.preventDefault(); alert('Link in-person application functionality is mocked. The backend endpoint needs to be connected.'); setIsModalOpen(false); }} className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800">
+            <div className="flex justify-between items-center p-5 border-b bg-slate-50 dark:bg-slate-950">
+              <h3 className="font-bold text-sm">LINK IN-PERSON APPLICATION</h3>
+              <button type="button" onClick={() => setIsModalOpen(false)} className="text-xl font-bold hover:text-rose-500">×</button>
+            </div>
+            <div className="p-6">
+              <p className="text-xs text-slate-600 dark:text-slate-400 mb-4 leading-relaxed">
+                Enter the In-Person Application Tracking Number sent to your registered email address. The QC e-Services account must correspond to the email address used in the application.
+              </p>
+              <div>
+                <label className="label">In-Person Application Tracking Number *</label>
+                <input required value={linkAppForm.trackingNumber} onChange={(e) => setLinkAppForm({ trackingNumber: e.target.value })} className="field" placeholder="e.g. BT-2026-..." />
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 p-4 border-t bg-slate-50 dark:bg-slate-950">
+              <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 rounded-xl border font-bold text-sm">Cancel</button>
+              <button type="submit" className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-sm transition-colors">Proceed</button>
+            </div>
+          </form>
         </div>
       )}
 
