@@ -646,9 +646,29 @@ export async function updateAssessmentStatus(req: Request, res: Response): Promi
     const nextStatus = status || current.status;
     const nextRecordStatus = recordStatus || current.record_status || 'ACTIVE';
 
-    if (current.status === 'RETURNED_FOR_COMPLIANCE' && nextStatus === 'FOR_FINAL_REVIEW') {
-      res.status(409).json({ message: 'Assessment cannot bypass FOR_INITIAL_ASSESSMENT after compliance return. Ensure citizen has resubmitted documents.' });
-      return;
+    if (status && status !== current.status) {
+      const validTransitions: Record<BusinessStatus, BusinessStatus[]> = {
+        SUBMITTED: ['FOR_INITIAL_ASSESSMENT', 'REJECTED'],
+        FOR_INITIAL_ASSESSMENT: ['FOR_FINAL_REVIEW', 'REJECTED'],
+        FOR_FINAL_REVIEW: ['RETURNED_FOR_COMPLIANCE', 'FOR_FINAL_APPROVAL', 'REJECTED'],
+        RETURNED_FOR_COMPLIANCE: ['RESUBMITTED'], 
+        RESUBMITTED: ['FOR_INITIAL_ASSESSMENT', 'REJECTED'],
+        FOR_FINAL_APPROVAL: ['TAX_BILL_ISSUED', 'REJECTED'],
+        TAX_BILL_ISSUED: ['FOR_OWNER_PAYMENT'],
+        FOR_OWNER_PAYMENT: ['FOR_PAYMENT_VALIDATION'],
+        FOR_PAYMENT_VALIDATION: ['OR_ISSUED'],
+        OR_ISSUED: [],
+        REJECTED: [],
+        ARCHIVED: [],
+        FOR_COMPLIANCE: [],
+        APPROVED: []
+      };
+
+      const allowedNext = validTransitions[current.status as BusinessStatus] || [];
+      if (!allowedNext.includes(status)) {
+        res.status(409).json({ message: `Invalid workflow transition: Cannot move from ${current.status} to ${status}.` });
+        return;
+      }
     }
 
     const currentFees = parseJsonObject(current.computed_fees);
@@ -708,10 +728,24 @@ export async function updateAssessmentStatus(req: Request, res: Response): Promi
     const approvedBy = (nextStatus === 'TAX_BILL_ISSUED' || nextStatus === 'APPROVED') && current.status !== nextStatus ? authEmail : current.approved_by;
 
     // Payment amount and due date are set when the Tax Bill is issued.
-    const paymentAmount = (nextStatus === 'TAX_BILL_ISSUED' || nextStatus === 'APPROVED') ? total : Number(current.payment_amount || currentFees.total || 0);
+    let paymentAmount = (nextStatus === 'TAX_BILL_ISSUED' || nextStatus === 'APPROVED') ? total : Number(current.payment_amount || currentFees.total || 0);
     const dueDate = (nextStatus === 'TAX_BILL_ISSUED' || nextStatus === 'APPROVED') && String(current.assessment_period || 'ANNUAL_RENEWAL') === 'ANNUAL_RENEWAL'
       ? `${applicationYear}-01-20`
       : current.due_date;
+
+    let paymentStatus = current.payment_status;
+    let officialReceiptNumber = current.official_receipt_number;
+    let paidAmount = current.paid_amount;
+    let paymentDate = current.payment_date;
+
+    if (nextStatus === 'OR_ISSUED' && current.status !== 'OR_ISSUED') {
+      paymentStatus = 'PAID';
+      paidAmount = paymentAmount;
+      paymentDate = new Date();
+      if (!officialReceiptNumber) {
+        officialReceiptNumber = `OR-PM-${applicationYear}-${Math.floor(100000 + Math.random() * 900000)}`;
+      }
+    }
 
     const result = await pool.query(
       `UPDATE business_assessments
@@ -733,8 +767,12 @@ export async function updateAssessmentStatus(req: Request, res: Response): Promi
            final_reviewed_at = $16,
            approved_by = $17,
            approved_at = $18,
+           payment_status = $19,
+           official_receipt_number = $20,
+           paid_amount = $21,
+           payment_date = COALESCE($22, payment_date),
            updated_at = NOW()
-       WHERE id = $19
+       WHERE id = $23
        RETURNING *`,
       [
         nextStatus,
@@ -755,6 +793,10 @@ export async function updateAssessmentStatus(req: Request, res: Response): Promi
         finalReviewedAt,
         approvedBy,
         approvedAt,
+        paymentStatus,
+        officialReceiptNumber,
+        paidAmount,
+        paymentDate,
         id,
       ]
     );
@@ -768,7 +810,7 @@ export async function updateAssessmentStatus(req: Request, res: Response): Promi
       'BUSINESS_TAX_ASSESSMENT_STATUS_UPDATED',
       (nextStatus === 'FOR_COMPLIANCE' || nextStatus === 'RETURNED_FOR_COMPLIANCE' || nextStatus === 'REJECTED') ? 'WARNING' : 'INFO',
       JSON.stringify({ status: current.status, record_status: current.record_status, computedFees: currentFees, documentChecklist: currentChecklist }),
-      JSON.stringify({ status: nextStatus, record_status: nextRecordStatus, computedFees: nextFees, documentChecklist: nextChecklist, taxBillNumber, orderOfPaymentNumber })
+      JSON.stringify({ status: nextStatus, record_status: nextRecordStatus, computedFees: nextFees, documentChecklist: nextChecklist, taxBillNumber, orderOfPaymentNumber, officialReceiptNumber })
     );
 
     res.status(200).json({

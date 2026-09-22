@@ -163,22 +163,22 @@ function money(value: number | undefined): string {
 
 function statusClass(status: string): string {
   switch (status) {
-    case 'SUBMITTED':                return 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300';
-    case 'FOR_INITIAL_ASSESSMENT':   return 'bg-sky-100 text-sky-800 dark:bg-sky-950/80 dark:text-sky-300';
-    case 'FOR_FINAL_REVIEW':         return 'bg-blue-100 text-blue-800 dark:bg-blue-950/80 dark:text-blue-300';
-    case 'RETURNED_FOR_COMPLIANCE':  return 'bg-orange-100 text-orange-800 dark:bg-orange-950/80 dark:text-orange-300';
-    case 'FOR_COMPLIANCE':           return 'bg-orange-100 text-orange-800 dark:bg-orange-950/80 dark:text-orange-300';
-    case 'RESUBMITTED':              return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-950/80 dark:text-yellow-300';
-    case 'FOR_FINAL_APPROVAL':       return 'bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-950/80 dark:text-fuchsia-300';
-    case 'TAX_BILL_ISSUED':          return 'bg-teal-100 text-teal-800 dark:bg-teal-950/80 dark:text-teal-300';
-    case 'APPROVED':                 return 'bg-teal-100 text-teal-800 dark:bg-teal-950/80 dark:text-teal-300';
-    case 'FOR_OWNER_PAYMENT':        return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950/80 dark:text-indigo-300';
-    case 'PAID':                     return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300';
-    case 'FOR_PAYMENT_VALIDATION':   return 'bg-cyan-100 text-cyan-800 dark:bg-cyan-950/80 dark:text-cyan-300';
-    case 'OR_ISSUED':                return 'bg-green-100 text-green-800 dark:bg-green-950/80 dark:text-green-300';
-    case 'REJECTED':                 return 'bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300';
-    case 'ARCHIVED':                 return 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
-    default:                         return 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300';
+    case 'SUBMITTED': return 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300';
+    case 'FOR_INITIAL_ASSESSMENT': return 'bg-sky-100 text-sky-800 dark:bg-sky-950/80 dark:text-sky-300';
+    case 'FOR_FINAL_REVIEW': return 'bg-blue-100 text-blue-800 dark:bg-blue-950/80 dark:text-blue-300';
+    case 'RETURNED_FOR_COMPLIANCE': return 'bg-orange-100 text-orange-800 dark:bg-orange-950/80 dark:text-orange-300';
+    case 'FOR_COMPLIANCE': return 'bg-orange-100 text-orange-800 dark:bg-orange-950/80 dark:text-orange-300';
+    case 'RESUBMITTED': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-950/80 dark:text-yellow-300';
+    case 'FOR_FINAL_APPROVAL': return 'bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-950/80 dark:text-fuchsia-300';
+    case 'TAX_BILL_ISSUED': return 'bg-teal-100 text-teal-800 dark:bg-teal-950/80 dark:text-teal-300';
+    case 'APPROVED': return 'bg-teal-100 text-teal-800 dark:bg-teal-950/80 dark:text-teal-300';
+    case 'FOR_OWNER_PAYMENT': return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950/80 dark:text-indigo-300';
+    case 'PAID': return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300';
+    case 'FOR_PAYMENT_VALIDATION': return 'bg-cyan-100 text-cyan-800 dark:bg-cyan-950/80 dark:text-cyan-300';
+    case 'OR_ISSUED': return 'bg-green-100 text-green-800 dark:bg-green-950/80 dark:text-green-300';
+    case 'REJECTED': return 'bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300';
+    case 'ARCHIVED': return 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
+    default: return 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300';
   }
 }
 
@@ -255,7 +255,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
   const [salesFiles, setSalesFiles] = useState<Partial<Record<DocumentRequirementKey, File[]>>>({});
   const [currentStep, setCurrentStep] = useState(1);
   const [certificationChecked, setCertificationChecked] = useState(false);
-  const [submissionSuccess, setSubmissionSuccess] = useState<{trackingNumber: string; date: string; name: string} | null>(null);
+  const [submissionSuccess, setSubmissionSuccess] = useState<{ trackingNumber: string; date: string; name: string } | null>(null);
 
   const [captchaNum1, setCaptchaNum1] = useState(0);
   const [captchaNum2, setCaptchaNum2] = useState(0);
@@ -442,7 +442,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
       if (!salesForm.mayorsPermitNumber.trim() || !salesForm.businessName.trim()) {
         return alert('Please fill in all mandatory fields before proceeding.');
       }
-      
+
       if (targetStep === 2) {
         setSubmitting(true);
         try {
@@ -779,7 +779,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
 
         {currentScreen === 'assessment-list' && (
           <div className="mt-6 space-y-8">
-            
+
             {/* Primary Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-start border-b border-slate-200 dark:border-slate-800 pb-8">
               <button type="button" onClick={() => openModal('sales-declaration')} className="px-6 py-4 rounded-full bg-blue-700 hover:bg-blue-800 text-white font-extrabold text-sm shadow-md transition-transform hover:scale-105 uppercase tracking-wide">
@@ -824,7 +824,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
             </div>
 
             {fetchError && <div className="p-3 rounded-xl bg-rose-50 text-rose-700 border border-rose-200 text-xs">{fetchError}</div>}
-            
+
             {/* Table Section */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-none overflow-x-auto">
               <table className="w-full text-sm min-w-[1000px]">
@@ -913,7 +913,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                 <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 flex items-center justify-center text-3xl font-bold mb-4">✓</div>
                 <h2 className="text-2xl font-extrabold text-slate-900 dark:text-white uppercase mb-2">APPLICATION SUBMITTED</h2>
                 <div className="text-sm text-slate-600 dark:text-slate-400 mb-6 max-w-md">Your application has been submitted for Treasury assessment. You will receive a notification regarding the assessment status.</div>
-                
+
                 <div className="w-full max-w-sm rounded-2xl bg-slate-50 dark:bg-slate-950 p-5 text-left space-y-3 text-xs mb-8">
                   <div className="flex justify-between border-b border-slate-200 dark:border-slate-800 pb-2"><span className="text-slate-500">Tracking Number</span><span className="font-mono font-bold text-blue-600">{submissionSuccess.trackingNumber}</span></div>
                   <div className="flex justify-between border-b border-slate-200 dark:border-slate-800 pb-2"><span className="text-slate-500">Submission Date</span><span className="font-semibold">{submissionSuccess.date}</span></div>
@@ -935,7 +935,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                   </div>
                   <button type="button" onClick={() => setIsModalOpen(false)} className="text-xl font-bold">×</button>
                 </div>
-                
+
                 <div className="px-5 py-3 border-b bg-white dark:bg-slate-900 flex gap-2">
                   {[1, 2, 3, 4, 5].map((step) => (
                     <div key={step} className={`flex-1 h-2 rounded-full ${currentStep === step ? 'bg-blue-600' : currentStep > step ? 'bg-blue-200 dark:bg-blue-900' : 'bg-slate-200 dark:bg-slate-800'}`} />
@@ -987,7 +987,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                           <div><label className="label">Assessment Period *</label><select value={salesForm.assessmentPeriod} onChange={(e) => setSalesForm({ ...salesForm, assessmentPeriod: e.target.value, quarter: e.target.value === 'ANNUAL_RENEWAL' ? 'ANNUAL' : salesForm.quarter })} className="field"><option value="ANNUAL_RENEWAL">Annual Renewal</option></select></div>
                         </div>
                       </div>
-                      
+
                       <div>
                         <h4 className="font-bold text-sm border-b pb-2 mb-4">B. Gross Sales / Receipts</h4>
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -1014,7 +1014,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                   {currentStep === 5 && (
                     <div className="space-y-6">
                       <h4 className="font-bold text-sm border-b pb-2 mb-4">Review & Submit</h4>
-                      
+
                       <div className="rounded-xl border p-4 space-y-4 bg-slate-50 dark:bg-slate-950">
                         <div className="flex justify-between items-center border-b pb-2"><div className="font-bold">1. Business Identification</div><button type="button" onClick={() => setCurrentStep(1)} className="text-blue-600 font-bold hover:underline">Edit</button></div>
                         <div className="grid grid-cols-2 gap-2 text-[10px]">
@@ -1072,14 +1072,14 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                     </div>
                   )}
                 </div>
-                
+
                 <div className="sticky bottom-0 flex justify-between gap-2 px-5 py-4 border-t bg-slate-50 dark:bg-slate-950 mt-auto">
                   {currentStep === 1 ? (
                     <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 rounded-xl border text-xs font-bold bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700">Cancel</button>
                   ) : (
                     <button type="button" onClick={() => setCurrentStep(prev => prev - 1)} className="px-5 py-2.5 rounded-xl border text-xs font-bold bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700">Back</button>
                   )}
-                  
+
                   {currentStep < 5 ? (
                     <button type="button" onClick={() => handleNextStep(currentStep + 1)} className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors shadow-sm">Next Step</button>
                   ) : (
@@ -1133,9 +1133,9 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
               <h3 className="font-bold text-sm mx-auto text-slate-800 dark:text-white">Request New Appointment</h3>
               <button type="button" onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600 text-xl font-bold absolute right-4 top-3">×</button>
             </div>
-            
+
             <div className="p-6 space-y-4 text-xs max-h-[75vh] overflow-y-auto custom-scrollbar">
-              
+
               <div>
                 <label className="block text-[11px] mb-1 font-semibold text-slate-700"><span className="text-rose-500">*</span> Department</label>
                 <select className="w-full p-2.5 border rounded text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500" value={aptForm.department} onChange={(e) => setAptForm({ ...aptForm, department: e.target.value })}>
@@ -1212,7 +1212,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                 <div className="card border-orange-300 dark:border-orange-900/70"><div className="font-bold text-orange-800 dark:text-orange-300">Additional documents requested</div><div className="mt-2 space-y-2">{(selectedAssessmentView.missingDocuments || []).map((item) => <div key={item.key} className="rounded-xl bg-orange-50 dark:bg-orange-950/30 p-3"><div className="font-semibold">{item.label}</div><input type="file" multiple={item.key === 'branch_permits_and_ors' || item.key === 'line_of_business_sales_breakdown'} accept={formatFileAccept} onChange={(e) => setComplianceFiles((prev) => ({ ...prev, [item.key as DocumentRequirementKey]: e.target.files ? Array.from(e.target.files) : [] }))} className="mt-2 w-full text-[10px]" />{(complianceFiles[item.key as DocumentRequirementKey] || []).length > 0 && <div className="mt-1 text-[10px] text-emerald-700">Files selected.</div>}</div>)}</div><button type="button" disabled={isComplianceSubmitting} onClick={() => void submitComplianceDocuments()} className="mt-3 px-4 py-2 rounded-xl bg-orange-600 text-white font-bold">{isComplianceSubmitting ? 'Submitting...' : 'Submit Additional Documents'}</button></div>
               )}
               <div className="card"><div className="font-bold mb-2">Assessment / Treasury Status</div><div className="grid grid-cols-2 lg:grid-cols-4 gap-3"><div><span className="labelText">Payment Status</span><span className={`inline-block px-2 py-1 rounded-full text-[9px] font-bold ${selectedAssessmentView.paymentStatus === 'PAID' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>{selectedAssessmentView.paymentStatus}</span></div><div><span className="labelText">Amount Due</span><div className="font-bold">{money(selectedAssessmentView.paymentAmount || selectedAssessmentView.computedFees?.total)}</div></div><div><span className="labelText">O.R. Number</span><div className="font-mono font-bold">{selectedAssessmentView.officialReceiptNumber || '—'}</div></div><div><span className="labelText">Payment Reference</span><div className="font-mono break-all">{selectedAssessmentView.paymentReference || '—'}</div></div></div></div>
-              {(selectedAssessmentView.computedFees && Number(selectedAssessmentView.computedFees.total || 0) > 0) && <div className="card"><div className="font-bold mb-2">Approved Fee Breakdown</div>{['lbt','mayorsPermit','sanitaryFee','garbageFee','fireSafetyFee','otherFees'].map((key) => <div key={key} className="flex justify-between py-1 border-b last:border-b-0"><span>{({ lbt: 'Local Business Tax', mayorsPermit: 'Mayor’s Permit Fee', sanitaryFee: 'Sanitary Inspection Fee', garbageFee: 'Garbage Fee', fireSafetyFee: 'Fire Safety / BFP Fee', otherFees: 'Other Regulatory Fees' } as Record<string, string>)[key]}</span><span className="font-mono">{money((selectedAssessmentView.computedFees as any)?.[key])}</span></div>)}<div className="flex justify-between pt-2 font-bold"><span>Total</span><span>{money(selectedAssessmentView.computedFees.total)}</span></div></div>}
+              {(selectedAssessmentView.computedFees && Number(selectedAssessmentView.computedFees.total || 0) > 0) && <div className="card"><div className="font-bold mb-2">Approved Fee Breakdown</div>{['lbt', 'mayorsPermit', 'sanitaryFee', 'garbageFee', 'fireSafetyFee', 'otherFees'].map((key) => <div key={key} className="flex justify-between py-1 border-b last:border-b-0"><span>{({ lbt: 'Local Business Tax', mayorsPermit: 'Mayor’s Permit Fee', sanitaryFee: 'Sanitary Inspection Fee', garbageFee: 'Garbage Fee', fireSafetyFee: 'Fire Safety / BFP Fee', otherFees: 'Other Regulatory Fees' } as Record<string, string>)[key]}</span><span className="font-mono">{money((selectedAssessmentView.computedFees as any)?.[key])}</span></div>)}<div className="flex justify-between pt-2 font-bold"><span>Total</span><span>{money(selectedAssessmentView.computedFees.total)}</span></div></div>}
               <div className="card"><span className="labelText">Treasurer’s Office Remarks</span><div className="italic mt-1">{selectedAssessmentView.remarks || 'No remarks yet.'}</div>{selectedAssessmentView.complianceRemarks && <div className="mt-2 text-orange-700 dark:text-orange-300">Compliance: {selectedAssessmentView.complianceRemarks}</div>}</div>
             </div>
             <div className="sticky bottom-0 flex justify-end gap-2 px-5 py-4 border-t bg-slate-50 dark:bg-slate-950">{selectedAssessmentView.status === 'FOR_OWNER_PAYMENT' && selectedAssessmentView.paymentStatus !== 'PAID' && <button type="button" disabled={isProcessingPayment} onClick={() => openBusinessTaxPayment(selectedAssessmentView)} className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold">{isProcessingPayment ? 'Generating QR...' : 'Proceed to Digital Payment →'}</button>}{selectedAssessmentView.paymentStatus === 'PAID' && <span className="px-3 py-2 rounded-xl bg-emerald-100 text-emerald-800 text-xs font-bold">Payment Verified</span>}<button type="button" onClick={() => setSelectedAssessmentView(null)} className="px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold">Close</button></div>
@@ -1258,7 +1258,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
             </div>
             <div className="p-6">
               <p className="text-xs text-slate-600 dark:text-slate-400 mb-4 leading-relaxed">
-                Enter the In-Person Application Tracking Number sent to your registered email address. The QC e-Services account must correspond to the email address used in the application.
+                Enter the In-Person Application Tracking Number sent to your registered email address. The GovServ account must correspond to the email address used in the application.
               </p>
               <div>
                 <label className="label">In-Person Application Tracking Number *</label>

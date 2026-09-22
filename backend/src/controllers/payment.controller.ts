@@ -172,31 +172,23 @@ async function finalizeBusinessTaxPayment(params: {
       };
     }
 
-    const officialReceiptNumber = String(record.official_receipt_number || makeOfficialReceiptNumber());
-
     const updated = await client.query(
       `UPDATE business_assessments
-       SET payment_status = 'PAID',
-           status = 'OR_ISSUED',
-           paid_amount = $1,
-           payment_method = $2,
-           payment_reference = $3,
-           payment_date = NOW(),
-           official_receipt_number = $4,
-           paymongo_payment_id = $5,
-           paymongo_session_id = $6,
-           remarks = COALESCE(NULLIF($7, ''), remarks),
+       SET status = 'FOR_PAYMENT_VALIDATION',
+           payment_method = $1,
+           payment_reference = $2,
+           paymongo_payment_id = $3,
+           paymongo_session_id = $4,
+           remarks = COALESCE(NULLIF($5, ''), remarks),
            updated_at = NOW()
-       WHERE id = $8
+       WHERE id = $6
        RETURNING *`,
       [
-        params.amount,
         params.paymentMethod,
         params.paymentReference,
-        officialReceiptNumber,
         params.paymongoPaymentId || null,
         params.paymongoSessionId || null,
-        `Payment verified via ${params.paymentMethod}. O.R.: ${officialReceiptNumber}`,
+        `Payment reported via ${params.paymentMethod} (Ref: ${params.paymentReference}). Awaiting Treasury validation.`,
         record.id,
       ]
     );
@@ -422,15 +414,9 @@ export async function createCheckoutSession(req: Request, res: Response): Promis
       `Created PayMongo checkout session ${session.id} for ${referenceNumber} (${numericAmount.toFixed(2)})`
     );
 
-    if (type === 'BUSINESS_TAX' && businessTrackingNumber) {
-      await pool.query(
-        `UPDATE business_assessments
-         SET status = 'FOR_PAYMENT_VALIDATION', updated_at = NOW()
-         WHERE tracking_number = $1 AND status = 'FOR_OWNER_PAYMENT'`,
-        [businessTrackingNumber]
-      );
-    }
-
+    // Ensure we don't jump to FOR_PAYMENT_VALIDATION merely because a checkout is created.
+    // The status must remain FOR_OWNER_PAYMENT until the webhook confirms successful payment.
+    
     res.status(200).json({
       success: true,
       checkoutUrl: session.checkoutUrl,
@@ -1512,7 +1498,6 @@ export async function handlePayMongoWebhook(
       }
 
       const businessRecord = finalized.record;
-      const businessOfficialReceiptNumber = String(businessRecord?.official_receipt_number || officialReceiptNumber);
       const businessPaymentReference = String(businessRecord?.payment_reference || paymentReference);
 
       await recordAudit(
@@ -1521,24 +1506,11 @@ export async function handlePayMongoWebhook(
         metadata.customerEmail || businessRecord?.email || 'citizen@gov.ph',
         'Citizen',
         'Business Tax Module',
-        'BUSINESS_TAX_PAYMENT_WEBHOOK_CONFIRMED',
+        'BUSINESS_TAX_PAYMENT_WEBHOOK_RECEIVED',
         'INFO',
         null,
-        `Business tax payment confirmed via ${formattedPaymentMethod}. Tracking #${metadata.businessTrackingNumber}. Reference ${businessPaymentReference}. Amount ${amountPhp.toFixed(2)}. O.R. ${businessOfficialReceiptNumber}.`
+        `Business tax payment received via ${formattedPaymentMethod} and is now FOR_PAYMENT_VALIDATION. Tracking #${metadata.businessTrackingNumber}. Reference ${businessPaymentReference}. Amount ${amountPhp.toFixed(2)}.`
       );
-
-      await sendPaymentReceiptOnce({
-        paymentKey: `paymongo:${paymentId || paymentIntentId}`,
-        toEmail: metadata.customerEmail || businessRecord?.email,
-        customerName: metadata.customerName || businessRecord?.business_owner,
-        service: 'Business Tax and Regulatory Fee',
-        amount: amountPhp,
-        paymentMethod: businessRecord?.payment_method || formattedPaymentMethod,
-        paymentReference: businessPaymentReference,
-        officialReceiptNumber: businessOfficialReceiptNumber,
-        paymentDate: businessRecord?.payment_date || new Date(),
-        accountReference: metadata.businessTrackingNumber,
-      });
 
       res.status(200).json({
         received: true,
@@ -1548,7 +1520,6 @@ export async function handlePayMongoWebhook(
         amount: amountPhp,
         paymentMethod: businessRecord?.payment_method || formattedPaymentMethod,
         paymentReference: businessPaymentReference,
-        officialReceiptNumber: businessOfficialReceiptNumber,
         businessTrackingNumber: metadata.businessTrackingNumber,
         alreadyRecorded: Boolean(finalized.alreadyRecorded),
       });
@@ -1695,14 +1666,7 @@ export async function getQrPaymentStatus(
       }
 
       const businessRecord = finalized.record;
-      const qrOfficialReceiptNumber = String(
-        businessRecord?.official_receipt_number ||
-        makeOfficialReceiptNumber()
-      );
-      const qrSavedReference = String(
-        businessRecord?.payment_reference ||
-        qrPaymentReference
-      );
+      const qrSavedReference = String(businessRecord?.payment_reference || qrPaymentReference);
 
       await recordAudit(
         req,
@@ -1710,24 +1674,11 @@ export async function getQrPaymentStatus(
         metadata.customerEmail || businessRecord?.email || 'citizen@gov.ph',
         'Citizen',
         'Business Tax Module',
-        'BUSINESS_TAX_QR_PAYMENT_CONFIRMED',
+        'BUSINESS_TAX_QR_PAYMENT_RECEIVED',
         'INFO',
         null,
-        `Business Tax payment confirmed via PayMongo QR Ph. Tracking #${metadata.businessTrackingNumber}. Amount ${qrAmount.toFixed(2)}. Reference ${qrSavedReference}. O.R. ${qrOfficialReceiptNumber}.`
+        `Business Tax payment received via PayMongo QR Ph and is now FOR_PAYMENT_VALIDATION. Tracking #${metadata.businessTrackingNumber}. Amount ${qrAmount.toFixed(2)}. Reference ${qrSavedReference}.`
       );
-
-      await sendPaymentReceiptOnce({
-        paymentKey: `paymongo:${paymentIntentId}`,
-        toEmail: metadata.customerEmail || businessRecord?.email,
-        customerName: metadata.customerName || businessRecord?.business_owner,
-        service: 'Business Tax and Regulatory Fee',
-        amount: qrAmount,
-        paymentMethod: businessRecord?.payment_method || 'PayMongo (QR Ph)',
-        paymentReference: qrSavedReference,
-        officialReceiptNumber: qrOfficialReceiptNumber,
-        paymentDate: businessRecord?.payment_date || new Date(),
-        accountReference: metadata.businessTrackingNumber,
-      });
 
       res.status(200).json({
         success: true,
@@ -1736,7 +1687,6 @@ export async function getQrPaymentStatus(
         status,
         amount: qrAmount,
         metadata,
-        officialReceiptNumber: qrOfficialReceiptNumber,
         paymentReference: qrSavedReference,
         businessTrackingNumber: metadata.businessTrackingNumber,
         alreadyRecorded: Boolean(finalized.alreadyRecorded),
