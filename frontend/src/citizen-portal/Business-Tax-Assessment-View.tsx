@@ -224,7 +224,9 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewMime, setPreviewMime] = useState('');
 
-  const [verifyForm, setVerifyForm] = useState({ taxBillNo: '', orNo: '' });
+  const [verifyMode, setVerifyMode] = useState<'selection' | 'tax-bill' | 'or-number'>('selection');
+  const [verifyTaxBillForm, setVerifyTaxBillForm] = useState({ mayorsPermitNo: '', taxBillNo: '' });
+  const [verifyOrForm, setVerifyOrForm] = useState({ mayorsPermitNo: '', orNo: '' });
   const [salesForm, setSalesForm] = useState({
     businessName: '',
     businessOwner: '',
@@ -706,22 +708,43 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
     }
   };
 
-  const handleVerificationSubmit = async (event: React.FormEvent) => {
+  const handleTaxBillVerifySubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setVerifying(true);
     setVerificationResult(null);
     setVerificationError(null);
     try {
-      const response = await fetch(`${API_BASE_URL}/verify-record`, {
+      const response = await fetch(`${API_BASE_URL}/verify/tax-bill`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user?.token || ''}` },
-        body: JSON.stringify({ taxBillNo: verifyForm.taxBillNo.trim(), orNo: verifyForm.orNo.trim() })
+        body: JSON.stringify({ permitNo: verifyTaxBillForm.mayorsPermitNo.trim(), taxBillNo: verifyTaxBillForm.taxBillNo.trim() })
       });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.message || 'Verification failed.');
+      if (!response.ok) throw new Error(data.message || 'The Mayor\'s Permit Number and Tax Bill Number could not be verified against the available Treasury records.');
       setVerificationResult(data);
     } catch (error: any) {
-      setVerificationError(error.message || 'Verification failed.');
+      setVerificationError(error.message || 'The Mayor\'s Permit Number and Tax Bill Number could not be verified against the available Treasury records.');
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const handleOrVerifySubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setVerifying(true);
+    setVerificationResult(null);
+    setVerificationError(null);
+    try {
+      const response = await fetch(`${API_BASE_URL}/verify/or-number`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user?.token || ''}` },
+        body: JSON.stringify({ permitNo: verifyOrForm.mayorsPermitNo.trim(), orNo: verifyOrForm.orNo.trim() })
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || 'The Mayor\'s Permit Number and O.R. Number could not be verified against the available Treasury payment records.');
+      setVerificationResult(data);
+    } catch (error: any) {
+      setVerificationError(error.message || 'The Mayor\'s Permit Number and O.R. Number could not be verified against the available Treasury payment records.');
     } finally {
       setVerifying(false);
     }
@@ -993,46 +1016,109 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
         )}
 
         {currentScreen === 'verification' && (
-          <form onSubmit={handleVerificationSubmit} className="mt-8 max-w-xl mx-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 shadow-sm">
-            <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-6 text-center">Verify Payment Record</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Tax Bill Number</label>
-                <input value={verifyForm.taxBillNo} onChange={(e) => setVerifyForm({ ...verifyForm, taxBillNo: e.target.value })} placeholder="Enter Tax Bill Number" required className="w-full p-3 border border-slate-300 dark:border-slate-700 rounded-xl text-sm bg-slate-50 dark:bg-slate-950 focus:ring-2 focus:ring-blue-500" />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">O.R. Number</label>
-                <input value={verifyForm.orNo} onChange={(e) => setVerifyForm({ ...verifyForm, orNo: e.target.value })} placeholder="Enter Official Receipt Number" required className="w-full p-3 border border-slate-300 dark:border-slate-700 rounded-xl text-sm bg-slate-50 dark:bg-slate-950 focus:ring-2 focus:ring-blue-500" />
-              </div>
-            </div>
-            <button disabled={verifying} type="submit" className="mt-6 w-full py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold shadow-md transition-all">{verifying ? 'Verifying...' : 'VERIFY'}</button>
+          <div className="mt-8 max-w-xl mx-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 shadow-sm">
+            <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-6 text-center uppercase">TAX BILL NUMBER AND O.R. NUMBER VERIFICATION</h2>
             
-            {verificationError && <div className="mt-6 p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-sm font-medium text-center">{verificationError}</div>}
-            
-            {verificationResult && (
-              <div className="mt-6 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden bg-slate-50 dark:bg-slate-950">
-                {verificationResult.verified ? (
-                  <>
-                    <div className="bg-emerald-500 text-white p-3 text-center font-bold text-sm">PAYMENT RECORD VERIFIED</div>
-                    <div className="p-5 space-y-3 text-xs">
-                      <div className="flex justify-between border-b pb-2"><span className="text-slate-500">Business Name</span><span className="font-semibold text-right">{verificationResult.record.business_name}</span></div>
-                      <div className="flex justify-between border-b pb-2"><span className="text-slate-500">Tax Bill Number</span><span className="font-mono font-semibold">{verificationResult.record.tax_bill_number}</span></div>
-                      <div className="flex justify-between border-b pb-2"><span className="text-slate-500">O.R. Number</span><span className="font-mono font-semibold">{verificationResult.record.official_receipt_number}</span></div>
-                      <div className="flex justify-between border-b pb-2"><span className="text-slate-500">Amount Paid</span><span className="font-bold">{money(verificationResult.record.payment_amount)}</span></div>
-                      <div className="flex justify-between border-b pb-2"><span className="text-slate-500">Payment Date</span><span>{verificationResult.record.payment_date ? new Date(verificationResult.record.payment_date).toLocaleDateString() : 'N/A'}</span></div>
-                      <div className="flex justify-between border-b pb-2"><span className="text-slate-500">Payment Method</span><span>{verificationResult.record.payment_method || 'N/A'}</span></div>
-                      <div className="flex justify-between"><span className="text-slate-500">Status</span><span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">VERIFIED</span></div>
-                    </div>
-                  </>
-                ) : (
-                  <div className="p-6 text-center">
-                    <div className="text-rose-500 font-bold text-base mb-2">NO PAYMENT RECORD FOUND</div>
-                    <p className="text-slate-500 text-xs leading-relaxed">The Tax Bill Number and O.R. Number could not be verified against the available Treasury payment records.</p>
-                  </div>
-                )}
+            {verifyMode === 'selection' && (
+              <div className="flex flex-col gap-4">
+                <button type="button" onClick={() => { setVerifyMode('tax-bill'); setVerificationResult(null); setVerificationError(null); }} className="w-full py-4 rounded-xl border-2 border-blue-600 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold transition-colors">
+                  TAX BILL NUMBER VERIFICATION
+                </button>
+                <button type="button" onClick={() => { setVerifyMode('or-number'); setVerificationResult(null); setVerificationError(null); }} className="w-full py-4 rounded-xl border-2 border-emerald-600 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold transition-colors">
+                  O.R. NUMBER VERIFICATION
+                </button>
               </div>
             )}
-          </form>
+
+            {verifyMode === 'tax-bill' && (
+              <form onSubmit={handleTaxBillVerifySubmit} className="space-y-4">
+                <h3 className="font-bold text-sm text-center mb-4">TAX BILL NUMBER VERIFICATION</h3>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Mayor's Permit Number</label>
+                  <input value={verifyTaxBillForm.mayorsPermitNo} onChange={(e) => setVerifyTaxBillForm({ ...verifyTaxBillForm, mayorsPermitNo: e.target.value })} placeholder="Enter Mayor's Permit Number" required className="w-full p-3 border border-slate-300 dark:border-slate-700 rounded-xl text-sm bg-slate-50 dark:bg-slate-950 focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Tax Bill Number</label>
+                  <input value={verifyTaxBillForm.taxBillNo} onChange={(e) => setVerifyTaxBillForm({ ...verifyTaxBillForm, taxBillNo: e.target.value })} placeholder="Enter Tax Bill Number" required className="w-full p-3 border border-slate-300 dark:border-slate-700 rounded-xl text-sm bg-slate-50 dark:bg-slate-950 focus:ring-2 focus:ring-blue-500" />
+                </div>
+                
+                <div className="flex gap-3 pt-2">
+                  <button type="button" disabled={verifying} onClick={() => setVerifyMode('selection')} className="w-1/3 py-3.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm font-bold transition-all">Cancel</button>
+                  <button disabled={verifying} type="submit" className="w-2/3 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold shadow-md transition-all">{verifying ? 'Verifying...' : 'Next'}</button>
+                </div>
+
+                {verificationError && (
+                  <div className="mt-6 border border-rose-200 dark:border-rose-900 rounded-2xl overflow-hidden bg-slate-50 dark:bg-slate-950">
+                    <div className="p-6 text-center">
+                      <div className="text-rose-500 font-bold text-base mb-2">NO TAX BILL RECORD FOUND</div>
+                      <p className="text-slate-500 text-xs leading-relaxed">{verificationError}</p>
+                    </div>
+                  </div>
+                )}
+                
+                {verificationResult?.verified && (
+                  <div className="mt-6 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden bg-slate-50 dark:bg-slate-950">
+                    <div className="bg-emerald-500 text-white p-3 text-center font-bold text-sm">TAX BILL NUMBER VERIFIED</div>
+                    <div className="p-5 space-y-3 text-xs">
+                      <div className="flex justify-between border-b pb-2"><span className="text-slate-500">Business Name</span><span className="font-semibold text-right">{verificationResult.record.businessName}</span></div>
+                      <div className="flex justify-between border-b pb-2"><span className="text-slate-500">Mayor's Permit Number</span><span className="font-semibold">{verificationResult.record.mayorsPermitNo}</span></div>
+                      <div className="flex justify-between border-b pb-2"><span className="text-slate-500">Tax Bill Number</span><span className="font-mono font-semibold">{verificationResult.record.taxBillNo}</span></div>
+                      <div className="flex justify-between border-b pb-2"><span className="text-slate-500">Tax Year</span><span className="font-semibold">{verificationResult.record.taxYear}</span></div>
+                      <div className="flex justify-between border-b pb-2"><span className="text-slate-500">Amount Due</span><span className="font-bold">{money(verificationResult.record.amountDue)}</span></div>
+                      <div className="flex justify-between border-b pb-2"><span className="text-slate-500">Tax Bill Status</span><span className="font-bold">{verificationResult.record.status}</span></div>
+                      <div className="flex justify-between border-b pb-2"><span className="text-slate-500">Assessment Date</span><span>{verificationResult.record.assessmentDate ? new Date(verificationResult.record.assessmentDate).toLocaleDateString() : '—'}</span></div>
+                      <div className="flex justify-between border-b pb-2"><span className="text-slate-500">Due Date</span><span>{verificationResult.record.dueDate ? new Date(verificationResult.record.dueDate).toLocaleDateString() : '—'}</span></div>
+                      <div className="flex justify-between"><span className="text-slate-500">Status</span><span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">VERIFIED</span></div>
+                    </div>
+                  </div>
+                )}
+              </form>
+            )}
+
+            {verifyMode === 'or-number' && (
+              <form onSubmit={handleOrVerifySubmit} className="space-y-4">
+                <h3 className="font-bold text-sm text-center mb-4">O.R. NUMBER VERIFICATION</h3>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Mayor's Permit Number</label>
+                  <input value={verifyOrForm.mayorsPermitNo} onChange={(e) => setVerifyOrForm({ ...verifyOrForm, mayorsPermitNo: e.target.value })} placeholder="Enter Mayor's Permit Number" required className="w-full p-3 border border-slate-300 dark:border-slate-700 rounded-xl text-sm bg-slate-50 dark:bg-slate-950 focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">O.R. Number</label>
+                  <input value={verifyOrForm.orNo} onChange={(e) => setVerifyOrForm({ ...verifyOrForm, orNo: e.target.value })} placeholder="Enter Official Receipt Number" required className="w-full p-3 border border-slate-300 dark:border-slate-700 rounded-xl text-sm bg-slate-50 dark:bg-slate-950 focus:ring-2 focus:ring-blue-500" />
+                </div>
+                
+                <div className="flex gap-3 pt-2">
+                  <button type="button" disabled={verifying} onClick={() => setVerifyMode('selection')} className="w-1/3 py-3.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm font-bold transition-all">Cancel</button>
+                  <button disabled={verifying} type="submit" className="w-2/3 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold shadow-md transition-all">{verifying ? 'Verifying...' : 'Next'}</button>
+                </div>
+
+                {verificationError && (
+                  <div className="mt-6 border border-rose-200 dark:border-rose-900 rounded-2xl overflow-hidden bg-slate-50 dark:bg-slate-950">
+                    <div className="p-6 text-center">
+                      <div className="text-rose-500 font-bold text-base mb-2">NO O.R. RECORD FOUND</div>
+                      <p className="text-slate-500 text-xs leading-relaxed">{verificationError}</p>
+                    </div>
+                  </div>
+                )}
+                
+                {verificationResult?.verified && (
+                  <div className="mt-6 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden bg-slate-50 dark:bg-slate-950">
+                    <div className="bg-emerald-500 text-white p-3 text-center font-bold text-sm">O.R. NUMBER VERIFIED</div>
+                    <div className="p-5 space-y-3 text-xs">
+                      <div className="flex justify-between border-b pb-2"><span className="text-slate-500">Business Name</span><span className="font-semibold text-right">{verificationResult.record.businessName}</span></div>
+                      <div className="flex justify-between border-b pb-2"><span className="text-slate-500">Mayor's Permit Number</span><span className="font-semibold">{verificationResult.record.mayorsPermitNo}</span></div>
+                      <div className="flex justify-between border-b pb-2"><span className="text-slate-500">O.R. Number</span><span className="font-mono font-semibold">{verificationResult.record.orNo}</span></div>
+                      <div className="flex justify-between border-b pb-2"><span className="text-slate-500">Amount Paid</span><span className="font-bold">{money(verificationResult.record.amountPaid)}</span></div>
+                      <div className="flex justify-between border-b pb-2"><span className="text-slate-500">Payment Date</span><span>{verificationResult.record.paymentDate ? new Date(verificationResult.record.paymentDate).toLocaleDateString() : '—'}</span></div>
+                      <div className="flex justify-between border-b pb-2"><span className="text-slate-500">Payment Method</span><span>{verificationResult.record.paymentMethod || '—'}</span></div>
+                      <div className="flex justify-between border-b pb-2"><span className="text-slate-500">Payment Status</span><span className="font-bold">{verificationResult.record.paymentStatus}</span></div>
+                      <div className="flex justify-between"><span className="text-slate-500">Status</span><span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">VERIFIED</span></div>
+                    </div>
+                  </div>
+                )}
+              </form>
+            )}
+          </div>
         )}
       </div>
 

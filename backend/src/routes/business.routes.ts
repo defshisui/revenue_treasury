@@ -17,7 +17,6 @@ import {
   deleteAppointment,
   linkInPersonApplication,
   verifyMayorPermit,
-  verifyTaxBillOR,
 } from '../controllers/business.controller.js';
 
 const upload = multer({
@@ -85,7 +84,6 @@ router.delete(
 router.post('/verify/tax-bill', verifyTaxBill);
 router.post('/verify/or-number', verifyOrNumber);
 router.post('/verify/mayor-permit', authenticateToken, verifyMayorPermit);
-router.post('/verify-record', authenticateToken, verifyTaxBillOR);
 
 router.post('/appointments', authenticateToken, createAppointment);
 router.get('/appointments/config', authenticateToken, getAppointmentConfig);

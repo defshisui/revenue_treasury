@@ -857,111 +857,92 @@ export async function deleteBusinessAssessment(req: Request, res: Response): Pro
 
 export async function verifyTaxBill(req: Request, res: Response): Promise<void> {
   const taxBillNo = String(req.body?.taxBillNo || '').trim();
-  const tin = String(req.body?.tin || '').trim();
+  const permitNo = String(req.body?.permitNo || '').trim();
 
-  if (!taxBillNo || !tin) {
-    res.status(400).json({ message: 'Tax Bill Number and TIN are required.' });
+  if (!taxBillNo || !permitNo) {
+    res.status(400).json({ message: 'Tax Bill Number and Mayor\'s Permit Number are required.' });
     return;
   }
 
   try {
     const result = await pool.query(
-      `SELECT * FROM business_assessments WHERE tax_bill_number = $1 AND tin = $2 LIMIT 1`,
-      [taxBillNo, tin]
+      `SELECT business_name, mayors_permit_number, tax_bill_number, tax_year, computed_fees, payment_amount, status, created_at, due_date
+       FROM business_assessments 
+       WHERE tax_bill_number = $1 AND mayors_permit_number = $2 
+       LIMIT 1`,
+      [taxBillNo, permitNo]
     );
 
     if (result.rows.length === 0) {
-      res.status(404).json({ message: 'Tax Bill Number not found or does not match the supplied TIN.' });
+      res.status(404).json({ message: 'The Mayor\'s Permit Number and Tax Bill Number could not be verified against the available Treasury records.' });
       return;
     }
 
     const record = result.rows[0];
-    const paymentStatus = String(record.payment_status || 'UNPAID').toUpperCase();
-
-    if (paymentStatus === 'PAID') {
-      res.status(409).json({
-        message: 'This Tax Bill has already been paid. Please use the O.R. Number Verification instead.',
-        status: 'PAID',
-        record: {
-          businessName: record.business_name,
-          taxBillNo: record.tax_bill_number,
-          tin: record.tin,
-          trackingNumber: record.tracking_number,
-          officialReceiptNumber: record.official_receipt_number || null,
-        },
-      });
-      return;
-    }
-
     const computedFees = parseJsonObject(record.computed_fees);
-    // Any status at or past TAX_BILL_ISSUED is valid and assessed for payment.
-    const assessedStatuses = new Set(['APPROVED', 'TAX_BILL_ISSUED', 'FOR_OWNER_PAYMENT', 'FOR_PAYMENT_VALIDATION', 'OR_ISSUED']);
+    const amountDue = Number(record.payment_amount) > 0 ? record.payment_amount : (computedFees.total || 0);
+
     res.status(200).json({
-      status: assessedStatuses.has(String(record.status || '').toUpperCase()) ? 'VALID & ASSESSED' : 'PENDING EVALUATION',
+      verified: true,
       record: {
         businessName: record.business_name,
+        mayorsPermitNo: record.mayors_permit_number,
         taxBillNo: record.tax_bill_number,
-        trackingNumber: record.tracking_number,
-        tin: record.tin,
-        grossSales: Number(record.gross_sales || 0),
-        computedFees,
-        assessmentStatus: record.status,
-        paymentStatus: 'UNPAID',
-      },
+        taxYear: record.tax_year || new Date().getFullYear(),
+        amountDue: amountDue,
+        status: record.status,
+        assessmentDate: record.created_at,
+        dueDate: record.due_date
+      }
     });
   } catch (err: any) {
     console.error('Error verifying tax bill:', err);
-    res.status(500).json({ message: err.message || 'Server error during tax bill verification.' });
+    res.status(500).json({ message: 'Server error during tax bill verification.' });
   }
 }
 
 export async function verifyOrNumber(req: Request, res: Response): Promise<void> {
   const permitNo = String(req.body?.permitNo || '').trim();
   const orNo = String(req.body?.orNo || '').trim();
-  const tin = String(req.body?.tin || '').trim();
 
-  if (!permitNo || !orNo || !tin) {
-    res.status(400).json({ message: 'Mayor’s Permit/Tracking number, OR number, and TIN are required.' });
+  if (!permitNo || !orNo) {
+    res.status(400).json({ message: 'Mayor\'s Permit Number and OR Number are required.' });
     return;
   }
 
   try {
     const result = await pool.query(
-      `SELECT * FROM business_assessments
-       WHERE (tracking_number = $1 OR mayors_permit_number = $1 OR id::text = $1)
-         AND tin = $2
+      `SELECT business_name, mayors_permit_number, official_receipt_number, paid_amount, payment_amount, computed_fees, payment_date, payment_method, payment_status
+       FROM business_assessments
+       WHERE mayors_permit_number = $1 AND official_receipt_number = $2 AND payment_status = 'PAID'
        LIMIT 1`,
-      [permitNo, tin]
+      [permitNo, orNo]
     );
 
     if (result.rows.length === 0) {
-      res.status(404).json({ message: 'Official Receipt record not found or mismatched TIN/permit details.' });
+      res.status(404).json({ message: 'The Mayor\'s Permit Number and O.R. Number could not be verified against the available Treasury payment records.' });
       return;
     }
 
     const record = result.rows[0];
-    if (String(record.payment_status || 'UNPAID').toUpperCase() !== 'PAID') {
-      res.status(409).json({
-        message: 'This Business Tax assessment has not been paid yet. Please use Tax Bill Number Verification instead.',
-        status: 'UNPAID',
-        taxBillNumber: record.tax_bill_number || null,
-      });
-      return;
-    }
-
     const computedFees = parseJsonObject(record.computed_fees);
+    const amountPaid = Number(record.paid_amount || record.payment_amount || computedFees.total || 0);
+
     res.status(200).json({
-      amount: String(Number(record.paid_amount || record.payment_amount || computedFees.total || 0).toFixed(2)),
-      message: 'Official Receipt verified successfully in treasury records.',
-      orNumber: record.official_receipt_number || orNo,
-      businessName: record.business_name || 'Verified Business',
-      paymentStatus: 'PAID',
-      paymentReference: record.payment_reference || null,
-      paymentDate: record.payment_date || null,
+      verified: true,
+      record: {
+        businessName: record.business_name,
+        mayorsPermitNo: record.mayors_permit_number,
+        orNo: record.official_receipt_number,
+        amountPaid: amountPaid,
+        paymentDate: record.payment_date,
+        paymentMethod: record.payment_method,
+        paymentStatus: record.payment_status
+      }
     });
   } catch (err: any) {
     console.error('Error verifying O.R. number:', err);
-    res.status(500).json({ message: err.message || 'Server error during O.R. verification.' });
+    res.status(500).json({ message: 'Server error during O.R. verification.' });
   }
 }
 
