@@ -269,6 +269,8 @@ export async function initializeDatabase(): Promise<void> {
           email VARCHAR(255),
           attachments JSONB DEFAULT '[]'::jsonb,
           application_date TIMESTAMP DEFAULT NOW(),
+          application_source VARCHAR(50) DEFAULT 'ONLINE',
+          is_linked BOOLEAN DEFAULT TRUE,
           created_at TIMESTAMP DEFAULT NOW()
       );
 
@@ -311,6 +313,8 @@ export async function initializeDatabase(): Promise<void> {
       ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();
       ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS initial_assessed_by VARCHAR(255);
       ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS initial_assessed_at TIMESTAMP;
+      ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS application_source VARCHAR(50) DEFAULT 'ONLINE';
+      ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS is_linked BOOLEAN DEFAULT TRUE;
 
       UPDATE business_assessments
       SET payment_status = CASE

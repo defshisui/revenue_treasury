@@ -241,6 +241,8 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
     hasOtherBranches: 'no',
     hasMultipleLines: 'no',
     grossSales: '',
+    essentialSales: '',
+    nonEssentialSales: '',
     year: String(new Date().getFullYear()),
     assessmentPeriod: 'ANNUAL_RENEWAL',
     quarter: 'ANNUAL',
@@ -481,8 +483,10 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
       formData.append('mayorsPermitNumber', salesForm.mayorsPermitNumber.trim());
       formData.append('birRegistered', salesForm.birRegistered === 'yes' ? 'true' : 'false');
       formData.append('hasOtherBranches', salesForm.hasOtherBranches === 'yes' ? 'true' : 'false');
-      formData.append('hasMultipleLines', salesForm.hasMultipleLines === 'yes' ? 'true' : 'false');
+      formData.append('hasMultipleLines', salesForm.hasMultipleLines);
       formData.append('grossSales', salesForm.grossSales);
+      formData.append('essentialSales', salesForm.essentialSales);
+      formData.append('nonEssentialSales', salesForm.nonEssentialSales);
       formData.append('year', salesForm.year);
       formData.append('assessmentPeriod', salesForm.assessmentPeriod);
       formData.append('quarter', salesForm.quarter);
@@ -537,6 +541,28 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
     setIsModalOpen(type);
   };
 
+  const handleLinkInPersonSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!user || !linkAppForm.trackingNumber.trim()) return;
+    setSubmitting(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/business-assessments/link`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user.token}` },
+        body: JSON.stringify({ tracking_number: linkAppForm.trackingNumber.trim() }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || 'Failed to link application.');
+      alert('Application linked successfully.');
+      setIsModalOpen(false);
+      void fetchAssessments();
+    } catch (error: any) {
+      alert(error.message || 'Failed to link application.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleAppointmentSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!user) return;
@@ -581,7 +607,8 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
   };
 
   const handlePayMongoBusinessTaxQrPayment = async (record: AssessmentRecord) => {
-    if (record.status !== 'FOR_OWNER_PAYMENT' || record.paymentStatus === 'PAID') {
+    const isLegacyApproved = record.status === 'APPROVED' && record.paymentStatus === 'UNPAID' && Number(record.paymentAmount || record.computedFees?.total || 0) > 0;
+    if ((record.status !== 'FOR_OWNER_PAYMENT' && !isLegacyApproved) || record.paymentStatus === 'PAID') {
       setQrError('This assessment is not available for payment.');
       return;
     }
@@ -811,7 +838,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                             const s = record.status;
                             if (s === 'RETURNED_FOR_COMPLIANCE') return 'Respond';
                             if (s === 'TAX_BILL_ISSUED') return 'View Tax Bill';
-                            if (s === 'FOR_OWNER_PAYMENT') return 'Pay';
+                            if (s === 'FOR_OWNER_PAYMENT' || (s === 'APPROVED' && record.paymentStatus === 'UNPAID' && Number(record.paymentAmount) > 0)) return 'Pay';
                             if (s === 'FOR_PAYMENT_VALIDATION') return 'View Payment Status';
                             if (s === 'OR_ISSUED') return 'View OR';
                             if (s === 'ARCHIVED') return record.officialReceiptNumber ? 'View OR' : 'View Record';
@@ -870,8 +897,8 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                 </div>
 
                 <div className="flex justify-center gap-3 w-full max-w-sm">
-                  <button type="button" onClick={() => { setIsModalOpen(false); setSalesForm((prev) => ({ ...prev, businessName: '', businessAddress: '', barangay: '', lineOfBusiness: '', businessAreaSqm: '', registrationNumber: '', mayorsPermitNumber: '', grossSales: '', psicCode: '', tin: '' })); }} className="flex-1 px-4 py-3 rounded-xl border font-bold text-sm">Close</button>
-                  <button type="button" onClick={() => { setIsModalOpen(false); setSalesForm((prev) => ({ ...prev, businessName: '', businessAddress: '', barangay: '', lineOfBusiness: '', businessAreaSqm: '', registrationNumber: '', mayorsPermitNumber: '', grossSales: '', psicCode: '', tin: '' })); setCurrentScreen('assessment-list'); }} className="flex-1 px-4 py-3 rounded-xl bg-blue-600 text-white font-bold text-sm hover:bg-blue-700">View Application Status</button>
+                  <button type="button" onClick={() => { setIsModalOpen(false); setSalesForm((prev) => ({ ...prev, businessName: '', businessAddress: '', barangay: '', lineOfBusiness: '', businessAreaSqm: '', registrationNumber: '', mayorsPermitNumber: '', grossSales: '', essentialSales: '', nonEssentialSales: '', psicCode: '', tin: '' })); }} className="flex-1 px-4 py-3 rounded-xl border font-bold text-sm">Close</button>
+                  <button type="button" onClick={() => { setIsModalOpen(false); setSalesForm((prev) => ({ ...prev, businessName: '', businessAddress: '', barangay: '', lineOfBusiness: '', businessAreaSqm: '', registrationNumber: '', mayorsPermitNumber: '', grossSales: '', essentialSales: '', nonEssentialSales: '', psicCode: '', tin: '' })); setCurrentScreen('assessment-list'); }} className="flex-1 px-4 py-3 rounded-xl bg-blue-600 text-white font-bold text-sm hover:bg-blue-700">View Application Status</button>
                 </div>
               </div>
             ) : (
@@ -939,9 +966,12 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                       <div>
                         <h4 className="font-bold text-sm border-b pb-2 mb-4">B. Gross Sales / Receipts</h4>
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                          <div><label className="label">Gross Sales / Receipts (PHP) *</label><input required type="number" min="0" step="0.01" value={salesForm.grossSales} onChange={(e) => setSalesForm({ ...salesForm, grossSales: e.target.value })} className="field font-bold text-blue-700" /></div>
+                          <div><label className="label">Total Gross Sales / Receipts (PHP) *</label><input required type="number" min="0" step="0.01" value={salesForm.grossSales} onChange={(e) => setSalesForm({ ...salesForm, grossSales: e.target.value })} className="field font-bold text-blue-700" /></div>
                           <div><label className="label">PSIC Code (optional)</label><input value={salesForm.psicCode} onChange={(e) => setSalesForm({ ...salesForm, psicCode: e.target.value })} className="field" placeholder="e.g. 47110" /></div>
+                          <div><label className="label">Essential / Basic Commodities (PHP)</label><input type="number" min="0" step="0.01" value={salesForm.essentialSales} onChange={(e) => setSalesForm({ ...salesForm, essentialSales: e.target.value })} className="field" placeholder="0.00" /></div>
+                          <div><label className="label">Non-Essential Commodities (PHP)</label><input type="number" min="0" step="0.01" value={salesForm.nonEssentialSales} onChange={(e) => setSalesForm({ ...salesForm, nonEssentialSales: e.target.value })} className="field" placeholder="0.00" /></div>
                         </div>
+                        <p className="text-[10px] text-slate-500 mt-2">Note: Essential and Non-Essential sales breakdown should sum up to your Total Gross Sales.</p>
                       </div>
                     </div>
                   )}
@@ -1101,7 +1131,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
 
       {isModalOpen === 'link-application' && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <form onSubmit={(e) => { e.preventDefault(); alert('Link in-person application functionality is mocked. The backend endpoint needs to be connected.'); setIsModalOpen(false); }} className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800">
+          <form onSubmit={handleLinkInPersonSubmit} className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800">
             <div className="flex justify-between items-center p-5 border-b bg-slate-50 dark:bg-slate-950">
               <h3 className="font-bold text-sm">LINK IN-PERSON APPLICATION</h3>
               <button type="button" onClick={() => setIsModalOpen(false)} className="text-xl font-bold hover:text-rose-500">×</button>
@@ -1117,7 +1147,9 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
             </div>
             <div className="flex justify-end gap-3 p-4 border-t bg-slate-50 dark:bg-slate-950">
               <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 rounded-xl border font-bold text-sm">Cancel</button>
-              <button type="submit" className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-sm transition-colors">Proceed</button>
+              <button type="submit" disabled={submitting} className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-sm transition-colors disabled:opacity-50">
+                {submitting ? 'Linking...' : 'Proceed'}
+              </button>
             </div>
           </form>
         </div>

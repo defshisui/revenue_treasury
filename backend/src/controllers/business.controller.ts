@@ -259,7 +259,7 @@ export async function getBusinessAssessments(req: Request, res: Response): Promi
         res.status(401).json({ message: 'Authenticated citizen email is required.' });
         return;
       }
-      query += ` AND LOWER(email) = $${paramIndex++}`;
+      query += ` AND LOWER(email) = $${paramIndex++} AND COALESCE(is_linked, TRUE) = TRUE`;
       params.push(authEmail);
     } else if (email) {
       query += ` AND LOWER(email) = $${paramIndex++}`;
@@ -433,7 +433,8 @@ export async function createSalesDeclaration(req: Request, res: Response): Promi
         bir_registered, has_other_branches, has_multiple_lines,
         status, psic_code, gross_sales, tin, email, tax_year,
         assessment_period, quarter, attachments, document_checklist,
-        payment_status, payment_amount, paid_amount
+        payment_status, payment_amount, paid_amount,
+        application_source, is_linked
       ) VALUES (
         $1, $2, NULL, NULL,
         $3, $4, $5, $6,
@@ -441,8 +442,9 @@ export async function createSalesDeclaration(req: Request, res: Response): Promi
         $10, $11, $12,
         $13, $14, $15,
         'SUBMITTED', $16, $17, $18, $19, $20,
-        $21, $22, $23, $24, '{}'::jsonb,
-        'UNPAID', 0, 0
+        $21, $22, $23, '{}'::jsonb,
+        'UNPAID', 0, 0,
+        'ONLINE', TRUE
       )
       RETURNING *`,
       [
@@ -681,9 +683,9 @@ export async function updateAssessmentStatus(req: Request, res: Response): Promi
 
     const authEmail = String((req as AuthenticatedRequest).user?.email || 'treasury-staff');
 
-    // Initial assessment officer: recorded when staff moves to FOR_INITIAL_ASSESSMENT.
-    const initialAssessedAt = nextStatus === 'FOR_INITIAL_ASSESSMENT' && current.status !== nextStatus ? new Date() : current.initial_assessed_at;
-    const initialAssessedBy = nextStatus === 'FOR_INITIAL_ASSESSMENT' && current.status !== nextStatus ? authEmail : current.initial_assessed_by;
+    // Initial assessment officer: recorded when staff completes the assessment and moves to FOR_FINAL_REVIEW.
+    const initialAssessedAt = nextStatus === 'FOR_FINAL_REVIEW' && current.status === 'FOR_INITIAL_ASSESSMENT' ? new Date() : current.initial_assessed_at;
+    const initialAssessedBy = nextStatus === 'FOR_FINAL_REVIEW' && current.status === 'FOR_INITIAL_ASSESSMENT' ? authEmail : current.initial_assessed_by;
 
     // Final review officer: recorded when staff moves to FOR_FINAL_REVIEW.
     const reviewedAt = nextStatus === 'FOR_FINAL_REVIEW' && current.status !== nextStatus ? new Date() : current.reviewed_at;
@@ -1057,5 +1059,71 @@ export async function deleteAppointment(req: Request, res: Response): Promise<vo
   } catch (err) {
     console.error('Error deleting appointment record:', err);
     res.status(500).json({ message: 'Failed to delete appointment from server.' });
+  }
+}
+
+export async function linkInPersonApplication(req: Request, res: Response): Promise<void> {
+  const { tracking_number } = req.body;
+  const authEmail = String((req as AuthenticatedRequest).user?.email || '').trim().toLowerCase();
+
+  if (!authEmail) {
+    res.status(401).json({ message: 'Authenticated citizen email is required.' });
+    return;
+  }
+
+  if (!tracking_number) {
+    res.status(400).json({ message: 'Tracking number is required.' });
+    return;
+  }
+
+  try {
+    const checkResult = await pool.query(
+      `SELECT * FROM business_assessments WHERE tracking_number = $1`,
+      [tracking_number]
+    );
+
+    if (checkResult.rows.length === 0) {
+      res.status(404).json({ message: 'Application not found with the provided tracking number.' });
+      return;
+    }
+
+    const application = checkResult.rows[0];
+
+    if (application.application_source !== 'IN_PERSON') {
+      res.status(400).json({ message: 'Only in-person applications can be linked via this method.' });
+      return;
+    }
+
+    if (String(application.email || '').trim().toLowerCase() !== authEmail) {
+      res.status(403).json({ message: 'This application is registered to a different email address.' });
+      return;
+    }
+
+    if (application.is_linked) {
+      res.status(400).json({ message: 'This application is already linked to an account.' });
+      return;
+    }
+
+    await pool.query(
+      `UPDATE business_assessments SET is_linked = TRUE, updated_at = NOW() WHERE tracking_number = $1`,
+      [tracking_number]
+    );
+
+    await recordAudit(
+      req,
+      'AUD-BIZ-LINK',
+      authEmail,
+      'citizen',
+      'Business Tax Module',
+      'BUSINESS_TAX_APPLICATION_LINKED',
+      'INFO',
+      JSON.stringify({ is_linked: false }),
+      JSON.stringify({ is_linked: true, trackingNumber: tracking_number })
+    );
+
+    res.status(200).json({ message: 'Application successfully linked to your account.' });
+  } catch (err: any) {
+    console.error('Error linking application:', err);
+    res.status(500).json({ message: err.message || 'Failed to link application.' });
   }
 }

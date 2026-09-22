@@ -1,4 +1,4 @@
-﻿import { Router } from 'express';
+import { Router } from 'express';
 import multer from 'multer';
 import { authenticateToken } from '../middleware/auth.js';
 import {
@@ -13,6 +13,7 @@ import {
   getAppointments,
   updateAppointmentStatus,
   deleteAppointment,
+  linkInPersonApplication,
 } from '../controllers/business.controller.js';
 
 const upload = multer({
@@ -61,6 +62,12 @@ router.patch(
   authenticateToken,
   staffOnly,
   updateAssessmentStatus
+);
+
+router.post(
+  '/business-assessments/link',
+  authenticateToken,
+  linkInPersonApplication
 );
 
 router.delete(
