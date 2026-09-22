@@ -221,7 +221,15 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
     return <div className="space-y-2">{required.map((key) => <label key={key} className="flex items-start gap-3 p-3 rounded-xl border bg-slate-50 dark:bg-slate-950 cursor-pointer"><input type="checkbox" checked={Boolean(checklist[key])} onChange={(e) => setChecklist((prev) => ({ ...prev, [key]: e.target.checked }))} className="mt-1" /><span><span className="font-semibold">{LABELS[key] || key}</span><span className="block text-[9px] text-slate-400 mt-0.5">{(selectedAssessment.attachments || []).filter((a) => a.type === key).map((a) => a.name).join(', ') || 'No uploaded document mapped to this requirement.'}</span></span></label>)}</div>;
   };
 
-  return <div className="w-full font-sans animate-in fade-in duration-300">
+  return (
+    <div
+      style={{
+        marginLeft: _isCollapsed ? '80px' : '256px',
+        width: _isCollapsed ? 'calc(100% - 80px)' : 'calc(100% - 256px)',
+      }}
+      className="min-h-screen bg-slate-50/50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 p-6 pt-24 transition-all duration-300 box-border flex flex-col font-sans"
+    >
+      <div className="w-full font-sans animate-in fade-in duration-300">
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6 bg-white dark:bg-slate-900/80 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs backdrop-blur-md">
         <div>
           <div className="flex flex-wrap items-center gap-2 mb-1">
@@ -328,18 +336,43 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
                 <span>Archiver</span>
               </button>
             </div>
+            
+            <div className="flex items-center gap-2 text-xs text-slate-500">
+               {/* Optional pagination controls */}
+            </div>
+          </div>
 
-            <div className="flex flex-wrap items-center gap-3">
-              <select disabled={archiveView} value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }} className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-semibold text-slate-700 dark:text-slate-300">
+          <div className="p-4 bg-slate-50/70 dark:bg-slate-950/60 rounded-2xl border border-slate-200/80 dark:border-slate-800 grid grid-cols-1 sm:grid-cols-4 gap-4">
+            
+            <div className="flex flex-col gap-1.5 text-xs">
+              <label className="font-semibold text-slate-700 dark:text-slate-300">Filter Status</label>
+              <select disabled={archiveView} value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }} className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white outline-none focus:border-blue-500 transition-all text-xs font-semibold">
                 <option value="ALL">All Active Statuses</option>
                 {filteredStatuses.filter((x) => x !== 'ARCHIVED').map((x) => <option key={x}>{x}</option>)}
               </select>
-              <select value={searchType} onChange={(e) => setSearchType(e.target.value)} className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-semibold text-slate-700 dark:text-slate-300">
+            </div>
+
+            <div className="flex flex-col gap-1.5 text-xs">
+              <label className="font-semibold text-slate-700 dark:text-slate-300">Search Field</label>
+              <select value={searchType} onChange={(e) => setSearchType(e.target.value)} className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white outline-none focus:border-blue-500 transition-all text-xs font-semibold">
                 <option>Tracking/MP No.</option><option>Business Name</option><option>Business Owner</option><option>Mayor's Permit No.</option><option>Tax Bill Number</option>
               </select>
-              <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && void fetchAssessments()} placeholder="Search assessment queue..." className="min-w-[220px] px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs focus:ring-2 focus:ring-blue-500 outline-none" />
-              <button type="button" onClick={() => { setPage(1); void fetchAssessments(); }} className="px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold shadow-sm hover:bg-blue-700">Search</button>
             </div>
+
+            <div className="flex flex-col gap-1.5 text-xs">
+              <label className="font-semibold text-slate-700 dark:text-slate-300">Search Query</label>
+              <div className="relative">
+                <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && void fetchAssessments()} placeholder="Enter keywords..." className="w-full pl-8 pr-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white outline-none focus:border-blue-500 transition-all text-xs" />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5 text-xs justify-end">
+              <button type="button" onClick={() => { setPage(1); void fetchAssessments(); }} className="w-full py-2.5 rounded-xl bg-blue-600 text-white text-xs font-bold shadow-sm hover:bg-blue-700 transition flex items-center justify-center">
+                <i className="fa-solid fa-magnifying-glass mr-2"></i>Search
+              </button>
+            </div>
+            
           </div>
       {fetchError && <div className="p-3 rounded-xl bg-rose-50 text-rose-700 border border-rose-200 text-xs">{fetchError}</div>}
       <div className="overflow-x-auto bg-white dark:bg-slate-900 border rounded-2xl"><table className="w-full min-w-[1100px] text-xs"><thead className="bg-slate-50 dark:bg-slate-950 text-[10px] uppercase text-slate-500"><tr><th className="p-3 text-left">Tracking</th><th className="p-3 text-left">Business / Owner</th><th className="p-3 text-left">Permit</th><th className="p-3 text-left">Gross Sales</th><th className="p-3 text-left">Status</th><th className="p-3 text-left">Payment</th><th className="p-3 text-right">Action</th></tr></thead><tbody className="divide-y">{loading ? <tr><td colSpan={7} className="p-12 text-center text-slate-400">Loading...</td></tr> : assessments.length ? assessments.map((record) => <tr key={record.id} className="hover:bg-slate-50 dark:hover:bg-slate-950/50"><td className="p-3 font-mono font-bold text-blue-600">{record.trackingNumber}</td><td className="p-3"><div className="font-bold">{record.businessName}</div><div className="text-[10px] text-slate-400">{record.businessOwner}</div></td><td className="p-3 font-mono">{record.mayorPermitNumber || '—'}</td><td className="p-3 font-mono">{money(record.grossSales)}</td><td className="p-3"><span className={`px-2 py-1 rounded-full text-[9px] font-bold ${statusClass(record.status)}`}>{record.status}</span></td><td className="p-3"><span className={`px-2 py-1 rounded-full text-[9px] font-bold ${record.paymentStatus === 'PAID' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>{record.paymentStatus || 'UNPAID'}</span></td><td className="p-3 text-right"><button type="button" onClick={() => setSelectedAssessment(record)} className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 font-bold mr-1">Review</button><button type="button" onClick={() => void archiveOrRestore(record)} className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 font-bold">{record.recordStatus === 'ARCHIVED' ? 'Restore' : 'Archive'}</button></td></tr>) : <tr><td colSpan={7} className="p-12 text-center text-slate-400">No records found.</td></tr>}</tbody></table></div>
@@ -378,7 +411,9 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
     {previewFile && <div className="fixed inset-0 z-[70] bg-black/90 flex items-center justify-center p-4" onClick={() => setPreviewFile(null)}><div className="w-full max-w-5xl h-[90vh]" onClick={(e) => e.stopPropagation()}><div className="flex justify-end mb-2"><button type="button" onClick={() => setPreviewFile(null)} className="text-white text-2xl font-bold">×</button></div>{previewFile.mimeType === 'application/pdf' || previewFile.url.startsWith('data:application/pdf') ? <iframe src={previewFile.url} title="Document Preview" className="w-full h-[calc(100%-40px)] bg-white rounded-xl" /> : <div className="w-full h-[calc(100%-40px)] flex items-center justify-center"><img src={previewFile.url} alt="Document Preview" className="max-w-full max-h-full object-contain rounded-xl" /></div>}</div></div>}
 
     <style>{`.box{display:flex;flex-direction:column;gap:.25rem;padding:1rem;border:1px solid rgb(226 232 240);border-radius:1rem;background:rgb(248 250 252)}.dark .box{border-color:rgb(51 65 85);background:rgba(2,6,23,.35)}.box>span:first-child{font-size:9px;font-weight:700;text-transform:uppercase;color:rgb(148 163 184)}.box>b{font-weight:700}`}</style>
-  </div>;
+  </div>
+  </div>
+  );
 };
 
 export default BusinessTaxAssessmentAdminView;
