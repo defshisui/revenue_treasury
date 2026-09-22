@@ -1102,7 +1102,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
               The Mayor's Permit Number you have entered has no records in the OUBPAS/was encoded only. Unfortunately, you cannot proceed with the Online Sales Declaration.
             </p>
             <p className="text-xs text-slate-700 dark:text-slate-300 mb-4 leading-relaxed">
-              Kindly set an appointment with CTO to proceed with the assessment. Please take note that you should submit an Online Renewal Application via Kiosk or QC E-Services portal after settling your business tax payment.
+              Kindly set an appointment with CTO to proceed. After payment, submit an Online Renewal Application via GovServ portal.
             </p>
             <p className="text-xs text-rose-600 font-medium mb-6">
               Reminder: Bring your appointment confirmation email when you visit us.
@@ -1128,10 +1128,73 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
 
       {isModalOpen === 'appointment' && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <form onSubmit={handleAppointmentSubmit} className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-xl overflow-hidden">
-            <div className="flex justify-between px-5 py-4 border-b bg-slate-50 dark:bg-slate-950"><h3 className="font-bold text-sm">BOOK CTO APPOINTMENT</h3><button type="button" onClick={() => setIsModalOpen(false)} className="font-bold text-xl">×</button></div>
-            <div className="p-5 space-y-3 text-xs"><input required placeholder="Appointment Type" value={aptForm.appointmentType} onChange={(e) => setAptForm({ ...aptForm, appointmentType: e.target.value })} className="field" /><input required placeholder="Business Name" value={aptForm.businessName} onChange={(e) => setAptForm({ ...aptForm, businessName: e.target.value })} className="field" /><input placeholder="TIN" value={aptForm.tin} onChange={(e) => setAptForm({ ...aptForm, tin: e.target.value })} className="field" /><input required placeholder="Address" value={aptForm.address} onChange={(e) => setAptForm({ ...aptForm, address: e.target.value })} className="field" /><textarea required placeholder="Description / Concern" value={aptForm.description} onChange={(e) => setAptForm({ ...aptForm, description: e.target.value })} className="field" rows={3} /><input required type="tel" placeholder="09123456789" value={aptForm.phone} onChange={(e) => setAptForm({ ...aptForm, phone: e.target.value })} className="field" /><input required type="date" value={aptForm.date} onChange={(e) => setAptForm({ ...aptForm, date: e.target.value })} className="field" /><select value={aptForm.timeSlot} onChange={(e) => setAptForm({ ...aptForm, timeSlot: e.target.value })} className="field"><option>08:00 AM - 09:00 AM</option><option>09:00 AM - 10:00 AM</option><option>10:00 AM - 11:00 AM</option><option>01:00 PM - 02:00 PM</option><option>02:00 PM - 03:00 PM</option><option>03:00 PM - 04:00 PM</option></select><div className="flex items-center justify-between rounded-xl border p-3"><span className="font-mono font-bold">{captchaNum1} + {captchaNum2} = ?</span><input required value={captchaInput} onChange={(e) => setCaptchaInput(e.target.value)} className="w-24 p-2 border rounded-lg text-center" /><button type="button" onClick={() => { setCaptchaNum1(Math.floor(Math.random() * 10) + 1); setCaptchaNum2(Math.floor(Math.random() * 10) + 1); setCaptchaInput(''); }} className="text-blue-600 font-bold">Refresh</button></div></div>
-            <div className="flex justify-end gap-2 px-5 py-4 border-t bg-slate-50 dark:bg-slate-950"><button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 rounded-xl border text-xs font-bold">Cancel</button><button disabled={submitting} type="submit" className="px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold">{submitting ? 'Submitting...' : 'Submit Appointment'}</button></div>
+          <form onSubmit={handleAppointmentSubmit} className="bg-white dark:bg-slate-900 w-full max-w-2xl overflow-hidden relative" style={{ borderRadius: '4px' }}>
+            <div className="flex justify-between items-center px-6 py-4 border-b bg-white dark:bg-slate-950">
+              <h3 className="font-bold text-sm mx-auto text-slate-800 dark:text-white">Request New Appointment</h3>
+              <button type="button" onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600 text-xl font-bold absolute right-4 top-3">×</button>
+            </div>
+            
+            <div className="p-6 space-y-4 text-xs max-h-[75vh] overflow-y-auto custom-scrollbar">
+              
+              <div>
+                <label className="block text-[11px] mb-1 font-semibold text-slate-700"><span className="text-rose-500">*</span> Department</label>
+                <select className="w-full p-2.5 border rounded text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500" value={aptForm.department} onChange={(e) => setAptForm({ ...aptForm, department: e.target.value })}>
+                  <option>City Treasurer's Office</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] mb-1 font-semibold text-slate-700"><span className="text-rose-500">*</span> Appointment Type</label>
+                <select required className="w-full p-2.5 border rounded text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500" value={aptForm.appointmentType} onChange={(e) => setAptForm({ ...aptForm, appointmentType: e.target.value })}>
+                  <option value="">Nothing selected</option>
+                  <option value="BUSINESS TAX ASSESSMENT (Renewal) - MAIN OFFICE">BUSINESS TAX ASSESSMENT (Renewal) - MAIN OFFICE</option>
+                  <option value="BUSINESS TAX ASSESSMENT (SOLE PROPRIETORSHIP) - BRANCHES">BUSINESS TAX ASSESSMENT (SOLE PROPRIETORSHIP) - BRANCHES</option>
+                  <option value="BUSINESS TAX ASSESSMENT (SOLE PROPRIETORSHIP) - SATELLITE OFFICES">BUSINESS TAX ASSESSMENT (SOLE PROPRIETORSHIP) - SATELLITE OFFICES</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] mb-1 font-semibold text-slate-700">Appointment Address</label>
+                <input className="w-full p-2.5 border rounded text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500" value={aptForm.address} onChange={(e) => setAptForm({ ...aptForm, address: e.target.value })} />
+              </div>
+
+              <div>
+                <label className="block text-[11px] mb-1 font-semibold text-slate-700">Appointment Description</label>
+                <input className="w-full p-2.5 border rounded text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500" value={aptForm.description} onChange={(e) => setAptForm({ ...aptForm, description: e.target.value })} />
+              </div>
+
+              <div>
+                <label className="block text-[11px] mb-1 font-semibold text-slate-700"><span className="text-rose-500">*</span> Full Name</label>
+                <input required className="w-full p-2.5 border rounded text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500" value={aptForm.fullName || user?.fullname || ''} onChange={(e) => setAptForm({ ...aptForm, fullName: e.target.value })} />
+              </div>
+
+              <div>
+                <label className="block text-[11px] mb-1 font-semibold text-slate-700"><span className="text-rose-500">*</span> Email Address</label>
+                <input required type="email" className="w-full p-2.5 border rounded text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500" value={aptForm.email || user?.email || ''} onChange={(e) => setAptForm({ ...aptForm, email: e.target.value })} />
+              </div>
+
+              <div>
+                <label className="block text-[11px] mb-1 font-semibold text-slate-700"><span className="text-rose-500">*</span> Phone Number</label>
+                <input required type="tel" className="w-full p-2.5 border rounded text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500" value={aptForm.phone} onChange={(e) => setAptForm({ ...aptForm, phone: e.target.value })} />
+              </div>
+
+              <div>
+                <label className="block text-[11px] mb-1 font-semibold text-slate-700"><span className="text-rose-500">*</span> Date</label>
+                <div className="relative">
+                  <input required type="date" className="w-full p-2.5 border rounded text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500" value={aptForm.date} onChange={(e) => setAptForm({ ...aptForm, date: e.target.value })} />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] mb-1 font-semibold text-slate-700">Remarks (Optional)</label>
+                <textarea className="w-full p-2.5 border rounded text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500" rows={3} value={aptForm.remarks} onChange={(e) => setAptForm({ ...aptForm, remarks: e.target.value })}></textarea>
+              </div>
+
+            </div>
+
+            <div className="px-6 py-4 bg-white border-t border-slate-100 dark:bg-slate-950">
+              <button disabled={submitting} type="submit" className="px-5 py-2 rounded bg-[#00adef] text-white text-xs font-bold hover:bg-[#0099d8] transition-colors">{submitting ? 'Submitting...' : 'SUBMIT'}</button>
+            </div>
           </form>
         </div>
       )}
