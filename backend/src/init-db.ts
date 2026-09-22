@@ -776,34 +776,34 @@ export async function initializeDatabase(): Promise<void> {
         mayors_permit_number, status, payment_status, application_source, is_linked, email
       ) VALUES
       (
-        'b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d5e', 'QC-BT-2025-00101', 'TB-2025-1001', 'Jomell Tech Solutions', 'Jomell Cruz',
+        'b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d5e', 'QC-BT-2025-00111', 'TB-2025-1011', 'Shishui Tech Solutions', 'Def Shishui',
         'Block 12 Lot 4, Commonwealth Avenue', 'Commonwealth', 'Corporation', 'IT Services',
         'MP-2025-0123456', 'TAX_BILL_ISSUED', 'PAID', 'ONLINE', TRUE, 'defshishui@gmail.com'
       ),
       (
-        'c2d3e4f5-a6b7-4c8d-9e0f-1a2b3c4d5e6f', 'QC-BT-2025-00102', 'TB-2025-1002', 'Hero Trading Corp', 'Hero Odiaman',
+        'c2d3e4f5-a6b7-4c8d-9e0f-1a2b3c4d5e6f', 'QC-BT-2025-00112', 'TB-2025-1012', 'Def Trading Corp', 'Def Shishui',
         'Lot 8, Katipunan Avenue', 'Loyola Heights', 'Corporation', 'Retail',
         'MP-2025-0987654', 'TAX_BILL_ISSUED', 'PAID', 'ONLINE', TRUE, 'defshishui@gmail.com'
       ),
       (
-        'd3e4f5a6-b7c8-4d9e-0f1a-2b3c4d5e6f7a', 'QC-BT-2025-00103', 'TB-2025-1003', 'Citizen Eatery', 'Citizen User',
+        'd3e4f5a6-b7c8-4d9e-0f1a-2b3c4d5e6f7a', 'QC-BT-2025-00113', 'TB-2025-1013', 'Shishui Eatery', 'Def Shishui',
         'Unit 4B, North Fairview', 'Greater Fairview', 'Sole Proprietorship', 'Restaurant',
         'MP-2025-0456789', 'TAX_BILL_ISSUED', 'PAID', 'ONLINE', TRUE, 'defshishui@gmail.com'
       ),
       (
-        'e4f5a6b7-c8d9-4e0f-1a2b-3c4d5e6f7a8b', 'QC-BT-2025-00104', 'TB-2025-1004', 'Metro Manila Enterprises', 'Maria Santos',
+        'e4f5a6b7-c8d9-4e0f-1a2b-3c4d5e6f7a8b', 'QC-BT-2025-00114', 'TB-2025-1014', 'Def Manila Enterprises', 'Def Shishui',
         'Quezon Avenue', 'South Triangle', 'Partnership', 'Wholesale',
         'MP-2025-0741852', 'TAX_BILL_ISSUED', 'UNPAID', 'ONLINE', TRUE, 'defshishui@gmail.com'
+      ),
+      (
+        '1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d', 'QC-BT-2025-00115', 'TB-2025-1015', 'Shishui Tech Innovations', 'Def Shishui',
+        'East Avenue', 'Central', 'Corporation', 'Software Development',
+        'MP-2025-1112223', 'TAX_BILL_ISSUED', 'PAID', 'ONLINE', TRUE, 'defshishui@gmail.com'
       ),
       (
         'f5a6b7c8-d9e0-4f1a-2b3c-4d5e6f7a8b9c', 'QC-BT-2025-00105', 'TB-2025-1005', 'QC General Merchandise', 'Juan Dela Cruz',
         'Kamuning Road', 'Kamuning', 'Sole Proprietorship', 'Retail',
         'MP-2025-0852963', 'TAX_BILL_ISSUED', 'PAID', 'IN_PERSON', FALSE, 'defshishui@gmail.com'
-      ),
-      (
-        '1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d', 'QC-BT-2025-00106', 'TB-2025-1006', 'Manila Tech Innovations', 'Rizalino Perez',
-        'East Avenue', 'Central', 'Corporation', 'Software Development',
-        'MP-2025-1112223', 'TAX_BILL_ISSUED', 'PAID', 'ONLINE', TRUE, 'defshishui@gmail.com'
       ),
       (
         '2b3c4d5e-6f7a-8b9c-0d1e-2f3a4b5c6d7e', 'QC-BT-2025-00107', 'TB-2025-1007', 'Mabuhay Bakery', 'Lourdes Reyes',
