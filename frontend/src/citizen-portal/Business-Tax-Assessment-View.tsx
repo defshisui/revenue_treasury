@@ -13,7 +13,7 @@ export interface BusinessTaxAssessmentViewProps {
 }
 
 type ActiveScreen = 'assessment-list' | 'appointments-list' | 'verification';
-type AssessmentStatus = 'PENDING' | 'SUBMITTED' | 'FOR_COMPLIANCE' | 'FOR_FINAL_REVIEW' | 'APPROVED' | 'REJECTED' | 'ARCHIVED';
+type AssessmentStatus = 'PENDING' | 'SUBMITTED' | 'FOR_COMPLIANCE' | 'FOR_FINAL_REVIEW' | 'FOR_FINAL_APPROVAL' | 'APPROVED' | 'REJECTED' | 'ARCHIVED';
 type DocumentRequirementKey =
   | 'sales_declaration'
   | 'mayors_permit'
@@ -150,6 +150,7 @@ function statusClass(status: string): string {
     case 'REJECTED': return 'bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300';
     case 'FOR_COMPLIANCE': return 'bg-orange-100 text-orange-800 dark:bg-orange-950/80 dark:text-orange-300';
     case 'FOR_FINAL_REVIEW': return 'bg-blue-100 text-blue-800 dark:bg-blue-950/80 dark:text-blue-300';
+    case 'FOR_FINAL_APPROVAL': return 'bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-950/80 dark:text-fuchsia-300';
     case 'ARCHIVED': return 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
     default: return 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300';
   }

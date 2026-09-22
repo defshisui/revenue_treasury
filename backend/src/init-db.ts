@@ -293,6 +293,8 @@ export async function initializeDatabase(): Promise<void> {
       ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS compliance_remarks TEXT;
       ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS reviewed_by VARCHAR(255);
       ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMP;
+      ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS final_reviewed_by VARCHAR(255);
+      ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS final_reviewed_at TIMESTAMP;
       ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS approved_by VARCHAR(255);
       ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS approved_at TIMESTAMP;
       ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS payment_status VARCHAR(50) DEFAULT 'UNPAID';

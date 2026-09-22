@@ -8,6 +8,7 @@ type BusinessStatus =
   | 'SUBMITTED'
   | 'FOR_COMPLIANCE'
   | 'FOR_FINAL_REVIEW'
+  | 'FOR_FINAL_APPROVAL'
   | 'APPROVED'
   | 'REJECTED'
   | 'ARCHIVED';
@@ -216,6 +217,8 @@ function formatAssessment(row: any) {
     complianceRemarks: row.compliance_remarks || '',
     reviewedBy: row.reviewed_by || '',
     reviewedAt: row.reviewed_at || null,
+    finalReviewedBy: row.final_reviewed_by || '',
+    finalReviewedAt: row.final_reviewed_at || null,
     approvedBy: row.approved_by || '',
     approvedAt: row.approved_at || null,
     paymentStatus: String(row.payment_status || 'UNPAID').toUpperCase() === 'PAID' ? 'PAID' : 'UNPAID',
@@ -569,6 +572,7 @@ export async function updateAssessmentStatus(req: Request, res: Response): Promi
     'SUBMITTED',
     'FOR_COMPLIANCE',
     'FOR_FINAL_REVIEW',
+    'FOR_FINAL_APPROVAL',
     'APPROVED',
     'REJECTED',
     'ARCHIVED',
@@ -623,18 +627,17 @@ export async function updateAssessmentStatus(req: Request, res: Response): Promi
       if (!orderOfPaymentNumber) orderOfPaymentNumber = generateReference('OP', taxBillNumber);
     }
 
-    const reviewedAt = ['FOR_FINAL_REVIEW', 'FOR_COMPLIANCE', 'REJECTED', 'APPROVED'].includes(status)
-      ? new Date()
-      : current.reviewed_at;
-    const reviewedBy = ['FOR_FINAL_REVIEW', 'FOR_COMPLIANCE', 'REJECTED', 'APPROVED'].includes(status)
-      ? String((req as AuthenticatedRequest).user?.email || 'treasury-staff')
-      : current.reviewed_by;
+    const authEmail = String((req as AuthenticatedRequest).user?.email || 'treasury-staff');
+
+    const reviewedAt = status === 'FOR_FINAL_REVIEW' ? new Date() : current.reviewed_at;
+    const reviewedBy = status === 'FOR_FINAL_REVIEW' ? authEmail : current.reviewed_by;
+
+    const finalReviewedAt = status === 'FOR_FINAL_APPROVAL' ? new Date() : current.final_reviewed_at;
+    const finalReviewedBy = status === 'FOR_FINAL_APPROVAL' ? authEmail : current.final_reviewed_by;
 
     const complianceRemarks = status === 'FOR_COMPLIANCE' ? remarks || 'Additional documents or clarification are required.' : null;
     const approvedAt = status === 'APPROVED' ? new Date() : current.approved_at;
-    const approvedBy = status === 'APPROVED'
-      ? String((req as AuthenticatedRequest).user?.email || 'treasury-staff')
-      : current.approved_by;
+    const approvedBy = status === 'APPROVED' ? authEmail : current.approved_by;
     const paymentAmount = status === 'APPROVED' ? total : Number(current.payment_amount || currentFees.total || 0);
     const dueDate = status === 'APPROVED' && String(current.assessment_period || 'ANNUAL_RENEWAL') === 'ANNUAL_RENEWAL'
       ? `${applicationYear}-01-20`
@@ -653,10 +656,12 @@ export async function updateAssessmentStatus(req: Request, res: Response): Promi
            due_date = $9,
            reviewed_by = $10,
            reviewed_at = $11,
-           approved_by = $12,
-           approved_at = $13,
+           final_reviewed_by = $12,
+           final_reviewed_at = $13,
+           approved_by = $14,
+           approved_at = $15,
            updated_at = NOW()
-       WHERE id = $14
+       WHERE id = $16
        RETURNING *`,
       [
         status,
@@ -670,6 +675,8 @@ export async function updateAssessmentStatus(req: Request, res: Response): Promi
         dueDate,
         reviewedBy,
         reviewedAt,
+        finalReviewedBy,
+        finalReviewedAt,
         approvedBy,
         approvedAt,
         id,
