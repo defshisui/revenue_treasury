@@ -249,6 +249,9 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
     psicCode: '',
     tin: '',
   });
+
+  const [isDataNotFoundModalOpen, setIsDataNotFoundModalOpen] = useState(false);
+  const [linkErrorModalMessage, setLinkErrorModalMessage] = useState<string | null>(null);
   const [salesFiles, setSalesFiles] = useState<Partial<Record<DocumentRequirementKey, File[]>>>({});
   const [currentStep, setCurrentStep] = useState(1);
   const [certificationChecked, setCertificationChecked] = useState(false);
@@ -434,10 +437,32 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
     return null;
   };
 
-  const handleNextStep = (targetStep: number) => {
+  const handleNextStep = async (targetStep: number) => {
     if (currentStep === 1) {
       if (!salesForm.mayorsPermitNumber.trim() || !salesForm.businessName.trim()) {
         return alert('Please fill in all mandatory fields before proceeding.');
+      }
+      
+      if (targetStep === 2) {
+        setSubmitting(true);
+        try {
+          const res = await fetch(`${API_BASE_URL}/verify/mayor-permit`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user?.token || ''}` },
+            body: JSON.stringify({ permitNo: salesForm.mayorsPermitNumber.trim() })
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.message || 'Failed to verify Mayor’s Permit.');
+          if (!data.exists) {
+            setIsDataNotFoundModalOpen(true);
+            return;
+          }
+        } catch (err: any) {
+          alert(err.message || 'Error verifying permit.');
+          return;
+        } finally {
+          setSubmitting(false);
+        }
       }
     } else if (currentStep === 2) {
       if (!salesForm.businessOwner.trim() || !salesForm.businessAddress.trim() || !salesForm.barangay.trim() || !salesForm.businessType || !salesForm.lineOfBusiness.trim() || !salesForm.businessAreaSqm || !salesForm.registrationType || !salesForm.tin.trim() || !salesForm.birRegistered || !salesForm.hasOtherBranches || !salesForm.hasMultipleLines) {
@@ -557,7 +582,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
       setIsModalOpen(false);
       void fetchAssessments();
     } catch (error: any) {
-      alert(error.message || 'Failed to link application.');
+      setLinkErrorModalMessage(error.message || 'Failed to link application.');
     } finally {
       setSubmitting(false);
     }
@@ -1065,6 +1090,38 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                 </div>
               </form>
             )}
+          </div>
+        </div>
+      )}
+
+      {isDataNotFoundModalOpen && (
+        <div className="fixed inset-0 z-[60] bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-md p-6 text-center border-t-4 border-t-rose-500">
+            <h3 className="text-xl font-bold text-rose-600 mb-4">DATA NOT FOUND</h3>
+            <p className="text-xs text-slate-700 dark:text-slate-300 mb-4 leading-relaxed">
+              The Mayor's Permit Number you have entered has no records in the OUBPAS/was encoded only. Unfortunately, you cannot proceed with the Online Sales Declaration.
+            </p>
+            <p className="text-xs text-slate-700 dark:text-slate-300 mb-4 leading-relaxed">
+              Kindly set an appointment with CTO to proceed with the assessment. Please take note that you should submit an Online Renewal Application via Kiosk or QC E-Services portal after settling your business tax payment.
+            </p>
+            <p className="text-xs text-rose-600 font-medium mb-6">
+              Reminder: Bring your appointment confirmation email when you visit us.
+            </p>
+            <div className="flex gap-3 justify-center mt-2">
+              <button type="button" onClick={() => setIsDataNotFoundModalOpen(false)} className="px-6 py-2 rounded-lg bg-rose-600 text-white text-sm font-bold shadow-sm hover:bg-rose-700">Cancel</button>
+              <button type="button" onClick={() => { setIsDataNotFoundModalOpen(false); openModal('appointment'); }} className="px-6 py-2 rounded-lg bg-emerald-600 text-white text-sm font-bold shadow-sm hover:bg-emerald-700">Set an Appointment</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {linkErrorModalMessage && (
+        <div className="fixed inset-0 z-[60] bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-sm p-6 text-center border-t-4 border-t-rose-500">
+            <div className="mx-auto w-12 h-12 rounded-full border-2 border-rose-500 text-rose-500 flex items-center justify-center text-2xl font-bold mb-4">×</div>
+            <h3 className="text-lg font-bold text-rose-600 mb-2 uppercase">CANNOT BE LINKED</h3>
+            <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">{linkErrorModalMessage}</p>
+            <button type="button" onClick={() => setLinkErrorModalMessage(null)} className="px-8 py-2 rounded-lg bg-blue-500 text-white text-sm font-bold shadow-sm hover:bg-blue-600">OK</button>
           </div>
         </div>
       )}

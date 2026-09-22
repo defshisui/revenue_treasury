@@ -14,6 +14,7 @@ import {
   updateAppointmentStatus,
   deleteAppointment,
   linkInPersonApplication,
+  verifyMayorPermit,
 } from '../controllers/business.controller.js';
 
 const upload = multer({
@@ -80,6 +81,7 @@ router.delete(
 // Public verification endpoints are intentionally separate from the citizen list endpoint.
 router.post('/verify/tax-bill', verifyTaxBill);
 router.post('/verify/or-number', verifyOrNumber);
+router.post('/verify/mayor-permit', authenticateToken, verifyMayorPermit);
 
 router.post('/appointments', authenticateToken, createAppointment);
 router.get('/appointments', authenticateToken, getAppointments);

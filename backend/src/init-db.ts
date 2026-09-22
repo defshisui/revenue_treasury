@@ -268,10 +268,11 @@ export async function initializeDatabase(): Promise<void> {
           tin VARCHAR(50),
           email VARCHAR(255),
           attachments JSONB DEFAULT '[]'::jsonb,
-          application_date TIMESTAMP DEFAULT NOW(),
           application_source VARCHAR(50) DEFAULT 'ONLINE',
           is_linked BOOLEAN DEFAULT TRUE,
-          created_at TIMESTAMP DEFAULT NOW()
+          created_at TIMESTAMP DEFAULT NOW(),
+          payment_status VARCHAR(50) DEFAULT 'UNPAID',
+          remarks TEXT
       );
 
       -- BUSINESS TAX WORKFLOW / DOCUMENT / PAYMENT FIELDS
@@ -316,6 +317,9 @@ export async function initializeDatabase(): Promise<void> {
       ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS application_source VARCHAR(50) DEFAULT 'ONLINE';
       ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS is_linked BOOLEAN DEFAULT TRUE;
 
+    `);
+
+    await pool.query(`
       UPDATE business_assessments
       SET payment_status = CASE
         WHEN LOWER(COALESCE(remarks, '')) LIKE 'paid via%' THEN 'PAID'
@@ -341,7 +345,23 @@ export async function initializeDatabase(): Promise<void> {
       WHERE LOWER(COALESCE(remarks, '')) LIKE 'paid via%';
     `);
 
+    await pool.query(`
+      CREATE OR REPLACE FUNCTION set_in_person_is_linked()
+      RETURNS TRIGGER AS $$
+      BEGIN
+        IF NEW.application_source = 'IN_PERSON' THEN
+          NEW.is_linked = FALSE;
+        END IF;
+        RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql;
 
+      DROP TRIGGER IF EXISTS trigger_set_in_person_is_linked ON business_assessments;
+      CREATE TRIGGER trigger_set_in_person_is_linked
+      BEFORE INSERT ON business_assessments
+      FOR EACH ROW
+      EXECUTE FUNCTION set_in_person_is_linked();
+    `);
 
     await pool.query(`
       -- USERS
@@ -746,6 +766,41 @@ export async function initializeDatabase(): Promise<void> {
       UPDATE rpt_applications
       SET control_number = 'RPT-QC-' || EXTRACT(YEAR FROM COALESCE(created_at, NOW())) || '-' || LPAD(SUBSTRING(REPLACE(id::text, '-', ''), 1, 6), 6, '0')
       WHERE control_number IS NULL OR control_number = '' OR control_number = '-' OR control_number = '—';
+    `);
+
+    // Initial Seed: Business Assessments
+    await pool.query(`
+      INSERT INTO business_assessments (
+        id, tracking_number, tax_bill_number, business_name, business_owner,
+        business_address, barangay, business_type, line_of_business,
+        mayors_permit_number, status, payment_status, application_source, is_linked, email
+      ) VALUES
+      (
+        'b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d5e', 'QC-BT-2025-00101', 'TB-2025-1001', 'Jomell Tech Solutions', 'Jomell Cruz',
+        'Block 12 Lot 4, Commonwealth Avenue', 'Commonwealth', 'Corporation', 'IT Services',
+        'MP-2025-0123456', 'TAX_BILL_ISSUED', 'PAID', 'ONLINE', TRUE, 'jomell@gmail.com'
+      ),
+      (
+        'c2d3e4f5-a6b7-4c8d-9e0f-1a2b3c4d5e6f', 'QC-BT-2025-00102', 'TB-2025-1002', 'Hero Trading Corp', 'Hero Odiaman',
+        'Lot 8, Katipunan Avenue', 'Loyola Heights', 'Corporation', 'Retail',
+        'MP-2025-0987654', 'TAX_BILL_ISSUED', 'PAID', 'ONLINE', TRUE, 'dizon.hero.odiaman@gmail.com'
+      ),
+      (
+        'd3e4f5a6-b7c8-4d9e-0f1a-2b3c4d5e6f7a', 'QC-BT-2025-00103', 'TB-2025-1003', 'Citizen Eatery', 'Citizen User',
+        'Unit 4B, North Fairview', 'Greater Fairview', 'Sole Proprietorship', 'Restaurant',
+        'MP-2025-0456789', 'TAX_BILL_ISSUED', 'PAID', 'ONLINE', TRUE, 'citizen@govserve.gov.ph'
+      ),
+      (
+        'e4f5a6b7-c8d9-4e0f-1a2b-3c4d5e6f7a8b', 'QC-BT-2025-00104', 'TB-2025-1004', 'Metro Manila Enterprises', 'Maria Santos',
+        'Quezon Avenue', 'South Triangle', 'Partnership', 'Wholesale',
+        'MP-2025-0741852', 'TAX_BILL_ISSUED', 'UNPAID', 'ONLINE', TRUE, 'maria@example.com'
+      ),
+      (
+        'f5a6b7c8-d9e0-4f1a-2b3c-4d5e6f7a8b9c', 'QC-BT-2025-00105', 'TB-2025-1005', 'QC General Merchandise', 'Juan Dela Cruz',
+        'Kamuning Road', 'Kamuning', 'Sole Proprietorship', 'Retail',
+        'MP-2025-0852963', 'TAX_BILL_ISSUED', 'PAID', 'IN_PERSON', FALSE, 'juan@example.com'
+      )
+      ON CONFLICT DO NOTHING;
     `);
 
     console.log('Database tables and performance indexes initialized successfully.');

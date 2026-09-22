@@ -221,17 +221,132 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
     return <div className="space-y-2">{required.map((key) => <label key={key} className="flex items-start gap-3 p-3 rounded-xl border bg-slate-50 dark:bg-slate-950 cursor-pointer"><input type="checkbox" checked={Boolean(checklist[key])} onChange={(e) => setChecklist((prev) => ({ ...prev, [key]: e.target.checked }))} className="mt-1" /><span><span className="font-semibold">{LABELS[key] || key}</span><span className="block text-[9px] text-slate-400 mt-0.5">{(selectedAssessment.attachments || []).filter((a) => a.type === key).map((a) => a.name).join(', ') || 'No uploaded document mapped to this requirement.'}</span></span></label>)}</div>;
   };
 
-  return <div className="w-full space-y-4">
-    <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3"><div><h2 className="text-xl font-extrabold text-slate-900 dark:text-white">Business Tax Assessment Management</h2><p className="text-[11px] text-slate-500">Initial assessment → compliance → final review → approval → Tax Bill → payment → O.R.</p></div><div className="flex gap-2"><button type="button" onClick={() => setActiveTab('assessments')} className={`px-3 py-2 rounded-lg text-xs font-bold ${activeTab === 'assessments' ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-slate-800'}`}>Assessments</button><button type="button" onClick={() => setActiveTab('appointments')} className={`px-3 py-2 rounded-lg text-xs font-bold ${activeTab === 'appointments' ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-slate-800'}`}>Appointments</button></div></div>
+  return <div className="w-full font-sans animate-in fade-in duration-300">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6 bg-white dark:bg-slate-900/80 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs backdrop-blur-md">
+        <div>
+          <div className="flex flex-wrap items-center gap-2 mb-1">
+            <span className="text-[11px] font-semibold tracking-wider text-blue-600 dark:text-blue-400 uppercase">
+              Municipal Treasury Operations
+            </span>
+          </div>
+          <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+            Business Tax &amp; Regulatory Hub
+          </h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            Application Processing, Assessment Review &amp; Compliance Verification
+          </p>
+        </div>
 
-    {activeTab === 'assessments' && <>
-      <div className="flex flex-wrap items-center gap-2"><button type="button" onClick={() => { setArchiveView(false); setStatusFilter('ALL'); setPage(1); }} className={`px-3 py-2 rounded-lg text-xs font-bold ${!archiveView ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-slate-800'}`}>Active Queue</button><button type="button" onClick={() => { setArchiveView(true); setPage(1); }} className={`px-3 py-2 rounded-lg text-xs font-bold ${archiveView ? 'bg-slate-700 text-white' : 'bg-slate-100 dark:bg-slate-800'}`}>Archiver</button><select disabled={archiveView} value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }} className="px-3 py-2 rounded-lg border text-xs"><option value="ALL">All Active Statuses</option>{filteredStatuses.filter((x) => x !== 'ARCHIVED').map((x) => <option key={x}>{x}</option>)}</select><select value={searchType} onChange={(e) => setSearchType(e.target.value)} className="px-3 py-2 rounded-lg border text-xs"><option>Tracking/MP No.</option><option>Business Name</option><option>Business Owner</option><option>Mayor's Permit No.</option><option>Tax Bill Number</option></select><input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && void fetchAssessments()} placeholder="Search assessment queue..." className="flex-1 min-w-[220px] px-3 py-2 rounded-lg border text-xs" /><button type="button" onClick={() => { setPage(1); void fetchAssessments(); }} className="px-4 py-2 rounded-lg bg-blue-600 text-white text-xs font-bold">Search</button></div>
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            onClick={() => void fetchAssessments()}
+            className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold px-4 py-2.5 rounded-xl transition-all border border-slate-200 dark:border-slate-700 cursor-pointer flex items-center gap-2 shadow-xs"
+          >
+            <i className="fa-solid fa-arrows-rotate text-[11px]"></i> Refresh List
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs">
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Pending Applications</p>
+          <h4 className="text-2xl font-bold text-slate-900 dark:text-white mt-3">{assessments.filter(a => a.status === 'SUBMITTED' || a.status === 'FOR_INITIAL_ASSESSMENT').length}</h4>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs">
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">For Final Approval</p>
+          <h4 className="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-3">{assessments.filter(a => a.status === 'FOR_FINAL_APPROVAL').length}</h4>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs">
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Total Paid Revenue</p>
+          <h4 className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-3">
+            {money(assessments.filter(a => a.paymentStatus === 'PAID').reduce((acc, a) => acc + Number(a.paidAmount || a.paymentAmount || a.computedFees?.total || 0), 0))}
+          </h4>
+          <p className="mt-2 text-[11px] text-slate-400">
+            {assessments.filter(a => a.paymentStatus === 'PAID').length} verified e-Receipts settled
+          </p>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs">
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Unpaid Receivables</p>
+          <h4 className="text-2xl font-bold text-rose-600 dark:text-rose-400 mt-3">
+            {money(assessments.filter(a => a.paymentStatus !== 'PAID' && a.status !== 'ARCHIVED' && (a.paymentAmount || a.computedFees?.total || 0) > 0).reduce((acc, a) => acc + Number(a.paymentAmount || a.computedFees?.total || 0), 0))}
+          </h4>
+          <p className="mt-2 text-[11px] text-slate-400">
+            {assessments.filter(a => a.paymentStatus !== 'PAID' && a.status !== 'ARCHIVED' && (a.paymentAmount || a.computedFees?.total || 0) > 0).length} unpaid bills
+          </p>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-4 mb-6">
+        <button
+          onClick={() => setActiveTab('assessments')}
+          className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${activeTab === 'assessments'
+            ? 'bg-blue-600 text-white shadow-md'
+            : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+            }`}
+        >
+          <i className="fa-solid fa-file-invoice-dollar text-xs"></i>
+          <span>Business Assessments</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('appointments')}
+          className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${activeTab === 'appointments'
+            ? 'bg-blue-600 text-white shadow-md'
+            : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+            }`}
+        >
+          <i className="fa-solid fa-calendar-check text-xs"></i>
+          <span>Appointments</span>
+        </button>
+      </div>
+
+    {activeTab === 'assessments' && <section className="bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-xs space-y-5">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="flex space-x-1 bg-slate-200/60 dark:bg-slate-800/60 p-1.5 rounded-xl w-fit">
+              <button
+                onClick={() => { setArchiveView(false); setStatusFilter('ALL'); setPage(1); }}
+                className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-2 ${!archiveView
+                  ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                  : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                  }`}
+              >
+                <i className="fa-solid fa-list-check text-xs"></i>
+                <span>Active Queue</span>
+              </button>
+
+              <button
+                onClick={() => { setArchiveView(true); setPage(1); }}
+                className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-2 ${archiveView
+                  ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                  : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                  }`}
+              >
+                <i className="fa-solid fa-box-archive text-xs"></i>
+                <span>Archiver</span>
+              </button>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <select disabled={archiveView} value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }} className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                <option value="ALL">All Active Statuses</option>
+                {filteredStatuses.filter((x) => x !== 'ARCHIVED').map((x) => <option key={x}>{x}</option>)}
+              </select>
+              <select value={searchType} onChange={(e) => setSearchType(e.target.value)} className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                <option>Tracking/MP No.</option><option>Business Name</option><option>Business Owner</option><option>Mayor's Permit No.</option><option>Tax Bill Number</option>
+              </select>
+              <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && void fetchAssessments()} placeholder="Search assessment queue..." className="min-w-[220px] px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs focus:ring-2 focus:ring-blue-500 outline-none" />
+              <button type="button" onClick={() => { setPage(1); void fetchAssessments(); }} className="px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold shadow-sm hover:bg-blue-700">Search</button>
+            </div>
+          </div>
       {fetchError && <div className="p-3 rounded-xl bg-rose-50 text-rose-700 border border-rose-200 text-xs">{fetchError}</div>}
       <div className="overflow-x-auto bg-white dark:bg-slate-900 border rounded-2xl"><table className="w-full min-w-[1100px] text-xs"><thead className="bg-slate-50 dark:bg-slate-950 text-[10px] uppercase text-slate-500"><tr><th className="p-3 text-left">Tracking</th><th className="p-3 text-left">Business / Owner</th><th className="p-3 text-left">Permit</th><th className="p-3 text-left">Gross Sales</th><th className="p-3 text-left">Status</th><th className="p-3 text-left">Payment</th><th className="p-3 text-right">Action</th></tr></thead><tbody className="divide-y">{loading ? <tr><td colSpan={7} className="p-12 text-center text-slate-400">Loading...</td></tr> : assessments.length ? assessments.map((record) => <tr key={record.id} className="hover:bg-slate-50 dark:hover:bg-slate-950/50"><td className="p-3 font-mono font-bold text-blue-600">{record.trackingNumber}</td><td className="p-3"><div className="font-bold">{record.businessName}</div><div className="text-[10px] text-slate-400">{record.businessOwner}</div></td><td className="p-3 font-mono">{record.mayorPermitNumber || '—'}</td><td className="p-3 font-mono">{money(record.grossSales)}</td><td className="p-3"><span className={`px-2 py-1 rounded-full text-[9px] font-bold ${statusClass(record.status)}`}>{record.status}</span></td><td className="p-3"><span className={`px-2 py-1 rounded-full text-[9px] font-bold ${record.paymentStatus === 'PAID' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>{record.paymentStatus || 'UNPAID'}</span></td><td className="p-3 text-right"><button type="button" onClick={() => setSelectedAssessment(record)} className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 font-bold mr-1">Review</button><button type="button" onClick={() => void archiveOrRestore(record)} className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 font-bold">{record.recordStatus === 'ARCHIVED' ? 'Restore' : 'Archive'}</button></td></tr>) : <tr><td colSpan={7} className="p-12 text-center text-slate-400">No records found.</td></tr>}</tbody></table></div>
       <div className="flex justify-between items-center text-xs text-slate-500"><span>Page {page} of {totalPages}</span><div className="flex gap-2"><button type="button" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))} className="px-3 py-1.5 border rounded-lg disabled:opacity-40">Previous</button><button type="button" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))} className="px-3 py-1.5 border rounded-lg disabled:opacity-40">Next</button></div></div>
-    </>}
+    </section>}
 
-    {activeTab === 'appointments' && <div className="overflow-x-auto bg-white dark:bg-slate-900 border rounded-2xl"><table className="w-full min-w-[850px] text-xs"><thead className="bg-slate-50 dark:bg-slate-950"><tr><th className="p-3 text-left">Purpose</th><th className="p-3 text-left">Business</th><th className="p-3 text-left">Date</th><th className="p-3 text-left">Status</th><th className="p-3 text-right">Action</th></tr></thead><tbody className="divide-y">{appointments.map((a) => <tr key={a.id}><td className="p-3">{a.appointmentType}</td><td className="p-3">{a.businessName || a.fullName}</td><td className="p-3">{a.date} {a.timeSlot || ''}</td><td className="p-3"><span className="px-2 py-1 rounded-full bg-slate-100 font-bold">{a.status}</span></td><td className="p-3 text-right"><button type="button" onClick={() => setSelectedAppointment(a)} className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 font-bold">View</button></td></tr>)}</tbody></table></div>}
+    {activeTab === 'appointments' && <section className="bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-xs"><div className="overflow-x-auto border rounded-2xl"><table className="w-full min-w-[850px] text-xs"><thead className="bg-slate-50 dark:bg-slate-950"><tr><th className="p-3 text-left">Purpose</th><th className="p-3 text-left">Business</th><th className="p-3 text-left">Date</th><th className="p-3 text-left">Status</th><th className="p-3 text-right">Action</th></tr></thead><tbody className="divide-y">{appointments.map((a) => <tr key={a.id}><td className="p-3">{a.appointmentType}</td><td className="p-3">{a.businessName || a.fullName}</td><td className="p-3">{a.date} {a.timeSlot || ''}</td><td className="p-3"><span className="px-2 py-1 rounded-full bg-slate-100 font-bold">{a.status}</span></td><td className="p-3 text-right"><button type="button" onClick={() => setSelectedAppointment(a)} className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 font-bold">View</button></td></tr>)}</tbody></table></div></section>}
 
     {selectedAppointment && <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"><div className="bg-white dark:bg-slate-900 rounded-2xl p-5 w-full max-w-lg"><div className="flex justify-between mb-4"><h3 className="font-bold">Appointment Details</h3><button onClick={() => setSelectedAppointment(null)} className="font-bold">×</button></div><div className="space-y-2 text-xs"><div><b>Purpose:</b> {selectedAppointment.appointmentType}</div><div><b>Business:</b> {selectedAppointment.businessName || '—'}</div><div><b>Applicant:</b> {selectedAppointment.fullName}</div><div><b>Date:</b> {selectedAppointment.date}</div><div><b>Time:</b> {selectedAppointment.timeSlot || 'All Day'}</div><div><b>Description:</b> {selectedAppointment.description || '—'}</div><div><b>Status:</b> {selectedAppointment.status}</div></div><button type="button" onClick={() => setSelectedAppointment(null)} className="mt-5 w-full px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold">Close</button></div></div>}
 
@@ -247,7 +362,7 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
     </div><div className="sticky bottom-0 flex flex-wrap items-center justify-between gap-2 px-5 py-4 border-t bg-slate-50 dark:bg-slate-950"><div className="flex gap-2">
       {(selectedAssessment.status === 'SUBMITTED' || selectedAssessment.status === 'RESUBMITTED' || selectedAssessment.status === 'FOR_FINAL_REVIEW' || selectedAssessment.status === 'FOR_FINAL_APPROVAL') && <button type="button" disabled={submitting} onClick={() => void updateStatus('RETURNED_FOR_COMPLIANCE')} className="px-3 py-2 rounded-xl bg-orange-600 text-white text-xs font-bold">Return for Compliance</button>}
       {(selectedAssessment.status === 'SUBMITTED' || selectedAssessment.status === 'RESUBMITTED') && <button type="button" disabled={submitting} onClick={() => void updateStatus('FOR_INITIAL_ASSESSMENT')} className="px-3 py-2 rounded-xl bg-sky-600 text-white text-xs font-bold">Proceed to Initial Assessment</button>}
-      {(selectedAssessment.status === 'FOR_INITIAL_ASSESSMENT' || selectedAssessment.status === 'RETURNED_FOR_COMPLIANCE') && <button type="button" disabled={submitting} onClick={() => void updateStatus('FOR_FINAL_REVIEW')} className="px-3 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold">Proceed to Final Review</button>}
+      {(selectedAssessment.status === 'FOR_INITIAL_ASSESSMENT') && <button type="button" disabled={submitting} onClick={() => void updateStatus('FOR_FINAL_REVIEW')} className="px-3 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold">Proceed to Final Review</button>}
       {selectedAssessment.status === 'FOR_FINAL_REVIEW' && <button type="button" disabled={submitting} onClick={() => void updateStatus('FOR_FINAL_APPROVAL')} className="px-3 py-2 rounded-xl bg-fuchsia-600 text-white text-xs font-bold">Approve for Final Approval</button>}
       {['SUBMITTED', 'FOR_INITIAL_ASSESSMENT', 'RETURNED_FOR_COMPLIANCE', 'RESUBMITTED', 'FOR_FINAL_REVIEW', 'FOR_FINAL_APPROVAL'].includes(selectedAssessment.status) && <button type="button" disabled={submitting} onClick={() => void updateStatus('REJECTED')} className="px-3 py-2 rounded-xl bg-rose-600 text-white text-xs font-bold">Reject</button>}
     </div><div className="flex gap-2">

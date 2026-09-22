@@ -646,6 +646,11 @@ export async function updateAssessmentStatus(req: Request, res: Response): Promi
     const nextStatus = status || current.status;
     const nextRecordStatus = recordStatus || current.record_status || 'ACTIVE';
 
+    if (current.status === 'RETURNED_FOR_COMPLIANCE' && nextStatus === 'FOR_FINAL_REVIEW') {
+      res.status(409).json({ message: 'Assessment cannot bypass FOR_INITIAL_ASSESSMENT after compliance return. Ensure citizen has resubmitted documents.' });
+      return;
+    }
+
     const currentFees = parseJsonObject(current.computed_fees);
     const currentChecklist = parseJsonObject(current.document_checklist);
     const nextFees = Object.keys(suppliedFees).length > 0 ? suppliedFees : currentFees;
@@ -1125,5 +1130,30 @@ export async function linkInPersonApplication(req: Request, res: Response): Prom
   } catch (err: any) {
     console.error('Error linking application:', err);
     res.status(500).json({ message: err.message || 'Failed to link application.' });
+  }
+}
+
+export async function verifyMayorPermit(req: Request, res: Response): Promise<void> {
+  const permitNo = String(req.body?.permitNo || '').trim();
+
+  if (!permitNo) {
+    res.status(400).json({ message: 'Mayor’s Permit Number is required.' });
+    return;
+  }
+
+  try {
+    const result = await pool.query(
+      `SELECT id FROM business_assessments WHERE mayors_permit_number = $1 LIMIT 1`,
+      [permitNo]
+    );
+
+    if (result.rows.length > 0) {
+      res.status(200).json({ exists: true });
+    } else {
+      res.status(200).json({ exists: false });
+    }
+  } catch (err) {
+    console.error('Error verifying Mayor’s Permit:', err);
+    res.status(500).json({ message: 'Server error while verifying Mayor’s Permit.' });
   }
 }

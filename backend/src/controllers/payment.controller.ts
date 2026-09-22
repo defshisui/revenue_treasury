@@ -152,7 +152,8 @@ async function finalizeBusinessTaxPayment(params: {
       return { ok: true, status: 200, alreadyRecorded: true, record };
     }
 
-    if (String(record.status || '').toUpperCase() !== 'APPROVED' && String(record.status || '').toUpperCase() !== 'FOR_OWNER_PAYMENT') {
+    const currentStatus = String(record.status || '').toUpperCase();
+    if (currentStatus !== 'APPROVED' && currentStatus !== 'FOR_OWNER_PAYMENT' && currentStatus !== 'FOR_PAYMENT_VALIDATION') {
       await client.query('ROLLBACK');
       return { ok: false, status: 409, error: 'This Business Tax assessment is not approved for payment yet.' };
     }
@@ -420,6 +421,15 @@ export async function createCheckoutSession(req: Request, res: Response): Promis
       null,
       `Created PayMongo checkout session ${session.id} for ${referenceNumber} (${numericAmount.toFixed(2)})`
     );
+
+    if (type === 'BUSINESS_TAX' && businessTrackingNumber) {
+      await pool.query(
+        `UPDATE business_assessments
+         SET status = 'FOR_PAYMENT_VALIDATION', updated_at = NOW()
+         WHERE tracking_number = $1 AND status = 'FOR_OWNER_PAYMENT'`,
+        [businessTrackingNumber]
+      );
+    }
 
     res.status(200).json({
       success: true,
