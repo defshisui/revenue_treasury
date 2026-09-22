@@ -383,28 +383,189 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
 
     {selectedAppointment && <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"><div className="bg-white dark:bg-slate-900 rounded-2xl p-5 w-full max-w-lg"><div className="flex justify-between mb-4"><h3 className="font-bold">Appointment Details</h3><button onClick={() => setSelectedAppointment(null)} className="font-bold">×</button></div><div className="space-y-2 text-xs"><div><b>Purpose:</b> {selectedAppointment.appointmentType}</div><div><b>Business:</b> {selectedAppointment.businessName || '—'}</div><div><b>Applicant:</b> {selectedAppointment.fullName}</div><div><b>Date:</b> {selectedAppointment.date}</div><div><b>Time:</b> {selectedAppointment.timeSlot || 'All Day'}</div><div><b>Description:</b> {selectedAppointment.description || '—'}</div><div><b>Status:</b> {selectedAppointment.status}</div></div><button type="button" onClick={() => setSelectedAppointment(null)} className="mt-5 w-full px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold">Close</button></div></div>}
 
-    {selectedAssessment && <div className="fixed inset-0 z-50 bg-slate-950/75 flex items-center justify-center p-2 sm:p-4 overflow-y-auto"><div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-5xl max-h-[95vh] overflow-y-auto shadow-2xl border"><div className="sticky top-0 z-10 flex justify-between items-center px-5 py-4 border-b bg-slate-50 dark:bg-slate-950"><div><h3 className="font-bold text-sm uppercase">{(selectedAssessment.status === 'SUBMITTED' || selectedAssessment.status === 'RESUBMITTED' || selectedAssessment.status === 'RETURNED_FOR_COMPLIANCE' || selectedAssessment.status === 'FOR_INITIAL_ASSESSMENT') ? 'Initial Assessment (Assessment Officer)' : selectedAssessment.status === 'FOR_FINAL_REVIEW' ? 'Final Review (Operations Officer)' : selectedAssessment.status === 'FOR_FINAL_APPROVAL' ? 'Final Approval (City Treasurer)' : 'Business Tax Assessment Review'}</h3><p className="font-mono text-[10px] text-blue-600">{selectedAssessment.trackingNumber}</p></div><button onClick={() => setSelectedAssessment(null)} className="text-xl font-bold">×</button></div><div className="p-5 space-y-5 text-xs">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3"><div className="box"><span>Business</span><b>{selectedAssessment.businessName}</b></div><div className="box"><span>Owner</span><b>{selectedAssessment.businessOwner}</b></div><div className="box"><span>Mayor’s Permit</span><b>{selectedAssessment.mayorPermitNumber || '—'}</b></div><div className="box"><span>Status</span><span className={`self-start px-2 py-1 rounded-full text-[9px] font-bold ${statusClass(selectedAssessment.status)}`}>{selectedAssessment.status}</span></div></div>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3"><div className="box"><span>Gross Sales</span><b>{money(selectedAssessment.grossSales)}</b></div><div className="box"><span>Business Type</span><b>{selectedAssessment.businessType || '—'}</b></div><div className="box"><span>Line of Business</span><b>{selectedAssessment.lineOfBusiness || '—'}</b></div><div className="box"><span>Area</span><b>{Number(selectedAssessment.businessAreaSqm || 0).toLocaleString()} sqm</b></div></div>
-      <div className="box"><span>Address</span><b>{selectedAssessment.businessAddress || '—'}, {selectedAssessment.barangay || '—'}</b><span>Registration: {selectedAssessment.registrationType || '—'} {selectedAssessment.registrationNumber || ''} • TIN: {selectedAssessment.tin || '—'}</span><span>BIR Registered: {selectedAssessment.birRegistered ? 'Yes' : 'No'} • Other Branches: {selectedAssessment.hasOtherBranches ? 'Yes' : 'No'} • Multiple Lines: {selectedAssessment.hasMultipleLines ? 'Yes' : 'No'}</span></div>
-      <div><div className="font-bold mb-2">Document Verification Checklist</div>{renderDocChecklist()}</div>
-      <div><div className="font-bold mb-2">Uploaded Documents</div><div className="space-y-2">{(selectedAssessment.attachments || []).map((file, index) => <div key={`${file.name}-${index}`} className="flex justify-between items-center p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border"><div><div className="font-semibold">{file.name}</div><div className="text-[9px] text-slate-400">{LABELS[file.type || ''] || file.type || 'supporting_document'}</div></div><button type="button" onClick={() => setPreviewFile(file)} className="text-blue-600 font-bold">Preview</button></div>)}</div></div>
-      <div><div className="flex items-center justify-between mb-2"><div className="font-bold">Final Assessed Amount</div><div className="text-[10px] text-slate-500">Use the applicable current QC schedule / Revenue Code. Do not use an arbitrary percentage.</div></div><div className="grid grid-cols-2 md:grid-cols-3 gap-3">{([['lbt','Local Business Tax'],['mayorsPermit','Mayor’s Permit Fee'],['sanitaryFee','Sanitary Inspection Fee'],['garbageFee','Garbage Fee'],['fireSafetyFee','Fire Safety / BFP Fee'],['otherFees','Other Regulatory Fees']] as Array<[keyof Required<FeeBreakdown>, string]>).map(([key, label]) => <label key={key} className="p-3 rounded-xl border"><span className="block text-[10px] font-bold text-slate-500 mb-1">{label}</span><input type="number" min="0" step="0.01" value={fees[key]} onChange={(e) => setFee(key, e.target.value)} className="w-full p-2 rounded-lg border bg-transparent" /></label>)}</div><div className="mt-3 p-4 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 flex justify-between font-extrabold"><span>Total Assessment</span><span>{money(fees.total)}</span></div></div>
-      <div><label className="block font-bold mb-2">Treasurer’s Office Remarks</label><textarea value={actionRemarks} onChange={(e) => setActionRemarks(e.target.value)} rows={4} className="w-full p-3 rounded-xl border bg-transparent" placeholder="Explain returned documents, assessment findings, approval notes, etc." /></div>
-      <div className="box"><span>Current Payment</span><b>{selectedAssessment.paymentStatus || 'UNPAID'} • {money(selectedAssessment.paidAmount || selectedAssessment.paymentAmount || selectedAssessment.computedFees?.total)}</b>{selectedAssessment.officialReceiptNumber && <span>O.R.: {selectedAssessment.officialReceiptNumber}</span>}</div>
-    </div><div className="sticky bottom-0 flex flex-wrap items-center justify-between gap-2 px-5 py-4 border-t bg-slate-50 dark:bg-slate-950"><div className="flex gap-2">
-      {(selectedAssessment.status === 'SUBMITTED' || selectedAssessment.status === 'RESUBMITTED' || selectedAssessment.status === 'FOR_FINAL_REVIEW' || selectedAssessment.status === 'FOR_FINAL_APPROVAL') && <button type="button" disabled={submitting} onClick={() => void updateStatus('RETURNED_FOR_COMPLIANCE')} className="px-3 py-2 rounded-xl bg-orange-600 text-white text-xs font-bold">Return for Compliance</button>}
-      {(selectedAssessment.status === 'SUBMITTED' || selectedAssessment.status === 'RESUBMITTED') && <button type="button" disabled={submitting} onClick={() => void updateStatus('FOR_INITIAL_ASSESSMENT')} className="px-3 py-2 rounded-xl bg-sky-600 text-white text-xs font-bold">Proceed to Initial Assessment</button>}
-      {(selectedAssessment.status === 'FOR_INITIAL_ASSESSMENT') && <button type="button" disabled={submitting} onClick={() => void updateStatus('FOR_FINAL_REVIEW')} className="px-3 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold">Proceed to Final Review</button>}
-      {selectedAssessment.status === 'FOR_FINAL_REVIEW' && <button type="button" disabled={submitting} onClick={() => void updateStatus('FOR_FINAL_APPROVAL')} className="px-3 py-2 rounded-xl bg-fuchsia-600 text-white text-xs font-bold">Approve for Final Approval</button>}
-      {['SUBMITTED', 'FOR_INITIAL_ASSESSMENT', 'RETURNED_FOR_COMPLIANCE', 'RESUBMITTED', 'FOR_FINAL_REVIEW', 'FOR_FINAL_APPROVAL'].includes(selectedAssessment.status) && <button type="button" disabled={submitting} onClick={() => void updateStatus('REJECTED')} className="px-3 py-2 rounded-xl bg-rose-600 text-white text-xs font-bold">Reject</button>}
-    </div><div className="flex gap-2">
-      {!(selectedAssessment.paymentStatus === 'PAID' || selectedAssessment.officialReceiptNumber || selectedAssessment.paymentReference) && <button type="button" onClick={() => void deleteAssessment(selectedAssessment)} className="px-3 py-2 rounded-xl bg-rose-50 text-rose-700 text-xs font-bold">Delete</button>}
-      <button type="button" onClick={() => void archiveOrRestore(selectedAssessment)} className="px-3 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 text-xs font-bold">{selectedAssessment.recordStatus === 'ARCHIVED' ? 'Restore' : 'Archive'}</button>
-      {(selectedAssessment.status === 'FOR_FINAL_APPROVAL' || selectedAssessment.status === 'TAX_BILL_ISSUED') && <button type="button" disabled={submitting || selectedAssessment.status === 'TAX_BILL_ISSUED'} onClick={() => void updateStatus('TAX_BILL_ISSUED')} className="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold">Issue Tax Bill</button>}
-      {selectedAssessment.status === 'TAX_BILL_ISSUED' && <button type="button" disabled={submitting} onClick={() => void updateStatus('FOR_OWNER_PAYMENT')} className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold">Issue for Payment</button>}
-      {selectedAssessment.status === 'FOR_PAYMENT_VALIDATION' && <button type="button" disabled={submitting} onClick={() => void updateStatus('OR_ISSUED')} className="px-4 py-2 rounded-xl bg-green-600 hover:bg-green-700 text-white text-xs font-bold">Verify Payment & Issue O.R.</button>}
-    </div></div></div></div>}
+    {selectedAssessment && (() => {
+      const isArchived = selectedAssessment.recordStatus === 'ARCHIVED';
+      const s = selectedAssessment.status;
+      const isSubmittedOrResubmitted = s === 'SUBMITTED' || s === 'RESUBMITTED';
+      const isForInitial = s === 'FOR_INITIAL_ASSESSMENT';
+      const isForReview = s === 'FOR_FINAL_REVIEW';
+      const isReturned = s === 'RETURNED_FOR_COMPLIANCE';
+      const isForApproval = s === 'FOR_FINAL_APPROVAL';
+      const isTaxBill = s === 'TAX_BILL_ISSUED';
+      const isForPayment = s === 'FOR_OWNER_PAYMENT';
+      const isForValidation = s === 'FOR_PAYMENT_VALIDATION';
+      const isPaid = s === 'PAID' || s === 'OR_ISSUED';
+
+      const showBusinessInfo = true;
+      const showAssessmentPanel = !isArchived && (isForInitial || isForReview || isForApproval || isTaxBill);
+      const editableAssessmentPanel = isForInitial || isForReview;
+      const showDocumentChecklist = !isArchived && isForInitial;
+      const showUploadedDocs = !isArchived && (isSubmittedOrResubmitted || isForInitial || isForReview || isForApproval || isReturned);
+      const showRemarks = !isArchived && !isForPayment && !isPaid && !isForValidation && !isTaxBill;
+      const editableRemarks = isSubmittedOrResubmitted || isForInitial || isForReview;
+      const showPaymentMonitoring = isForPayment || isForValidation || isPaid || isArchived;
+
+      return (
+        <div className="fixed inset-0 z-50 bg-slate-950/75 flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-5xl max-h-[95vh] overflow-y-auto shadow-2xl border">
+            
+            <div className="sticky top-0 z-10 flex justify-between items-center px-5 py-4 border-b bg-slate-50 dark:bg-slate-950">
+              <div>
+                <h3 className="font-bold text-sm uppercase">
+                  {isForInitial || isSubmittedOrResubmitted || isReturned ? 'Initial Assessment (Assessment Officer)' 
+                   : isForReview ? 'Final Review (Operations Officer)' 
+                   : isForApproval ? 'Final Approval (City Treasurer)' 
+                   : 'Business Tax Assessment Review'}
+                </h3>
+                <p className="font-mono text-[10px] text-blue-600">{selectedAssessment.trackingNumber}</p>
+              </div>
+              <button onClick={() => setSelectedAssessment(null)} className="text-xl font-bold">×</button>
+            </div>
+            
+            <div className="p-5 space-y-5 text-xs">
+              {showBusinessInfo && (
+                <>
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div className="box"><span>Business</span><b>{selectedAssessment.businessName}</b></div>
+                    <div className="box"><span>Owner</span><b>{selectedAssessment.businessOwner}</b></div>
+                    <div className="box"><span>Mayor’s Permit</span><b>{selectedAssessment.mayorPermitNumber || '—'}</b></div>
+                    <div className="box"><span>Status</span><span className={`self-start px-2 py-1 rounded-full text-[9px] font-bold ${statusClass(selectedAssessment.status)}`}>{selectedAssessment.status}</span></div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div className="box"><span>Gross Sales</span><b>{money(selectedAssessment.grossSales)}</b></div>
+                    <div className="box"><span>Business Type</span><b>{selectedAssessment.businessType || '—'}</b></div>
+                    <div className="box"><span>Line of Business</span><b>{selectedAssessment.lineOfBusiness || '—'}</b></div>
+                    <div className="box"><span>Area</span><b>{Number(selectedAssessment.businessAreaSqm || 0).toLocaleString()} sqm</b></div>
+                  </div>
+                  <div className="box">
+                    <span>Address</span><b>{selectedAssessment.businessAddress || '—'}, {selectedAssessment.barangay || '—'}</b>
+                    <span>Registration: {selectedAssessment.registrationType || '—'} {selectedAssessment.registrationNumber || ''} • TIN: {selectedAssessment.tin || '—'}</span>
+                    <span>BIR Registered: {selectedAssessment.birRegistered ? 'Yes' : 'No'} • Other Branches: {selectedAssessment.hasOtherBranches ? 'Yes' : 'No'} • Multiple Lines: {selectedAssessment.hasMultipleLines ? 'Yes' : 'No'}</span>
+                  </div>
+                </>
+              )}
+
+              {showDocumentChecklist && (
+                <div><div className="font-bold mb-2">Document Verification Checklist</div>{renderDocChecklist()}</div>
+              )}
+              
+              {showUploadedDocs && (
+                <div>
+                  <div className="font-bold mb-2">Uploaded Documents</div>
+                  <div className="space-y-2">
+                    {(selectedAssessment.attachments || []).map((file, index) => (
+                      <div key={`${file.name}-${index}`} className="flex justify-between items-center p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border">
+                        <div>
+                          <div className="font-semibold">{file.name}</div>
+                          <div className="text-[9px] text-slate-400">{LABELS[file.type || ''] || file.type || 'supporting_document'}</div>
+                        </div>
+                        <button type="button" onClick={() => setPreviewFile(file)} className="text-blue-600 font-bold">Preview</button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {showAssessmentPanel && (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="font-bold">Final Assessed Amount</div>
+                    {editableAssessmentPanel && (
+                      <div className="text-[10px] text-slate-500">Use the applicable current QC schedule / Revenue Code. Do not use an arbitrary percentage.</div>
+                    )}
+                  </div>
+                  
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {([['lbt','Local Business Tax'],['mayorsPermit','Mayor’s Permit Fee'],['sanitaryFee','Sanitary Inspection Fee'],['garbageFee','Garbage Fee'],['fireSafetyFee','Fire Safety / BFP Fee'],['otherFees','Other Regulatory Fees']] as Array<[keyof Required<FeeBreakdown>, string]>).map(([key, label]) => (
+                      <label key={key} className="p-3 rounded-xl border">
+                        <span className="block text-[10px] font-bold text-slate-500 mb-1">{label}</span>
+                        <input type="number" min="0" step="0.01" value={fees[key]} onChange={(e) => setFee(key, e.target.value)} disabled={!editableAssessmentPanel} className="w-full p-2 rounded-lg border bg-transparent disabled:opacity-50" />
+                      </label>
+                    ))}
+                  </div>
+                  
+                  <div className="mt-3 p-4 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 flex justify-between font-extrabold">
+                    <span>Total Assessment</span><span>{money(fees.total)}</span>
+                  </div>
+                </div>
+              )}
+
+              {showRemarks && (
+                <div>
+                  <label className="block font-bold mb-2">Treasurer’s Office Remarks</label>
+                  <textarea value={actionRemarks} onChange={(e) => setActionRemarks(e.target.value)} rows={4} disabled={!editableRemarks} className="w-full p-3 rounded-xl border bg-transparent disabled:opacity-50" placeholder="Explain returned documents, assessment findings, approval notes, etc." />
+                </div>
+              )}
+
+              {showPaymentMonitoring && (
+                <div className="box">
+                  <span>Current Payment</span>
+                  <b>{selectedAssessment.paymentStatus || 'UNPAID'} • {money(selectedAssessment.paidAmount || selectedAssessment.paymentAmount || selectedAssessment.computedFees?.total)}</b>
+                  {selectedAssessment.officialReceiptNumber && <span>O.R.: {selectedAssessment.officialReceiptNumber}</span>}
+                </div>
+              )}
+
+            </div>
+            
+            <div className="sticky bottom-0 flex flex-wrap items-center justify-between gap-2 px-5 py-4 border-t bg-slate-50 dark:bg-slate-950">
+              <div className="flex gap-2">
+                
+                {isSubmittedOrResubmitted && (
+                  <>
+                    {s === 'RESUBMITTED' && <button type="button" disabled={submitting} onClick={() => void updateStatus('RETURNED_FOR_COMPLIANCE')} className="px-3 py-2 rounded-xl bg-orange-600 text-white text-xs font-bold">Return for Compliance</button>}
+                    <button type="button" disabled={submitting} onClick={() => void updateStatus('FOR_INITIAL_ASSESSMENT')} className="px-3 py-2 rounded-xl bg-sky-600 text-white text-xs font-bold">Proceed to Initial Assessment</button>
+                    <button type="button" disabled={submitting} onClick={() => void updateStatus('REJECTED')} className="px-3 py-2 rounded-xl bg-rose-600 text-white text-xs font-bold">Reject</button>
+                  </>
+                )}
+
+                {isForInitial && (
+                  <>
+                    <button type="button" disabled={submitting} onClick={() => void updateStatus('RETURNED_FOR_COMPLIANCE')} className="px-3 py-2 rounded-xl bg-orange-600 text-white text-xs font-bold">Return for Compliance</button>
+                    <button type="button" disabled={submitting} onClick={() => void updateStatus('FOR_FINAL_REVIEW')} className="px-3 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold">Complete Initial Assessment</button>
+                    <button type="button" disabled={submitting} onClick={() => void updateStatus('REJECTED')} className="px-3 py-2 rounded-xl bg-rose-600 text-white text-xs font-bold">Reject</button>
+                  </>
+                )}
+
+                {isForReview && (
+                  <>
+                    <button type="button" disabled={submitting} onClick={() => void updateStatus('RETURNED_FOR_COMPLIANCE')} className="px-3 py-2 rounded-xl bg-orange-600 text-white text-xs font-bold">Return for Compliance</button>
+                    <button type="button" disabled={submitting} onClick={() => void updateStatus('FOR_FINAL_APPROVAL')} className="px-3 py-2 rounded-xl bg-fuchsia-600 text-white text-xs font-bold">Approve for Final Approval</button>
+                    <button type="button" disabled={submitting} onClick={() => void updateStatus('REJECTED')} className="px-3 py-2 rounded-xl bg-rose-600 text-white text-xs font-bold">Reject</button>
+                  </>
+                )}
+
+                {isForApproval && (
+                  <>
+                    <button type="button" disabled={submitting} onClick={() => void updateStatus('RETURNED_FOR_COMPLIANCE')} className="px-3 py-2 rounded-xl bg-orange-600 text-white text-xs font-bold">Return for Compliance</button>
+                    <button type="button" disabled={submitting} onClick={() => void updateStatus('TAX_BILL_ISSUED')} className="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold">Issue Tax Bill</button>
+                    <button type="button" disabled={submitting} onClick={() => void updateStatus('REJECTED')} className="px-3 py-2 rounded-xl bg-rose-600 text-white text-xs font-bold">Reject</button>
+                  </>
+                )}
+
+                {isTaxBill && (
+                  <button type="button" disabled={submitting} onClick={() => void updateStatus('FOR_OWNER_PAYMENT')} className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold">Issue for Payment</button>
+                )}
+
+                {isForValidation && (
+                  <button type="button" disabled={submitting} onClick={() => void updateStatus('OR_ISSUED')} className="px-4 py-2 rounded-xl bg-green-600 hover:bg-green-700 text-white text-xs font-bold">Verify Payment & Issue O.R.</button>
+                )}
+
+              </div>
+              
+              <div className="flex gap-2">
+                {(!isPaid && !selectedAssessment.officialReceiptNumber && !selectedAssessment.paymentReference) && (
+                  <button type="button" onClick={() => void deleteAssessment(selectedAssessment)} className="px-3 py-2 rounded-xl bg-rose-50 text-rose-700 text-xs font-bold">Delete</button>
+                )}
+                <button type="button" onClick={() => void archiveOrRestore(selectedAssessment)} className="px-3 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 text-xs font-bold">
+                  {isArchived ? 'Restore' : 'Archive'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    })()}
 
     {showOrderModal && selectedAssessment && selectedAssessment.status === 'TAX_BILL_ISSUED' && <div className="fixed inset-0 z-[60] bg-slate-950/70 flex items-center justify-center p-4"><div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-lg p-6 border shadow-2xl"><h3 className="font-bold text-sm uppercase">Approved Business Tax Bill / Order of Payment</h3><div className="mt-4 space-y-2 text-xs"><div className="flex justify-between"><span>Tracking Number</span><b className="font-mono">{selectedAssessment.trackingNumber}</b></div><div className="flex justify-between"><span>Tax Bill Number</span><b className="font-mono text-blue-600">{selectedAssessment.taxBillNumber || '—'}</b></div><div className="flex justify-between"><span>Order of Payment</span><b className="font-mono">{selectedAssessment.orderOfPaymentNumber || '—'}</b></div><div className="flex justify-between"><span>Amount Due</span><b>{money(selectedAssessment.paymentAmount || selectedAssessment.computedFees?.total)}</b></div><div className="flex justify-between"><span>Due Date</span><b>{selectedAssessment.dueDate ? new Date(selectedAssessment.dueDate).toLocaleDateString() : '—'}</b></div></div><div className="mt-5 flex gap-2"><button type="button" onClick={() => setShowOrderModal(false)} className="flex-1 px-4 py-2 rounded-xl border text-xs font-bold">Close</button><button type="button" onClick={() => window.print()} className="flex-1 px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold">Print</button></div></div></div>}
 
