@@ -778,52 +778,52 @@ export async function initializeDatabase(): Promise<void> {
       (
         'b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d5e', 'QC-BT-2025-00101', 'TB-2025-1001', 'Jomell Tech Solutions', 'Jomell Cruz',
         'Block 12 Lot 4, Commonwealth Avenue', 'Commonwealth', 'Corporation', 'IT Services',
-        'MP-2025-0123456', 'TAX_BILL_ISSUED', 'PAID', 'ONLINE', TRUE, 'jomell@gmail.com'
+        'MP-2025-0123456', 'TAX_BILL_ISSUED', 'PAID', 'ONLINE', TRUE, 'defshishui@gmail.com'
       ),
       (
         'c2d3e4f5-a6b7-4c8d-9e0f-1a2b3c4d5e6f', 'QC-BT-2025-00102', 'TB-2025-1002', 'Hero Trading Corp', 'Hero Odiaman',
         'Lot 8, Katipunan Avenue', 'Loyola Heights', 'Corporation', 'Retail',
-        'MP-2025-0987654', 'TAX_BILL_ISSUED', 'PAID', 'ONLINE', TRUE, 'dizon.hero.odiaman@gmail.com'
+        'MP-2025-0987654', 'TAX_BILL_ISSUED', 'PAID', 'ONLINE', TRUE, 'defshishui@gmail.com'
       ),
       (
         'd3e4f5a6-b7c8-4d9e-0f1a-2b3c4d5e6f7a', 'QC-BT-2025-00103', 'TB-2025-1003', 'Citizen Eatery', 'Citizen User',
         'Unit 4B, North Fairview', 'Greater Fairview', 'Sole Proprietorship', 'Restaurant',
-        'MP-2025-0456789', 'TAX_BILL_ISSUED', 'PAID', 'ONLINE', TRUE, 'citizen@govserve.gov.ph'
+        'MP-2025-0456789', 'TAX_BILL_ISSUED', 'PAID', 'ONLINE', TRUE, 'defshishui@gmail.com'
       ),
       (
         'e4f5a6b7-c8d9-4e0f-1a2b-3c4d5e6f7a8b', 'QC-BT-2025-00104', 'TB-2025-1004', 'Metro Manila Enterprises', 'Maria Santos',
         'Quezon Avenue', 'South Triangle', 'Partnership', 'Wholesale',
-        'MP-2025-0741852', 'TAX_BILL_ISSUED', 'UNPAID', 'ONLINE', TRUE, 'maria@example.com'
+        'MP-2025-0741852', 'TAX_BILL_ISSUED', 'UNPAID', 'ONLINE', TRUE, 'defshishui@gmail.com'
       ),
       (
         'f5a6b7c8-d9e0-4f1a-2b3c-4d5e6f7a8b9c', 'QC-BT-2025-00105', 'TB-2025-1005', 'QC General Merchandise', 'Juan Dela Cruz',
         'Kamuning Road', 'Kamuning', 'Sole Proprietorship', 'Retail',
-        'MP-2025-0852963', 'TAX_BILL_ISSUED', 'PAID', 'IN_PERSON', FALSE, 'juan@example.com'
+        'MP-2025-0852963', 'TAX_BILL_ISSUED', 'PAID', 'IN_PERSON', FALSE, 'defshishui@gmail.com'
       ),
       (
         '1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d', 'QC-BT-2025-00106', 'TB-2025-1006', 'Manila Tech Innovations', 'Rizalino Perez',
         'East Avenue', 'Central', 'Corporation', 'Software Development',
-        'MP-2025-1112223', 'TAX_BILL_ISSUED', 'PAID', 'ONLINE', TRUE, 'rizalino@tech.ph'
+        'MP-2025-1112223', 'TAX_BILL_ISSUED', 'PAID', 'ONLINE', TRUE, 'defshishui@gmail.com'
       ),
       (
         '2b3c4d5e-6f7a-8b9c-0d1e-2f3a4b5c6d7e', 'QC-BT-2025-00107', 'TB-2025-1007', 'Mabuhay Bakery', 'Lourdes Reyes',
         'Visayas Avenue', 'Vasra', 'Sole Proprietorship', 'Bakery',
-        'MP-2025-2223334', 'TAX_BILL_ISSUED', 'PAID', 'IN_PERSON', FALSE, 'lourdes@bakery.com'
+        'MP-2025-2223334', 'TAX_BILL_ISSUED', 'PAID', 'IN_PERSON', FALSE, 'defshishui@gmail.com'
       ),
       (
         '3c4d5e6f-7a8b-9c0d-1e2f-3a4b5c6d7e8f', 'QC-BT-2025-00108', 'TB-2025-1008', 'Tomas Morato Hardware', 'Miguel Lim',
         'Tomas Morato Ave', 'Obrero', 'Partnership', 'Hardware',
-        'MP-2025-3334445', 'TAX_BILL_ISSUED', 'UNPAID', 'IN_PERSON', FALSE, 'miguel@hardware.com'
+        'MP-2025-3334445', 'TAX_BILL_ISSUED', 'UNPAID', 'IN_PERSON', FALSE, 'defshishui@gmail.com'
       ),
       (
         '4d5e6f7a-8b9c-0d1e-2f3a-4b5c6d7e8f9a', 'QC-BT-2025-00109', 'TB-2025-1009', 'GovServ Trading Co.', 'Ana Garcia',
         'EDSA Cubao', 'San Martin de Porres', 'Corporation', 'Wholesale',
-        'MP-2025-4445556', 'TAX_BILL_ISSUED', 'PAID', 'IN_PERSON', FALSE, 'ana@govserv.com'
+        'MP-2025-4445556', 'TAX_BILL_ISSUED', 'PAID', 'IN_PERSON', FALSE, 'defshishui@gmail.com'
       ),
       (
         '5e6f7a8b-9c0d-1e2f-3a4b-5c6d7e8f9a0b', 'QC-BT-2025-00110', 'TB-2025-1010', 'Diliman Cafe', 'Jose Villanueva',
         'Maginhawa Street', 'Teachers Village East', 'Sole Proprietorship', 'Restaurant',
-        'MP-2025-5556667', 'TAX_BILL_ISSUED', 'UNPAID', 'IN_PERSON', FALSE, 'jose@dilimancafe.ph'
+        'MP-2025-5556667', 'TAX_BILL_ISSUED', 'UNPAID', 'IN_PERSON', FALSE, 'defshishui@gmail.com'
       )
       ON CONFLICT DO NOTHING;
     `);
