@@ -255,6 +255,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
   const [isBusinessVerified, setIsBusinessVerified] = useState(false);
 
   const [isDataNotFoundModalOpen, setIsDataNotFoundModalOpen] = useState(false);
+  const [globalAlert, setGlobalAlert] = useState<{message: string, type: 'success' | 'error'} | null>(null);
   const [linkErrorModalMessage, setLinkErrorModalMessage] = useState<string | null>(null);
   const [salesFiles, setSalesFiles] = useState<Partial<Record<DocumentRequirementKey, File[]>>>({});
   const [currentStep, setCurrentStep] = useState(1);
@@ -638,7 +639,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
       setSalesFiles({});
       void fetchAssessments();
     } catch (error: any) {
-      alert(error.message || 'An error occurred while submitting the assessment.');
+      setGlobalAlert({ message: error.message || 'An error occurred while submitting the assessment.', type: 'error' });
     } finally {
       setSubmitting(false);
     }
@@ -670,7 +671,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.message || 'Failed to link application.');
-      alert('Application linked successfully.');
+      setGlobalAlert({ message: 'Application linked successfully.', type: 'success' });
       setIsModalOpen(false);
       void fetchAssessments();
     } catch (error: any) {
@@ -686,15 +687,15 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
     
     // Check form validity manually just to be safe
     if (!aptForm.appointmentType) {
-      alert('Please select an appointment type.');
+      setGlobalAlert({ message: 'Please select an appointment type.', type: 'error' });
       return;
     }
     if (!aptForm.phone || !/^\d{11}$/.test(aptForm.phone.trim())) {
-      alert('Please enter a valid 11-digit Philippine mobile number.');
+      setGlobalAlert({ message: 'Please enter a valid 11-digit Philippine mobile number.', type: 'error' });
       return;
     }
     if (!aptForm.date || !aptForm.timeSlot) {
-      alert('Please select a valid date and time slot.');
+      setGlobalAlert({ message: 'Please select a valid date and time slot.', type: 'error' });
       return;
     }
 
@@ -729,7 +730,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
       });
       
     } catch (error: any) {
-      alert(error.message || 'Failed to submit appointment.');
+      setGlobalAlert({ message: error.message || 'Failed to submit appointment.', type: 'error' });
     } finally {
       setSubmitting(false);
     }
@@ -854,7 +855,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
         documentTypes.push(key);
       });
     });
-    if (!files.length) return alert('Please upload at least one requested document.');
+    if (!files.length) { setGlobalAlert({ message: 'Please upload at least one requested document.', type: 'error' }); return; }
     setIsComplianceSubmitting(true);
     try {
       const formData = new FormData();
@@ -869,10 +870,10 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
       if (!response.ok) throw new Error(data.message || 'Failed to submit compliance documents.');
       setSelectedAssessmentView(data.record);
       setComplianceFiles({});
-      alert('Additional documents submitted successfully. Your assessment has returned to the review queue.');
+      setGlobalAlert({ message: 'Additional documents submitted successfully. Your assessment has returned to the review queue.', type: 'success' });
       void fetchAssessments();
     } catch (error: any) {
-      alert(error.message || 'Failed to submit additional documents.');
+      setGlobalAlert({ message: error.message || 'Failed to submit additional documents.', type: 'error' });
     } finally {
       setIsComplianceSubmitting(false);
     }
@@ -1367,6 +1368,21 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
               <button type="button" onClick={() => setIsDataNotFoundModalOpen(false)} className="px-6 py-2 rounded-lg bg-rose-600 text-white text-sm font-bold shadow-sm hover:bg-rose-700">Cancel</button>
               <button type="button" onClick={() => { setIsDataNotFoundModalOpen(false); openModal('appointment'); }} className="px-6 py-2 rounded-lg bg-emerald-600 text-white text-sm font-bold shadow-sm hover:bg-emerald-700">Set an Appointment</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {globalAlert && (
+        <div className="fixed inset-0 z-[70] bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className={`bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-sm p-6 text-center border-t-4 ${globalAlert.type === 'success' ? 'border-t-emerald-500' : 'border-t-rose-500'}`}>
+            <div className={`mx-auto w-12 h-12 rounded-full border-2 flex items-center justify-center text-2xl font-bold mb-4 ${globalAlert.type === 'success' ? 'border-emerald-500 text-emerald-500' : 'border-rose-500 text-rose-500'}`}>
+              {globalAlert.type === 'success' ? '✓' : '×'}
+            </div>
+            <h3 className={`text-lg font-bold mb-2 uppercase ${globalAlert.type === 'success' ? 'text-emerald-600' : 'text-rose-600'}`}>
+              {globalAlert.type === 'success' ? 'SUCCESS' : 'ERROR'}
+            </h3>
+            <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">{globalAlert.message}</p>
+            <button type="button" onClick={() => setGlobalAlert(null)} className="px-8 py-2 rounded-lg bg-blue-500 text-white text-sm font-bold shadow-sm hover:bg-blue-600">OK</button>
           </div>
         </div>
       )}
