@@ -377,11 +377,20 @@ export async function createSalesDeclaration(req: Request, res: Response): Promi
   const grossSales = Number(body.grossSales);
   const businessAreaSqm = Number(body.businessAreaSqm || 0);
   const taxYear = Number(body.year || new Date().getFullYear());
+  if (taxYear !== 2026) {
+    res.status(400).json({ message: 'Only the 2026 Business Tax Assessment Application is available in the current system.' });
+    return;
+  }
   const assessmentPeriod = String(body.assessmentPeriod || 'ANNUAL_RENEWAL').trim();
   const quarter = String(body.quarter || 'ANNUAL').trim();
   const psicCode = String(body.psicCode || '').trim();
   const tin = String(body.tin || '').trim();
-  const email = String(body.email || '').trim().toLowerCase();
+  const authEmail = String((req as AuthenticatedRequest).user?.email || '').trim().toLowerCase();
+  if (!authEmail) {
+    res.status(401).json({ message: 'Authentication required.' });
+    return;
+  }
+  const email = authEmail;
 
   if (!businessName || !businessOwner || !businessAddress || !barangay || !businessType || !lineOfBusiness || !mayorsPermitNumber || !tin || !email) {
     res.status(400).json({ message: 'Business name, owner, address, barangay, business type, line of business, Mayor’s Permit number, TIN, and email are required.' });
@@ -1388,7 +1397,7 @@ export async function verifyMayorPermit(req: Request, res: Response): Promise<vo
 
   try {
     const result = await pool.query(
-      `SELECT id FROM business_permits 
+      `SELECT id, mayor_permit_no, business_name, business_address, owner_reference, permit_status FROM business_permits 
        WHERE mayor_permit_no = $1 
          AND LOWER(business_name) = LOWER($2) 
          AND permit_status = 'ACTIVE' 
@@ -1397,7 +1406,7 @@ export async function verifyMayorPermit(req: Request, res: Response): Promise<vo
     );
 
     if (result.rows.length > 0) {
-      res.status(200).json({ exists: true });
+      res.status(200).json({ exists: true, ...result.rows[0] });
     } else {
       res.status(200).json({ exists: false });
     }

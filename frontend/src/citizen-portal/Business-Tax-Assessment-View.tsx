@@ -244,7 +244,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
     grossSales: '',
     essentialSales: '',
     nonEssentialSales: '',
-    year: String(new Date().getFullYear()),
+    year: '2026',
     assessmentPeriod: 'ANNUAL_RENEWAL',
     quarter: 'ANNUAL',
     psicCode: '',
@@ -539,6 +539,11 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
               setIsDataNotFoundModalOpen(true);
               return;
             }
+            setSalesForm(prev => ({
+              ...prev,
+              businessAddress: data.business_address || prev.businessAddress,
+              businessOwner: data.owner_reference || prev.businessOwner,
+            }));
             setIsBusinessVerified(true);
             return; // Don't proceed to step 2 yet. User must click "Continue".
           } catch (err: any) {
@@ -1238,7 +1243,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                       <div>
                         <h4 className="font-bold text-sm border-b pb-2 mb-4">A. Tax Year / Assessment Period</h4>
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                          <div><label className="label">Tax Year *</label><input required type="number" min="2000" max="2100" value={salesForm.year} onChange={(e) => setSalesForm({ ...salesForm, year: e.target.value })} className="field" /></div>
+                          <div><label className="label">Tax Year *</label><input required type="number" min="2000" max="2100" value={salesForm.year} onChange={(e) => setSalesForm({ ...salesForm, year: e.target.value })} className="field disabled:opacity-75 disabled:bg-slate-100 dark:disabled:bg-slate-800" disabled readOnly /></div>
                           <div><label className="label">Assessment Period *</label><select value={salesForm.assessmentPeriod} onChange={(e) => setSalesForm({ ...salesForm, assessmentPeriod: e.target.value, quarter: e.target.value === 'ANNUAL_RENEWAL' ? 'ANNUAL' : salesForm.quarter })} className="field"><option value="ANNUAL_RENEWAL">Annual Renewal</option></select></div>
                         </div>
                       </div>

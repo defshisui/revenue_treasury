@@ -842,18 +842,18 @@ export async function initializeDatabase(): Promise<void> {
     await pool.query(`
       INSERT INTO business_assessments (
         id, tracking_number, tax_bill_number, business_name, business_owner,
-        mayors_permit_number, status, payment_status, application_source, is_linked
+        mayors_permit_number, status, payment_status, application_source, is_linked, tax_year
       ) VALUES
-      (gen_random_uuid()::varchar, 'OLD-BT-2024-001', 'TB-2024-1001', 'Blue Sapphire Technologies', 'Owner 1', 'MP-2025-1000001', 'OR_ISSUED', 'PAID', 'ONLINE', TRUE),
-      (gen_random_uuid()::varchar, 'OLD-BT-2024-002', 'TB-2024-1002', 'Golden Crown Bakery', 'Owner 2', 'MP-2025-1000002', 'OR_ISSUED', 'PAID', 'ONLINE', TRUE),
-      (gen_random_uuid()::varchar, 'OLD-BT-2024-003', 'TB-2024-1003', 'Metro Prime Logistics', 'Owner 3', 'MP-2025-1000003', 'OR_ISSUED', 'PAID', 'ONLINE', TRUE),
-      (gen_random_uuid()::varchar, 'OLD-BT-2024-004', 'TB-2024-1004', 'Sunrise Auto Parts', 'Owner 4', 'MP-2025-1000004', 'OR_ISSUED', 'PAID', 'ONLINE', TRUE),
-      (gen_random_uuid()::varchar, 'OLD-BT-2024-005', 'TB-2024-1005', 'Elite Fitness Center', 'Owner 5', 'MP-2025-1000005', 'OR_ISSUED', 'PAID', 'ONLINE', TRUE),
-      (gen_random_uuid()::varchar, 'OLD-BT-2024-006', 'TB-2024-1006', 'Horizon Medical Clinic', 'Owner 6', 'MP-2025-1000006', 'OR_ISSUED', 'PAID', 'ONLINE', TRUE),
-      (gen_random_uuid()::varchar, 'OLD-BT-2024-007', 'TB-2024-1007', 'Crimson Leaf Cafe', 'Owner 7', 'MP-2025-1000007', 'OR_ISSUED', 'PAID', 'ONLINE', TRUE),
-      (gen_random_uuid()::varchar, 'OLD-BT-2024-008', 'TB-2024-1008', 'Urban Nest Real Estate', 'Owner 8', 'MP-2025-1000008', 'OR_ISSUED', 'PAID', 'ONLINE', TRUE),
-      (gen_random_uuid()::varchar, 'OLD-BT-2024-009', 'TB-2024-1009', 'Apex Construction Corp', 'Owner 9', 'MP-2025-1000009', 'OR_ISSUED', 'PAID', 'ONLINE', TRUE),
-      (gen_random_uuid()::varchar, 'OLD-BT-2024-010', 'TB-2024-1010', 'Pioneer Agri Supplies', 'Owner 10', 'MP-2025-1000010', 'OR_ISSUED', 'PAID', 'ONLINE', TRUE)
+      (gen_random_uuid()::varchar, 'OLD-BT-2024-001', 'TB-2024-1001', 'Blue Sapphire Technologies', 'Owner 1', 'MP-2025-1000001', 'OR_ISSUED', 'PAID', 'ONLINE', TRUE, 2024),
+      (gen_random_uuid()::varchar, 'OLD-BT-2024-002', 'TB-2024-1002', 'Golden Crown Bakery', 'Owner 2', 'MP-2025-1000002', 'OR_ISSUED', 'PAID', 'ONLINE', TRUE, 2024),
+      (gen_random_uuid()::varchar, 'OLD-BT-2024-003', 'TB-2024-1003', 'Metro Prime Logistics', 'Owner 3', 'MP-2025-1000003', 'OR_ISSUED', 'PAID', 'ONLINE', TRUE, 2024),
+      (gen_random_uuid()::varchar, 'OLD-BT-2024-004', 'TB-2024-1004', 'Sunrise Auto Parts', 'Owner 4', 'MP-2025-1000004', 'OR_ISSUED', 'PAID', 'ONLINE', TRUE, 2024),
+      (gen_random_uuid()::varchar, 'OLD-BT-2024-005', 'TB-2024-1005', 'Elite Fitness Center', 'Owner 5', 'MP-2025-1000005', 'OR_ISSUED', 'PAID', 'ONLINE', TRUE, 2024),
+      (gen_random_uuid()::varchar, 'OLD-BT-2024-006', 'TB-2024-1006', 'Horizon Medical Clinic', 'Owner 6', 'MP-2025-1000006', 'OR_ISSUED', 'PAID', 'ONLINE', TRUE, 2024),
+      (gen_random_uuid()::varchar, 'OLD-BT-2024-007', 'TB-2024-1007', 'Crimson Leaf Cafe', 'Owner 7', 'MP-2025-1000007', 'OR_ISSUED', 'PAID', 'ONLINE', TRUE, 2024),
+      (gen_random_uuid()::varchar, 'OLD-BT-2024-008', 'TB-2024-1008', 'Urban Nest Real Estate', 'Owner 8', 'MP-2025-1000008', 'OR_ISSUED', 'PAID', 'ONLINE', TRUE, 2024),
+      (gen_random_uuid()::varchar, 'OLD-BT-2024-009', 'TB-2024-1009', 'Apex Construction Corp', 'Owner 9', 'MP-2025-1000009', 'OR_ISSUED', 'PAID', 'ONLINE', TRUE, 2024),
+      (gen_random_uuid()::varchar, 'OLD-BT-2024-010', 'TB-2024-1010', 'Pioneer Agri Supplies', 'Owner 10', 'MP-2025-1000010', 'OR_ISSUED', 'PAID', 'ONLINE', TRUE, 2024)
       ON CONFLICT DO NOTHING;
     `);
 
