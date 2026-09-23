@@ -214,7 +214,7 @@ function formatAssessment(row: any) {
     dueDate: row.due_date || null,
     status: row.status,
     recordStatus: row.record_status || 'ACTIVE',
-    applicationDate: row.application_date,
+    applicationDate: row.created_at,
     psicCode: row.psic_code || '',
     grossSales: Number(row.gross_sales || 0),
     tin: row.tin || '',

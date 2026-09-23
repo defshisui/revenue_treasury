@@ -241,20 +241,7 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
     });
   }
 
-  async function deleteAssessment(record: AssessmentRecord) {
-    if (!admin) return;
-    setConfirmState({
-      title: 'Delete Record',
-      message: `Permanently delete ${record.trackingNumber}? This action cannot be undone.`,
-      onConfirm: async () => {
-        const response = await fetch(`${API_BASE_URL}/admin/business-assessments/${record.id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${admin.token}` } });
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) return setAlertState({ message: data.message || 'Failed to delete record.', type: 'error' });
-        setAlertState({ message: 'Record deleted successfully.', type: 'success' });
-        setSelectedAssessment(null); void fetchAssessments();
-      }
-    });
-  }
+
 
   const setFee = (key: keyof Required<FeeBreakdown>, value: string) => setFees((prev) => ({ ...prev, [key]: Number(value) || 0 }));
 
@@ -523,7 +510,7 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
       const showDocumentChecklist = !isArchived && isForInitial;
       const showUploadedDocs = !isArchived && (isSubmittedOrResubmitted || isForInitial || isForReview || isForApproval || isReturned);
       const showRemarks = !isArchived && !isForPayment && !isPaid && !isForValidation && !isTaxBill;
-      const editableRemarks = isSubmittedOrResubmitted || isForInitial || isForReview;
+      const editableRemarks = isSubmittedOrResubmitted || isForInitial || isForReview || isForApproval;
       const showPaymentMonitoring = isForPayment || isForValidation || isPaid || isArchived;
 
       return (
@@ -533,9 +520,15 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
             <div className="sticky top-0 z-10 flex justify-between items-center px-5 py-4 border-b bg-slate-50 dark:bg-slate-950">
               <div>
                 <h3 className="font-bold text-sm uppercase">
-                  {isForInitial || isSubmittedOrResubmitted || isReturned ? 'Initial Assessment (Assessment Officer)' 
-                   : isForReview ? 'Final Review (Operations Officer)' 
-                   : isForApproval ? 'Final Approval (City Treasurer)' 
+                  {isForInitial ? 'Initial Assessment (ADMIN)'
+                   : isSubmittedOrResubmitted ? (s === 'RESUBMITTED' ? 'Resubmitted Application (ADMIN)' : 'Submitted Application (ADMIN)')
+                   : isReturned ? 'Returned for Compliance (ADMIN)' 
+                   : isForReview ? 'Final Review (ADMIN)' 
+                   : isForApproval ? 'Final Approval (ADMIN)' 
+                   : isTaxBill ? 'Tax Bill Issued (ADMIN)'
+                   : isForPayment ? 'Owner Payment (ADMIN)'
+                   : isForValidation ? 'Payment Validation (ADMIN)'
+                   : isPaid ? 'Official Receipt (ADMIN)'
                    : 'Business Tax Assessment Review'}
                 </h3>
                 <p className="font-mono text-[10px] text-blue-600">{selectedAssessment.trackingNumber}</p>
@@ -632,11 +625,14 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
             <div className="sticky bottom-0 flex flex-wrap items-center justify-between gap-2 px-5 py-4 border-t bg-slate-50 dark:bg-slate-950">
               <div className="flex gap-2">
                 
-                {isSubmittedOrResubmitted && (
+                {s === 'SUBMITTED' && (
+                  <button type="button" disabled={submitting} onClick={() => void updateStatus('FOR_INITIAL_ASSESSMENT')} className="px-3 py-2 rounded-xl bg-sky-600 text-white text-xs font-bold">Proceed to Initial Assessment</button>
+                )}
+
+                {s === 'RESUBMITTED' && (
                   <>
-                    {s === 'RESUBMITTED' && <button type="button" disabled={submitting} onClick={() => void updateStatus('RETURNED_FOR_COMPLIANCE')} className="px-3 py-2 rounded-xl bg-orange-600 text-white text-xs font-bold">Return for Compliance</button>}
+                    <button type="button" disabled={submitting} onClick={() => void updateStatus('RETURNED_FOR_COMPLIANCE')} className="px-3 py-2 rounded-xl bg-orange-600 text-white text-xs font-bold">Return for Compliance</button>
                     <button type="button" disabled={submitting} onClick={() => void updateStatus('FOR_INITIAL_ASSESSMENT')} className="px-3 py-2 rounded-xl bg-sky-600 text-white text-xs font-bold">Proceed to Initial Assessment</button>
-                    <button type="button" disabled={submitting} onClick={() => void updateStatus('REJECTED')} className="px-3 py-2 rounded-xl bg-rose-600 text-white text-xs font-bold">Reject</button>
                   </>
                 )}
 
@@ -645,27 +641,7 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
                 )}
 
                 {isForReview && (
-                  <>
-                    <button type="button" disabled={submitting} onClick={() => void updateStatus('RETURNED_FOR_COMPLIANCE')} className="px-3 py-2 rounded-xl bg-orange-600 text-white text-xs font-bold">Return for Compliance</button>
-                    <button type="button" disabled={submitting} onClick={() => void updateStatus('FOR_FINAL_APPROVAL')} className="px-3 py-2 rounded-xl bg-fuchsia-600 text-white text-xs font-bold">Submit for Final Approval</button>
-                    <button type="button" disabled={submitting} onClick={() => void updateStatus('REJECTED')} className="px-3 py-2 rounded-xl bg-rose-600 text-white text-xs font-bold">Reject</button>
-                  </>
-                )}
-
-                {isForApproval && (
-                  <>
-                    <button type="button" disabled={submitting} onClick={() => void updateStatus('RETURNED_FOR_COMPLIANCE')} className="px-3 py-2 rounded-xl bg-orange-600 text-white text-xs font-bold">Return for Compliance</button>
-                    <button type="button" disabled={submitting} onClick={() => void updateStatus('TAX_BILL_ISSUED')} className="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold">Approve & Issue Tax Bill</button>
-                    <button type="button" disabled={submitting} onClick={() => void updateStatus('REJECTED')} className="px-3 py-2 rounded-xl bg-rose-600 text-white text-xs font-bold">Reject</button>
-                  </>
-                )}
-
-                {isTaxBill && (
-                  <button type="button" disabled={submitting} onClick={() => void updateStatus('FOR_OWNER_PAYMENT')} className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold">Issue for Payment</button>
-                )}
-
-                {isForValidation && (
-                  <button type="button" disabled={submitting} onClick={() => void updateStatus('OR_ISSUED')} className="px-4 py-2 rounded-xl bg-green-600 hover:bg-green-700 text-white text-xs font-bold">Verify Payment & Issue O.R.</button>
+                  <button type="button" disabled={submitting} onClick={() => void updateStatus('RETURNED_FOR_COMPLIANCE')} className="px-3 py-2 rounded-xl bg-orange-600 text-white text-xs font-bold">Return for Compliance</button>
                 )}
 
               </div>
@@ -674,13 +650,21 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
                 {isForInitial && (
                   <button type="button" disabled={submitting} onClick={() => void updateStatus('FOR_FINAL_REVIEW')} className="px-3 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold">Complete Initial Assessment</button>
                 )}
-                {!isForInitial && (!isPaid && !selectedAssessment.officialReceiptNumber && !selectedAssessment.paymentReference) && (
-                  <button type="button" onClick={() => void deleteAssessment(selectedAssessment)} className="px-3 py-2 rounded-xl bg-rose-50 text-rose-700 text-xs font-bold">Delete</button>
+                
+                {isForReview && (
+                  <button type="button" disabled={submitting} onClick={() => void updateStatus('FOR_FINAL_APPROVAL')} className="px-3 py-2 rounded-xl bg-fuchsia-600 text-white text-xs font-bold">Submit for Final Approval</button>
                 )}
-                {!isForInitial && (
-                  <button type="button" onClick={() => void archiveOrRestore(selectedAssessment)} className="px-3 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 text-xs font-bold">
-                    {isArchived ? 'Restore' : 'Archive'}
-                  </button>
+
+                {isForApproval && (
+                  <button type="button" disabled={submitting} onClick={() => void updateStatus('TAX_BILL_ISSUED')} className="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold">Approve & Issue Tax Bill</button>
+                )}
+
+                {isTaxBill && (
+                  <button type="button" disabled={submitting} onClick={() => void updateStatus('FOR_OWNER_PAYMENT')} className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold">Issue for Payment</button>
+                )}
+
+                {isForValidation && (
+                  <button type="button" disabled={submitting} onClick={() => void updateStatus('OR_ISSUED')} className="px-4 py-2 rounded-xl bg-green-600 hover:bg-green-700 text-white text-xs font-bold">Verify Payment & Issue O.R.</button>
                 )}
               </div>
             </div>
