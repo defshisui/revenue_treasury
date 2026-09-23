@@ -284,6 +284,14 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
     return schedule;
   };
 
+  const getInstallmentAmount = (record: AssessmentRecord) => {
+    const total = Number(record.computedFees?.total || record.paymentAmount || 0);
+    const term = String(record.paymentTerm || '').toUpperCase();
+    if (term === 'QUARTERLY') return total / 4;
+    if (term === 'SEMI_ANNUAL') return total / 2;
+    return total;
+  };
+
   const [validationAlert, setValidationAlert] = useState<string | null>(null);
   const [isBusinessVerified, setIsBusinessVerified] = useState(false);
 
@@ -1047,13 +1055,18 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                         >
                           {(() => {
                             const s = record.status;
-                            if (s === 'RETURNED_FOR_COMPLIANCE') return 'Respond';
+                            if (s === 'SUBMITTED') return 'View Application';
+                            if (s === 'FOR_INITIAL_ASSESSMENT') return 'View Assessment Status';
+                            if (s === 'FOR_FINAL_REVIEW') return 'View Review Status';
+                            if (s === 'RETURNED_FOR_COMPLIANCE') return 'Submit Compliance';
+                            if (s === 'RESUBMITTED') return 'View Resubmission Status';
+                            if (s === 'FOR_FINAL_APPROVAL') return 'View Approval Status';
                             if (s === 'TAX_BILL_ISSUED') return 'View Tax Bill';
                             if (s === 'FOR_OWNER_PAYMENT' || (s === 'APPROVED' && record.paymentStatus === 'UNPAID' && Number(record.paymentAmount) > 0)) return 'Pay';
                             if (s === 'FOR_PAYMENT_VALIDATION') return 'View Payment Status';
                             if (s === 'OR_ISSUED') return 'View OR';
                             if (s === 'ARCHIVED') return record.officialReceiptNumber ? 'View OR' : 'View Record';
-                            return 'View';
+                            return 'View Application';
                           })()}
                         </button>
                       </td>
@@ -1189,7 +1202,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
 
       {isModalOpen === 'sales-declaration' && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] overflow-y-auto border border-slate-200 dark:border-slate-800">
+          <div className={`bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full ${submissionSuccess ? 'max-w-lg' : 'max-w-4xl'} max-h-[95vh] overflow-y-auto border border-slate-200 dark:border-slate-800`}>
             {submissionSuccess ? (
               <div className="p-8 text-center flex flex-col items-center">
                 <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 flex items-center justify-center text-3xl font-bold mb-4">✓</div>
@@ -1634,7 +1647,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                     ({selectedAssessmentView.paymentTerm === 'QUARTERLY' ? 'Quarterly' : selectedAssessmentView.paymentTerm === 'SEMI_ANNUAL' ? 'Semi-Annual' : 'Annual'})
                   </span>
                 </span>
-                <b>{money(selectedAssessmentView.paymentAmount || selectedAssessmentView.computedFees?.total)}</b>
+                <b>{money(getInstallmentAmount(selectedAssessmentView))}</b>
               </div>
               <div className="flex justify-between"><span>Due Date</span><b>{selectedAssessmentView.dueDate ? new Date(selectedAssessmentView.dueDate).toLocaleDateString() : '—'}</b></div>
             </div>
@@ -1658,7 +1671,21 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                   ({paymentAssessment.paymentTerm === 'QUARTERLY' ? 'Quarterly' : paymentAssessment.paymentTerm === 'SEMI_ANNUAL' ? 'Semi-Annual' : 'Annual'})
                 </span>
               </div>
-              <div className="text-2xl font-extrabold mt-1">{money(paymentAssessment.paymentAmount || paymentAssessment.computedFees?.total)}</div>
+              <div className="text-2xl font-extrabold mt-1 text-blue-600">{money(getInstallmentAmount(paymentAssessment))}</div>
+              
+              {paymentAssessment.paymentTerm !== 'ANNUAL' && (
+                 <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-800 text-left">
+                   <div className="text-[10px] font-bold text-slate-500 mb-2">PAYMENT SCHEDULE BREAKDOWN:</div>
+                   <ul className="space-y-1 text-xs">
+                     {generatePaymentSchedule(paymentAssessment.paymentTerm).map((item, idx) => (
+                       <li key={idx} className={`flex justify-between ${idx === 0 ? 'font-bold text-blue-700 dark:text-blue-400' : 'text-slate-500'}`}>
+                         <span>{item} {idx === 0 && '(Pay Now)'}</span>
+                         <span>{money(getInstallmentAmount(paymentAssessment))}</span>
+                       </li>
+                     ))}
+                   </ul>
+                 </div>
+              )}
             </div>
             {qrError && <div className="p-3 mb-3 rounded-xl bg-rose-50 text-rose-700 text-xs border border-rose-200">{qrError}</div>}
             {isProcessingPayment ? <div className="py-12 text-xs text-slate-500">Generating your QRPh payment code...</div> : qrCodeUrl ? <><img src={qrCodeUrl} alt="QRPh payment code" className="w-64 h-64 mx-auto object-contain border rounded-2xl p-3 bg-white" /><div className="mt-3 font-mono text-xs font-bold">Reference: {qrReferenceNumber || '—'}</div><div className="mt-2 text-xs text-slate-500">QR expires in {Math.floor(qrSecondsRemaining / 60)}:{String(qrSecondsRemaining % 60).padStart(2, '0')}</div><div className="mt-2 text-[10px] text-slate-500">Keep this window open while waiting. Your payment status is verified from the server before the receipt is issued.</div></> : <div className="py-12 text-xs text-slate-500">Preparing payment...</div>}
