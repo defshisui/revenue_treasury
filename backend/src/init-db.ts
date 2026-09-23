@@ -326,6 +326,7 @@ export async function initializeDatabase(): Promise<void> {
       );
 
       -- BUSINESS TAX WORKFLOW / DOCUMENT / PAYMENT FIELDS
+      ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS business_id INT REFERENCES business_permits(id);
       ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS record_status VARCHAR(50) DEFAULT 'ACTIVE';
       ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS business_address TEXT;
       ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS barangay VARCHAR(100);
@@ -738,6 +739,7 @@ export async function initializeDatabase(): Promise<void> {
       -- Business Assessments
       CREATE INDEX IF NOT EXISTS idx_business_assessments_tracking ON business_assessments(tracking_number);
       CREATE INDEX IF NOT EXISTS idx_business_assessments_tax_bill ON business_assessments(tax_bill_number);
+      CREATE INDEX IF NOT EXISTS idx_business_assessments_business_id ON business_assessments(business_id);
       CREATE INDEX IF NOT EXISTS idx_business_assessments_email ON business_assessments(email);
       CREATE INDEX IF NOT EXISTS idx_business_assessments_status ON business_assessments(status);
       CREATE INDEX IF NOT EXISTS idx_business_assessments_app_date ON business_assessments(created_at DESC);

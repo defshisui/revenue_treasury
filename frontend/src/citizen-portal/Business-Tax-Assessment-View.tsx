@@ -1203,7 +1203,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                       <h4 className="font-bold text-sm border-b pb-2 mb-4">Business Identification</h4>
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                         <div><label className="label">Mayor’s Permit Number *</label><input required value={salesForm.mayorsPermitNumber} onChange={(e) => { setSalesForm({ ...salesForm, mayorsPermitNumber: e.target.value }); setIsBusinessVerified(false); }} className="field" disabled={isBusinessVerified} /></div>
-                        <div><label className="label">Business Name *</label><input required value={salesForm.businessName} onChange={(e) => { setSalesForm({ ...salesForm, businessName: e.target.value }); setIsBusinessVerified(false); }} className="field" disabled={isBusinessVerified} /></div>
+                        <div><label className="label">Business / Corporate Name *</label><input required value={salesForm.businessName} onChange={(e) => { setSalesForm({ ...salesForm, businessName: e.target.value }); setIsBusinessVerified(false); }} className="field" disabled={isBusinessVerified} /></div>
                       </div>
                       {isBusinessVerified && (
                         <div className="mt-4 p-3 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded-xl font-bold flex items-center gap-2">

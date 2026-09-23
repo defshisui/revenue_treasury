@@ -422,13 +422,33 @@ export async function createSalesDeclaration(req: Request, res: Response): Promi
   const trackingNumber = `BT-${taxYear}-${Math.floor(100000 + Math.random() * 900000)}`;
 
   try {
+    // 1. Server-Side Business Validation
+    const businessMatch = await pool.query(
+      `SELECT id FROM business_permits
+       WHERE mayor_permit_no = $1
+         AND LOWER(TRIM(business_name)) = LOWER(TRIM($2))
+         AND permit_status = 'ACTIVE'
+       LIMIT 1`,
+      [mayorsPermitNumber, businessName]
+    );
+
+    if (businessMatch.rows.length === 0) {
+      res.status(400).json({ 
+        message: "Business record not found. Please verify your Mayor's Permit Number and Business / Corporate Name." 
+      });
+      return;
+    }
+    const businessId = businessMatch.rows[0].id;
+
+    // 2. Duplicate 2026 Application Check
     const existingCheck = await pool.query(
       `SELECT tracking_number FROM business_assessments 
-       WHERE (mayors_permit_number = $1 OR LOWER(business_name) = LOWER($2))
-         AND tax_year = $3
-         AND status NOT IN ('REJECTED', 'ARCHIVED')
+       WHERE business_id = $1
+         AND tax_year = $2
+         AND status NOT IN ('REJECTED')
+         AND record_status = 'ACTIVE'
        LIMIT 1`,
-      [mayorsPermitNumber, businessName, taxYear]
+      [businessId, taxYear]
     );
 
     if (existingCheck.rows.length > 0) {
@@ -444,7 +464,7 @@ export async function createSalesDeclaration(req: Request, res: Response): Promi
     const result = await pool.query(
       `INSERT INTO business_assessments (
         id, tracking_number, tax_bill_number, order_of_payment_number,
-        business_name, business_owner, business_address, barangay,
+        business_id, business_name, business_owner, business_address, barangay,
         business_type, line_of_business, business_area_sqm,
         registration_type, registration_number, mayors_permit_number,
         bir_registered, has_other_branches, has_multiple_lines,
@@ -454,14 +474,14 @@ export async function createSalesDeclaration(req: Request, res: Response): Promi
         application_source, is_linked
       ) VALUES (
         $1, $2, NULL, NULL,
-        $3, $4, $5, $6,
+        $24, $3, $4, $5, $6,
         $7, $8, $9,
         $10, $11, $12,
         $13, $14, $15,
         'SUBMITTED', $16, $17, $18, $19, $20,
         $21, $22, $23, '{}'::jsonb,
         'UNPAID', 0, 0,
-        'ONLINE', TRUE
+        'ONLINE_RENEWAL', TRUE
       )
       RETURNING *`,
       [
@@ -488,6 +508,7 @@ export async function createSalesDeclaration(req: Request, res: Response): Promi
         assessmentPeriod,
         quarter,
         JSON.stringify(attachments),
+        businessId,
       ]
     );
 

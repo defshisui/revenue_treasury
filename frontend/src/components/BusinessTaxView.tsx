@@ -640,7 +640,7 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
                 {isForReview && (
                   <>
                     <button type="button" disabled={submitting} onClick={() => void updateStatus('RETURNED_FOR_COMPLIANCE')} className="px-3 py-2 rounded-xl bg-orange-600 text-white text-xs font-bold">Return for Compliance</button>
-                    <button type="button" disabled={submitting} onClick={() => void updateStatus('FOR_FINAL_APPROVAL')} className="px-3 py-2 rounded-xl bg-fuchsia-600 text-white text-xs font-bold">Approve for Final Approval</button>
+                    <button type="button" disabled={submitting} onClick={() => void updateStatus('FOR_FINAL_APPROVAL')} className="px-3 py-2 rounded-xl bg-fuchsia-600 text-white text-xs font-bold">Submit for Final Approval</button>
                     <button type="button" disabled={submitting} onClick={() => void updateStatus('REJECTED')} className="px-3 py-2 rounded-xl bg-rose-600 text-white text-xs font-bold">Reject</button>
                   </>
                 )}
@@ -648,7 +648,7 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
                 {isForApproval && (
                   <>
                     <button type="button" disabled={submitting} onClick={() => void updateStatus('RETURNED_FOR_COMPLIANCE')} className="px-3 py-2 rounded-xl bg-orange-600 text-white text-xs font-bold">Return for Compliance</button>
-                    <button type="button" disabled={submitting} onClick={() => void updateStatus('TAX_BILL_ISSUED')} className="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold">Issue Tax Bill</button>
+                    <button type="button" disabled={submitting} onClick={() => void updateStatus('TAX_BILL_ISSUED')} className="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold">Approve & Issue Tax Bill</button>
                     <button type="button" disabled={submitting} onClick={() => void updateStatus('REJECTED')} className="px-3 py-2 rounded-xl bg-rose-600 text-white text-xs font-bold">Reject</button>
                   </>
                 )}
