@@ -245,11 +245,7 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
 
   const setFee = (key: keyof Required<FeeBreakdown>, value: string) => setFees((prev) => ({ ...prev, [key]: Number(value) || 0 }));
 
-  const renderDocChecklist = () => {
-    if (!selectedAssessment) return null;
-    const required = requiredKeysFor(selectedAssessment);
-    return <div className="space-y-2">{required.map((key) => <label key={key} className="flex items-start gap-3 p-3 rounded-xl border bg-slate-50 dark:bg-slate-950 cursor-pointer"><input type="checkbox" checked={Boolean(checklist[key])} onChange={(e) => setChecklist((prev) => ({ ...prev, [key]: e.target.checked }))} className="mt-1" /><span><span className="font-semibold">{LABELS[key] || key}</span><span className="block text-[9px] text-slate-400 mt-0.5">{(selectedAssessment.attachments || []).filter((a) => a.type === key).map((a) => a.name).join(', ') || 'No uploaded document mapped to this requirement.'}</span></span></label>)}</div>;
-  };
+
 
   return (
     <div
@@ -507,7 +503,6 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
       const showBusinessInfo = true;
       const showAssessmentPanel = !isArchived && (isForInitial || isForReview || isForApproval || isTaxBill);
       const editableAssessmentPanel = isForInitial || isForReview;
-      const showDocumentChecklist = !isArchived && isForInitial;
       const showUploadedDocs = !isArchived && (isSubmittedOrResubmitted || isForInitial || isForReview || isForApproval || isReturned);
       const showRemarks = !isArchived && !isForPayment && !isPaid && !isForValidation && !isTaxBill;
       const editableRemarks = isSubmittedOrResubmitted || isForInitial || isForReview || isForApproval;
@@ -560,23 +555,64 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
                 </>
               )}
 
-              {showDocumentChecklist && (
-                <div><div className="font-bold mb-2">Document Verification Checklist</div>{renderDocChecklist()}</div>
-              )}
-              
               {showUploadedDocs && (
                 <div>
-                  <div className="font-bold mb-2">Uploaded Documents</div>
+                  <div className="font-bold mb-2">Documents & Verification</div>
                   <div className="space-y-2">
-                    {(selectedAssessment.attachments || []).map((file, index) => (
-                      <div key={`${file.name}-${index}`} className="flex justify-between items-center p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border">
-                        <div>
-                          <div className="font-semibold">{file.name}</div>
-                          <div className="text-[9px] text-slate-400">{LABELS[file.type || ''] || file.type || 'supporting_document'}</div>
+                    {(() => {
+                      const required = requiredKeysFor(selectedAssessment);
+                      const allAttachments = selectedAssessment.attachments || [];
+                      
+                      const requiredNodes = required.map((key) => {
+                        const matchedFiles = allAttachments.filter((a) => a.type === key);
+                        const filenames = matchedFiles.map((a) => a.name).join(', ') || 'No uploaded document mapped to this requirement.';
+                        return (
+                          <div key={`req-${key}`} className="flex items-center justify-between p-3 rounded-xl border bg-white dark:bg-slate-950">
+                            <label className={`flex items-start gap-3 flex-1 ${isForInitial ? 'cursor-pointer' : 'cursor-default'}`}>
+                              <input 
+                                type="checkbox" 
+                                checked={Boolean(checklist[key])} 
+                                onChange={(e) => isForInitial && setChecklist((prev) => ({ ...prev, [key]: e.target.checked }))} 
+                                disabled={!isForInitial}
+                                className="mt-1" 
+                              />
+                              <div className="flex-1">
+                                <span className="font-semibold block leading-tight">{LABELS[key] || key}</span>
+                                <span className="block text-[10px] text-slate-400 mt-0.5">{filenames}</span>
+                              </div>
+                            </label>
+                            {matchedFiles.length > 0 && (
+                              <button type="button" onClick={() => setPreviewFile(matchedFiles[0])} className="text-blue-600 font-bold text-xs ml-4">Preview</button>
+                            )}
+                          </div>
+                        );
+                      });
+
+                      const extraFiles = allAttachments.filter(a => !required.includes(a.type as string));
+                      const extraNodes = extraFiles.map((file, index) => (
+                        <div key={`extra-${file.name}-${index}`} className="flex justify-between items-center p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border">
+                          <div className="flex items-start gap-3 flex-1 ml-[28px] opacity-75">
+                            <div>
+                              <div className="font-semibold leading-tight">{file.name}</div>
+                              <div className="text-[10px] text-slate-400 mt-0.5">Additional Document: {LABELS[file.type || ''] || file.type || 'supporting_document'}</div>
+                            </div>
+                          </div>
+                          <button type="button" onClick={() => setPreviewFile(file)} className="text-blue-600 font-bold text-xs ml-4">Preview</button>
                         </div>
-                        <button type="button" onClick={() => setPreviewFile(file)} className="text-blue-600 font-bold">Preview</button>
-                      </div>
-                    ))}
+                      ));
+
+                      return (
+                        <>
+                          {requiredNodes}
+                          {extraNodes.length > 0 && (
+                            <>
+                              <div className="text-xs font-bold text-slate-500 mt-4 mb-2 uppercase tracking-wider">Other Uploaded Files</div>
+                              {extraNodes}
+                            </>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
               )}
