@@ -126,8 +126,29 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
     if (!selectedAssessment) return;
     const stored = selectedAssessment.documentChecklist || {};
     setChecklist(stored);
+    
     const existing = selectedAssessment.computedFees || {};
-    setFees({ lbt: Number(existing.lbt || 0), mayorsPermit: Number(existing.mayorsPermit || 0), sanitaryFee: Number(existing.sanitaryFee || 0), garbageFee: Number(existing.garbageFee || 0), fireSafetyFee: Number(existing.fireSafetyFee || 0), otherFees: Number(existing.otherFees || 0), total: Number(existing.total || 0) });
+    let lbt = Number(existing.lbt || 0);
+    let mayorsPermit = Number(existing.mayorsPermit || 0);
+    let sanitaryFee = Number(existing.sanitaryFee || 0);
+    let garbageFee = Number(existing.garbageFee || 0);
+    let fireSafetyFee = Number(existing.fireSafetyFee || 0);
+    let otherFees = Number(existing.otherFees || 0);
+    let total = Number(existing.total || 0);
+
+    if (total === 0 && selectedAssessment.grossSales) {
+      const gross = selectedAssessment.grossSales;
+      lbt = Number((gross * 0.01).toFixed(2));
+      mayorsPermit = Number((gross * 0.001).toFixed(2));
+      sanitaryFee = Number((gross * 0.001).toFixed(2));
+      garbageFee = Number((gross * 0.0005).toFixed(2));
+      fireSafetyFee = Number((mayorsPermit * 0.10).toFixed(2));
+      otherFees = 0;
+      total = Number((lbt + mayorsPermit + sanitaryFee + garbageFee + fireSafetyFee).toFixed(2));
+    }
+
+    setFees({ lbt, mayorsPermit, sanitaryFee, garbageFee, fireSafetyFee, otherFees, total });
+    
     setActionRemarks(selectedAssessment.remarks || '');
     setShowOrderModal(false);
   }, [selectedAssessment?.id]);
@@ -243,7 +264,7 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
 
 
 
-  const setFee = (key: keyof Required<FeeBreakdown>, value: string) => setFees((prev) => ({ ...prev, [key]: Number(value) || 0 }));
+
 
 
 
@@ -621,9 +642,9 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
               {showAssessmentPanel && (
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <div className="font-bold">Final Assessed Amount</div>
+                    <div className="font-bold">Assessment Amount</div>
                     {editableAssessmentPanel && (
-                      <div className="text-[10px] text-slate-500">Use the applicable current QC schedule / Revenue Code. Do not use an arbitrary percentage.</div>
+                      <div className="text-[10px] text-slate-500">Auto-computed based on Declared Gross Sales.</div>
                     )}
                   </div>
                   
@@ -631,7 +652,7 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
                     {([['lbt','Local Business Tax'],['mayorsPermit','Mayor’s Permit Fee'],['sanitaryFee','Sanitary Inspection Fee'],['garbageFee','Garbage Fee'],['fireSafetyFee','Fire Safety / BFP Fee'],['otherFees','Other Regulatory Fees']] as Array<[keyof Required<FeeBreakdown>, string]>).map(([key, label]) => (
                       <label key={key} className="p-3 rounded-xl border">
                         <span className="block text-[10px] font-bold text-slate-500 mb-1">{label}</span>
-                        <input type="number" min="0" step="0.01" value={fees[key]} onChange={(e) => setFee(key, e.target.value)} disabled={!editableAssessmentPanel} className="w-full p-2 rounded-lg border bg-transparent disabled:opacity-50" />
+                        <input type="number" min="0" step="0.01" value={fees[key]} disabled={true} className="w-full p-2 rounded-lg border bg-transparent disabled:opacity-100 font-bold" />
                       </label>
                     ))}
                   </div>
