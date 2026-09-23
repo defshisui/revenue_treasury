@@ -36,7 +36,7 @@ interface AssessmentRecord {
   businessType?: string; lineOfBusiness?: string; businessAreaSqm?: number;
   registrationType?: string; registrationNumber?: string; mayorPermitNumber?: string;
   birRegistered?: boolean; hasOtherBranches?: boolean; hasMultipleLines?: boolean;
-  taxYear?: number; assessmentPeriod?: string; quarter?: string; dueDate?: string | null;
+  taxYear?: number; paymentTerm?: string; assessmentPeriod?: string; quarter?: string; dueDate?: string | null;
   status: AssessmentStatus; recordStatus?: string; applicationDate: string; psicCode?: string; grossSales?: number; tin?: string; email?: string;
   attachments?: AttachmentFile[]; documentChecklist?: Record<string, boolean>; missingDocuments?: MissingDocument[];
   remarks?: string; complianceRemarks?: string; reviewedBy?: string; reviewedAt?: string | null; approvedBy?: string; approvedAt?: string | null;
@@ -541,7 +541,8 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
                     <div className="box"><span>Status</span><span className={`self-start px-2 py-1 rounded-full text-[9px] font-bold ${statusClass(selectedAssessment.status)}`}>{selectedAssessment.status}</span></div>
                   </div>
                   
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+                    <div className="box"><span>Payment Term</span><b className="text-blue-600">{selectedAssessment.paymentTerm === 'ANNUAL' ? 'Annual' : selectedAssessment.paymentTerm === 'SEMI_ANNUAL' ? 'Semi-Annual' : selectedAssessment.paymentTerm === 'QUARTERLY' ? 'Quarterly' : (selectedAssessment.paymentTerm || 'Annual')}</b></div>
                     <div className="box"><span>Gross Sales</span><b>{money(selectedAssessment.grossSales)}</b></div>
                     <div className="box"><span>Business Type</span><b>{selectedAssessment.businessType || '—'}</b></div>
                     <div className="box"><span>Line of Business</span><b>{selectedAssessment.lineOfBusiness || '—'}</b></div>

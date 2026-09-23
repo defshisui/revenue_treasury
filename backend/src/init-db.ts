@@ -340,6 +340,7 @@ export async function initializeDatabase(): Promise<void> {
       ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS has_other_branches BOOLEAN DEFAULT FALSE;
       ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS has_multiple_lines BOOLEAN DEFAULT FALSE;
       ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS tax_year INT DEFAULT EXTRACT(YEAR FROM CURRENT_DATE)::INT;
+      ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS payment_term VARCHAR(40) DEFAULT 'ANNUAL';
       ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS assessment_period VARCHAR(40) DEFAULT 'ANNUAL_RENEWAL';
       ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS quarter VARCHAR(30) DEFAULT 'ANNUAL';
       ALTER TABLE business_assessments ADD COLUMN IF NOT EXISTS due_date DATE;

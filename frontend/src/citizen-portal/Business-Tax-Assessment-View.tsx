@@ -90,7 +90,7 @@ interface AssessmentRecord {
   hasOtherBranches?: boolean;
   hasMultipleLines?: boolean;
   taxYear?: number;
-  assessmentPeriod?: string;
+  paymentTerm?: string;
   quarter?: string;
   dueDate?: string | null;
   status: AssessmentStatus;
@@ -245,7 +245,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
     essentialSales: '',
     nonEssentialSales: '',
     year: '2026',
-    assessmentPeriod: 'ANNUAL_RENEWAL',
+    paymentTerm: '',
     quarter: 'ANNUAL',
     psicCode: '',
     tin: '',
@@ -556,7 +556,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
         return;
       }
     } else if (currentStep === 3) {
-      if (!salesForm.grossSales || !salesForm.year || !salesForm.assessmentPeriod) {
+      if (!salesForm.grossSales || !salesForm.year || !salesForm.paymentTerm) {
         setValidationAlert('Please fill in all mandatory sales fields before proceeding.');
         return;
       }
@@ -608,7 +608,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
       formData.append('essentialSales', salesForm.essentialSales);
       formData.append('nonEssentialSales', salesForm.nonEssentialSales);
       formData.append('year', salesForm.year);
-      formData.append('assessmentPeriod', salesForm.assessmentPeriod);
+      formData.append('paymentTerm', salesForm.paymentTerm);
       formData.append('quarter', salesForm.quarter);
       formData.append('psicCode', salesForm.psicCode.trim());
       formData.append('tin', salesForm.tin.trim());
@@ -1240,7 +1240,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                         <h4 className="font-bold text-sm border-b pb-2 mb-4">A. Tax Year / Assessment Period</h4>
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                           <div><label className="label">Tax Year *</label><input required type="number" min="2000" max="2100" value={salesForm.year} onChange={(e) => setSalesForm({ ...salesForm, year: e.target.value })} className="field disabled:opacity-75 disabled:bg-slate-100 dark:disabled:bg-slate-800" disabled readOnly /></div>
-                          <div><label className="label">Assessment Period *</label><select value={salesForm.assessmentPeriod} onChange={(e) => setSalesForm({ ...salesForm, assessmentPeriod: e.target.value, quarter: e.target.value === 'ANNUAL_RENEWAL' ? 'ANNUAL' : salesForm.quarter })} className="field"><option value="ANNUAL_RENEWAL">Annual Renewal</option></select></div>
+                          <div><label className="label">Payment Term *</label><select value={salesForm.paymentTerm} onChange={(e) => setSalesForm({ ...salesForm, paymentTerm: e.target.value })} className="field"><option value="" disabled>Select Payment Term</option><option value="ANNUAL">Annual</option><option value="SEMI_ANNUAL">Semi-Annual</option><option value="QUARTERLY">Quarterly</option></select></div>
                         </div>
                       </div>
 
@@ -1299,7 +1299,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                         <div className="flex justify-between items-center border-b pb-2"><div className="font-bold">3. Sales Declaration & Tax Information</div><button type="button" onClick={() => setCurrentStep(3)} className="text-blue-600 font-bold hover:underline">Edit</button></div>
                         <div className="grid grid-cols-2 gap-2 text-[10px]">
                           <div><span className="text-slate-500">Tax Year:</span> {salesForm.year}</div>
-                          <div><span className="text-slate-500">Period:</span> {salesForm.assessmentPeriod}</div>
+                          <div><span className="text-slate-500">Payment Term:</span> {salesForm.paymentTerm === 'ANNUAL' ? 'Annual' : salesForm.paymentTerm === 'SEMI_ANNUAL' ? 'Semi-Annual' : salesForm.paymentTerm === 'QUARTERLY' ? 'Quarterly' : salesForm.paymentTerm}</div>
                           <div><span className="text-slate-500">PSIC:</span> {salesForm.psicCode || '—'}</div>
                           <div><span className="text-slate-500">Gross Sales:</span> <span className="font-bold font-mono">PHP {Number(salesForm.grossSales).toLocaleString()}</span></div>
                         </div>

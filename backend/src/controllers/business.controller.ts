@@ -209,6 +209,7 @@ function formatAssessment(row: any) {
     hasOtherBranches: normalizeBoolean(row.has_other_branches, false),
     hasMultipleLines: normalizeBoolean(row.has_multiple_lines, false),
     taxYear: Number(row.tax_year || new Date().getFullYear()),
+    paymentTerm: row.payment_term || (row.assessment_period === 'ANNUAL_RENEWAL' ? 'ANNUAL' : 'ANNUAL'),
     assessmentPeriod: row.assessment_period || 'ANNUAL_RENEWAL',
     quarter: row.quarter || 'ANNUAL',
     dueDate: row.due_date || null,
@@ -381,8 +382,18 @@ export async function createSalesDeclaration(req: Request, res: Response): Promi
     res.status(400).json({ message: 'Only the 2026 Business Tax Assessment Application is available in the current system.' });
     return;
   }
+  const paymentTerm = String(body.paymentTerm || '').trim();
   const assessmentPeriod = String(body.assessmentPeriod || 'ANNUAL_RENEWAL').trim();
   const quarter = String(body.quarter || 'ANNUAL').trim();
+
+  if (!paymentTerm) {
+    res.status(400).json({ message: 'Please select a payment term.' });
+    return;
+  }
+  if (!['ANNUAL', 'SEMI_ANNUAL', 'QUARTERLY'].includes(paymentTerm)) {
+    res.status(400).json({ message: 'Invalid payment term. Please select Annual, Semi-Annual, or Quarterly.' });
+    return;
+  }
   const psicCode = String(body.psicCode || '').trim();
   const tin = String(body.tin || '').trim();
   const authEmail = String((req as AuthenticatedRequest).user?.email || '').trim().toLowerCase();
@@ -480,7 +491,7 @@ export async function createSalesDeclaration(req: Request, res: Response): Promi
         status, psic_code, gross_sales, tin, email, tax_year,
         assessment_period, quarter, attachments, document_checklist,
         payment_status, payment_amount, paid_amount,
-        application_source, is_linked
+        application_source, is_linked, payment_term
       ) VALUES (
         $1, $2, NULL, NULL,
         $24, $3, $4, $5, $6,
@@ -490,7 +501,7 @@ export async function createSalesDeclaration(req: Request, res: Response): Promi
         'SUBMITTED', $16, $17, $18, $19, $20,
         $21, $22, $23, '{}'::jsonb,
         'UNPAID', 0, 0,
-        'ONLINE_RENEWAL', TRUE
+        'ONLINE_RENEWAL', TRUE, $25
       )
       RETURNING *`,
       [
@@ -518,6 +529,7 @@ export async function createSalesDeclaration(req: Request, res: Response): Promi
         quarter,
         JSON.stringify(attachments),
         businessId,
+        paymentTerm
       ]
     );
 
