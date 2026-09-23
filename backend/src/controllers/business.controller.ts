@@ -133,9 +133,9 @@ function getUploadedDocumentKeys(attachments: unknown): Set<string> {
 }
 
 function getMissingDocuments(record: any): Array<{ key: string; label: string }> {
-  const uploaded = getUploadedDocumentKeys(record.attachments);
+  const checklist = parseJsonObject(record.document_checklist);
   return buildRequiredDocumentKeys(record)
-    .filter((key) => !uploaded.has(key))
+    .filter((key) => checklist[key] !== true)
     .map((key) => ({ key, label: DOCUMENT_LABELS[key] || key }));
 }
 
@@ -708,7 +708,7 @@ export async function updateAssessmentStatus(req: Request, res: Response): Promi
     if (status && status !== current.status) {
       const validTransitions: Record<BusinessStatus, BusinessStatus[]> = {
         SUBMITTED: ['FOR_INITIAL_ASSESSMENT', 'REJECTED'],
-        FOR_INITIAL_ASSESSMENT: ['FOR_FINAL_REVIEW', 'REJECTED'],
+        FOR_INITIAL_ASSESSMENT: ['FOR_FINAL_REVIEW', 'RETURNED_FOR_COMPLIANCE', 'REJECTED'],
         FOR_FINAL_REVIEW: ['RETURNED_FOR_COMPLIANCE', 'FOR_FINAL_APPROVAL', 'REJECTED'],
         RETURNED_FOR_COMPLIANCE: ['RESUBMITTED'], 
         RESUBMITTED: ['FOR_INITIAL_ASSESSMENT', 'REJECTED'],
@@ -787,7 +787,17 @@ export async function updateAssessmentStatus(req: Request, res: Response): Promi
     const approvedBy = (nextStatus === 'TAX_BILL_ISSUED' || nextStatus === 'APPROVED') && current.status !== nextStatus ? authEmail : current.approved_by;
 
     // Payment amount and due date are set when the Tax Bill is issued.
-    let paymentAmount = (nextStatus === 'TAX_BILL_ISSUED' || nextStatus === 'APPROVED') ? total : Number(current.payment_amount || currentFees.total || 0);
+    let paymentAmount = Number(current.payment_amount || currentFees.total || 0);
+    if (nextStatus === 'TAX_BILL_ISSUED' || nextStatus === 'APPROVED') {
+      const pTerm = String(current.payment_term || '').toUpperCase();
+      if (pTerm === 'QUARTERLY') {
+        paymentAmount = total / 4;
+      } else if (pTerm === 'SEMI_ANNUAL') {
+        paymentAmount = total / 2;
+      } else {
+        paymentAmount = total;
+      }
+    }
     const dueDate = (nextStatus === 'TAX_BILL_ISSUED' || nextStatus === 'APPROVED') && String(current.assessment_period || 'ANNUAL_RENEWAL') === 'ANNUAL_RENEWAL'
       ? `${applicationYear}-01-20`
       : current.due_date;

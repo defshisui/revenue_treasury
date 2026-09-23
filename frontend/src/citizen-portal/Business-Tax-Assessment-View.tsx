@@ -189,6 +189,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
   const [isModalOpen, setIsModalOpen] = useState<false | 'appointment' | 'sales-declaration' | 'link-application'>(false);
   const [linkAppForm, setLinkAppForm] = useState({ trackingNumber: '' });
   const [selectedAssessmentView, setSelectedAssessmentView] = useState<AssessmentRecord | null>(null);
+  const [showOrderModal, setShowOrderModal] = useState(false);
   const [complianceFiles, setComplianceFiles] = useState<Partial<Record<DocumentRequirementKey, File[]>>>({});
   const [isComplianceSubmitting, setIsComplianceSubmitting] = useState(false);
   const [user, setUser] = useState<{ fullname: string; email: string; initials: string; firstName: string; token: string } | null>(null);
@@ -1037,7 +1038,11 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                       <td className="px-4 py-4 text-center">
                         <button
                           type="button"
-                          onClick={() => { setSelectedAssessmentView(record); setComplianceFiles({}); }}
+                          onClick={() => { 
+                            setSelectedAssessmentView(record); 
+                            setComplianceFiles({}); 
+                            if (record.status === 'TAX_BILL_ISSUED') setShowOrderModal(true);
+                          }}
                           className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-bold underline underline-offset-2"
                         >
                           {(() => {
@@ -1614,11 +1619,47 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
         </div>
       )}
 
+      {showOrderModal && selectedAssessmentView && selectedAssessmentView.status === 'TAX_BILL_ISSUED' && (
+        <div className="fixed inset-0 z-[60] bg-slate-950/70 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-lg p-6 border shadow-2xl">
+            <h3 className="font-bold text-sm uppercase">Approved Business Tax Bill / Order of Payment</h3>
+            <div className="mt-4 space-y-2 text-xs">
+              <div className="flex justify-between"><span>Tracking Number</span><b className="font-mono">{selectedAssessmentView.trackingNumber}</b></div>
+              <div className="flex justify-between"><span>Tax Bill Number</span><b className="font-mono text-blue-600">{selectedAssessmentView.taxBillNumber || '—'}</b></div>
+              <div className="flex justify-between"><span>Order of Payment</span><b className="font-mono">{selectedAssessmentView.orderOfPaymentNumber || '—'}</b></div>
+              <div className="flex justify-between">
+                <span>
+                  Amount Due
+                  <span className="text-slate-500 text-[10px] ml-1">
+                    ({selectedAssessmentView.paymentTerm === 'QUARTERLY' ? 'Quarterly' : selectedAssessmentView.paymentTerm === 'SEMI_ANNUAL' ? 'Semi-Annual' : 'Annual'})
+                  </span>
+                </span>
+                <b>{money(selectedAssessmentView.paymentAmount || selectedAssessmentView.computedFees?.total)}</b>
+              </div>
+              <div className="flex justify-between"><span>Due Date</span><b>{selectedAssessmentView.dueDate ? new Date(selectedAssessmentView.dueDate).toLocaleDateString() : '—'}</b></div>
+            </div>
+            <div className="mt-5 flex gap-2">
+              <button type="button" onClick={() => setShowOrderModal(false)} className="flex-1 px-4 py-2 rounded-xl border text-xs font-bold">Close</button>
+              <button type="button" onClick={() => window.print()} className="flex-1 px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold">Print</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
       {isPaymentStep && paymentAssessment && (
         <div className="fixed inset-0 z-[60] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-md p-5 border border-slate-200 dark:border-slate-800 shadow-2xl text-center">
             <div className="flex justify-between items-center mb-4"><div><h3 className="font-bold text-sm">BUSINESS TAX DIGITAL PAYMENT</h3><p className="text-[10px] text-slate-500">{paymentAssessment.trackingNumber}</p></div><button type="button" onClick={closeBusinessTaxPayment} className="font-bold text-xl">×</button></div>
-            <div className="rounded-2xl bg-slate-50 dark:bg-slate-950 p-3 mb-4"><div className="text-[10px] text-slate-500">Approved Amount Due</div><div className="text-2xl font-extrabold mt-1">{money(paymentAssessment.paymentAmount || paymentAssessment.computedFees?.total)}</div></div>
+            <div className="rounded-2xl bg-slate-50 dark:bg-slate-950 p-3 mb-4">
+              <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+                Approved Amount Due
+                <span className="ml-1 text-blue-600 dark:text-blue-400">
+                  ({paymentAssessment.paymentTerm === 'QUARTERLY' ? 'Quarterly' : paymentAssessment.paymentTerm === 'SEMI_ANNUAL' ? 'Semi-Annual' : 'Annual'})
+                </span>
+              </div>
+              <div className="text-2xl font-extrabold mt-1">{money(paymentAssessment.paymentAmount || paymentAssessment.computedFees?.total)}</div>
+            </div>
             {qrError && <div className="p-3 mb-3 rounded-xl bg-rose-50 text-rose-700 text-xs border border-rose-200">{qrError}</div>}
             {isProcessingPayment ? <div className="py-12 text-xs text-slate-500">Generating your QRPh payment code...</div> : qrCodeUrl ? <><img src={qrCodeUrl} alt="QRPh payment code" className="w-64 h-64 mx-auto object-contain border rounded-2xl p-3 bg-white" /><div className="mt-3 font-mono text-xs font-bold">Reference: {qrReferenceNumber || '—'}</div><div className="mt-2 text-xs text-slate-500">QR expires in {Math.floor(qrSecondsRemaining / 60)}:{String(qrSecondsRemaining % 60).padStart(2, '0')}</div><div className="mt-2 text-[10px] text-slate-500">Keep this window open while waiting. Your payment status is verified from the server before the receipt is issued.</div></> : <div className="py-12 text-xs text-slate-500">Preparing payment...</div>}
           </div>
