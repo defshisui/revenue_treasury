@@ -251,6 +251,8 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
     tin: '',
   });
 
+  const [isBusinessVerified, setIsBusinessVerified] = useState(false);
+
   const [isDataNotFoundModalOpen, setIsDataNotFoundModalOpen] = useState(false);
   const [linkErrorModalMessage, setLinkErrorModalMessage] = useState<string | null>(null);
   const [salesFiles, setSalesFiles] = useState<Partial<Record<DocumentRequirementKey, File[]>>>({});
@@ -512,24 +514,28 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
       }
 
       if (targetStep === 2) {
-        setSubmitting(true);
-        try {
-          const res = await fetch(`${API_BASE_URL}/verify/mayor-permit`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user?.token || ''}` },
-            body: JSON.stringify({ permitNo: salesForm.mayorsPermitNumber.trim() })
-          });
-          const data = await res.json().catch(() => ({}));
-          if (!res.ok) throw new Error(data.message || 'Failed to verify Mayor’s Permit.');
-          if (!data.exists) {
-            setIsDataNotFoundModalOpen(true);
+        if (!isBusinessVerified) {
+          setSubmitting(true);
+          try {
+            const res = await fetch(`${API_BASE_URL}/verify/mayor-permit`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user?.token || ''}` },
+              body: JSON.stringify({ permitNo: salesForm.mayorsPermitNumber.trim(), businessName: salesForm.businessName.trim() })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.message || 'Failed to verify Mayor’s Permit.');
+            if (!data.exists) {
+              setIsDataNotFoundModalOpen(true);
+              return;
+            }
+            setIsBusinessVerified(true);
+            return; // Don't proceed to step 2 yet. User must click "Continue".
+          } catch (err: any) {
+            alert(err.message || 'Error verifying permit.');
             return;
+          } finally {
+            setSubmitting(false);
           }
-        } catch (err: any) {
-          alert(err.message || 'Error verifying permit.');
-          return;
-        } finally {
-          setSubmitting(false);
         }
       }
     } else if (currentStep === 2) {
@@ -1169,9 +1175,14 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                       </div>
                       <h4 className="font-bold text-sm border-b pb-2 mb-4">Business Identification</h4>
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                        <div><label className="label">Mayor’s Permit Number *</label><input required value={salesForm.mayorsPermitNumber} onChange={(e) => setSalesForm({ ...salesForm, mayorsPermitNumber: e.target.value })} className="field" /></div>
-                        <div><label className="label">Business Name *</label><input required value={salesForm.businessName} onChange={(e) => setSalesForm({ ...salesForm, businessName: e.target.value })} className="field" /></div>
+                        <div><label className="label">Mayor’s Permit Number *</label><input required value={salesForm.mayorsPermitNumber} onChange={(e) => { setSalesForm({ ...salesForm, mayorsPermitNumber: e.target.value }); setIsBusinessVerified(false); }} className="field" disabled={isBusinessVerified} /></div>
+                        <div><label className="label">Business Name *</label><input required value={salesForm.businessName} onChange={(e) => { setSalesForm({ ...salesForm, businessName: e.target.value }); setIsBusinessVerified(false); }} className="field" disabled={isBusinessVerified} /></div>
                       </div>
+                      {isBusinessVerified && (
+                        <div className="mt-4 p-3 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded-xl font-bold flex items-center gap-2">
+                          <span>✅ Existing business found.</span>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -1298,7 +1309,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                   )}
 
                   {currentStep < 5 ? (
-                    <button type="button" onClick={() => handleNextStep(currentStep + 1)} className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors shadow-sm">Next Step</button>
+                    <button type="button" disabled={submitting} onClick={() => handleNextStep(currentStep + 1)} className="px-5 py-2.5 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700">{submitting ? 'Please wait...' : currentStep === 1 && !isBusinessVerified ? 'Validate' : currentStep === 1 && isBusinessVerified ? 'Continue' : 'Next'}</button>
                   ) : (
                     <button disabled={submitting || !certificationChecked} type="submit" className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
                       {submitting ? 'Submitting...' : 'Submit for Assessment'}
@@ -1316,7 +1327,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
           <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-md p-6 text-center border-t-4 border-t-rose-500">
             <h3 className="text-xl font-bold text-rose-600 mb-4">DATA NOT FOUND</h3>
             <p className="text-xs text-slate-700 dark:text-slate-300 mb-4 leading-relaxed">
-              The Mayor's Permit Number you have entered has no records in the OUBPAS/was encoded only. Unfortunately, you cannot proceed with the Online Sales Declaration.
+              Business record not found. Please verify your Mayor's Permit Number and Business / Corporate Name.
             </p>
             <p className="text-xs text-slate-700 dark:text-slate-300 mb-4 leading-relaxed">
               Kindly set an appointment with CTO to proceed. After payment, submit an Online Renewal Application via GovServ portal.

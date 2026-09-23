@@ -422,6 +422,23 @@ export async function createSalesDeclaration(req: Request, res: Response): Promi
   const trackingNumber = `BT-${taxYear}-${Math.floor(100000 + Math.random() * 900000)}`;
 
   try {
+    const existingCheck = await pool.query(
+      `SELECT tracking_number FROM business_assessments 
+       WHERE (mayors_permit_number = $1 OR LOWER(business_name) = LOWER($2))
+         AND tax_year = $3
+         AND status NOT IN ('REJECTED', 'ARCHIVED')
+       LIMIT 1`,
+      [mayorsPermitNumber, businessName, taxYear]
+    );
+
+    if (existingCheck.rows.length > 0) {
+      res.status(400).json({ 
+        message: 'An active application for this business already exists for the selected tax year.',
+        trackingNumber: existingCheck.rows[0].tracking_number 
+      });
+      return;
+    }
+
     // Submission creates a tracking reference only. The official tax bill and OP
     // are generated only after Treasurer approval, matching the assessment flow.
     const result = await pool.query(
@@ -1341,16 +1358,21 @@ export async function verifyTaxBillOR(req: Request, res: Response): Promise<void
 
 export async function verifyMayorPermit(req: Request, res: Response): Promise<void> {
   const permitNo = String(req.body?.permitNo || '').trim();
+  const businessName = String(req.body?.businessName || '').trim();
 
-  if (!permitNo) {
-    res.status(400).json({ message: 'Mayor’s Permit Number is required.' });
+  if (!permitNo || !businessName) {
+    res.status(400).json({ message: 'Mayor’s Permit Number and Business Name are required.' });
     return;
   }
 
   try {
     const result = await pool.query(
-      `SELECT id FROM business_assessments WHERE mayors_permit_number = $1 LIMIT 1`,
-      [permitNo]
+      `SELECT id FROM business_permits 
+       WHERE mayor_permit_no = $1 
+         AND LOWER(business_name) = LOWER($2) 
+         AND permit_status = 'ACTIVE' 
+       LIMIT 1`,
+      [permitNo, businessName]
     );
 
     if (result.rows.length > 0) {

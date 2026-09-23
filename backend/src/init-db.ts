@@ -173,7 +173,7 @@ export async function initializeDatabase(): Promise<void> {
           balance NUMERIC(12, 2) DEFAULT 0,
 
           status VARCHAR(50) DEFAULT 'Unpaid',
-          payment_status VARCHAR(50) DEFAULT 'Unpaid',
+          paymentstatus VARCHAR(50) DEFAULT 'Unpaid',
 
           payment_method VARCHAR(50),
           officialReceiptNumber VARCHAR(100),
@@ -285,6 +285,21 @@ export async function initializeDatabase(): Promise<void> {
           previous_status VARCHAR(50),
           new_status VARCHAR(50),
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      -- ==========================================================
+      -- LOCAL BUSINESS PERMITS MASTER
+      -- ==========================================================
+      CREATE TABLE IF NOT EXISTS business_permits (
+          id SERIAL PRIMARY KEY,
+          mayor_permit_no VARCHAR(100) UNIQUE NOT NULL,
+          business_name VARCHAR(255) NOT NULL,
+          business_address TEXT,
+          owner_reference VARCHAR(255),
+          permit_status VARCHAR(50) DEFAULT 'ACTIVE',
+          issued_date DATE,
+          expiration_date DATE,
+          created_at TIMESTAMP DEFAULT NOW()
       );
 
       -- ==========================================================
@@ -705,8 +720,8 @@ export async function initializeDatabase(): Promise<void> {
       -- LGU RPT Records
       CREATE INDEX IF NOT EXISTS idx_lgu_rpt_pin ON lgu_rpt_records(pin);
       CREATE INDEX IF NOT EXISTS idx_lgu_rpt_status ON lgu_rpt_records(status);
-      CREATE INDEX IF NOT EXISTS idx_lgu_rpt_payment_status ON lgu_rpt_records(payment_status);
-      CREATE INDEX IF NOT EXISTS idx_lgu_rpt_owner ON lgu_rpt_records(owner_name);
+      CREATE INDEX IF NOT EXISTS idx_lgu_rpt_payment_status ON lgu_rpt_records(paymentstatus);
+      CREATE INDEX IF NOT EXISTS idx_lgu_rpt_owner ON lgu_rpt_records(ownername);
 
       -- Citizen RPT Payments
       CREATE INDEX IF NOT EXISTS idx_rpt_payments_record_id ON citizen_rpt_payments(rpt_record_id);
@@ -725,7 +740,7 @@ export async function initializeDatabase(): Promise<void> {
       CREATE INDEX IF NOT EXISTS idx_business_assessments_tax_bill ON business_assessments(tax_bill_number);
       CREATE INDEX IF NOT EXISTS idx_business_assessments_email ON business_assessments(email);
       CREATE INDEX IF NOT EXISTS idx_business_assessments_status ON business_assessments(status);
-      CREATE INDEX IF NOT EXISTS idx_business_assessments_app_date ON business_assessments(application_date DESC);
+      CREATE INDEX IF NOT EXISTS idx_business_assessments_app_date ON business_assessments(created_at DESC);
       CREATE INDEX IF NOT EXISTS idx_business_assessments_mayor_permit ON business_assessments(mayors_permit_number);
       CREATE INDEX IF NOT EXISTS idx_business_assessments_payment_status ON business_assessments(payment_status);
       CREATE INDEX IF NOT EXISTS idx_business_assessments_tax_year ON business_assessments(tax_year);
@@ -803,63 +818,40 @@ export async function initializeDatabase(): Promise<void> {
       WHERE control_number IS NULL OR control_number = '' OR control_number = '-' OR control_number = '—';
     `);
 
+    // Initial Seed: Business Permits Master
+    await pool.query(`
+      INSERT INTO business_permits (
+        mayor_permit_no, business_name, business_address, owner_reference, permit_status
+      ) VALUES
+      ('MP-2025-1000001', 'Blue Sapphire Technologies', 'Quezon City', 'Owner 1', 'ACTIVE'),
+      ('MP-2025-1000002', 'Golden Crown Bakery', 'Quezon City', 'Owner 2', 'ACTIVE'),
+      ('MP-2025-1000003', 'Metro Prime Logistics', 'Quezon City', 'Owner 3', 'ACTIVE'),
+      ('MP-2025-1000004', 'Sunrise Auto Parts', 'Quezon City', 'Owner 4', 'ACTIVE'),
+      ('MP-2025-1000005', 'Elite Fitness Center', 'Quezon City', 'Owner 5', 'ACTIVE'),
+      ('MP-2025-1000006', 'Horizon Medical Clinic', 'Quezon City', 'Owner 6', 'ACTIVE'),
+      ('MP-2025-1000007', 'Crimson Leaf Cafe', 'Quezon City', 'Owner 7', 'ACTIVE'),
+      ('MP-2025-1000008', 'Urban Nest Real Estate', 'Quezon City', 'Owner 8', 'ACTIVE'),
+      ('MP-2025-1000009', 'Apex Construction Corp', 'Quezon City', 'Owner 9', 'ACTIVE'),
+      ('MP-2025-1000010', 'Pioneer Agri Supplies', 'Quezon City', 'Owner 10', 'ACTIVE')
+      ON CONFLICT DO NOTHING;
+    `);
+
     // Initial Seed: Business Assessments
     await pool.query(`
       INSERT INTO business_assessments (
         id, tracking_number, tax_bill_number, business_name, business_owner,
-        business_address, barangay, business_type, line_of_business,
-        mayors_permit_number, status, payment_status, application_source, is_linked, email
+        mayors_permit_number, status, payment_status, application_source, is_linked
       ) VALUES
-      (
-        'b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d5e', 'QC-BT-2025-00111', 'TB-2025-1011', 'Shishui Tech Solutions', 'Def Shishui',
-        'Block 12 Lot 4, Commonwealth Avenue', 'Commonwealth', 'Corporation', 'IT Services',
-        'MP-2025-0123456', 'TAX_BILL_ISSUED', 'PAID', 'ONLINE', TRUE, 'defshishui@gmail.com'
-      ),
-      (
-        'c2d3e4f5-a6b7-4c8d-9e0f-1a2b3c4d5e6f', 'QC-BT-2025-00112', 'TB-2025-1012', 'Def Trading Corp', 'Def Shishui',
-        'Lot 8, Katipunan Avenue', 'Loyola Heights', 'Corporation', 'Retail',
-        'MP-2025-0987654', 'TAX_BILL_ISSUED', 'PAID', 'ONLINE', TRUE, 'defshishui@gmail.com'
-      ),
-      (
-        'd3e4f5a6-b7c8-4d9e-0f1a-2b3c4d5e6f7a', 'QC-BT-2025-00113', 'TB-2025-1013', 'Shishui Eatery', 'Def Shishui',
-        'Unit 4B, North Fairview', 'Greater Fairview', 'Sole Proprietorship', 'Restaurant',
-        'MP-2025-0456789', 'TAX_BILL_ISSUED', 'PAID', 'ONLINE', TRUE, 'defshishui@gmail.com'
-      ),
-      (
-        'e4f5a6b7-c8d9-4e0f-1a2b-3c4d5e6f7a8b', 'QC-BT-2025-00114', 'TB-2025-1014', 'Def Manila Enterprises', 'Def Shishui',
-        'Quezon Avenue', 'South Triangle', 'Partnership', 'Wholesale',
-        'MP-2025-0741852', 'TAX_BILL_ISSUED', 'UNPAID', 'ONLINE', TRUE, 'defshishui@gmail.com'
-      ),
-      (
-        '1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d', 'QC-BT-2025-00115', 'TB-2025-1015', 'Shishui Tech Innovations', 'Def Shishui',
-        'East Avenue', 'Central', 'Corporation', 'Software Development',
-        'MP-2025-1112223', 'TAX_BILL_ISSUED', 'PAID', 'ONLINE', TRUE, 'defshishui@gmail.com'
-      ),
-      (
-        'f5a6b7c8-d9e0-4f1a-2b3c-4d5e6f7a8b9c', 'QC-BT-2025-00105', 'TB-2025-1005', 'QC General Merchandise', 'Juan Dela Cruz',
-        'Kamuning Road', 'Kamuning', 'Sole Proprietorship', 'Retail',
-        'MP-2025-0852963', 'TAX_BILL_ISSUED', 'PAID', 'IN_PERSON', FALSE, 'defshishui@gmail.com'
-      ),
-      (
-        '2b3c4d5e-6f7a-8b9c-0d1e-2f3a4b5c6d7e', 'QC-BT-2025-00107', 'TB-2025-1007', 'Mabuhay Bakery', 'Lourdes Reyes',
-        'Visayas Avenue', 'Vasra', 'Sole Proprietorship', 'Bakery',
-        'MP-2025-2223334', 'TAX_BILL_ISSUED', 'PAID', 'IN_PERSON', FALSE, 'defshishui@gmail.com'
-      ),
-      (
-        '3c4d5e6f-7a8b-9c0d-1e2f-3a4b5c6d7e8f', 'QC-BT-2025-00108', 'TB-2025-1008', 'Tomas Morato Hardware', 'Miguel Lim',
-        'Tomas Morato Ave', 'Obrero', 'Partnership', 'Hardware',
-        'MP-2025-3334445', 'TAX_BILL_ISSUED', 'UNPAID', 'IN_PERSON', FALSE, 'defshishui@gmail.com'
-      ),
-      (
-        '4d5e6f7a-8b9c-0d1e-2f3a-4b5c6d7e8f9a', 'QC-BT-2025-00109', 'TB-2025-1009', 'GovServ Trading Co.', 'Ana Garcia',
-        'EDSA Cubao', 'San Martin de Porres', 'Corporation', 'Wholesale',
-        'MP-2025-4445556', 'TAX_BILL_ISSUED', 'PAID', 'IN_PERSON', FALSE, 'defshishui@gmail.com'
-      ),
-      (
-        '5e6f7a8b-9c0d-1e2f-3a4b-5c6d7e8f9a0b', 'QC-BT-2025-00110', 'TB-2025-1010', 'Diliman Cafe', 'Jose Villanueva',
-        'Maginhawa Street', 'Teachers Village East', 'Sole Proprietorship', 'Restaurant',
-        'MP-2025-5556667', 'TAX_BILL_ISSUED', 'UNPAID', 'IN_PERSON', FALSE, 'defshishui@gmail.com'
-      )
+      (gen_random_uuid()::varchar, 'OLD-BT-2024-001', 'TB-2024-1001', 'Blue Sapphire Technologies', 'Owner 1', 'MP-2025-1000001', 'OR_ISSUED', 'PAID', 'ONLINE', TRUE),
+      (gen_random_uuid()::varchar, 'OLD-BT-2024-002', 'TB-2024-1002', 'Golden Crown Bakery', 'Owner 2', 'MP-2025-1000002', 'OR_ISSUED', 'PAID', 'ONLINE', TRUE),
+      (gen_random_uuid()::varchar, 'OLD-BT-2024-003', 'TB-2024-1003', 'Metro Prime Logistics', 'Owner 3', 'MP-2025-1000003', 'OR_ISSUED', 'PAID', 'ONLINE', TRUE),
+      (gen_random_uuid()::varchar, 'OLD-BT-2024-004', 'TB-2024-1004', 'Sunrise Auto Parts', 'Owner 4', 'MP-2025-1000004', 'OR_ISSUED', 'PAID', 'ONLINE', TRUE),
+      (gen_random_uuid()::varchar, 'OLD-BT-2024-005', 'TB-2024-1005', 'Elite Fitness Center', 'Owner 5', 'MP-2025-1000005', 'OR_ISSUED', 'PAID', 'ONLINE', TRUE),
+      (gen_random_uuid()::varchar, 'OLD-BT-2024-006', 'TB-2024-1006', 'Horizon Medical Clinic', 'Owner 6', 'MP-2025-1000006', 'OR_ISSUED', 'PAID', 'ONLINE', TRUE),
+      (gen_random_uuid()::varchar, 'OLD-BT-2024-007', 'TB-2024-1007', 'Crimson Leaf Cafe', 'Owner 7', 'MP-2025-1000007', 'OR_ISSUED', 'PAID', 'ONLINE', TRUE),
+      (gen_random_uuid()::varchar, 'OLD-BT-2024-008', 'TB-2024-1008', 'Urban Nest Real Estate', 'Owner 8', 'MP-2025-1000008', 'OR_ISSUED', 'PAID', 'ONLINE', TRUE),
+      (gen_random_uuid()::varchar, 'OLD-BT-2024-009', 'TB-2024-1009', 'Apex Construction Corp', 'Owner 9', 'MP-2025-1000009', 'OR_ISSUED', 'PAID', 'ONLINE', TRUE),
+      (gen_random_uuid()::varchar, 'OLD-BT-2024-010', 'TB-2024-1010', 'Pioneer Agri Supplies', 'Owner 10', 'MP-2025-1000010', 'OR_ISSUED', 'PAID', 'ONLINE', TRUE)
       ON CONFLICT DO NOTHING;
     `);
 
@@ -867,5 +859,6 @@ export async function initializeDatabase(): Promise<void> {
   } catch (err) {
     const error = err as Error;
     console.error('Error initializing database tables:', error.message || error);
+    throw error;
   }
 }
