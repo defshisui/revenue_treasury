@@ -380,13 +380,9 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
     if (!user) return;
     if (currentScreen === 'assessment-list') {
       void fetchAssessments();
-      const interval = setInterval(fetchAssessments, 10000);
-      return () => clearInterval(interval);
     }
     if (currentScreen === 'appointments-list') {
       void fetchUserAppointments();
-      const interval = setInterval(fetchUserAppointments, 10000);
-      return () => clearInterval(interval);
     }
   }, [currentScreen, user, statusFilter, currentPage]);
 

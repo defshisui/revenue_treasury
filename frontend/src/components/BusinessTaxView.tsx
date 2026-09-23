@@ -107,6 +107,8 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [checklist, setChecklist] = useState<Record<string, boolean>>({});
   const [fees, setFees] = useState<Required<FeeBreakdown>>({ lbt: 0, mayorsPermit: 0, sanitaryFee: 0, garbageFee: 0, fireSafetyFee: 0, otherFees: 0, total: 0 });
+  const [alertState, setAlertState] = useState<{ title?: string; message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const [confirmState, setConfirmState] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null);
 
   useEffect(() => { setAdmin(currentUser()); }, []);
 
@@ -115,12 +117,8 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
     
     if (activeTab === 'assessments') {
       void fetchAssessments(); 
-      const interval = setInterval(fetchAssessments, 10000);
-      return () => clearInterval(interval);
     } else {
       void fetchAppointments(); 
-      const interval = setInterval(fetchAppointments, 10000);
-      return () => clearInterval(interval);
     }
   }, [admin, activeTab, archiveView, statusFilter, page]);
 
@@ -184,7 +182,7 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
       setSelectedAppointment(null);
       void fetchAppointments();
     } catch (err: any) {
-      alert(err.message || 'Failed to update appointment status.');
+      setAlertState({ message: err.message || 'Failed to update appointment status.', type: 'error' });
     } finally {
       setSubmitting(false);
     }
@@ -203,8 +201,8 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
   const updateStatus = async (newStatus: AssessmentStatus) => {
     if (!selectedAssessment || !admin) return;
     if (newStatus === 'TAX_BILL_ISSUED') {
-      if (!allRequiredDocumentsVerified(selectedAssessment)) { alert('Approval is blocked until every applicable required document is verified.'); return; }
-      if (fees.total <= 0) { alert('Enter the final approved amount before approval.'); return; }
+      if (!allRequiredDocumentsVerified(selectedAssessment)) { setAlertState({ message: 'Approval is blocked until every applicable required document is verified.', type: 'error' }); return; }
+      if (fees.total <= 0) { setAlertState({ message: 'Enter the final approved amount before approval.', type: 'error' }); return; }
     }
     setSubmitting(true);
     try {
@@ -214,35 +212,48 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
       if (!response.ok) throw new Error(data.message || 'Failed to update assessment status.');
       if (newStatus === 'TAX_BILL_ISSUED') setSelectedAssessment(data.record);
       else setSelectedAssessment(null);
-      if (newStatus === 'TAX_BILL_ISSUED') { alert('Assessment approved. Tax Bill and Order of Payment have been issued.'); setShowOrderModal(true); }
-      else if (newStatus === 'RETURNED_FOR_COMPLIANCE') alert('Assessment returned to citizen for additional documents/clarification.');
-      else if (newStatus === 'FOR_INITIAL_ASSESSMENT') alert('Assessment moved to initial assessment queue.');
-      else if (newStatus === 'FOR_FINAL_REVIEW') alert('Assessment moved to final review.');
-      else if (newStatus === 'FOR_FINAL_APPROVAL') alert('Assessment submitted for City Treasurer final approval.');
-      else if (newStatus === 'FOR_OWNER_PAYMENT') alert('Assessment marked as ready for owner payment.');
-      else if (newStatus === 'REJECTED') alert('Assessment rejected.');
+      if (newStatus === 'TAX_BILL_ISSUED') { setAlertState({ title: 'Success', message: 'Assessment approved. Tax Bill and Order of Payment have been issued.', type: 'success' }); setShowOrderModal(true); }
+      else if (newStatus === 'RETURNED_FOR_COMPLIANCE') setAlertState({ title: 'Success', message: 'Assessment returned to citizen for additional documents/clarification.', type: 'success' });
+      else if (newStatus === 'FOR_INITIAL_ASSESSMENT') setAlertState({ title: 'Success', message: 'Assessment moved to initial assessment queue.', type: 'success' });
+      else if (newStatus === 'FOR_FINAL_REVIEW') setAlertState({ title: 'Success', message: 'Assessment moved to final review.', type: 'success' });
+      else if (newStatus === 'FOR_FINAL_APPROVAL') setAlertState({ title: 'Success', message: 'Assessment submitted for City Treasurer final approval.', type: 'success' });
+      else if (newStatus === 'FOR_OWNER_PAYMENT') setAlertState({ title: 'Success', message: 'Assessment marked as ready for owner payment.', type: 'success' });
+      else if (newStatus === 'REJECTED') setAlertState({ title: 'Success', message: 'Assessment rejected.', type: 'success' });
       void fetchAssessments();
-    } catch (error: any) { alert(error.message || 'Failed to update assessment.'); } finally { setSubmitting(false); }
+    } catch (error: any) { setAlertState({ message: error.message || 'Failed to update assessment.', type: 'error' }); } finally { setSubmitting(false); }
   };
 
   async function archiveOrRestore(record: AssessmentRecord) {
     if (!admin) return;
     const target = record.recordStatus === 'ARCHIVED' ? 'ACTIVE' : 'ARCHIVED';
-    if (!window.confirm(target === 'ARCHIVED' ? `Archive ${record.trackingNumber}?` : `Restore ${record.trackingNumber}?`)) return;
-    try {
-      const response = await fetch(`${API_BASE_URL}/admin/business-assessments/${record.id}/status`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${admin.token}` }, body: JSON.stringify({ recordStatus: target, remarks: target === 'ARCHIVED' ? 'Moved to archiver' : 'Restored from archiver', documentChecklist: record.documentChecklist || {}, computedFees: record.computedFees || {} }) });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.message || 'Archive action failed.');
-      void fetchAssessments();
-    } catch (error: any) { alert(error.message || 'Archive action failed.'); }
+    setConfirmState({
+      title: target === 'ARCHIVED' ? 'Archive Record' : 'Restore Record',
+      message: target === 'ARCHIVED' ? `Are you sure you want to archive ${record.trackingNumber}?` : `Are you sure you want to restore ${record.trackingNumber}?`,
+      onConfirm: async () => {
+        try {
+          const response = await fetch(`${API_BASE_URL}/admin/business-assessments/${record.id}/status`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${admin.token}` }, body: JSON.stringify({ recordStatus: target, remarks: target === 'ARCHIVED' ? 'Moved to archiver' : 'Restored from archiver', documentChecklist: record.documentChecklist || {}, computedFees: record.computedFees || {} }) });
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(data.message || 'Archive action failed.');
+          setAlertState({ message: target === 'ARCHIVED' ? 'Record archived successfully.' : 'Record restored successfully.', type: 'success' });
+          void fetchAssessments();
+        } catch (error: any) { setAlertState({ message: error.message || 'Archive action failed.', type: 'error' }); }
+      }
+    });
   }
 
   async function deleteAssessment(record: AssessmentRecord) {
-    if (!admin || !window.confirm(`Permanently delete ${record.trackingNumber}?`)) return;
-    const response = await fetch(`${API_BASE_URL}/admin/business-assessments/${record.id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${admin.token}` } });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) return alert(data.message || 'Failed to delete record.');
-    setSelectedAssessment(null); void fetchAssessments();
+    if (!admin) return;
+    setConfirmState({
+      title: 'Delete Record',
+      message: `Permanently delete ${record.trackingNumber}? This action cannot be undone.`,
+      onConfirm: async () => {
+        const response = await fetch(`${API_BASE_URL}/admin/business-assessments/${record.id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${admin.token}` } });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) return setAlertState({ message: data.message || 'Failed to delete record.', type: 'error' });
+        setAlertState({ message: 'Record deleted successfully.', type: 'success' });
+        setSelectedAssessment(null); void fetchAssessments();
+      }
+    });
   }
 
   const setFee = (key: keyof Required<FeeBreakdown>, value: string) => setFees((prev) => ({ ...prev, [key]: Number(value) || 0 }));
@@ -630,11 +641,7 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
                 )}
 
                 {isForInitial && (
-                  <>
-                    <button type="button" disabled={submitting} onClick={() => void updateStatus('RETURNED_FOR_COMPLIANCE')} className="px-3 py-2 rounded-xl bg-orange-600 text-white text-xs font-bold">Return for Compliance</button>
-                    <button type="button" disabled={submitting} onClick={() => void updateStatus('FOR_FINAL_REVIEW')} className="px-3 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold">Complete Initial Assessment</button>
-                    <button type="button" disabled={submitting} onClick={() => void updateStatus('REJECTED')} className="px-3 py-2 rounded-xl bg-rose-600 text-white text-xs font-bold">Reject</button>
-                  </>
+                  <button type="button" disabled={submitting} onClick={() => void updateStatus('RETURNED_FOR_COMPLIANCE')} className="px-3 py-2 rounded-xl bg-orange-600 text-white text-xs font-bold">Return for Compliance</button>
                 )}
 
                 {isForReview && (
@@ -664,12 +671,17 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
               </div>
               
               <div className="flex gap-2">
-                {(!isPaid && !selectedAssessment.officialReceiptNumber && !selectedAssessment.paymentReference) && (
+                {isForInitial && (
+                  <button type="button" disabled={submitting} onClick={() => void updateStatus('FOR_FINAL_REVIEW')} className="px-3 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold">Complete Initial Assessment</button>
+                )}
+                {!isForInitial && (!isPaid && !selectedAssessment.officialReceiptNumber && !selectedAssessment.paymentReference) && (
                   <button type="button" onClick={() => void deleteAssessment(selectedAssessment)} className="px-3 py-2 rounded-xl bg-rose-50 text-rose-700 text-xs font-bold">Delete</button>
                 )}
-                <button type="button" onClick={() => void archiveOrRestore(selectedAssessment)} className="px-3 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 text-xs font-bold">
-                  {isArchived ? 'Restore' : 'Archive'}
-                </button>
+                {!isForInitial && (
+                  <button type="button" onClick={() => void archiveOrRestore(selectedAssessment)} className="px-3 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 text-xs font-bold">
+                    {isArchived ? 'Restore' : 'Archive'}
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -680,6 +692,67 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
     {showOrderModal && selectedAssessment && selectedAssessment.status === 'TAX_BILL_ISSUED' && <div className="fixed inset-0 z-[60] bg-slate-950/70 flex items-center justify-center p-4"><div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-lg p-6 border shadow-2xl"><h3 className="font-bold text-sm uppercase">Approved Business Tax Bill / Order of Payment</h3><div className="mt-4 space-y-2 text-xs"><div className="flex justify-between"><span>Tracking Number</span><b className="font-mono">{selectedAssessment.trackingNumber}</b></div><div className="flex justify-between"><span>Tax Bill Number</span><b className="font-mono text-blue-600">{selectedAssessment.taxBillNumber || '—'}</b></div><div className="flex justify-between"><span>Order of Payment</span><b className="font-mono">{selectedAssessment.orderOfPaymentNumber || '—'}</b></div><div className="flex justify-between"><span>Amount Due</span><b>{money(selectedAssessment.paymentAmount || selectedAssessment.computedFees?.total)}</b></div><div className="flex justify-between"><span>Due Date</span><b>{selectedAssessment.dueDate ? new Date(selectedAssessment.dueDate).toLocaleDateString() : '—'}</b></div></div><div className="mt-5 flex gap-2"><button type="button" onClick={() => setShowOrderModal(false)} className="flex-1 px-4 py-2 rounded-xl border text-xs font-bold">Close</button><button type="button" onClick={() => window.print()} className="flex-1 px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold">Print</button></div></div></div>}
 
     {previewFile && <div className="fixed inset-0 z-[70] bg-black/90 flex items-center justify-center p-4" onClick={() => setPreviewFile(null)}><div className="w-full max-w-5xl h-[90vh]" onClick={(e) => e.stopPropagation()}><div className="flex justify-end mb-2"><button type="button" onClick={() => setPreviewFile(null)} className="text-white text-2xl font-bold">×</button></div>{previewFile.mimeType === 'application/pdf' || previewFile.url.startsWith('data:application/pdf') ? <iframe src={previewFile.url} title="Document Preview" className="w-full h-[calc(100%-40px)] bg-white rounded-xl" /> : <div className="w-full h-[calc(100%-40px)] flex items-center justify-center"><img src={previewFile.url} alt="Document Preview" className="max-w-full max-h-full object-contain rounded-xl" /></div>}</div></div>}
+
+    {alertState && (
+      <div className="fixed inset-0 z-[9999] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl w-full max-w-sm p-6 text-center relative overflow-hidden transform scale-100 transition-all">
+          <div className={`w-16 h-16 rounded-2xl mx-auto flex items-center justify-center mb-4 shadow-sm ${alertState.type === 'error' ? 'bg-rose-50 dark:bg-rose-950/50 border border-rose-100 dark:border-rose-900 text-rose-600' : alertState.type === 'success' ? 'bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-100 dark:border-emerald-900 text-emerald-600' : 'bg-blue-50 dark:bg-blue-950/50 border border-blue-100 dark:border-blue-900 text-blue-600'}`}>
+            {alertState.type === 'error' ? (
+              <i className="fa-solid fa-triangle-exclamation text-2xl"></i>
+            ) : alertState.type === 'success' ? (
+              <i className="fa-solid fa-circle-check text-2xl"></i>
+            ) : (
+              <i className="fa-solid fa-circle-info text-2xl"></i>
+            )}
+          </div>
+          <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight mb-2">
+            {alertState.title || (alertState.type === 'error' ? 'Error' : alertState.type === 'success' ? 'Success' : 'Notice')}
+          </h3>
+          <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-6">
+            {alertState.message}
+          </p>
+          <button
+            onClick={() => setAlertState(null)}
+            className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-md cursor-pointer"
+          >
+            Okay
+          </button>
+        </div>
+      </div>
+    )}
+
+    {confirmState && (
+      <div className="fixed inset-0 z-[9999] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl w-full max-w-sm p-6 text-center relative overflow-hidden transform scale-100 transition-all">
+          <div className="w-16 h-16 rounded-2xl mx-auto flex items-center justify-center mb-4 shadow-sm bg-amber-50 dark:bg-amber-950/50 border border-amber-100 dark:border-amber-900 text-amber-600">
+            <i className="fa-solid fa-circle-question text-2xl"></i>
+          </div>
+          <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight mb-2">
+            {confirmState.title}
+          </h3>
+          <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-6">
+            {confirmState.message}
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={() => setConfirmState(null)}
+              className="w-full py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-xs cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => {
+                confirmState.onConfirm();
+                setConfirmState(null);
+              }}
+              className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-md cursor-pointer"
+            >
+              Confirm
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
 
     <style>{`.box{display:flex;flex-direction:column;gap:.25rem;padding:1rem;border:1px solid rgb(226 232 240);border-radius:1rem;background:rgb(248 250 252)}.dark .box{border-color:rgb(51 65 85);background:rgba(2,6,23,.35)}.box>span:first-child{font-size:9px;font-weight:700;text-transform:uppercase;color:rgb(148 163 184)}.box>b{font-weight:700}`}</style>
   </div>
