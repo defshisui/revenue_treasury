@@ -251,6 +251,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
     tin: '',
   });
 
+  const [validationAlert, setValidationAlert] = useState<string | null>(null);
   const [isBusinessVerified, setIsBusinessVerified] = useState(false);
 
   const [isDataNotFoundModalOpen, setIsDataNotFoundModalOpen] = useState(false);
@@ -377,8 +378,16 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
 
   useEffect(() => {
     if (!user) return;
-    if (currentScreen === 'assessment-list') void fetchAssessments();
-    if (currentScreen === 'appointments-list') void fetchUserAppointments();
+    if (currentScreen === 'assessment-list') {
+      void fetchAssessments();
+      const interval = setInterval(fetchAssessments, 10000);
+      return () => clearInterval(interval);
+    }
+    if (currentScreen === 'appointments-list') {
+      void fetchUserAppointments();
+      const interval = setInterval(fetchUserAppointments, 10000);
+      return () => clearInterval(interval);
+    }
   }, [currentScreen, user, statusFilter, currentPage]);
 
   useEffect(() => {
@@ -508,9 +517,11 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
   };
 
   const handleNextStep = async (targetStep: number) => {
+    setValidationAlert(null);
     if (currentStep === 1) {
       if (!salesForm.mayorsPermitNumber.trim() || !salesForm.businessName.trim()) {
-        return alert('Please fill in all mandatory fields before proceeding.');
+        setValidationAlert('Please fill in all mandatory fields before proceeding.');
+        return;
       }
 
       if (targetStep === 2) {
@@ -531,7 +542,7 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
             setIsBusinessVerified(true);
             return; // Don't proceed to step 2 yet. User must click "Continue".
           } catch (err: any) {
-            alert(err.message || 'Error verifying permit.');
+            setValidationAlert(err.message || 'Error verifying permit.');
             return;
           } finally {
             setSubmitting(false);
@@ -540,17 +551,25 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
       }
     } else if (currentStep === 2) {
       if (!salesForm.businessOwner.trim() || !salesForm.businessAddress.trim() || !salesForm.barangay.trim() || !salesForm.businessType || !salesForm.lineOfBusiness.trim() || !salesForm.businessAreaSqm || !salesForm.registrationType || !salesForm.tin.trim() || !salesForm.birRegistered || !salesForm.hasOtherBranches || !salesForm.hasMultipleLines) {
-        return alert('Please fill in all mandatory fields before proceeding.');
+        setValidationAlert('Please fill in all mandatory fields before proceeding.');
+        return;
       }
     } else if (currentStep === 3) {
       if (!salesForm.grossSales || !salesForm.year || !salesForm.assessmentPeriod) {
-        return alert('Please fill in all mandatory sales fields before proceeding.');
+        setValidationAlert('Please fill in all mandatory sales fields before proceeding.');
+        return;
       }
       const gross = Number(salesForm.grossSales);
-      if (!Number.isFinite(gross) || gross < 0) return alert('Enter a valid non-negative gross sales amount.');
+      if (!Number.isFinite(gross) || gross < 0) {
+        setValidationAlert('Enter a valid non-negative gross sales amount.');
+        return;
+      }
     } else if (currentStep === 4) {
       for (const definition of applicableDocumentDefinitions().filter((item) => item.required)) {
-        if (!(salesFiles[definition.key] || []).length) return alert(`Please upload: ${definition.label}.`);
+        if (!(salesFiles[definition.key] || []).length) {
+          setValidationAlert(`Please upload: ${definition.label}.`);
+          return;
+        }
       }
     }
     setCurrentStep(targetStep);
@@ -558,13 +577,14 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
 
   const handleSalesDeclarationSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    setValidationAlert(null);
     const validationError = validateSalesSubmission();
     if (validationError) {
-      alert(validationError);
+      setValidationAlert(validationError);
       return;
     }
     if (!user) {
-      alert('Please log in before submitting a Business Tax assessment.');
+      setValidationAlert('Please log in before submitting a Business Tax assessment.');
       return;
     }
     setSubmitting(true);
@@ -1158,6 +1178,13 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                   </div>
                   <button type="button" onClick={() => setIsModalOpen(false)} className="text-xl font-bold">×</button>
                 </div>
+
+                {validationAlert && (
+                  <div className="mx-5 mt-4 p-3 rounded-lg bg-rose-50 border border-rose-200 flex items-center justify-between text-rose-700 text-xs">
+                    <span>{validationAlert}</span>
+                    <button type="button" onClick={() => setValidationAlert(null)} className="font-bold ml-4 hover:text-rose-900">✕</button>
+                  </div>
+                )}
 
                 <div className="px-5 py-3 border-b bg-white dark:bg-slate-900 flex gap-2">
                   {[1, 2, 3, 4, 5].map((step) => (

@@ -110,7 +110,19 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
 
   useEffect(() => { setAdmin(currentUser()); }, []);
 
-  useEffect(() => { if (!admin) return; if (activeTab === 'assessments') void fetchAssessments(); else void fetchAppointments(); }, [admin, activeTab, archiveView, statusFilter, page]);
+  useEffect(() => { 
+    if (!admin) return; 
+    
+    if (activeTab === 'assessments') {
+      void fetchAssessments(); 
+      const interval = setInterval(fetchAssessments, 10000);
+      return () => clearInterval(interval);
+    } else {
+      void fetchAppointments(); 
+      const interval = setInterval(fetchAppointments, 10000);
+      return () => clearInterval(interval);
+    }
+  }, [admin, activeTab, archiveView, statusFilter, page]);
 
   useEffect(() => {
     if (!selectedAssessment) return;

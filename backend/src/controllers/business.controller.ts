@@ -299,7 +299,7 @@ export async function getBusinessAssessments(req: Request, res: Response): Promi
     const limitNum = Math.min(200, Math.max(1, Number.parseInt(String(limit), 10) || 10));
     const offset = (pageNum - 1) * limitNum;
 
-    query += ` ORDER BY application_date DESC LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
+    query += ` ORDER BY created_at DESC LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
     params.push(limitNum, offset);
 
     const result = await pool.query(query, params);
