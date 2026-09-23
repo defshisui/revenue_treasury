@@ -262,6 +262,23 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
     });
   }
 
+  async function deleteAssessment(record: AssessmentRecord) {
+    if (!admin) return;
+    setConfirmState({
+      title: 'Delete Record',
+      message: `Are you sure you want to PERMANENTLY delete ${record.trackingNumber}? This action cannot be undone.`,
+      onConfirm: async () => {
+        try {
+          const response = await fetch(`${API_BASE_URL}/admin/business-assessments/${record.id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${admin.token}` } });
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(data.message || 'Delete action failed.');
+          setAlertState({ message: 'Record deleted permanently.', type: 'success' });
+          void fetchAssessments();
+        } catch (error: any) { setAlertState({ message: error.message || 'Delete action failed.', type: 'error' }); }
+      }
+    });
+  }
+
 
 
 
@@ -422,7 +439,7 @@ export const BusinessTaxAssessmentAdminView: React.FC<BusinessTaxAssessmentAdmin
             
           </div>
       {fetchError && <div className="p-3 rounded-xl bg-rose-50 text-rose-700 border border-rose-200 text-xs">{fetchError}</div>}
-      <div className="overflow-x-auto bg-white dark:bg-slate-900 border rounded-2xl"><table className="w-full min-w-[1100px] text-xs"><thead className="bg-slate-50 dark:bg-slate-950 text-[10px] uppercase text-slate-500"><tr><th className="p-3 text-left">Tracking</th><th className="p-3 text-left">Business / Owner</th><th className="p-3 text-left">Permit</th><th className="p-3 text-left">Gross Sales</th><th className="p-3 text-left">Status</th><th className="p-3 text-left">Payment</th><th className="p-3 text-right">Action</th></tr></thead><tbody className="divide-y">{loading ? <tr><td colSpan={7} className="p-12 text-center text-slate-400">Loading...</td></tr> : assessments.length ? assessments.map((record) => <tr key={record.id} className="hover:bg-slate-50 dark:hover:bg-slate-950/50"><td className="p-3 font-mono font-bold text-blue-600">{record.trackingNumber}</td><td className="p-3"><div className="font-bold">{record.businessName}</div><div className="text-[10px] text-slate-400">{record.businessOwner}</div></td><td className="p-3 font-mono">{record.mayorPermitNumber || '—'}</td><td className="p-3 font-mono">{money(record.grossSales)}</td><td className="p-3"><span className={`px-2 py-1 rounded-full text-[9px] font-bold ${statusClass(record.status)}`}>{record.status}</span></td><td className="p-3"><span className={`px-2 py-1 rounded-full text-[9px] font-bold ${record.paymentStatus === 'PAID' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>{record.paymentStatus || 'UNPAID'}</span></td><td className="p-3 text-right"><button type="button" onClick={() => setSelectedAssessment(record)} className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 font-bold mr-1">Review</button><button type="button" onClick={() => void archiveOrRestore(record)} className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 font-bold">{record.recordStatus === 'ARCHIVED' ? 'Restore' : 'Archive'}</button></td></tr>) : <tr><td colSpan={7} className="p-12 text-center text-slate-400">No records found.</td></tr>}</tbody></table></div>
+      <div className="overflow-x-auto bg-white dark:bg-slate-900 border rounded-2xl"><table className="w-full min-w-[1100px] text-xs"><thead className="bg-slate-50 dark:bg-slate-950 text-[10px] uppercase text-slate-500"><tr><th className="p-3 text-left">Tracking</th><th className="p-3 text-left">Business / Owner</th><th className="p-3 text-left">Permit</th><th className="p-3 text-left">Gross Sales</th><th className="p-3 text-left">Status</th><th className="p-3 text-left">Payment</th><th className="p-3 text-right">Action</th></tr></thead><tbody className="divide-y">{loading ? <tr><td colSpan={7} className="p-12 text-center text-slate-400">Loading...</td></tr> : assessments.length ? assessments.map((record) => <tr key={record.id} className="hover:bg-slate-50 dark:hover:bg-slate-950/50"><td className="p-3 font-mono font-bold text-blue-600">{record.trackingNumber}</td><td className="p-3"><div className="font-bold">{record.businessName}</div><div className="text-[10px] text-slate-400">{record.businessOwner}</div></td><td className="p-3 font-mono">{record.mayorPermitNumber || '-'}</td><td className="p-3 font-mono">{money(record.grossSales)}</td><td className="p-3"><span className={`px-2 py-1 rounded-full text-[9px] font-bold ${statusClass(record.status)}`}>{record.status}</span></td><td className="p-3"><span className={`px-2 py-1 rounded-full text-[9px] font-bold ${record.paymentStatus === 'PAID' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>{record.paymentStatus || 'UNPAID'}</span></td><td className="p-3 text-right"><button type="button" onClick={() => setSelectedAssessment(record)} className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 font-bold mr-1">Review</button><button type="button" onClick={() => void archiveOrRestore(record)} className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 font-bold">{record.recordStatus === 'ARCHIVED' ? 'Restore' : 'Archive'}</button>{record.recordStatus === 'ARCHIVED' && <button type="button" onClick={() => void deleteAssessment(record)} className="px-3 py-1.5 rounded-lg bg-rose-50 text-rose-700 font-bold ml-1">Delete</button>}</td></tr>) : <tr><td colSpan={7} className="p-12 text-center text-slate-400">No records found.</td></tr>}</tbody></table></div>
       <div className="flex justify-between items-center text-xs text-slate-500"><span>Page {page} of {totalPages}</span><div className="flex gap-2"><button type="button" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))} className="px-3 py-1.5 border rounded-lg disabled:opacity-40">Previous</button><button type="button" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))} className="px-3 py-1.5 border rounded-lg disabled:opacity-40">Next</button></div></div>
     </section>}
 

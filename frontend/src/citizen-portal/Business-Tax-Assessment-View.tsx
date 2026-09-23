@@ -251,6 +251,38 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
     tin: '',
   });
 
+  const generatePaymentSchedule = (term: string) => {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    let currentYear = now.getFullYear();
+    const schedule = [];
+
+    if (term === 'QUARTERLY') {
+      let currentQ = Math.floor(currentMonth / 3) + 1;
+      for (let i = 0; i < 4; i++) {
+        schedule.push(`Q${currentQ} ${currentYear}`);
+        currentQ++;
+        if (currentQ > 4) {
+          currentQ = 1;
+          currentYear++;
+        }
+      }
+    } else if (term === 'SEMI_ANNUAL') {
+      let currentSem = Math.floor(currentMonth / 6) + 1;
+      for (let i = 0; i < 2; i++) {
+        schedule.push(`${currentSem === 1 ? '1st' : '2nd'} Semester ${currentYear}`);
+        currentSem++;
+        if (currentSem > 2) {
+          currentSem = 1;
+          currentYear++;
+        }
+      }
+    } else if (term === 'ANNUAL') {
+      schedule.push(`Annual Payment ${currentYear}`);
+    }
+    return schedule;
+  };
+
   const [validationAlert, setValidationAlert] = useState<string | null>(null);
   const [isBusinessVerified, setIsBusinessVerified] = useState(false);
 
@@ -1241,7 +1273,31 @@ export const BusinessTaxAssessmentView: React.FC<BusinessTaxAssessmentViewProps>
                         <h4 className="font-bold text-sm border-b pb-2 mb-4">A. Tax Year / Assessment Period</h4>
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                           <div><label className="label">Tax Year *</label><input required type="number" min="2000" max="2100" value={salesForm.year} onChange={(e) => setSalesForm({ ...salesForm, year: e.target.value })} className="field disabled:opacity-75 disabled:bg-slate-100 dark:disabled:bg-slate-800" disabled readOnly /></div>
-                          <div><label className="label">Payment Term *</label><select value={salesForm.paymentTerm} onChange={(e) => setSalesForm({ ...salesForm, paymentTerm: e.target.value })} className="field"><option value="" disabled>Select Payment Term</option><option value="ANNUAL">Annual</option><option value="SEMI_ANNUAL">Semi-Annual</option><option value="QUARTERLY">Quarterly</option></select></div>
+                          <div>
+                            <label className="label">Payment Term *</label>
+                            <select value={salesForm.paymentTerm} onChange={(e) => setSalesForm({ ...salesForm, paymentTerm: e.target.value })} className="field">
+                              <option value="" disabled>Select Payment Term</option>
+                              <option value="ANNUAL">Annual</option>
+                              <option value="SEMI_ANNUAL">Semi-Annual</option>
+                              <option value="QUARTERLY">Quarterly</option>
+                            </select>
+                            
+                            {salesForm.paymentTerm && (
+                              <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-xl border border-blue-200 dark:border-blue-900 text-xs">
+                                <span className="font-bold text-blue-800 dark:text-blue-300 block mb-2">Rolling Payment Schedule:</span>
+                                <ul className="list-decimal list-inside text-blue-700 dark:text-blue-400 space-y-1">
+                                  {generatePaymentSchedule(salesForm.paymentTerm).map((item, idx) => (
+                                    <li key={idx}>
+                                      <span className="font-semibold">{item}</span> 
+                                      <span className="text-blue-500/80 text-[10px] ml-1">
+                                        ({idx === 0 ? 'Due immediately upon approval' : `Due in ${idx * (salesForm.paymentTerm === 'QUARTERLY' ? 3 : 6)} months`})
+                                      </span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
 
